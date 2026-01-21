@@ -1,0 +1,150 @@
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #0f172a;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  background: #1e293b;
+  border-bottom: 1px solid #334155;
+}
+
+.back-button {
+  padding: 0.5rem 1rem;
+  background: #334155;
+  color: #cbd5e1;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.back-button:hover {
+  background: #475569;
+}
+
+.app-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.app-title .app-icon {
+  font-size: 1.75rem;
+}
+
+.app-title h2 {
+  font-size: 1.5rem;
+  color: #f1f5f9;
+  margin: 0;
+}
+
+.app-content {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+/* iframe for static apps */
+.app-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: white;
+}
+
+/* Placeholder for apps not yet implemented */
+.app-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 3rem;
+  text-align: center;
+  color: #94a3b8;
+}
+
+.app-icon-large {
+  font-size: 5rem;
+  margin-bottom: 1rem;
+}
+
+.app-placeholder h3 {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  color: #cbd5e1;
+}
+
+.app-placeholder p {
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+}
+
+.coming-soon {
+  color: #3b82f6;
+  font-weight: 600;
+  margin-top: 1rem !important;
+}
+
+/* Not found state */
+.app-not-found {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 3rem;
+  text-align: center;
+}
+
+.app-not-found h2 {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  color: #cbd5e1;
+}
+
+.app-not-found p {
+  color: #94a3b8;
+  margin-bottom: 2rem;
+}
+
+.app-not-found button {
+  padding: 0.75rem 1.5rem;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.app-not-found button:hover {
+  background: #2563eb;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .app-header {
+    padding: 0.75rem 1rem;
+  }
+
+  .app-title h2 {
+    font-size: 1.25rem;
+  }
+
+  .app-placeholder {
+    padding: 2rem 1rem;
+  }
+
+  .app-icon-large {
+    font-size: 4rem;
+  }
+}

@@ -1,0 +1,191 @@
+.lobby {
+  padding: 2rem 1.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.lobby-header {
+  margin-bottom: 2rem;
+}
+
+.lobby-header h1 {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+  color: #f1f5f9;
+}
+
+.lobby-header p {
+  color: #94a3b8;
+  font-size: 1.1rem;
+}
+
+.lobby-sections {
+  display: grid;
+  grid-template-columns: 300px 1fr 300px;
+  gap: 1.5rem;
+}
+
+.lobby-section {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.lobby-section h2 {
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+  color: #cbd5e1;
+}
+
+/* Online Users */
+.online-users-placeholder,
+.challenges-placeholder {
+  color: #64748b;
+}
+
+.placeholder-text {
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.hint-text {
+  font-size: 0.85rem;
+  color: #475569;
+  font-style: italic;
+}
+
+.demo-users {
+  margin-top: 1rem;
+}
+
+.user-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: #0f172a;
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.status-dot.online {
+  background: #22c55e;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+}
+
+.status-dot.in_game {
+  background: #eab308;
+}
+
+.status-dot.away {
+  background: #6b7280;
+}
+
+/* App Grid */
+.lobby-apps {
+  grid-column: 2;
+}
+
+.app-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.app-card {
+  background: #0f172a;
+  border: 2px solid #334155;
+  border-radius: 12px;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  position: relative;
+}
+
+.app-card:hover {
+  border-color: #3b82f6;
+  background: #1e293b;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+.app-icon {
+  font-size: 3rem;
+  margin-bottom: 0.75rem;
+  display: block;
+}
+
+.app-card h3 {
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+  color: #f1f5f9;
+}
+
+.app-card p {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  margin-bottom: 0.75rem;
+}
+
+.app-type-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  background: #334155;
+  color: #94a3b8;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.app-card.interactive .app-type-badge {
+  background: #1e3a8a;
+  color: #93c5fd;
+}
+
+.app-card.static .app-type-badge {
+  background: #064e3b;
+  color: #6ee7b7;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .lobby-sections {
+    grid-template-columns: 1fr;
+  }
+
+  .lobby-apps {
+    grid-column: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .lobby {
+    padding: 1rem;
+  }
+
+  .lobby-header h1 {
+    font-size: 2rem;
+  }
+
+  .app-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .app-card {
+    padding: 1rem;
+  }
+
+  .app-icon {
+    font-size: 2.5rem;
+  }
+}

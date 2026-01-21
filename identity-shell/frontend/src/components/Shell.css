@@ -1,0 +1,169 @@
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: #0f172a;
+}
+
+/* Shell Header */
+.shell-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.5rem;
+  background: #1e293b;
+  border-bottom: 1px solid #334155;
+  gap: 1rem;
+}
+
+.shell-header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.logo-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: none;
+  color: #3b82f6;
+  font-size: 1.25rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.logo-button:hover {
+  background: #334155;
+}
+
+.logo-text {
+  color: #f1f5f9;
+}
+
+.shell-nav {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.nav-button {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.nav-button:hover {
+  background: #334155;
+  color: #f1f5f9;
+}
+
+.shell-header-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.notification-button {
+  position: relative;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.notification-button:hover {
+  background: #334155;
+  color: #f1f5f9;
+}
+
+.notification-badge {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  background: #dc2626;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.1rem 0.35rem;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+}
+
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.user-email {
+  color: #cbd5e1;
+  font-size: 0.9rem;
+}
+
+.logout-button {
+  padding: 0.5rem 1rem;
+  background: #475569;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.logout-button:hover {
+  background: #64748b;
+}
+
+/* Main Content */
+.shell-content {
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* Placeholder View */
+.placeholder-view {
+  padding: 3rem 1.5rem;
+  text-align: center;
+  color: #94a3b8;
+}
+
+.placeholder-view h2 {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  color: #cbd5e1;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .shell-header {
+    padding: 0.5rem 1rem;
+  }
+
+  .logo-text {
+    display: none;
+  }
+
+  .user-email {
+    display: none;
+  }
+
+  .shell-nav {
+    flex: 1;
+    justify-content: center;
+  }
+}
