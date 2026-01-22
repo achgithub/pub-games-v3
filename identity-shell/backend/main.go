@@ -38,18 +38,11 @@ func main() {
 	api.HandleFunc("/login", handleLogin).Methods("POST")
 	api.HandleFunc("/validate", handleValidate).Methods("POST")
 
-	// CORS configuration - Allow requests from frontend on any local network
-	// For production, replace with specific allowed origins
+	// CORS configuration - Allow requests from frontend on local network
 	corsHandler := handlers.CORS(
-		handlers.AllowedOriginValidator(func(origin string) bool {
-			// Allow localhost and any 192.168.*.* or 10.*.*.* address on port 3000
-			return origin == "http://localhost:3000" ||
-				(len(origin) > 7 && origin[:7] == "http://192.168." && origin[len(origin)-5:] == ":3000") ||
-				(len(origin) > 7 && origin[:11] == "http://10." && origin[len(origin)-5:] == ":3000")
-		}),
+		handlers.AllowedOrigins([]string{"*"}),
 		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
 		handlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
-		handlers.AllowCredentials(),
 	)
 
 	// Start server
