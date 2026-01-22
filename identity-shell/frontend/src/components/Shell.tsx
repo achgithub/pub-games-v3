@@ -33,7 +33,7 @@ const APPS: AppDefinition[] = [
     name: 'Sweepstakes',
     icon: '🎁',
     type: 'static',
-    url: 'http://localhost:5000', // Would be actual sweepstakes URL
+    url: `http://${window.location.hostname}:5000`,
     description: 'Draw competitions',
     category: 'game',
   },
