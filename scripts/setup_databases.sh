@@ -57,7 +57,7 @@ SCHEMA_FILE="$SCRIPT_DIR/schema.sql"
 
 if [ -f "$SCHEMA_FILE" ]; then
     echo "📋 Initializing schema..."
-    sudo -u postgres psql -p 5555 -d pubgames -f "$SCHEMA_FILE"
+    cat "$SCHEMA_FILE" | sudo -u postgres psql -p 5555 -d pubgames
     echo "✅ Schema initialized"
 else
     echo "⚠️  schema.sql not found, skipping schema initialization"
