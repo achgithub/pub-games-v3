@@ -5,7 +5,9 @@ import { User } from './types';
 import LoginView from './components/LoginView';
 import Shell from './components/Shell';
 
-const API_BASE = 'http://192.168.1.45:3001/api';
+// Dynamically determine API base URL based on current hostname
+// This allows the app to work regardless of Pi's IP address
+const API_BASE = `http://${window.location.hostname}:3001/api`;
 
 function App() {
   const [user, setUser] = useState<User | null>(null);
