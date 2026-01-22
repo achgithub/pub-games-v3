@@ -1,0 +1,2 @@
+# This directory holds the SQLite database for local development
+# The .db files are excluded from Git (see .gitignore)
