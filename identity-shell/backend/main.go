@@ -21,8 +21,8 @@ func main() {
 	var err error
 
 	// Get database connection string from environment or use default
-	dbHost := getEnv("DB_HOST", "/var/run/postgresql") // Unix socket by default
-	dbPort := getEnv("DB_PORT", "5555")                 // Pi uses port 5555
+	dbHost := getEnv("DB_HOST", "127.0.0.1") // Use TCP/IP for password auth
+	dbPort := getEnv("DB_PORT", "5555")      // Pi uses port 5555
 	dbUser := getEnv("DB_USER", "pubgames")
 	dbPass := getEnv("DB_PASS", "pubgames")
 	dbName := getEnv("DB_NAME", "pubgames")

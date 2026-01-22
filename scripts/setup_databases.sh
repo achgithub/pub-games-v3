@@ -37,13 +37,27 @@ sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE pubgames TO pubgames;
 
 echo "✅ PostgreSQL database 'pubgames' created"
 
+# Enable TCP/IP connections for localhost (needed for password authentication)
+echo "📝 Configuring PostgreSQL for TCP/IP connections..."
+PG_VERSION=$(psql --version | awk '{print $3}' | cut -d. -f1)
+PG_HBA="/etc/postgresql/${PG_VERSION}/main/pg_hba.conf"
+
+# Check if localhost md5 auth already exists
+if ! sudo grep -q "^host.*pubgames.*127.0.0.1/32.*md5" "$PG_HBA"; then
+    echo "host    pubgames    pubgames    127.0.0.1/32    md5" | sudo tee -a "$PG_HBA" > /dev/null
+    sudo systemctl reload postgresql
+    echo "✅ TCP/IP authentication configured"
+else
+    echo "✅ TCP/IP authentication already configured"
+fi
+
 # Run schema initialization
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCHEMA_FILE="$SCRIPT_DIR/schema.sql"
 
 if [ -f "$SCHEMA_FILE" ]; then
     echo "📋 Initializing schema..."
-    PGPASSWORD=pubgames PGHOST=/var/run/postgresql psql -p 5555 -U pubgames -d pubgames -f "$SCHEMA_FILE"
+    sudo -u postgres psql -p 5555 -d pubgames -f "$SCHEMA_FILE"
     echo "✅ Schema initialized"
 else
     echo "⚠️  schema.sql not found, skipping schema initialization"
@@ -78,7 +92,8 @@ echo "PostgreSQL:"
 echo "  - Database: pubgames"
 echo "  - User: pubgames"
 echo "  - Password: pubgames (CHANGE THIS IN PRODUCTION)"
-echo "  - Connection: postgresql://pubgames:pubgames@localhost/pubgames"
+echo "  - Port: 5555"
+echo "  - Connection: postgresql://pubgames:pubgames@127.0.0.1:5555/pubgames"
 echo ""
 echo "Redis:"
 echo "  - Running on default port 6379"
