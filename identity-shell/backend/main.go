@@ -21,7 +21,7 @@ func main() {
 	var err error
 
 	// Get database connection string from environment or use default
-	dbHost := getEnv("DB_HOST", "localhost")
+	dbHost := getEnv("DB_HOST", "/var/run/postgresql") // Unix socket by default
 	dbUser := getEnv("DB_USER", "pubgames")
 	dbPass := getEnv("DB_PASS", "pubgames")
 	dbName := getEnv("DB_NAME", "pubgames")
