@@ -22,12 +22,13 @@ func main() {
 
 	// Get database connection string from environment or use default
 	dbHost := getEnv("DB_HOST", "/var/run/postgresql") // Unix socket by default
+	dbPort := getEnv("DB_PORT", "5555")                 // Pi uses port 5555
 	dbUser := getEnv("DB_USER", "pubgames")
 	dbPass := getEnv("DB_PASS", "pubgames")
 	dbName := getEnv("DB_NAME", "pubgames")
 
-	connStr := fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=disable",
-		dbHost, dbUser, dbPass, dbName)
+	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		dbHost, dbPort, dbUser, dbPass, dbName)
 
 	// Initialize database
 	db, err = sql.Open("postgres", connStr)
