@@ -135,8 +135,10 @@ function App() {
   // Loading state
   if (view === 'loading') {
     return (
-      <div className="container" style={{textAlign: 'center', padding: '100px 20px'}}>
-        <h2>Loading...</h2>
+      <div className="App" style={{display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+        <div style={{textAlign: 'center'}}>
+          <h2>Loading...</h2>
+        </div>
       </div>
     );
   }
@@ -144,11 +146,13 @@ function App() {
   // No user provided (shouldn't happen if loaded from shell)
   if (view === 'no-user') {
     return (
-      <div className="container" style={{textAlign: 'center', padding: '100px 20px'}}>
-        <h1>⚠️ Access Error</h1>
-        <p style={{fontSize: '18px', margin: '30px 0', color: '#666'}}>
-          This app must be accessed through the Identity Shell.
-        </p>
+      <div className="App" style={{display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+        <div style={{textAlign: 'center', padding: '20px'}}>
+          <h1>⚠️ Access Error</h1>
+          <p style={{fontSize: '18px', margin: '30px 0', color: '#666'}}>
+            This app must be accessed through the Identity Shell.
+          </p>
+        </div>
       </div>
     );
   }
