@@ -73,10 +73,3 @@ func createTables(db *sql.DB) error {
 	log.Println("✅ Database schema initialized")
 	return nil
 }
-
-func getEnv(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
-}
