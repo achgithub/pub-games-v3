@@ -58,7 +58,13 @@ SCHEMA_FILE="$SCRIPT_DIR/schema.sql"
 if [ -f "$SCHEMA_FILE" ]; then
     echo "📋 Initializing schema..."
     cat "$SCHEMA_FILE" | sudo -u postgres psql -p 5555 -d pubgames
-    echo "✅ Schema initialized"
+
+    # Grant all permissions to pubgames user
+    echo "🔑 Granting table permissions to pubgames user..."
+    sudo -u postgres psql -p 5555 -d pubgames -c "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO pubgames;"
+    sudo -u postgres psql -p 5555 -d pubgames -c "GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO pubgames;"
+
+    echo "✅ Schema initialized with permissions"
 else
     echo "⚠️  schema.sql not found, skipping schema initialization"
 fi
