@@ -26,12 +26,12 @@ CREATE INDEX IF NOT EXISTS idx_presence_status ON user_presence(status);
 CREATE INDEX IF NOT EXISTS idx_presence_last_seen ON user_presence(last_seen);
 
 -- Seed data: Admin user with code "123456"
--- Password hash for "123456" using bcrypt
+-- Password hash for "123456" using bcrypt (generated via Go bcrypt.GenerateFromPassword)
 INSERT INTO users (email, name, code_hash, is_admin)
 VALUES (
     'admin@pubgames.local',
     'Admin User',
-    '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5NU8YOc8KLKEK', -- bcrypt hash of "123456"
+    '$2a$10$uwXWNdFfI9GWqzaGuh3PPunUuKmK52mjpLihTmr5cMlwOEJlmTRd6', -- bcrypt hash of "123456"
     TRUE
 )
 ON CONFLICT (email) DO NOTHING;
@@ -41,7 +41,7 @@ INSERT INTO users (email, name, code_hash, is_admin)
 VALUES (
     'test@pubgames.local',
     'Test User',
-    '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5NU8YOc8KLKEK', -- bcrypt hash of "123456"
+    '$2a$10$uwXWNdFfI9GWqzaGuh3PPunUuKmK52mjpLihTmr5cMlwOEJlmTRd6', -- bcrypt hash of "123456"
     FALSE
 )
 ON CONFLICT (email) DO NOTHING;
