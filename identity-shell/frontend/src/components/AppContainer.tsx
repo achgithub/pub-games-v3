@@ -39,7 +39,7 @@ const AppContainer: React.FC<AppContainerProps> = ({ apps, user }) => {
       <div className="app-content">
         {app.type === 'static' && app.url ? (
           <iframe
-            src={app.url}
+            src={`${app.url}?user=${encodeURIComponent(user.email)}&name=${encodeURIComponent(user.name)}&admin=${user.is_admin || false}`}
             title={app.name}
             className="app-iframe"
             sandbox="allow-same-origin allow-scripts allow-forms"

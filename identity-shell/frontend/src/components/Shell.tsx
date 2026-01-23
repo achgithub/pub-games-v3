@@ -21,6 +21,15 @@ const APPS: AppDefinition[] = [
     category: 'utility',
   },
   {
+    id: 'smoke-test',
+    name: 'Smoke Test',
+    icon: '🧪',
+    type: 'static',
+    description: 'Template validation and smoke testing',
+    category: 'utility',
+    url: `http://${window.location.hostname}:5010`,
+  },
+  {
     id: 'tic-tac-toe',
     name: 'Tic-Tac-Toe',
     icon: '⭕',

@@ -47,6 +47,9 @@ func main() {
 	// Setup router
 	r := mux.NewRouter()
 
+	// Static files (shared CSS for all apps)
+	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
+
 	// API routes
 	api := r.PathPrefix("/api").Subrouter()
 	api.HandleFunc("/health", handleHealth).Methods("GET")

@@ -1,0 +1,244 @@
+/* ============================================================================
+   PUBGAMES V3 - SHARED PLATFORM CSS
+   Loaded by all mini-apps via Identity Shell
+   ============================================================================ */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f8f9fa;
+}
+
+/* Layout */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.App {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #f8f9fa;
+}
+
+/* Typography */
+h1, h2, h3 {
+  color: #333;
+}
+
+/* Buttons */
+button {
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Forms */
+input, textarea, select {
+  font-family: inherit;
+  font-size: 1rem;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  width: 100%;
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+/* Tables */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+th, td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  color: #555;
+}
+
+tr:last-child td {
+  border-bottom: none;
+}
+
+tr:hover {
+  background-color: #f8f9fa;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid #dee2e6;
+  margin: 20px 0;
+  background: white;
+  border-radius: 8px 8px 0 0;
+}
+
+.tabs button {
+  padding: 12px 24px;
+  border: none;
+  background: transparent;
+  color: #666;
+  font-weight: 500;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s;
+}
+
+.tabs button:hover {
+  background: #f8f9fa;
+  color: #333;
+}
+
+.tabs button.active {
+  color: #007bff;
+  border-bottom-color: #007bff;
+}
+
+/* Cards & Sections */
+.admin-section,
+.rules,
+.dashboard {
+  background: white;
+  padding: 24px;
+  margin: 20px 0;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.admin-section h3,
+.rules h3,
+.dashboard h3 {
+  margin-top: 0;
+  color: #333;
+  border-bottom: 2px solid #f0f0f0;
+  padding-bottom: 10px;
+}
+
+/* Badges */
+.admin-badge {
+  display: inline-block;
+  background: #ff6b6b;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+/* Forms */
+.inline-form {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.inline-form input {
+  flex: 1;
+  min-width: 200px;
+}
+
+.inline-form button {
+  padding: 8px 20px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.inline-form button:hover {
+  background: #0056b3;
+}
+
+/* Info Text */
+.info-text {
+  color: #666;
+  font-style: italic;
+  margin: 10px 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .container {
+    padding: 10px;
+  }
+
+  .admin-section,
+  .rules,
+  .dashboard {
+    padding: 16px;
+  }
+
+  table {
+    font-size: 0.9rem;
+  }
+
+  th, td {
+    padding: 8px;
+  }
+
+  .tabs button {
+    padding: 10px 16px;
+    font-size: 0.9rem;
+  }
+
+  .inline-form {
+    flex-direction: column;
+  }
+
+  .inline-form input {
+    width: 100%;
+  }
+}
+
+/* Lists */
+ul {
+  line-height: 1.8;
+}
+
+li {
+  margin: 8px 0;
+}
+
+/* Links */
+a {
+  color: #007bff;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
