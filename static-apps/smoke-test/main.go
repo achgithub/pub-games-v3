@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"log"
+	"net"
 	"net/http"
 	"os"
 
@@ -44,8 +45,8 @@ func main() {
 	frontendPort := getEnv("FRONTEND_PORT", "5010")
 	backendPort := getEnv("BACKEND_PORT", "5011")
 
-	// Get hostname for CORS (for mobile access)
-	hostname := getEnv("HOSTNAME", "localhost")
+	// Get hostname for CORS (auto-detect network IP if not set)
+	hostname := getHostname()
 
 	// CORS configuration - Allow requests from frontend and shell
 	corsHandler := handlers.CORS(
@@ -73,4 +74,33 @@ func getEnv(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
+}
+
+// getHostname auto-detects the primary network IP address
+func getHostname() string {
+	// Check environment variable first
+	if hostname := os.Getenv("HOSTNAME"); hostname != "" {
+		return hostname
+	}
+
+	// Try to detect network IP
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		log.Printf("⚠️  Failed to detect network IP, using localhost: %v", err)
+		return "localhost"
+	}
+
+	// Find first non-loopback IPv4 address
+	for _, addr := range addrs {
+		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				ip := ipnet.IP.String()
+				log.Printf("🌐 Auto-detected network IP: %s", ip)
+				return ip
+			}
+		}
+	}
+
+	log.Printf("⚠️  No network IP detected, using localhost")
+	return "localhost"
 }

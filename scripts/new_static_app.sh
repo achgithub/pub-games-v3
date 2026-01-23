@@ -296,16 +296,46 @@ echo -e "${YELLOW}Updating public/index.html...${NC}"
 sed -i '' "s|PLACEHOLDER_APP_NAME|$APP_DISPLAY_NAME|g" "$APP_DIR/public/index.html"
 echo -e "${GREEN}✓ Updated public/index.html${NC}"
 
-# Create database setup SQL file
-echo -e "${YELLOW}Creating database setup SQL...${NC}"
-cat > "$BASE_DIR/scripts/setup_${APP_NAME}_db.sql" << EOF
--- Database setup for $APP_DISPLAY_NAME
--- Run this on the Pi to create the app's database
+# Create database setup script
+echo -e "${YELLOW}Creating database setup script...${NC}"
+cat > "$BASE_DIR/scripts/setup_${APP_NAME}_db.sh" << 'SCRIPT_EOF'
+#!/bin/bash
+# Database setup for APP_DISPLAY_NAME_PLACEHOLDER
+# Run this on the Pi to create the app's database
 
-CREATE DATABASE IF NOT EXISTS ${DB_NAME};
-GRANT ALL PRIVILEGES ON DATABASE ${DB_NAME} TO pubgames;
+set -e
+
+echo "Creating database: DB_NAME_PLACEHOLDER"
+
+sudo -u postgres psql -p 5555 << 'EOF'
+-- Create database
+CREATE DATABASE DB_NAME_PLACEHOLDER;
+
+-- Grant database privileges to pubgames user
+GRANT ALL PRIVILEGES ON DATABASE DB_NAME_PLACEHOLDER TO pubgames;
+
+-- Connect to the database and set schema permissions
+\c DB_NAME_PLACEHOLDER
+
+-- Grant schema permissions (required for PostgreSQL 15+)
+GRANT ALL ON SCHEMA public TO pubgames;
+GRANT CREATE ON SCHEMA public TO pubgames;
+
+-- Set database owner
+ALTER DATABASE DB_NAME_PLACEHOLDER OWNER TO pubgames;
+
 EOF
-echo -e "${GREEN}✓ Created scripts/setup_${APP_NAME}_db.sql${NC}"
+
+echo "✅ Database DB_NAME_PLACEHOLDER created successfully"
+echo "   User 'pubgames' has full access"
+SCRIPT_EOF
+
+# Replace placeholders in the setup script
+sed -i '' "s|APP_DISPLAY_NAME_PLACEHOLDER|$APP_DISPLAY_NAME|g" "$BASE_DIR/scripts/setup_${APP_NAME}_db.sh"
+sed -i '' "s|DB_NAME_PLACEHOLDER|$DB_NAME|g" "$BASE_DIR/scripts/setup_${APP_NAME}_db.sh"
+chmod +x "$BASE_DIR/scripts/setup_${APP_NAME}_db.sh"
+
+echo -e "${GREEN}✓ Created scripts/setup_${APP_NAME}_db.sh${NC}"
 
 echo ""
 echo "==========================================="
@@ -318,11 +348,11 @@ echo "Database: $DB_NAME"
 echo ""
 echo -e "${YELLOW}Next steps (on Pi):${NC}"
 echo "1. Create database:"
-echo "   sudo -u postgres psql -c \"CREATE DATABASE $DB_NAME;\""
-echo "   sudo -u postgres psql -c \"GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO pubgames;\""
+echo "   cd ~/pub-games-v3"
+echo "   ./scripts/setup_${APP_NAME}_db.sh"
 echo ""
 echo "2. Install dependencies:"
-echo "   cd $APP_DIR"
+echo "   cd ~/pub-games-v3/static-apps/$APP_NAME"
 echo "   go mod download"
 echo "   npm install"
 echo ""
