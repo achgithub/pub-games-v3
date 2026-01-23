@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -23,7 +24,14 @@ func main() {
 	}
 	defer db.Close()
 
-	// Setup router
+	// Get frontend and backend ports from environment
+	frontendPort := getEnv("FRONTEND_PORT", "5010")
+	backendPort := getEnv("BACKEND_PORT", "5011")
+
+	// Get hostname for CORS (auto-detect network IP if not set)
+	hostname := getHostname()
+
+	// Setup API router
 	r := mux.NewRouter()
 
 	// Public endpoints
@@ -41,13 +49,6 @@ func main() {
 	// Admin endpoints
 	api.HandleFunc("/admin/stats", AdminMiddleware(HandleGetStats)).Methods("GET")
 
-	// Get frontend and backend ports from environment
-	frontendPort := getEnv("FRONTEND_PORT", "5010")
-	backendPort := getEnv("BACKEND_PORT", "5011")
-
-	// Get hostname for CORS (auto-detect network IP if not set)
-	hostname := getHostname()
-
 	// CORS configuration - Allow requests from frontend and shell
 	corsHandler := handlers.CORS(
 		handlers.AllowedOrigins([]string{
@@ -61,12 +62,56 @@ func main() {
 		handlers.AllowCredentials(),
 	)
 
-	// Start server
-	log.Printf("🎮 Smoke Test Backend")
-	log.Printf("📍 Listening on port %s", backendPort)
-	log.Printf("🌐 CORS enabled for: localhost:%s, %s:%s, localhost:3000, %s:3000",
-		frontendPort, hostname, frontendPort, hostname)
-	log.Fatal(http.ListenAndServe(":"+backendPort, corsHandler(r)))
+	// Start backend API server
+	go func() {
+		log.Printf("🎮 Smoke Test Backend API")
+		log.Printf("📍 API listening on port %s", backendPort)
+		log.Printf("🌐 CORS enabled for: localhost:%s, %s:%s, localhost:3000, %s:3000",
+			frontendPort, hostname, frontendPort, hostname)
+		if err := http.ListenAndServe(":"+backendPort, corsHandler(r)); err != nil {
+			log.Fatal("Backend API server error:", err)
+		}
+	}()
+
+	// Setup frontend static file server
+	frontendRouter := mux.NewRouter()
+
+	// Try to serve from build folder (production) or public folder (development)
+	buildDir := "./build"
+	publicDir := "./public"
+
+	var staticDir string
+	if _, err := os.Stat(buildDir); err == nil {
+		staticDir = buildDir
+		log.Printf("📦 Serving production build from %s", buildDir)
+	} else if _, err := os.Stat(publicDir); err == nil {
+		staticDir = publicDir
+		log.Printf("⚠️  No build folder found, serving from %s (development mode)", publicDir)
+		log.Printf("   Run 'npm run build' to create a production build")
+	} else {
+		log.Fatal("❌ Neither build/ nor public/ directory found. Run 'npm install && npm run build' first.")
+	}
+
+	// Serve static files
+	frontendRouter.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path := filepath.Join(staticDir, r.URL.Path)
+
+		// Check if file exists
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			// File doesn't exist, serve index.html (for React Router)
+			http.ServeFile(w, r, filepath.Join(staticDir, "index.html"))
+			return
+		}
+
+		// Serve the file
+		http.FileServer(http.Dir(staticDir)).ServeHTTP(w, r)
+	})
+
+	// Start frontend server
+	log.Printf("🌐 Smoke Test Frontend")
+	log.Printf("📍 Frontend listening on port %s", frontendPort)
+	log.Printf("🔗 Access at: http://localhost:%s or http://%s:%s", frontendPort, hostname, frontendPort)
+	log.Fatal(http.ListenAndServe(":"+frontendPort, frontendRouter))
 }
 
 func getEnv(key, defaultValue string) string {
