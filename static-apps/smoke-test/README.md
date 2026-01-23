@@ -64,13 +64,28 @@ This is the standard template for creating new static (iframe-embedded) apps in 
    ```
 
 3. **Run** (on Pi):
-   ```bash
-   # Backend
-   go run *.go
 
-   # Frontend (in another terminal)
+   **Development Mode** (recommended - hot reload):
+   ```bash
+   # Terminal 1: React dev server with hot reload
    npm start
+
+   # Terminal 2: Backend API
+   go run *.go
    ```
+
+   **Production Mode** (single process):
+   ```bash
+   # Build React app
+   npm run build
+
+   # Start Go server (serves both frontend and API)
+   go run *.go
+   ```
+
+   The Go server automatically detects whether build/ exists:
+   - If build/ exists: serves production build on port 5010
+   - If no build/: serves from public/ (development fallback)
 
 ## How It Works
 
@@ -232,6 +247,13 @@ export HOSTNAME=$(hostname -I | awk '{print $1}')
 ### Shared CSS Not Loading
 - Ensure Identity Shell is running and serving `/static/pubgames.css`
 - Check browser console for 404 errors
+
+### Iframe Not Filling Full Height
+If the app appears in a small box instead of filling the iframe:
+- **Shell side**: `identity-shell/frontend/src/components/AppContainer.css` must use flexbox layout
+- **App side**: `src/index.css` must set html/body/root/App to 100% height with flexbox
+- Both files are already configured correctly in this template
+- After changes, rebuild Identity Shell frontend: `cd identity-shell/frontend && npm run build`
 
 ## Notes
 

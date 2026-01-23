@@ -110,8 +110,14 @@ pub-games-v3/
 │       ├── frontend/
 │       └── README.md
 │
-├── static-apps/            # Legacy V2 apps (if needed)
-│   └── sweepstakes/        # Example static app
+├── static-apps/            # Static apps (iframe-embedded)
+│   ├── smoke-test/         # Template validation app (working)
+│   │   ├── main.go         # Serves both frontend + API
+│   │   ├── handlers.go     # API endpoints
+│   │   ├── database.go     # PostgreSQL setup
+│   │   ├── src/            # React frontend
+│   │   └── public/
+│   └── static-template/    # Template for new static apps
 │
 ├── shared/                 # Shared utilities
 │   ├── auth/              # Auth helpers
@@ -144,25 +150,30 @@ pub-games-v3/
 4010  - Chess Frontend
 4011  - Chess Backend
 
-5000  - Sweepstakes (static, iframe)
-5001  - Sweepstakes Backend
+5010  - Smoke Test Frontend (iframe)
+5011  - Smoke Test Backend API
+
+5020  - Static App Frontend (template pattern)
+5021  - Static App Backend API
 
 ... etc
 ```
 
 **Pattern**:
 - Shell uses 3000-3099
-- Interactive games use 4000-4999 (dev only)
-- Static apps use 5000+ (production iframes)
+- Interactive games use 4000-4999 (dev only, embedded as components)
+- Static apps use 5000+ (iframe embedded, dual ports: frontend + API)
 
 ---
 
 ## Development Phases
 
 ### Phase 1: Identity Shell Prototype ⬅️ **WE ARE HERE**
-- [ ] Basic shell UI (header + content area)
-- [ ] Auth system (login/logout)
-- [ ] App routing (load different apps)
+- [x] Basic shell UI (header + content area)
+- [x] Auth system (login/logout)
+- [x] App routing (load different apps)
+- [x] Iframe embedding with full-height rendering
+- [x] Static app template (smoke-test)
 - [ ] Simple presence tracking
 
 ### Phase 2: Lobby System
@@ -219,6 +230,27 @@ npm start
 3. **Backward Compatible**: Static V2 apps can run in iframes
 4. **Mobile Friendly**: Responsive design, touch-friendly
 5. **Real-time**: Long-polling for notifications (WebSocket later)
+
+---
+
+## Known Issues & Solutions
+
+### ✅ Iframe Height Issue (FIXED)
+**Problem**: Static apps appeared in small box instead of filling iframe.
+
+**Solution**:
+- Shell side: Use flexbox in `AppContainer.css` (not `position: relative`)
+- App side: Set `html/body/root` to `height: 100%` with flexbox in `index.css`
+- See commits: `b3227e8`, `7e32a2c`
+
+### ✅ Static App Serving (FIXED)
+**Problem**: Go backend only served API, frontend required separate `npm start`.
+
+**Solution**:
+- Modified `main.go` to run two HTTP servers (goroutine for API)
+- Port 5010: serves React static files (build/ or public/)
+- Port 5011: serves API endpoints
+- See commit: `f125b08`
 
 ---
 
