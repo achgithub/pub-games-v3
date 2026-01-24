@@ -44,9 +44,15 @@ CREATE INDEX IF NOT EXISTS idx_challenges_from_user ON challenges(from_user, sta
 CREATE INDEX IF NOT EXISTS idx_challenges_expires ON challenges(expires_at) WHERE status = 'pending';
 
 -- Grant permissions to pubgames user
-GRANT ALL ON TABLE users TO pubgames;
-GRANT ALL ON TABLE user_presence TO pubgames;
-GRANT ALL ON TABLE challenges TO pubgames;
+-- Grant on all existing tables
+GRANT ALL ON ALL TABLES IN SCHEMA public TO pubgames;
+
+-- Grant on all future tables (auto-grant for POC mode)
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO pubgames;
+
+-- Grant sequence permissions (for SERIAL columns like challenges.id if we add them)
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO pubgames;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO pubgames;
 
 -- Seed data: Admin user with code "123456"
 -- Password hash for "123456" using bcrypt (generated via Go bcrypt.GenerateFromPassword)
