@@ -31,18 +31,9 @@
   max-width: 300px;
   z-index: 9999;
   animation: slideInRight 0.3s ease-out;
-  cursor: pointer;
-  transition: all 0.2s;
   display: flex;
   gap: 0.75rem;
   align-items: center;
-}
-
-.challenge-toast:hover {
-  background: rgba(30, 41, 59, 0.95);
-  border-color: rgba(59, 130, 246, 0.5);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .challenge-toast-icon {
@@ -66,13 +57,6 @@
 .challenge-toast-message strong {
   color: #60a5fa;
   font-weight: 600;
-}
-
-.challenge-toast-hint {
-  margin: 0.25rem 0 0 0;
-  color: #64748b;
-  font-size: 0.75rem;
-  font-style: italic;
 }
 
 /* Mobile adjustments */

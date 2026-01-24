@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import './Lobby.css';
 import { AppDefinition, UserPresence, Challenge } from '../types';
 
@@ -27,6 +27,25 @@ const Lobby: React.FC<LobbyProps> = ({
   onAcceptChallenge,
   onRejectChallenge,
 }) => {
+  // Force re-render every second to update timers and filter expired challenges
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTick(tick => tick + 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  // Filter out expired challenges
+  const now = Date.now();
+  const activeReceivedChallenges = receivedChallenges.filter(
+    challenge => challenge.expiresAt * 1000 > now
+  );
+  const activeSentChallenges = sentChallenges.filter(
+    challenge => challenge.expiresAt * 1000 > now
+  );
 
   // Filter out lobby itself from the grid
   const availableGames = apps.filter(app => app.id !== 'lobby');
@@ -114,12 +133,12 @@ const Lobby: React.FC<LobbyProps> = ({
 
           {/* Received Challenges */}
           <div className="challenge-subsection">
-            <h3>📥 Received ({receivedChallenges.length})</h3>
+            <h3>📥 Received ({activeReceivedChallenges.length})</h3>
             <div className="challenges">
-              {receivedChallenges.length === 0 ? (
+              {activeReceivedChallenges.length === 0 ? (
                 <p className="placeholder-text">No incoming challenges</p>
               ) : (
-                receivedChallenges.map((challenge) => (
+                activeReceivedChallenges.map((challenge) => (
                   <div key={challenge.id} className="challenge-item">
                     <div className="challenge-info">
                       <strong>{challenge.fromUser}</strong> → <strong>{challenge.appId}</strong>
@@ -149,12 +168,12 @@ const Lobby: React.FC<LobbyProps> = ({
 
           {/* Sent Challenges */}
           <div className="challenge-subsection">
-            <h3>📤 Sent ({sentChallenges.length})</h3>
+            <h3>📤 Sent ({activeSentChallenges.length})</h3>
             <div className="challenges">
-              {sentChallenges.length === 0 ? (
+              {activeSentChallenges.length === 0 ? (
                 <p className="placeholder-text">No outgoing challenges</p>
               ) : (
-                sentChallenges.map((challenge) => (
+                activeSentChallenges.map((challenge) => (
                   <div key={challenge.id} className="challenge-item sent">
                     <div className="challenge-info">
                       <strong>{challenge.toUser}</strong> → <strong>{challenge.appId}</strong>

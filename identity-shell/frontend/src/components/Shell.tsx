@@ -72,12 +72,6 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout }) => {
     navigate(`/app/${appId}`);
   };
 
-  const handleToastClick = () => {
-    // Navigate to lobby to show challenges
-    navigate('/lobby');
-    setToastChallenge(null);
-  };
-
   const handleDismissToast = () => {
     setToastChallenge(null);
   };
@@ -130,7 +124,6 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout }) => {
         <ChallengeToast
           fromUser={toastChallenge.fromUser}
           appId={toastChallenge.appId}
-          onClick={handleToastClick}
           onDismiss={handleDismissToast}
         />
       )}
