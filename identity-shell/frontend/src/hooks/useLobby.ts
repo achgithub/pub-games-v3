@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { LobbyState } from '../types';
+import { LobbyState, Challenge } from '../types';
 
 const API_BASE = `http://${window.location.hostname}:3001/api`;
 
-export function useLobby(userEmail: string, onNewChallenge?: (challenge: any) => void) {
+export function useLobby(userEmail: string, onNewChallenge?: (challenge: Challenge) => void) {
   const [lobbyState, setLobbyState] = useState<LobbyState>({
     onlineUsers: [],
     receivedChallenges: [],
@@ -63,7 +63,7 @@ export function useLobby(userEmail: string, onNewChallenge?: (challenge: any) =>
 
       // Detect new challenges by ID (not count)
       if (onNewChallenge) {
-        challenges.forEach((challenge) => {
+        challenges.forEach((challenge: Challenge) => {
           if (!notifiedChallenges.current.has(challenge.id)) {
             notifiedChallenges.current.add(challenge.id);
             onNewChallenge(challenge);
