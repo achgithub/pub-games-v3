@@ -54,8 +54,8 @@ func main() {
 	// Setup router
 	r := mux.NewRouter()
 
-	// Static files (shared CSS for all apps)
-	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
+	// Shared CSS for mini-apps (renamed from /static/ to /shared/ to avoid conflict)
+	r.PathPrefix("/shared/").Handler(http.StripPrefix("/shared/", http.FileServer(http.Dir("./static"))))
 
 	// API routes
 	api := r.PathPrefix("/api").Subrouter()
@@ -74,7 +74,7 @@ func main() {
 	lobby.HandleFunc("/challenge/reject", HandleRejectChallenge).Methods("POST")
 	lobby.HandleFunc("/stream", HandleLobbyStream).Methods("GET")
 
-	// Serve frontend React app
+	// Serve frontend React app (includes /static/ for JS/CSS bundles)
 	frontendDir := "../frontend/build"
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir(frontendDir)))
 
