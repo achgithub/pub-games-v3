@@ -1,0 +1,78 @@
+package main
+
+import (
+	"database/sql"
+	"log"
+	"net/http"
+	"os"
+
+	"github.com/gorilla/handlers"
+	"github.com/gorilla/mux"
+	_ "github.com/lib/pq"
+)
+
+var db *sql.DB
+
+const (
+	APP_NAME     = "Tic-Tac-Toe"
+	BACKEND_PORT = "4001"
+)
+
+func main() {
+	log.Printf("🎮 %s Backend Starting", APP_NAME)
+
+	// Initialize Redis
+	if err := InitRedis(); err != nil {
+		log.Fatal("Failed to connect to Redis:", err)
+	}
+	log.Println("✅ Connected to Redis")
+
+	// Initialize PostgreSQL
+	var err error
+	db, err = InitDatabase()
+	if err != nil {
+		log.Fatal("Failed to connect to PostgreSQL:", err)
+	}
+	defer db.Close()
+	log.Println("✅ Connected to PostgreSQL")
+
+	// Setup router
+	r := mux.NewRouter()
+
+	// WebSocket endpoint
+	r.HandleFunc("/api/ws/game/{gameId}", gameWebSocketHandler)
+
+	// HTTP endpoints
+	r.HandleFunc("/api/health", handleHealth).Methods("GET")
+	r.HandleFunc("/api/game/{gameId}", handleGetGame).Methods("GET")
+	r.HandleFunc("/api/game", handleCreateGame).Methods("POST")
+	r.HandleFunc("/api/move", handleMakeMove).Methods("POST")
+	r.HandleFunc("/api/stats/{userId}", handleGetStats).Methods("GET")
+
+	// CORS configuration
+	corsHandler := handlers.CORS(
+		handlers.AllowedOrigins([]string{"*"}),
+		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
+		handlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
+		handlers.AllowCredentials(),
+	)
+
+	// Start server
+	port := getEnv("BACKEND_PORT", BACKEND_PORT)
+	log.Printf("🚀 %s backend listening on :%s", APP_NAME, port)
+	log.Fatal(http.ListenAndServe(":"+port, corsHandler(r)))
+}
+
+// handleHealth - Health check endpoint
+func handleHealth(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"status":"ok","service":"tic-tac-toe"}`))
+}
+
+// getEnv gets environment variable with fallback
+func getEnv(key, fallback string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return fallback
+}
