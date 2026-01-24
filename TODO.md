@@ -50,6 +50,17 @@
   - Redis-backed game state
   - Challenge integration
 
+- [ ] **Build Local Quizzing App**
+  - Pub quiz application (multi-player)
+  - Question bank management (PostgreSQL)
+  - Live quiz sessions with host controls
+  - Real-time scoring and leaderboard (Redis)
+  - Round-based format (multiple rounds per quiz)
+  - Team support (players can join teams)
+  - Answer submission with time limits
+  - Display integration (show questions on pub screens)
+  - Quiz history and statistics
+
 ### Display & Presentation System
 - [ ] **Screen Display / Slideshow Application**
   - Dedicated display app for pub screens/TVs
@@ -86,7 +97,7 @@
   - Or grey out/disable challenge button for offline users
 
 ### Mobile & UI
-- [ ] **Mobile UI optimization**
+- [ ] **Mobile web UI optimization**
   - Touch-friendly challenge buttons
   - Responsive lobby layout
   - Mobile toast positioning
@@ -117,6 +128,20 @@
   - Google Sign-In
   - Discord OAuth
   - GitHub OAuth (for developers)
+
+### Native Mobile Apps
+- [ ] **iOS and Android App Exploration**
+  - Lightweight native apps (React Native or similar)
+  - Online-only architecture (no offline functionality)
+  - Resource downloads for native look and feel
+    - Download game assets on first launch
+    - Cache CSS/UI resources locally
+    - Optimized images and icons
+  - Native UI components where beneficial
+  - Deep linking to games and challenges
+  - Push notifications for challenges
+  - App store deployment considerations
+  - Code sharing strategy with web version
 
 ### Lobby Features
 - [ ] **User status customization**
@@ -209,12 +234,21 @@
 ### Game Development Focus
 - Start with simpler games (Tic-Tac-Toe, Dots) to validate architecture
 - Migrate proven V2 games (Sweepstakes, Last Man Standing)
+- Quiz app is critical for pub engagement (multi-player, real-time)
 - Display system enables pub-wide engagement and visibility
 
 ### Display System Vision
 - Central display on pub TVs showing:
   - Live leaderboards across all games
+  - Quiz questions during active quiz sessions
   - Upcoming scheduled tournaments
   - Active games in progress
   - Social media buzz about the pub
   - Promotional content via URL embedding
+
+### Mobile App Strategy
+- Lightweight, online-only (no offline mode)
+- Resources downloaded and cached for performance
+- Native feel with web architecture underneath
+- Consider React Native or Capacitor for code sharing
+- Push notifications for challenges and quiz start times
