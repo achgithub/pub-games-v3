@@ -1,50 +1,50 @@
-@keyframes slideDown {
+@keyframes slideInRight {
   from {
-    transform: translateY(-100%);
+    transform: translateX(400px);
     opacity: 0;
   }
   to {
-    transform: translateY(0);
+    transform: translateX(0);
     opacity: 1;
   }
 }
 
 .challenge-toast {
   position: fixed;
-  top: 1rem;
-  left: 50%;
-  transform: translateX(-50%);
-  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-  border: 2px solid #3b82f6;
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-  width: 90%;
-  max-width: 400px;
+  top: 70px;
+  right: 1rem;
+  background: #1e293b;
+  border: 1px solid #3b82f6;
+  border-left: 4px solid #3b82f6;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  width: 320px;
+  max-width: calc(100vw - 2rem);
   z-index: 9999;
-  animation: slideDown 0.3s ease-out;
+  animation: slideInRight 0.3s ease-out;
 }
 
 .challenge-toast-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid #475569;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #334155;
 }
 
 .challenge-toast-icon {
-  font-size: 1.5rem;
+  font-size: 1.2rem;
 }
 
 .challenge-toast-close {
   background: transparent;
   border: none;
-  color: #94a3b8;
-  font-size: 1.5rem;
+  color: #64748b;
+  font-size: 1.25rem;
   cursor: pointer;
   padding: 0;
-  width: 2rem;
-  height: 2rem;
+  width: 1.5rem;
+  height: 1.5rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -53,23 +53,24 @@
 }
 
 .challenge-toast-close:hover {
-  background: #475569;
-  color: #f1f5f9;
+  background: #334155;
+  color: #cbd5e1;
 }
 
 .challenge-toast-body {
-  padding: 1rem;
+  padding: 0.75rem;
 }
 
 .challenge-toast-message {
-  margin: 0 0 1rem 0;
-  color: #f1f5f9;
-  font-size: 1rem;
-  text-align: center;
+  margin: 0 0 0.75rem 0;
+  color: #cbd5e1;
+  font-size: 0.9rem;
+  line-height: 1.4;
 }
 
 .challenge-toast-message strong {
-  color: #3b82f6;
+  color: #60a5fa;
+  font-weight: 600;
 }
 
 .challenge-toast-actions {
@@ -80,11 +81,11 @@
 .challenge-toast-accept,
 .challenge-toast-decline {
   flex: 1;
-  padding: 0.75rem;
+  padding: 0.5rem;
   border: none;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 1rem;
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: 0.85rem;
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -112,15 +113,9 @@
 /* Mobile adjustments */
 @media (max-width: 768px) {
   .challenge-toast {
-    top: 0.5rem;
-    width: 95%;
-  }
-
-  .challenge-toast-message {
-    font-size: 0.95rem;
-  }
-
-  .challenge-toast-actions {
-    flex-direction: column;
+    top: 60px;
+    right: 0.5rem;
+    width: calc(100vw - 1rem);
+    max-width: 320px;
   }
 }

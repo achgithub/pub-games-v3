@@ -11,7 +11,7 @@ export function useLobby(userEmail: string, onNewChallenge?: (challenge: any) =>
   });
 
   const eventSourceRef = useRef<EventSource | null>(null);
-  const previousChallengeCount = useRef(0);
+  const notifiedChallenges = useRef<Set<string>>(new Set());
 
   // Update user's presence
   const updatePresence = async (status: 'online' | 'in_game' | 'away', currentApp?: string) => {
@@ -59,12 +59,15 @@ export function useLobby(userEmail: string, onNewChallenge?: (challenge: any) =>
         lastUpdate: Date.now(),
       }));
 
-      // Detect new challenge and trigger callback
-      if (challenges.length > previousChallengeCount.current && onNewChallenge) {
-        const newestChallenge = challenges[0]; // Assumes newest is first
-        onNewChallenge(newestChallenge);
+      // Detect new challenges by ID (not count)
+      if (onNewChallenge) {
+        challenges.forEach((challenge) => {
+          if (!notifiedChallenges.current.has(challenge.id)) {
+            notifiedChallenges.current.add(challenge.id);
+            onNewChallenge(challenge);
+          }
+        });
       }
-      previousChallengeCount.current = challenges.length;
     } catch (err) {
       console.error('Failed to fetch challenges:', err);
     }

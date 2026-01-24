@@ -135,19 +135,11 @@ func HandleSendChallenge(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if recipient is online
-	users, err := GetOnlineUsers()
+	// Check if recipient is online (direct Redis check, more accurate)
+	recipientOnline, err := IsUserOnline(req.ToUser)
 	if err != nil {
 		http.Error(w, "Failed to verify user status", http.StatusInternalServerError)
 		return
-	}
-
-	recipientOnline := false
-	for _, u := range users {
-		if u.Email == req.ToUser {
-			recipientOnline = true
-			break
-		}
 	}
 
 	if !recipientOnline {

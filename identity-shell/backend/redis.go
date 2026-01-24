@@ -91,6 +91,16 @@ func RemoveUserPresence(email string) error {
 	return nil
 }
 
+// IsUserOnline checks if a specific user is currently online
+func IsUserOnline(email string) (bool, error) {
+	key := fmt.Sprintf("user:presence:%s", email)
+	exists, err := redisClient.Exists(ctx, key).Result()
+	if err != nil {
+		return false, err
+	}
+	return exists > 0, nil
+}
+
 // CreateChallenge creates a new challenge in Redis with 60s TTL
 func CreateChallenge(fromUser, toUser, appID string) (string, error) {
 	challengeID := fmt.Sprintf("%d-%s", time.Now().UnixNano(), fromUser)
