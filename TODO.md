@@ -26,40 +26,50 @@
 
 ### Game Migration & Development
 - [ ] **Migrate Tic-Tac-Toe**
-  - Port existing tic-tac-toe from V2 or integrate current prototype
+  - Port existing tic-tac-toe from V2 (has working WebSocket implementation)
   - Full challenge flow integration
-  - Real-time board state updates via Redis
+  - WebSocket for real-time move updates (low latency for fast gameplay)
+  - Redis for live game state persistence (crash recovery)
+  - PostgreSQL for game history and player stats
   - Game completion and result tracking
 
 - [ ] **Migrate Sweepstakes**
   - Port sweepstakes app from V2
   - Integrate with identity shell (iframe-embedded)
   - Update to use new auth system
+  - PostgreSQL only (static app, no real-time needed)
+  - Optional: Simple polling or SSE for "results ready" notification
   - Adapt UI to work within shell chrome
 
 - [ ] **Migrate Last Man Standing**
   - Port last man standing from V2
-  - Integrate with identity shell
+  - Integrate with identity shell (iframe-embedded)
+  - PostgreSQL only (static app, users pick and wait)
   - Solo mode support (no challenges)
-  - Multi-player mode support (with challenges)
+  - Multi-player competitive mode
+  - Optional: SSE for "round complete" notifications
 
 - [ ] **Create Dots Game**
   - New game implementation
   - Classic dots-and-boxes gameplay
-  - 2-player turn-based
-  - Redis-backed game state
+  - 2-player turn-based (can be fast-paced)
+  - WebSocket for real-time line drawing
+  - Redis for live game state persistence
+  - PostgreSQL for game history
   - Challenge integration
 
 - [ ] **Build Local Quizzing App**
   - Pub quiz application (multi-player)
   - Question bank management (PostgreSQL)
   - Live quiz sessions with host controls
-  - Real-time scoring and leaderboard (Redis)
+  - SSE for broadcasting questions and leaderboard updates (one-to-many)
+  - HTTP POST for answer submissions
+  - Real-time scoring and leaderboard (Redis sorted sets)
   - Round-based format (multiple rounds per quiz)
   - Team support (players can join teams)
   - Answer submission with time limits
-  - Display integration (show questions on pub screens)
-  - Quiz history and statistics
+  - Display integration (show questions on pub screens via SSE)
+  - Quiz history and statistics (PostgreSQL)
 
 ### Display & Presentation System
 - [ ] **Screen Display / Slideshow Application**

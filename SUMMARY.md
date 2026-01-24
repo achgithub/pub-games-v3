@@ -45,7 +45,30 @@
 
 ### Hybrid Data Strategy
 - **Redis**: Live game state, presence, active challenges, real-time pub/sub
-- **PostgreSQL**: User accounts, challenge history, persistent data
+- **PostgreSQL**: User accounts, challenge history, game results, persistent data
+
+### Real-Time Architecture by App Type
+
+**Fast Interactive Games** (Tic-Tac-Toe, Dots):
+- WebSocket for real-time moves (low latency)
+- Redis for live game state (crash recovery)
+- PostgreSQL for game history
+
+**Slow Interactive Games** (Chess, future):
+- SSE for move updates (simpler than WebSocket)
+- Redis for live game state
+- PostgreSQL for game history
+
+**Multi-Player Broadcast** (Quiz):
+- SSE for question/leaderboard updates (one-to-many)
+- Redis for live leaderboard and session state
+- PostgreSQL for questions and results
+
+**Static Apps** (Sweepstakes, Last Man Standing):
+- PostgreSQL only (no real-time needed)
+- Users make selections and wait for results
+- Optional: Simple polling or SSE for "results ready" notification
+- iframe-embedded, self-contained
 
 ### Challenge Flow
 1. User A sends challenge to User B

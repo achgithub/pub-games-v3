@@ -292,15 +292,21 @@ function TicTacToe({ gameId, user }) {
 
 ## Key Decisions
 
-### ✅ Use Redis for Live Games
-- Fast read/write for moves
-- Auto-expiry for abandoned games
-- Pub/sub for real-time updates (alternative to WebSocket broadcasting)
+### ✅ Use Redis for Live Game State (With WebSocket)
+- Game state persistence (survives server crashes)
+- Source of truth for reconnections
+- Auto-expiry for abandoned games (1 hour TTL)
+- WebSocket broadcasts moves (low latency)
+- Redis stores state (crash recovery)
+- Best of both: WebSocket speed + Redis durability
 
 ### ✅ Keep WebSocket for Real-Time Sync
 - V2's WebSocket implementation works well
 - Bidirectional handshake is solid
 - Disconnect detection is crucial for turn-based games
+- **Fast-paced gameplay**: Tic-tac-toe can have rapid moves (especially in series)
+- Low latency is critical for good UX
+- Redis still provides persistence for crash recovery
 
 ### ✅ Embed as React Component (Not Iframe)
 - Faster than iframe
