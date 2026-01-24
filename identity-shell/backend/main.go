@@ -76,7 +76,14 @@ func main() {
 
 	// Serve frontend React app (includes /static/ for JS/CSS bundles)
 	frontendDir := "../frontend/build"
-	r.PathPrefix("/").Handler(http.FileServer(http.Dir(frontendDir)))
+
+	// Serve static assets (JS, CSS, images)
+	r.PathPrefix("/static/").Handler(http.FileServer(http.Dir(frontendDir)))
+
+	// SPA fallback - serve index.html for all other routes (client-side routing)
+	r.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, frontendDir+"/index.html")
+	})
 
 	// CORS configuration - Allow requests from frontend on local network
 	corsHandler := handlers.CORS(

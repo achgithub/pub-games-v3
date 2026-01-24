@@ -44,7 +44,14 @@ func SetUserPresence(email, name, status, currentApp string) error {
 		return fmt.Errorf("failed to marshal presence: %w", err)
 	}
 
-	return redisClient.Set(ctx, key, data, 30*time.Second).Err()
+	if err := redisClient.Set(ctx, key, data, 30*time.Second).Err(); err != nil {
+		return err
+	}
+
+	// Notify all users about presence change
+	redisClient.Publish(ctx, "presence:updates", "presence_update")
+
+	return nil
 }
 
 // GetOnlineUsers retrieves all currently online users from Redis
@@ -74,7 +81,14 @@ func GetOnlineUsers() ([]UserPresence, error) {
 // RemoveUserPresence removes a user's presence from Redis
 func RemoveUserPresence(email string) error {
 	key := fmt.Sprintf("user:presence:%s", email)
-	return redisClient.Del(ctx, key).Err()
+	if err := redisClient.Del(ctx, key).Err(); err != nil {
+		return err
+	}
+
+	// Notify all users about presence change
+	redisClient.Publish(ctx, "presence:updates", "presence_update")
+
+	return nil
 }
 
 // CreateChallenge creates a new challenge in Redis with 60s TTL
@@ -193,6 +207,7 @@ func UpdateChallengeStatus(challengeID, status string) error {
 
 // SubscribeToUserEvents creates a Redis pub/sub subscription for user notifications
 func SubscribeToUserEvents(email string) *redis.PubSub {
-	channel := fmt.Sprintf("user:%s", email)
-	return redisClient.Subscribe(ctx, channel)
+	userChannel := fmt.Sprintf("user:%s", email)
+	// Subscribe to both user-specific channel and global presence updates
+	return redisClient.Subscribe(ctx, userChannel, "presence:updates")
 }
