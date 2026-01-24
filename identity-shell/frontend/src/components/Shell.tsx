@@ -59,12 +59,14 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout }) => {
 
   const {
     onlineUsers,
-    challenges,
+    receivedChallenges,
+    sentChallenges,
+    notification,
     sendChallenge,
     acceptChallenge,
     rejectChallenge,
   } = useLobby(user.email, handleNewChallenge);
-  const notificationCount = challenges.filter(c => c.status === 'pending').length;
+  const notificationCount = receivedChallenges.filter(c => c.status === 'pending').length;
 
   const handleAppClick = (appId: string) => {
     navigate(`/app/${appId}`);
@@ -154,7 +156,9 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout }) => {
                 onAppClick={handleAppClick}
                 userEmail={user.email}
                 onlineUsers={onlineUsers}
-                challenges={challenges}
+                receivedChallenges={receivedChallenges}
+                sentChallenges={sentChallenges}
+                notification={notification}
                 onSendChallenge={sendChallenge}
                 onAcceptChallenge={acceptChallenge}
                 onRejectChallenge={rejectChallenge}

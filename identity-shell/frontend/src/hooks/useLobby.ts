@@ -6,12 +6,14 @@ const API_BASE = `http://${window.location.hostname}:3001/api`;
 export function useLobby(userEmail: string, onNewChallenge?: (challenge: any) => void) {
   const [lobbyState, setLobbyState] = useState<LobbyState>({
     onlineUsers: [],
-    challenges: [],
+    receivedChallenges: [],
+    sentChallenges: [],
     lastUpdate: Date.now(),
   });
 
   const eventSourceRef = useRef<EventSource | null>(null);
   const notifiedChallenges = useRef<Set<string>>(new Set());
+  const [notification, setNotification] = useState<string | null>(null);
 
   // Update user's presence
   const updatePresence = async (status: 'online' | 'in_game' | 'away', currentApp?: string) => {
@@ -46,7 +48,7 @@ export function useLobby(userEmail: string, onNewChallenge?: (challenge: any) =>
     }
   };
 
-  // Fetch challenges
+  // Fetch received challenges
   const fetchChallenges = async () => {
     try {
       const response = await fetch(`${API_BASE}/lobby/challenges?email=${encodeURIComponent(userEmail)}`);
@@ -55,7 +57,7 @@ export function useLobby(userEmail: string, onNewChallenge?: (challenge: any) =>
 
       setLobbyState((prev) => ({
         ...prev,
-        challenges,
+        receivedChallenges: challenges,
         lastUpdate: Date.now(),
       }));
 
@@ -70,6 +72,21 @@ export function useLobby(userEmail: string, onNewChallenge?: (challenge: any) =>
       }
     } catch (err) {
       console.error('Failed to fetch challenges:', err);
+    }
+  };
+
+  // Fetch sent challenges
+  const fetchSentChallenges = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/lobby/challenges/sent?email=${encodeURIComponent(userEmail)}`);
+      const data = await response.json();
+      setLobbyState((prev) => ({
+        ...prev,
+        sentChallenges: data.challenges || [],
+        lastUpdate: Date.now(),
+      }));
+    } catch (err) {
+      console.error('Failed to fetch sent challenges:', err);
     }
   };
 
@@ -90,14 +107,27 @@ export function useLobby(userEmail: string, onNewChallenge?: (challenge: any) =>
         const error = await response.text();
         // Refresh user list when challenge fails (user likely offline)
         fetchOnlineUsers();
+        setNotification('User is offline');
+        setTimeout(() => setNotification(null), 3000);
         throw new Error(error);
       }
+
+      // Refresh sent challenges list
+      fetchSentChallenges();
+
+      // Show brief success notification
+      setNotification('Challenge sent!');
+      setTimeout(() => setNotification(null), 2000);
 
       return true;
     } catch (err) {
       console.error('Failed to send challenge:', err);
       // Refresh user list on any error
       fetchOnlineUsers();
+      if (!notification) {
+        setNotification('Failed to send challenge');
+        setTimeout(() => setNotification(null), 3000);
+      }
       return false;
     }
   };
@@ -148,9 +178,11 @@ export function useLobby(userEmail: string, onNewChallenge?: (challenge: any) =>
       } else if (data.type === 'accepted' || data.type === 'rejected') {
         // Refresh when challenge is responded to
         fetchChallenges();
+        fetchSentChallenges();
       } else if (data.type === 'presence_update') {
-        // Refresh online users
+        // Refresh online users and sent challenges (removes offline users)
         fetchOnlineUsers();
+        fetchSentChallenges();
       }
     };
 
@@ -162,10 +194,12 @@ export function useLobby(userEmail: string, onNewChallenge?: (challenge: any) =>
     updatePresence('online');
     fetchOnlineUsers();
     fetchChallenges();
+    fetchSentChallenges();
 
-    // Heartbeat every 20 seconds
+    // Heartbeat every 20 seconds (also refresh sent challenges to remove offline users)
     const heartbeat = setInterval(() => {
       updatePresence('online');
+      fetchSentChallenges();
     }, 20000);
 
     // Cleanup on unmount
@@ -206,6 +240,7 @@ export function useLobby(userEmail: string, onNewChallenge?: (challenge: any) =>
 
   return {
     ...lobbyState,
+    notification,
     updatePresence,
     sendChallenge,
     acceptChallenge,

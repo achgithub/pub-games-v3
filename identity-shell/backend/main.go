@@ -69,6 +69,7 @@ func main() {
 	lobby.HandleFunc("/presence", HandleUpdatePresence).Methods("POST")
 	lobby.HandleFunc("/presence/remove", HandleRemovePresence).Methods("POST")
 	lobby.HandleFunc("/challenges", HandleGetChallenges).Methods("GET")
+	lobby.HandleFunc("/challenges/sent", HandleGetSentChallenges).Methods("GET")
 	lobby.HandleFunc("/challenge", HandleSendChallenge).Methods("POST")
 	lobby.HandleFunc("/challenge/accept", HandleAcceptChallenge).Methods("POST")
 	lobby.HandleFunc("/challenge/reject", HandleRejectChallenge).Methods("POST")

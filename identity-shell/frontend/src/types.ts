@@ -53,6 +53,7 @@ export interface Challenge {
 // Lobby types
 export interface LobbyState {
   onlineUsers: UserPresence[];
-  challenges: Challenge[];
+  receivedChallenges: Challenge[];
+  sentChallenges: Challenge[];
   lastUpdate: number;
 }

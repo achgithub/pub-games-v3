@@ -1,3 +1,31 @@
+@keyframes slideInDown {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.lobby-notification {
+  position: fixed;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1e293b;
+  border: 1px solid #3b82f6;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  animation: slideInDown 0.3s ease-out;
+  color: #f1f5f9;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
 .lobby {
   padding: 2rem 1.5rem;
   max-width: 1400px;
@@ -124,6 +152,21 @@
 }
 
 /* Challenges */
+.challenge-subsection {
+  margin-bottom: 1.5rem;
+}
+
+.challenge-subsection:last-child {
+  margin-bottom: 0;
+}
+
+.challenge-subsection h3 {
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
 .challenge-item {
   padding: 1rem;
   background: #0f172a;
@@ -181,6 +224,17 @@
   font-size: 0.8rem;
   color: #64748b;
   text-align: center;
+}
+
+.challenge-status {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  text-align: center;
+  font-style: italic;
+}
+
+.challenge-item.sent {
+  border-left: 3px solid #3b82f6;
 }
 
 /* App Grid */

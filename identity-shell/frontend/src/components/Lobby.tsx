@@ -7,7 +7,9 @@ interface LobbyProps {
   onAppClick: (appId: string) => void;
   userEmail: string;
   onlineUsers: UserPresence[];
-  challenges: Challenge[];
+  receivedChallenges: Challenge[];
+  sentChallenges: Challenge[];
+  notification: string | null;
   onSendChallenge: (toUser: string, appId: string) => Promise<boolean>;
   onAcceptChallenge: (challengeId: string) => Promise<boolean>;
   onRejectChallenge: (challengeId: string) => Promise<boolean>;
@@ -18,7 +20,9 @@ const Lobby: React.FC<LobbyProps> = ({
   onAppClick,
   userEmail,
   onlineUsers,
-  challenges,
+  receivedChallenges,
+  sentChallenges,
+  notification,
   onSendChallenge,
   onAcceptChallenge,
   onRejectChallenge,
@@ -28,20 +32,12 @@ const Lobby: React.FC<LobbyProps> = ({
   const availableGames = apps.filter(app => app.id !== 'lobby');
 
   const handleChallengeUser = async (opponentEmail: string, appId: string) => {
-    const success = await onSendChallenge(opponentEmail, appId);
-    if (success) {
-      alert(`Challenge sent to ${opponentEmail}!`);
-    } else {
-      alert('Failed to send challenge - user may have gone offline');
-    }
+    await onSendChallenge(opponentEmail, appId);
   };
 
   const handleAcceptChallenge = async (challengeId: string) => {
-    const success = await onAcceptChallenge(challengeId);
-    if (success) {
-      // TODO: Navigate to game with challenge details
-      alert('Challenge accepted! (Game navigation coming soon)');
-    }
+    await onAcceptChallenge(challengeId);
+    // TODO: Navigate to game with challenge details
   };
 
   const handleRejectChallenge = async (challengeId: string) => {
@@ -50,6 +46,13 @@ const Lobby: React.FC<LobbyProps> = ({
 
   return (
     <div className="lobby">
+      {/* Notification Toast */}
+      {notification && (
+        <div className="lobby-notification">
+          {notification}
+        </div>
+      )}
+
       <div className="lobby-header">
         <h1>🏠 Game Lobby</h1>
         <p>Select a game or challenge someone!</p>
@@ -107,37 +110,65 @@ const Lobby: React.FC<LobbyProps> = ({
 
         {/* Challenges Section */}
         <section className="lobby-section">
-          <h2>⚔️ Challenges ({challenges.length})</h2>
-          <div className="challenges">
-            {challenges.length === 0 ? (
-              <p className="placeholder-text">No pending challenges</p>
-            ) : (
-              challenges.map((challenge) => (
-                <div key={challenge.id} className="challenge-item">
-                  <div className="challenge-info">
-                    <strong>{challenge.fromUser}</strong> challenges you to{' '}
-                    <strong>{challenge.appId}</strong>
+          <h2>⚔️ Challenges</h2>
+
+          {/* Received Challenges */}
+          <div className="challenge-subsection">
+            <h3>📥 Received ({receivedChallenges.length})</h3>
+            <div className="challenges">
+              {receivedChallenges.length === 0 ? (
+                <p className="placeholder-text">No incoming challenges</p>
+              ) : (
+                receivedChallenges.map((challenge) => (
+                  <div key={challenge.id} className="challenge-item">
+                    <div className="challenge-info">
+                      <strong>{challenge.fromUser}</strong> → <strong>{challenge.appId}</strong>
+                    </div>
+                    <div className="challenge-actions">
+                      <button
+                        className="accept-btn"
+                        onClick={() => handleAcceptChallenge(challenge.id)}
+                      >
+                        Accept
+                      </button>
+                      <button
+                        className="reject-btn"
+                        onClick={() => handleRejectChallenge(challenge.id)}
+                      >
+                        Decline
+                      </button>
+                    </div>
+                    <div className="challenge-timer">
+                      Expires in {Math.max(0, Math.floor((challenge.expiresAt * 1000 - Date.now()) / 1000))}s
+                    </div>
                   </div>
-                  <div className="challenge-actions">
-                    <button
-                      className="accept-btn"
-                      onClick={() => handleAcceptChallenge(challenge.id)}
-                    >
-                      Accept
-                    </button>
-                    <button
-                      className="reject-btn"
-                      onClick={() => handleRejectChallenge(challenge.id)}
-                    >
-                      Decline
-                    </button>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Sent Challenges */}
+          <div className="challenge-subsection">
+            <h3>📤 Sent ({sentChallenges.length})</h3>
+            <div className="challenges">
+              {sentChallenges.length === 0 ? (
+                <p className="placeholder-text">No outgoing challenges</p>
+              ) : (
+                sentChallenges.map((challenge) => (
+                  <div key={challenge.id} className="challenge-item sent">
+                    <div className="challenge-info">
+                      <strong>{challenge.toUser}</strong> → <strong>{challenge.appId}</strong>
+                    </div>
+                    <div className="challenge-status">
+                      Waiting for response...
+                    </div>
+                    <div className="challenge-timer">
+                      Expires in {Math.max(0, Math.floor((challenge.expiresAt * 1000 - Date.now()) / 1000))}s
+                    </div>
                   </div>
-                  <div className="challenge-timer">
-                    Expires in {Math.max(0, Math.floor((challenge.expiresAt * 1000 - Date.now()) / 1000))}s
-                  </div>
-                </div>
-              ))
-            )}
+                ))
+              )}
+            </div>
           </div>
         </section>
       </div>

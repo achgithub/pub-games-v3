@@ -127,11 +127,18 @@ func CreateChallenge(fromUser, toUser, appID string) (string, error) {
 	}
 
 	// Add to recipient's challenge queue
-	queueKey := fmt.Sprintf("user:challenges:%s", toUser)
-	if err := redisClient.LPush(ctx, queueKey, challengeID).Err(); err != nil {
-		return "", fmt.Errorf("failed to add to queue: %w", err)
+	recipientQueueKey := fmt.Sprintf("user:challenges:received:%s", toUser)
+	if err := redisClient.LPush(ctx, recipientQueueKey, challengeID).Err(); err != nil {
+		return "", fmt.Errorf("failed to add to recipient queue: %w", err)
 	}
-	redisClient.Expire(ctx, queueKey, 5*time.Minute)
+	redisClient.Expire(ctx, recipientQueueKey, 5*time.Minute)
+
+	// Add to sender's challenge queue
+	senderQueueKey := fmt.Sprintf("user:challenges:sent:%s", fromUser)
+	if err := redisClient.LPush(ctx, senderQueueKey, challengeID).Err(); err != nil {
+		return "", fmt.Errorf("failed to add to sender queue: %w", err)
+	}
+	redisClient.Expire(ctx, senderQueueKey, 5*time.Minute)
 
 	// Publish notification to recipient
 	channel := fmt.Sprintf("user:%s", toUser)
@@ -142,9 +149,37 @@ func CreateChallenge(fromUser, toUser, appID string) (string, error) {
 	return challengeID, nil
 }
 
-// GetUserChallenges retrieves all active challenges for a user
+// GetUserChallenges retrieves all active challenges received by a user
 func GetUserChallenges(email string) ([]Challenge, error) {
-	queueKey := fmt.Sprintf("user:challenges:%s", email)
+	queueKey := fmt.Sprintf("user:challenges:received:%s", email)
+	return getChallengesFromQueue(queueKey)
+}
+
+// GetSentChallenges retrieves all active challenges sent by a user
+func GetSentChallenges(email string) ([]Challenge, error) {
+	queueKey := fmt.Sprintf("user:challenges:sent:%s", email)
+	challenges, err := getChallengesFromQueue(queueKey)
+	if err != nil {
+		return nil, err
+	}
+
+	// Filter out challenges where recipient is offline >5s
+	validChallenges := []Challenge{}
+	for _, challenge := range challenges {
+		online, err := IsUserOnline(challenge.ToUser)
+		if err == nil && online {
+			validChallenges = append(validChallenges, challenge)
+		} else {
+			// Recipient offline, remove from sender's queue
+			redisClient.LRem(ctx, queueKey, 1, challenge.ID)
+		}
+	}
+
+	return validChallenges, nil
+}
+
+// getChallengesFromQueue is a helper to fetch challenges from a queue
+func getChallengesFromQueue(queueKey string) ([]Challenge, error) {
 	challengeIDs, err := redisClient.LRange(ctx, queueKey, 0, -1).Result()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get challenge queue: %w", err)
@@ -200,13 +235,17 @@ func UpdateChallengeStatus(challengeID, status string) error {
 		return fmt.Errorf("failed to update challenge: %w", err)
 	}
 
-	// Remove from recipient's queue
+	// Remove from both sender and recipient queues
 	toUser := challenge["toUser"].(string)
-	queueKey := fmt.Sprintf("user:challenges:%s", toUser)
-	redisClient.LRem(ctx, queueKey, 1, challengeID)
+	fromUser := challenge["fromUser"].(string)
+
+	recipientQueueKey := fmt.Sprintf("user:challenges:received:%s", toUser)
+	senderQueueKey := fmt.Sprintf("user:challenges:sent:%s", fromUser)
+
+	redisClient.LRem(ctx, recipientQueueKey, 1, challengeID)
+	redisClient.LRem(ctx, senderQueueKey, 1, challengeID)
 
 	// Notify challenger
-	fromUser := challenge["fromUser"].(string)
 	channel := fmt.Sprintf("user:%s", fromUser)
 	if err := redisClient.Publish(ctx, channel, status).Err(); err != nil {
 		return fmt.Errorf("challenge updated but notification failed: %w", err)

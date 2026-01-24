@@ -116,6 +116,28 @@ func HandleGetChallenges(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// HandleGetSentChallenges - GET /api/lobby/challenges/sent
+// Returns all challenges sent by a user
+func HandleGetSentChallenges(w http.ResponseWriter, r *http.Request) {
+	email := r.URL.Query().Get("email")
+	if email == "" {
+		http.Error(w, "Email parameter required", http.StatusBadRequest)
+		return
+	}
+
+	challenges, err := GetSentChallenges(email)
+	if err != nil {
+		log.Printf("Failed to fetch sent challenges: %v", err)
+		http.Error(w, "Failed to fetch sent challenges", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"challenges": challenges,
+	})
+}
+
 // HandleSendChallenge - POST /api/lobby/challenge
 // Sends a challenge from one user to another
 func HandleSendChallenge(w http.ResponseWriter, r *http.Request) {
