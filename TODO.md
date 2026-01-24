@@ -22,7 +22,52 @@
   - Game completion detection
   - Result persistence to PostgreSQL
 
-## 🟡 High Priority (Improves User Experience)
+## 🟡 High Priority (After Critical Integration Complete)
+
+### Game Migration & Development
+- [ ] **Migrate Tic-Tac-Toe**
+  - Port existing tic-tac-toe from V2 or integrate current prototype
+  - Full challenge flow integration
+  - Real-time board state updates via Redis
+  - Game completion and result tracking
+
+- [ ] **Migrate Sweepstakes**
+  - Port sweepstakes app from V2
+  - Integrate with identity shell (iframe-embedded)
+  - Update to use new auth system
+  - Adapt UI to work within shell chrome
+
+- [ ] **Migrate Last Man Standing**
+  - Port last man standing from V2
+  - Integrate with identity shell
+  - Solo mode support (no challenges)
+  - Multi-player mode support (with challenges)
+
+- [ ] **Create Dots Game**
+  - New game implementation
+  - Classic dots-and-boxes gameplay
+  - 2-player turn-based
+  - Redis-backed game state
+  - Challenge integration
+
+### Display & Presentation System
+- [ ] **Screen Display / Slideshow Application**
+  - Dedicated display app for pub screens/TVs
+  - URL embedding capabilities (show external content)
+  - Leaderboard display (pull from game databases)
+  - Upcoming games schedule
+  - Active games in progress
+  - App-driven content (games can push updates to display)
+  - Auto-rotation between slides
+  - Remote control/configuration
+
+- [ ] **Social Media Feed Aggregator**
+  - Retrieve pub-related social media posts
+  - Support for X/Twitter, Instagram, Facebook, TikTok
+  - Tag/hashtag filtering (pub-specific tags)
+  - Display in slideshow rotation
+  - Auto-refresh feed periodically
+  - Moderation/filtering capabilities
 
 ### Lobby & Challenges
 - [ ] **Challenge app selection**
@@ -89,16 +134,17 @@
   - Friends list in lobby
   - Challenge friends button
 
-### Games
-- [ ] **Additional game templates**
+### Additional Game Features
+- [ ] **Spectator mode**
+  - Watch ongoing games in real-time
+  - View game history/replays
+  - Share game links
+
+- [ ] **Future games** (after initial 4 are complete)
   - Chess
   - Checkers
   - Connect Four
   - Card games (Hearts, Spades)
-
-- [ ] **Spectator mode**
-  - Watch ongoing games
-  - View game history/replays
 
 ## 🔵 Low Priority (Future Enhancements)
 
@@ -154,6 +200,21 @@
 
 ## Notes
 
-- Focus on game integration before adding more lobby features
-- Mobile optimization should come after core gameplay works
-- Documentation can wait until architecture stabilizes
+### Priority Order
+1. **Critical first**: Get tic-tac-toe working end-to-end with challenge flow
+2. **Then migrate games**: Sweepstakes, Last Man Standing, create Dots
+3. **Then display system**: Screen slideshow with leaderboards and social feeds
+4. **Then polish**: Mobile optimization, additional features, documentation
+
+### Game Development Focus
+- Start with simpler games (Tic-Tac-Toe, Dots) to validate architecture
+- Migrate proven V2 games (Sweepstakes, Last Man Standing)
+- Display system enables pub-wide engagement and visibility
+
+### Display System Vision
+- Central display on pub TVs showing:
+  - Live leaderboards across all games
+  - Upcoming scheduled tournaments
+  - Active games in progress
+  - Social media buzz about the pub
+  - Promotional content via URL embedding
