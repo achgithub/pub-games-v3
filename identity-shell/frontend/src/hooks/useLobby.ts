@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { UserPresence, Challenge, LobbyState } from '../types';
+import { Challenge, LobbyState } from '../types';
 
 const API_BASE = `http://${window.location.hostname}:3001/api`;
 
