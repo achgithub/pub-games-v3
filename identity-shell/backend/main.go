@@ -74,6 +74,10 @@ func main() {
 	lobby.HandleFunc("/challenge/reject", HandleRejectChallenge).Methods("POST")
 	lobby.HandleFunc("/stream", HandleLobbyStream).Methods("GET")
 
+	// Serve frontend React app
+	frontendDir := "../frontend/build"
+	r.PathPrefix("/").Handler(http.FileServer(http.Dir(frontendDir)))
+
 	// CORS configuration - Allow requests from frontend on local network
 	corsHandler := handlers.CORS(
 		handlers.AllowedOrigins([]string{"*"}),
