@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import './Shell.css';
 import { User, AppDefinition } from '../types';
+import { useLobby } from '../hooks/useLobby';
 import Lobby from './Lobby';
 import AppContainer from './AppContainer';
 
@@ -49,7 +50,8 @@ const APPS: AppDefinition[] = [
 
 const Shell: React.FC<ShellProps> = ({ user, onLogout }) => {
   const navigate = useNavigate();
-  const [notificationCount] = useState(0); // Will be dynamic with lobby
+  const { challenges } = useLobby(user.email);
+  const notificationCount = challenges.filter(c => c.status === 'pending').length;
 
   const handleAppClick = (appId: string) => {
     navigate(`/app/${appId}`);
@@ -104,7 +106,7 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout }) => {
           <Route path="/" element={<Navigate to="/lobby" replace />} />
           <Route
             path="/lobby"
-            element={<Lobby apps={APPS} onAppClick={handleAppClick} />}
+            element={<Lobby apps={APPS} onAppClick={handleAppClick} userEmail={user.email} />}
           />
           <Route
             path="/app/:appId"

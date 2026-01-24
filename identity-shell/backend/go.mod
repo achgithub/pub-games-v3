@@ -3,6 +3,7 @@ module identity-shell
 go 1.25
 
 require (
+	github.com/go-redis/redis/v8 v8.11.5
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
 	github.com/lib/pq v1.10.9

@@ -1,0 +1,198 @@
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"time"
+
+	"github.com/go-redis/redis/v8"
+)
+
+var redisClient *redis.Client
+var ctx = context.Background()
+
+// InitRedis initializes the Redis connection
+func InitRedis() error {
+	redisClient = redis.NewClient(&redis.Options{
+		Addr:     getEnv("REDIS_HOST", "127.0.0.1") + ":" + getEnv("REDIS_PORT", "6379"),
+		Password: getEnv("REDIS_PASSWORD", ""),
+		DB:       0,
+	})
+
+	_, err := redisClient.Ping(ctx).Result()
+	if err != nil {
+		return fmt.Errorf("failed to connect to Redis: %w", err)
+	}
+
+	return nil
+}
+
+// SetUserPresence updates a user's presence in Redis with 30s TTL
+func SetUserPresence(email, name, status, currentApp string) error {
+	key := fmt.Sprintf("user:presence:%s", email)
+	presence := map[string]interface{}{
+		"email":       email,
+		"displayName": name,
+		"status":      status,
+		"currentApp":  currentApp,
+		"lastSeen":    time.Now().Unix(),
+	}
+
+	data, err := json.Marshal(presence)
+	if err != nil {
+		return fmt.Errorf("failed to marshal presence: %w", err)
+	}
+
+	return redisClient.Set(ctx, key, data, 30*time.Second).Err()
+}
+
+// GetOnlineUsers retrieves all currently online users from Redis
+func GetOnlineUsers() ([]UserPresence, error) {
+	keys, err := redisClient.Keys(ctx, "user:presence:*").Result()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get presence keys: %w", err)
+	}
+
+	users := []UserPresence{}
+	for _, key := range keys {
+		data, err := redisClient.Get(ctx, key).Result()
+		if err != nil {
+			continue // Key expired between Keys() and Get()
+		}
+
+		var presence UserPresence
+		if err := json.Unmarshal([]byte(data), &presence); err != nil {
+			continue
+		}
+		users = append(users, presence)
+	}
+
+	return users, nil
+}
+
+// RemoveUserPresence removes a user's presence from Redis
+func RemoveUserPresence(email string) error {
+	key := fmt.Sprintf("user:presence:%s", email)
+	return redisClient.Del(ctx, key).Err()
+}
+
+// CreateChallenge creates a new challenge in Redis with 60s TTL
+func CreateChallenge(fromUser, toUser, appID string) (string, error) {
+	challengeID := fmt.Sprintf("%d-%s", time.Now().UnixNano(), fromUser)
+	key := fmt.Sprintf("challenge:%s", challengeID)
+
+	challenge := map[string]interface{}{
+		"id":        challengeID,
+		"fromUser":  fromUser,
+		"toUser":    toUser,
+		"appId":     appID,
+		"status":    "pending",
+		"createdAt": time.Now().Unix(),
+		"expiresAt": time.Now().Add(60 * time.Second).Unix(),
+	}
+
+	data, err := json.Marshal(challenge)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal challenge: %w", err)
+	}
+
+	// Store challenge with 60s TTL
+	if err := redisClient.Set(ctx, key, data, 60*time.Second).Err(); err != nil {
+		return "", fmt.Errorf("failed to store challenge: %w", err)
+	}
+
+	// Add to recipient's challenge queue
+	queueKey := fmt.Sprintf("user:challenges:%s", toUser)
+	if err := redisClient.LPush(ctx, queueKey, challengeID).Err(); err != nil {
+		return "", fmt.Errorf("failed to add to queue: %w", err)
+	}
+	redisClient.Expire(ctx, queueKey, 5*time.Minute)
+
+	// Publish notification to recipient
+	channel := fmt.Sprintf("user:%s", toUser)
+	if err := redisClient.Publish(ctx, channel, "challenge_received").Err(); err != nil {
+		return challengeID, fmt.Errorf("challenge created but notification failed: %w", err)
+	}
+
+	return challengeID, nil
+}
+
+// GetUserChallenges retrieves all active challenges for a user
+func GetUserChallenges(email string) ([]Challenge, error) {
+	queueKey := fmt.Sprintf("user:challenges:%s", email)
+	challengeIDs, err := redisClient.LRange(ctx, queueKey, 0, -1).Result()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get challenge queue: %w", err)
+	}
+
+	challenges := []Challenge{}
+	for _, id := range challengeIDs {
+		key := fmt.Sprintf("challenge:%s", id)
+		data, err := redisClient.Get(ctx, key).Result()
+		if err != nil {
+			// Challenge expired, remove from queue
+			redisClient.LRem(ctx, queueKey, 1, id)
+			continue
+		}
+
+		var challenge Challenge
+		if err := json.Unmarshal([]byte(data), &challenge); err != nil {
+			continue
+		}
+		challenges = append(challenges, challenge)
+	}
+
+	return challenges, nil
+}
+
+// UpdateChallengeStatus updates a challenge's status and notifies the challenger
+func UpdateChallengeStatus(challengeID, status string) error {
+	key := fmt.Sprintf("challenge:%s", challengeID)
+
+	// Get current challenge
+	data, err := redisClient.Get(ctx, key).Result()
+	if err != nil {
+		return fmt.Errorf("challenge not found or expired")
+	}
+
+	var challenge map[string]interface{}
+	if err := json.Unmarshal([]byte(data), &challenge); err != nil {
+		return fmt.Errorf("failed to parse challenge: %w", err)
+	}
+
+	// Update status
+	challenge["status"] = status
+	challenge["respondedAt"] = time.Now().Unix()
+
+	newData, err := json.Marshal(challenge)
+	if err != nil {
+		return fmt.Errorf("failed to marshal updated challenge: %w", err)
+	}
+
+	// If accepted/rejected, set shorter TTL (5s for notification, then cleanup)
+	ttl := 5 * time.Second
+	if err := redisClient.Set(ctx, key, newData, ttl).Err(); err != nil {
+		return fmt.Errorf("failed to update challenge: %w", err)
+	}
+
+	// Remove from recipient's queue
+	toUser := challenge["toUser"].(string)
+	queueKey := fmt.Sprintf("user:challenges:%s", toUser)
+	redisClient.LRem(ctx, queueKey, 1, challengeID)
+
+	// Notify challenger
+	fromUser := challenge["fromUser"].(string)
+	channel := fmt.Sprintf("user:%s", fromUser)
+	if err := redisClient.Publish(ctx, channel, status).Err(); err != nil {
+		return fmt.Errorf("challenge updated but notification failed: %w", err)
+	}
+
+	return nil
+}
+
+// SubscribeToUserEvents creates a Redis pub/sub subscription for user notifications
+func SubscribeToUserEvents(email string) *redis.PubSub {
+	channel := fmt.Sprintf("user:%s", email)
+	return redisClient.Subscribe(ctx, channel)
+}

@@ -44,6 +44,13 @@ func main() {
 
 	log.Println("✅ Connected to PostgreSQL database")
 
+	// Initialize Redis
+	if err := InitRedis(); err != nil {
+		log.Fatal("Failed to connect to Redis:", err)
+	}
+
+	log.Println("✅ Connected to Redis")
+
 	// Setup router
 	r := mux.NewRouter()
 
@@ -55,6 +62,17 @@ func main() {
 	api.HandleFunc("/health", handleHealth).Methods("GET")
 	api.HandleFunc("/login", handleLogin).Methods("POST")
 	api.HandleFunc("/validate", handleValidate).Methods("POST")
+
+	// Lobby endpoints
+	lobby := r.PathPrefix("/api/lobby").Subrouter()
+	lobby.HandleFunc("/presence", HandleGetPresence).Methods("GET")
+	lobby.HandleFunc("/presence", HandleUpdatePresence).Methods("POST")
+	lobby.HandleFunc("/presence/remove", HandleRemovePresence).Methods("POST")
+	lobby.HandleFunc("/challenges", HandleGetChallenges).Methods("GET")
+	lobby.HandleFunc("/challenge", HandleSendChallenge).Methods("POST")
+	lobby.HandleFunc("/challenge/accept", HandleAcceptChallenge).Methods("POST")
+	lobby.HandleFunc("/challenge/reject", HandleRejectChallenge).Methods("POST")
+	lobby.HandleFunc("/stream", HandleLobbyStream).Methods("GET")
 
 	// CORS configuration - Allow requests from frontend on local network
 	corsHandler := handlers.CORS(

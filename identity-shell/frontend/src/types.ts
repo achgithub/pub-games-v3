@@ -24,7 +24,7 @@ export interface UserPresence {
   displayName: string;
   status: UserStatus;
   currentApp?: string;
-  lastSeen: string;
+  lastSeen: number; // Unix timestamp
 }
 
 // App types
@@ -46,8 +46,8 @@ export interface Challenge {
   toUser: string;
   appId: string;
   status: 'pending' | 'accepted' | 'rejected' | 'expired';
-  createdAt: string;
-  expiresAt: string;
+  createdAt: number; // Unix timestamp
+  expiresAt: number; // Unix timestamp
 }
 
 // Lobby types
