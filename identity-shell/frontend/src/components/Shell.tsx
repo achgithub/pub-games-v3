@@ -72,18 +72,10 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout }) => {
     navigate(`/app/${appId}`);
   };
 
-  const handleAcceptToast = async () => {
-    if (toastChallenge) {
-      await acceptChallenge(toastChallenge.id);
-      setToastChallenge(null);
-    }
-  };
-
-  const handleDeclineToast = async () => {
-    if (toastChallenge) {
-      await rejectChallenge(toastChallenge.id);
-      setToastChallenge(null);
-    }
+  const handleToastClick = () => {
+    // Navigate to lobby to show challenges
+    navigate('/lobby');
+    setToastChallenge(null);
   };
 
   const handleDismissToast = () => {
@@ -138,8 +130,7 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout }) => {
         <ChallengeToast
           fromUser={toastChallenge.fromUser}
           appId={toastChallenge.appId}
-          onAccept={handleAcceptToast}
-          onDecline={handleDeclineToast}
+          onClick={handleToastClick}
           onDismiss={handleDismissToast}
         />
       )}

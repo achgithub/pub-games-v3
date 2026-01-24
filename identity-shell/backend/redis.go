@@ -101,8 +101,62 @@ func IsUserOnline(email string) (bool, error) {
 	return exists > 0, nil
 }
 
+// HasPendingChallengeBetween checks if there's already a pending challenge between two users (in either direction)
+func HasPendingChallengeBetween(user1, user2 string) (bool, error) {
+	// Check user1's received challenges for any from user2
+	receivedKey := fmt.Sprintf("user:challenges:received:%s", user1)
+	receivedIDs, err := redisClient.LRange(ctx, receivedKey, 0, -1).Result()
+	if err == nil {
+		for _, id := range receivedIDs {
+			challengeKey := fmt.Sprintf("challenge:%s", id)
+			data, err := redisClient.Get(ctx, challengeKey).Result()
+			if err != nil {
+				continue
+			}
+			var challenge Challenge
+			if err := json.Unmarshal([]byte(data), &challenge); err != nil {
+				continue
+			}
+			if challenge.FromUser == user2 && challenge.Status == "pending" {
+				return true, nil
+			}
+		}
+	}
+
+	// Check user1's sent challenges for any to user2
+	sentKey := fmt.Sprintf("user:challenges:sent:%s", user1)
+	sentIDs, err := redisClient.LRange(ctx, sentKey, 0, -1).Result()
+	if err == nil {
+		for _, id := range sentIDs {
+			challengeKey := fmt.Sprintf("challenge:%s", id)
+			data, err := redisClient.Get(ctx, challengeKey).Result()
+			if err != nil {
+				continue
+			}
+			var challenge Challenge
+			if err := json.Unmarshal([]byte(data), &challenge); err != nil {
+				continue
+			}
+			if challenge.ToUser == user2 && challenge.Status == "pending" {
+				return true, nil
+			}
+		}
+	}
+
+	return false, nil
+}
+
 // CreateChallenge creates a new challenge in Redis with 60s TTL
 func CreateChallenge(fromUser, toUser, appID string) (string, error) {
+	// Check if there's already a pending challenge between these users
+	hasPending, err := HasPendingChallengeBetween(fromUser, toUser)
+	if err != nil {
+		return "", fmt.Errorf("failed to check for pending challenges: %w", err)
+	}
+	if hasPending {
+		return "", fmt.Errorf("there is already a pending challenge between these users")
+	}
+
 	challengeID := fmt.Sprintf("%d-%s", time.Now().UnixNano(), fromUser)
 	key := fmt.Sprintf("challenge:%s", challengeID)
 
