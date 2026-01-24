@@ -118,3 +118,27 @@
   color: #94a3b8;
   font-weight: 600;
 }
+
+.qr-section {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #334155;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.qr-label {
+  font-size: 0.9rem;
+  color: #94a3b8;
+  font-weight: 500;
+  margin: 0;
+}
+
+.qr-section svg {
+  background: white;
+  padding: 0.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}

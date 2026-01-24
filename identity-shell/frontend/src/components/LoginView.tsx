@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import './LoginView.css';
 
 interface LoginViewProps {
@@ -69,6 +70,16 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
         <div className="login-footer">
           <p className="demo-hint">Demo: Use code <code>123456</code></p>
+
+          <div className="qr-section">
+            <p className="qr-label">📱 Scan to login on mobile</p>
+            <QRCodeSVG
+              value={window.location.origin}
+              size={150}
+              level="M"
+              includeMargin={true}
+            />
+          </div>
         </div>
       </div>
     </div>
