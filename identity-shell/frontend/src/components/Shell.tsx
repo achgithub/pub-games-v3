@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import './Shell.css';
 import { User, AppDefinition } from '../types';
 import { useLobby } from '../hooks/useLobby';
 import Lobby from './Lobby';
 import AppContainer from './AppContainer';
+import ChallengeToast from './ChallengeToast';
 
 interface ShellProps {
   user: User;
@@ -50,11 +51,41 @@ const APPS: AppDefinition[] = [
 
 const Shell: React.FC<ShellProps> = ({ user, onLogout }) => {
   const navigate = useNavigate();
-  const { challenges } = useLobby(user.email);
+  const [toastChallenge, setToastChallenge] = useState<any | null>(null);
+
+  const handleNewChallenge = (challenge: any) => {
+    setToastChallenge(challenge);
+  };
+
+  const {
+    onlineUsers,
+    challenges,
+    sendChallenge,
+    acceptChallenge,
+    rejectChallenge,
+  } = useLobby(user.email, handleNewChallenge);
   const notificationCount = challenges.filter(c => c.status === 'pending').length;
 
   const handleAppClick = (appId: string) => {
     navigate(`/app/${appId}`);
+  };
+
+  const handleAcceptToast = async () => {
+    if (toastChallenge) {
+      await acceptChallenge(toastChallenge.id);
+      setToastChallenge(null);
+    }
+  };
+
+  const handleDeclineToast = async () => {
+    if (toastChallenge) {
+      await rejectChallenge(toastChallenge.id);
+      setToastChallenge(null);
+    }
+  };
+
+  const handleDismissToast = () => {
+    setToastChallenge(null);
   };
 
   return (
@@ -100,13 +131,35 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout }) => {
         </div>
       </header>
 
+      {/* Challenge Toast Notification */}
+      {toastChallenge && (
+        <ChallengeToast
+          fromUser={toastChallenge.fromUser}
+          appId={toastChallenge.appId}
+          onAccept={handleAcceptToast}
+          onDecline={handleDeclineToast}
+          onDismiss={handleDismissToast}
+        />
+      )}
+
       {/* Main Content Area */}
       <main className="shell-content">
         <Routes>
           <Route path="/" element={<Navigate to="/lobby" replace />} />
           <Route
             path="/lobby"
-            element={<Lobby apps={APPS} onAppClick={handleAppClick} userEmail={user.email} />}
+            element={
+              <Lobby
+                apps={APPS}
+                onAppClick={handleAppClick}
+                userEmail={user.email}
+                onlineUsers={onlineUsers}
+                challenges={challenges}
+                onSendChallenge={sendChallenge}
+                onAcceptChallenge={acceptChallenge}
+                onRejectChallenge={rejectChallenge}
+              />
+            }
           />
           <Route
             path="/app/:appId"

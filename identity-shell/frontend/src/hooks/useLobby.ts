@@ -3,7 +3,7 @@ import { LobbyState } from '../types';
 
 const API_BASE = `http://${window.location.hostname}:3001/api`;
 
-export function useLobby(userEmail: string) {
+export function useLobby(userEmail: string, onNewChallenge?: (challenge: any) => void) {
   const [lobbyState, setLobbyState] = useState<LobbyState>({
     onlineUsers: [],
     challenges: [],
@@ -11,6 +11,7 @@ export function useLobby(userEmail: string) {
   });
 
   const eventSourceRef = useRef<EventSource | null>(null);
+  const previousChallengeCount = useRef(0);
 
   // Update user's presence
   const updatePresence = async (status: 'online' | 'in_game' | 'away', currentApp?: string) => {
@@ -50,11 +51,20 @@ export function useLobby(userEmail: string) {
     try {
       const response = await fetch(`${API_BASE}/lobby/challenges?email=${encodeURIComponent(userEmail)}`);
       const data = await response.json();
+      const challenges = data.challenges || [];
+
       setLobbyState((prev) => ({
         ...prev,
-        challenges: data.challenges || [],
+        challenges,
         lastUpdate: Date.now(),
       }));
+
+      // Detect new challenge and trigger callback
+      if (challenges.length > previousChallengeCount.current && onNewChallenge) {
+        const newestChallenge = challenges[0]; // Assumes newest is first
+        onNewChallenge(newestChallenge);
+      }
+      previousChallengeCount.current = challenges.length;
     } catch (err) {
       console.error('Failed to fetch challenges:', err);
     }
@@ -75,12 +85,16 @@ export function useLobby(userEmail: string) {
 
       if (!response.ok) {
         const error = await response.text();
+        // Refresh user list when challenge fails (user likely offline)
+        fetchOnlineUsers();
         throw new Error(error);
       }
 
       return true;
     } catch (err) {
       console.error('Failed to send challenge:', err);
+      // Refresh user list on any error
+      fetchOnlineUsers();
       return false;
     }
   };

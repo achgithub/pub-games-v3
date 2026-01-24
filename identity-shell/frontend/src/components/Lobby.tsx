@@ -1,37 +1,43 @@
 import React from 'react';
 import './Lobby.css';
-import { AppDefinition } from '../types';
-import { useLobby } from '../hooks/useLobby';
+import { AppDefinition, UserPresence, Challenge } from '../types';
 
 interface LobbyProps {
   apps: AppDefinition[];
   onAppClick: (appId: string) => void;
   userEmail: string;
+  onlineUsers: UserPresence[];
+  challenges: Challenge[];
+  onSendChallenge: (toUser: string, appId: string) => Promise<boolean>;
+  onAcceptChallenge: (challengeId: string) => Promise<boolean>;
+  onRejectChallenge: (challengeId: string) => Promise<boolean>;
 }
 
-const Lobby: React.FC<LobbyProps> = ({ apps, onAppClick, userEmail }) => {
-  const {
-    onlineUsers,
-    challenges,
-    sendChallenge,
-    acceptChallenge,
-    rejectChallenge,
-  } = useLobby(userEmail);
+const Lobby: React.FC<LobbyProps> = ({
+  apps,
+  onAppClick,
+  userEmail,
+  onlineUsers,
+  challenges,
+  onSendChallenge,
+  onAcceptChallenge,
+  onRejectChallenge,
+}) => {
 
   // Filter out lobby itself from the grid
   const availableGames = apps.filter(app => app.id !== 'lobby');
 
   const handleChallengeUser = async (opponentEmail: string, appId: string) => {
-    const success = await sendChallenge(opponentEmail, appId);
+    const success = await onSendChallenge(opponentEmail, appId);
     if (success) {
       alert(`Challenge sent to ${opponentEmail}!`);
     } else {
-      alert('Failed to send challenge');
+      alert('Failed to send challenge - user may have gone offline');
     }
   };
 
   const handleAcceptChallenge = async (challengeId: string) => {
-    const success = await acceptChallenge(challengeId);
+    const success = await onAcceptChallenge(challengeId);
     if (success) {
       // TODO: Navigate to game with challenge details
       alert('Challenge accepted! (Game navigation coming soon)');
@@ -39,7 +45,7 @@ const Lobby: React.FC<LobbyProps> = ({ apps, onAppClick, userEmail }) => {
   };
 
   const handleRejectChallenge = async (challengeId: string) => {
-    await rejectChallenge(challengeId);
+    await onRejectChallenge(challengeId);
   };
 
   return (
