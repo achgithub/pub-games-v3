@@ -43,6 +43,11 @@ CREATE INDEX IF NOT EXISTS idx_challenges_to_user ON challenges(to_user, status,
 CREATE INDEX IF NOT EXISTS idx_challenges_from_user ON challenges(from_user, status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_challenges_expires ON challenges(expires_at) WHERE status = 'pending';
 
+-- Grant permissions to pubgames user
+GRANT ALL ON TABLE users TO pubgames;
+GRANT ALL ON TABLE user_presence TO pubgames;
+GRANT ALL ON TABLE challenges TO pubgames;
+
 -- Seed data: Admin user with code "123456"
 -- Password hash for "123456" using bcrypt (generated via Go bcrypt.GenerateFromPassword)
 INSERT INTO users (email, name, code_hash, is_admin)
