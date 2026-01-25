@@ -1,7 +1,5 @@
 package main
 
-import "time"
-
 // GameMode represents the type of game
 type GameMode string
 

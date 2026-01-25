@@ -100,13 +100,10 @@ func processGameResult(game *Game) (bool, string) {
 	winnerSymbol, hasWinner, isDraw := checkWinner(game.Board)
 
 	if hasWinner {
-		// Determine winner ID
-		var winnerID int
+		// Update scores
 		if winnerSymbol == game.Player1Symbol {
-			winnerID = game.Player1ID
 			game.Player1Score++
 		} else {
-			winnerID = game.Player2ID
 			game.Player2Score++
 		}
 
