@@ -314,3 +314,42 @@ func SubscribeToUserEvents(email string) *redis.PubSub {
 	// Subscribe to both user-specific channel and global presence updates
 	return redisClient.Subscribe(ctx, userChannel, "presence:updates")
 }
+
+// GetChallenge retrieves a challenge by ID from Redis
+func GetChallenge(challengeID string) (*Challenge, error) {
+	key := fmt.Sprintf("challenge:%s", challengeID)
+	data, err := redisClient.Get(ctx, key).Result()
+	if err != nil {
+		return nil, fmt.Errorf("challenge not found or expired")
+	}
+
+	var challenge Challenge
+	if err := json.Unmarshal([]byte(data), &challenge); err != nil {
+		return nil, fmt.Errorf("failed to parse challenge: %w", err)
+	}
+
+	return &challenge, nil
+}
+
+// GetUserPresence retrieves a user's presence info from Redis
+func GetUserPresence(email string) (*UserPresence, error) {
+	key := fmt.Sprintf("user:presence:%s", email)
+	data, err := redisClient.Get(ctx, key).Result()
+	if err != nil {
+		return nil, fmt.Errorf("user not found or offline")
+	}
+
+	var presence UserPresence
+	if err := json.Unmarshal([]byte(data), &presence); err != nil {
+		return nil, fmt.Errorf("failed to parse presence: %w", err)
+	}
+
+	return &presence, nil
+}
+
+// PublishGameStarted notifies a user that a game has started
+func PublishGameStarted(email, appID, gameID string) error {
+	channel := fmt.Sprintf("user:%s", email)
+	payload := fmt.Sprintf("game_started:%s:%s", appID, gameID)
+	return redisClient.Publish(ctx, channel, payload).Err()
+}

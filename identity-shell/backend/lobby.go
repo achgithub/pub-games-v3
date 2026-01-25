@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"time"
@@ -196,7 +198,7 @@ func HandleSendChallenge(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleAcceptChallenge - POST /api/lobby/challenge/accept
-// Accepts a challenge
+// Accepts a challenge and creates a game
 func HandleAcceptChallenge(w http.ResponseWriter, r *http.Request) {
 	challengeID := r.URL.Query().Get("id")
 	if challengeID == "" {
@@ -204,14 +206,43 @@ func HandleAcceptChallenge(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := UpdateChallengeStatus(challengeID, "accepted"); err != nil {
-		log.Printf("Failed to accept challenge: %v", err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	// Get challenge details before updating status
+	challenge, err := GetChallenge(challengeID)
+	if err != nil {
+		log.Printf("Failed to get challenge: %v", err)
+		http.Error(w, "Challenge not found or expired", http.StatusBadRequest)
 		return
 	}
 
+	// Get player display names from presence
+	player1Name := challenge.FromUser // default to email
+	player2Name := challenge.ToUser
+
+	if presence, err := GetUserPresence(challenge.FromUser); err == nil {
+		player1Name = presence.DisplayName
+	}
+	if presence, err := GetUserPresence(challenge.ToUser); err == nil {
+		player2Name = presence.DisplayName
+	}
+
+	// Create game via tic-tac-toe API
+	gameID, err := createGameForChallenge(challenge, player1Name, player2Name)
+	if err != nil {
+		log.Printf("Failed to create game: %v", err)
+		http.Error(w, "Failed to create game", http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("✅ Game created: %s for challenge %s", gameID, challengeID)
+
+	// Update challenge status
+	if err := UpdateChallengeStatus(challengeID, "accepted"); err != nil {
+		log.Printf("Failed to accept challenge: %v", err)
+		// Game was created, continue anyway
+	}
+
 	// Update PostgreSQL
-	_, err := db.Exec(`
+	_, err = db.Exec(`
 		UPDATE challenges
 		SET status = 'accepted', responded_at = NOW()
 		WHERE id = $1
@@ -221,8 +252,81 @@ func HandleAcceptChallenge(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Failed to update challenge in database: %v", err)
 	}
 
+	// Notify both players that game has started
+	if err := PublishGameStarted(challenge.FromUser, challenge.AppID, gameID); err != nil {
+		log.Printf("Failed to notify challenger: %v", err)
+	}
+	if err := PublishGameStarted(challenge.ToUser, challenge.AppID, gameID); err != nil {
+		log.Printf("Failed to notify accepter: %v", err)
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{"success": true})
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"gameId":  gameID,
+		"appId":   challenge.AppID,
+	})
+}
+
+// createGameForChallenge calls the game's API to create a new game
+func createGameForChallenge(challenge *Challenge, player1Name, player2Name string) (string, error) {
+	// Get the game backend URL from app registry
+	gameURL := getGameBackendURL(challenge.AppID)
+	if gameURL == "" {
+		return "", fmt.Errorf("unknown app: %s", challenge.AppID)
+	}
+
+	// Create game request
+	reqBody := map[string]interface{}{
+		"challengeId":   challenge.ID,
+		"player1Id":     challenge.FromUser, // Challenger is player 1 (X)
+		"player1Name":   player1Name,
+		"player2Id":     challenge.ToUser, // Accepter is player 2 (O)
+		"player2Name":   player2Name,
+		"mode":          "normal",
+		"moveTimeLimit": 0,
+		"firstTo":       1,
+	}
+
+	jsonBody, err := json.Marshal(reqBody)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	resp, err := http.Post(gameURL+"/api/game", "application/json", bytes.NewBuffer(jsonBody))
+	if err != nil {
+		return "", fmt.Errorf("failed to call game API: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("game API error: %s", string(body))
+	}
+
+	var result struct {
+		Success bool   `json:"success"`
+		GameID  string `json:"gameId"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return "", fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	if !result.Success {
+		return "", fmt.Errorf("game creation failed")
+	}
+
+	return result.GameID, nil
+}
+
+// getGameBackendURL returns the backend URL for a game app from the registry
+func getGameBackendURL(appID string) string {
+	app := GetAppByID(appID)
+	if app == nil || app.BackendPort == 0 {
+		return ""
+	}
+	return fmt.Sprintf("http://127.0.0.1:%d", app.BackendPort)
 }
 
 // HandleRejectChallenge - POST /api/lobby/challenge/reject
@@ -288,8 +392,8 @@ func HandleLobbyStream(w http.ResponseWriter, r *http.Request) {
 	for {
 		select {
 		case msg := <-ch:
-			// Send event to client
-			event := map[string]string{"type": msg.Payload}
+			// Parse and send event to client
+			event := parseSSEPayload(msg.Payload)
 			data, _ := json.Marshal(event)
 			fmt.Fprintf(w, "data: %s\n\n", data)
 			if flusher, ok := w.(http.Flusher); ok {
@@ -309,4 +413,27 @@ func HandleLobbyStream(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+}
+
+// parseSSEPayload converts Redis pub/sub messages to SSE event format
+func parseSSEPayload(payload string) map[string]interface{} {
+	// Check for game_started:appId:gameId format
+	if len(payload) > 13 && payload[:13] == "game_started:" {
+		parts := payload[13:] // Remove "game_started:" prefix
+		// Find the separator between appId and gameId
+		for i, c := range parts {
+			if c == ':' {
+				appID := parts[:i]
+				gameID := parts[i+1:]
+				return map[string]interface{}{
+					"type":   "game_started",
+					"appId":  appID,
+					"gameId": gameID,
+				}
+			}
+		}
+	}
+
+	// Default: simple type message
+	return map[string]interface{}{"type": payload}
 }

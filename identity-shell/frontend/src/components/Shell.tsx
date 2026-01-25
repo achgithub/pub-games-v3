@@ -24,6 +24,11 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout }) => {
     setToastChallenge(challenge);
   };
 
+  const handleGameStart = (appId: string, gameId: string) => {
+    // Navigate to the game with the gameId
+    navigate(`/app/${appId}?gameId=${encodeURIComponent(gameId)}`);
+  };
+
   const {
     onlineUsers,
     receivedChallenges,
@@ -32,7 +37,10 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout }) => {
     sendChallenge,
     acceptChallenge,
     rejectChallenge,
-  } = useLobby(user.email, handleNewChallenge);
+  } = useLobby(user.email, {
+    onNewChallenge: handleNewChallenge,
+    onGameStart: handleGameStart,
+  });
   const notificationCount = receivedChallenges.filter(c => c.status === 'pending').length;
 
   const handleAppClick = (appId: string) => {

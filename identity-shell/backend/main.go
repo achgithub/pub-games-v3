@@ -51,6 +51,11 @@ func main() {
 
 	log.Println("✅ Connected to Redis")
 
+	// Load app registry
+	if err := LoadAppRegistry(); err != nil {
+		log.Printf("Warning: Failed to load app registry: %v", err)
+	}
+
 	// Setup router
 	r := mux.NewRouter()
 
@@ -194,22 +199,8 @@ func getEnv(key, defaultValue string) string {
 
 // handleGetApps returns the list of registered apps
 func handleGetApps(w http.ResponseWriter, r *http.Request) {
-	// Read apps.json config file
-	data, err := os.ReadFile("./apps.json")
-	if err != nil {
-		log.Printf("Failed to read apps.json: %v", err)
-		http.Error(w, "Failed to load apps registry", http.StatusInternalServerError)
-		return
-	}
-
-	// Parse JSON to validate and potentially transform
-	var registry map[string]interface{}
-	if err := json.Unmarshal(data, &registry); err != nil {
-		log.Printf("Failed to parse apps.json: %v", err)
-		http.Error(w, "Invalid apps registry format", http.StatusInternalServerError)
-		return
-	}
-
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(registry)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"apps": GetAllApps(),
+	})
 }

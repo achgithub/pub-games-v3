@@ -3,7 +3,13 @@ import { LobbyState, Challenge } from '../types';
 
 const API_BASE = `http://${window.location.hostname}:3001/api`;
 
-export function useLobby(userEmail: string, onNewChallenge?: (challenge: Challenge) => void) {
+interface UseLobbyOptions {
+  onNewChallenge?: (challenge: Challenge) => void;
+  onGameStart?: (appId: string, gameId: string) => void;
+}
+
+export function useLobby(userEmail: string, options?: UseLobbyOptions) {
+  const { onNewChallenge, onGameStart } = options || {};
   const [lobbyState, setLobbyState] = useState<LobbyState>({
     onlineUsers: [],
     receivedChallenges: [],
@@ -183,6 +189,11 @@ export function useLobby(userEmail: string, onNewChallenge?: (challenge: Challen
         // Refresh online users and sent challenges (removes offline users)
         fetchOnlineUsers();
         fetchSentChallenges();
+      } else if (data.type === 'game_started') {
+        // Game has been created - navigate to it
+        if (onGameStart && data.appId && data.gameId) {
+          onGameStart(data.appId, data.gameId);
+        }
       }
     };
 
