@@ -10,6 +10,83 @@ Multi-app platform for pub-based games and activities. Microservices architectur
 - **Mini-apps** - Independent games/activities (tic-tac-toe, quizzes, etc.)
 - Each mini-app has its own database - enables independent deployments
 
+### Mini-App Architecture (Single Port per App)
+
+**Key Decision:** Each mini-app is a **standalone service** that serves both its API and frontend from a single port. The shell embeds apps via **iframe only** - no React component imports.
+
+**Why single port:**
+- Simpler deployment (one process per app)
+- No CORS issues (frontend and API same origin)
+- Independent scaling and updates
+- Adding new apps requires NO shell rebuilds
+
+**How it works:**
+```
+┌─────────────────────────────────────────┐
+│ Identity Shell (port 3001)              │
+│ ┌─────────────────────────────────────┐ │
+│ │ iframe src="http://pi:4001?userId=x"│ │
+│ │                                     │ │
+│ │   Tic-Tac-Toe (port 4001)          │ │
+│ │   - Go backend serves /api/*       │ │
+│ │   - Go backend serves React build  │ │
+│ │   - WebSocket at /api/ws/game/{id} │ │
+│ │                                     │ │
+│ └─────────────────────────────────────┘ │
+└─────────────────────────────────────────┘
+```
+
+**App structure:**
+```
+games/tic-tac-toe/
+├── backend/
+│   ├── main.go          # Serves API + static files
+│   ├── static/          # React build output
+│   └── ...
+├── frontend/
+│   ├── src/             # React source
+│   ├── public/
+│   └── package.json
+└── database/
+    └── schema.sql
+```
+
+**Build process:**
+```bash
+cd frontend && npm run build
+cp -r build/* ../backend/static/
+cd ../backend && go run *.go  # Serves everything on one port
+```
+
+### App Registry
+
+**Dynamic app discovery** - Shell fetches available apps from API, no hardcoding.
+
+**Registry file:** `identity-shell/backend/apps.json`
+```json
+{
+  "apps": [
+    {
+      "id": "tic-tac-toe",
+      "name": "Tic-Tac-Toe",
+      "icon": "⭕",
+      "type": "iframe",
+      "url": "http://{host}:4001",
+      "category": "game",
+      "realtime": "websocket"
+    }
+  ]
+}
+```
+
+**Shell fetches:** `GET /api/apps` → returns registry
+**Shell embeds:** `<iframe src="http://pi:4001?userId=x&gameId=y" />`
+
+**Adding a new app:**
+1. Create the app (backend + frontend)
+2. Add entry to `apps.json`
+3. Done - no shell rebuild needed
+
 ### Database Architecture
 
 **PostgreSQL** - System of record, persistent data:
