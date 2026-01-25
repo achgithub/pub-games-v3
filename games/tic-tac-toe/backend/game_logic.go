@@ -40,7 +40,7 @@ func checkWinner(board []string) (string, bool, bool) {
 }
 
 // validateMove checks if a move is valid
-func validateMove(game *Game, playerID int, position int) error {
+func validateMove(game *Game, playerID string, position int) error {
 	// Check if game is active
 	if game.Status != GameStatusActive {
 		return &GameError{Code: 400, Message: "Game is not active"}
@@ -66,7 +66,7 @@ func validateMove(game *Game, playerID int, position int) error {
 }
 
 // applyMove applies a move to the game board
-func applyMove(game *Game, playerID int, position int) (*Game, error) {
+func applyMove(game *Game, playerID string, position int) (*Game, error) {
 	// Validate the move
 	if err := validateMove(game, playerID, position); err != nil {
 		return nil, err

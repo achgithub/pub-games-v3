@@ -28,15 +28,23 @@ export interface UserPresence {
 }
 
 // App types
+export type AppType = 'internal' | 'iframe';
+export type RealtimeType = 'websocket' | 'sse' | 'none';
+
 export interface AppDefinition {
   id: string;
   name: string;
   icon: string;
-  type: 'static' | 'interactive';
-  url?: string; // For static apps (iframe)
-  component?: React.ComponentType<any>; // For interactive games
+  type: AppType;
+  url?: string; // URL template with {host} placeholder
   description: string;
   category: 'game' | 'utility' | 'admin';
+  backendPort?: number;
+  realtime?: RealtimeType;
+}
+
+export interface AppsRegistry {
+  apps: AppDefinition[];
 }
 
 // Challenge types

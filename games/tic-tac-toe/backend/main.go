@@ -49,6 +49,10 @@ func main() {
 	r.HandleFunc("/api/move", handleMakeMove).Methods("POST")
 	r.HandleFunc("/api/stats/{userId}", handleGetStats).Methods("GET")
 
+	// Serve static frontend files (React build output)
+	staticDir := getEnv("STATIC_DIR", "./static")
+	r.PathPrefix("/").Handler(spaHandler{staticPath: staticDir, indexPath: "index.html"})
+
 	// CORS configuration
 	corsHandler := handlers.CORS(
 		handlers.AllowedOrigins([]string{"*"}),
@@ -75,4 +79,32 @@ func getEnv(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+// spaHandler serves a single-page application
+type spaHandler struct {
+	staticPath string
+	indexPath  string
+}
+
+func (h spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Get the absolute path to prevent directory traversal
+	path := r.URL.Path
+
+	// Prepend the static directory
+	fullPath := h.staticPath + path
+
+	// Check if file exists
+	_, err := os.Stat(fullPath)
+	if os.IsNotExist(err) {
+		// File doesn't exist, serve index.html for SPA routing
+		http.ServeFile(w, r, h.staticPath+"/"+h.indexPath)
+		return
+	} else if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// File exists, serve it
+	http.FileServer(http.Dir(h.staticPath)).ServeHTTP(w, r)
 }

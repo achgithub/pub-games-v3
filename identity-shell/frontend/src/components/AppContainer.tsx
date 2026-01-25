@@ -1,7 +1,8 @@
 import React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import './AppContainer.css';
 import { AppDefinition, User } from '../types';
+import { buildAppUrl } from '../hooks/useApps';
 
 interface AppContainerProps {
   apps: AppDefinition[];
@@ -10,7 +11,11 @@ interface AppContainerProps {
 
 const AppContainer: React.FC<AppContainerProps> = ({ apps, user }) => {
   const { appId } = useParams<{ appId: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+
+  // Get gameId from URL if present (for challenge-based games)
+  const gameId = searchParams.get('gameId') || undefined;
 
   const app = apps.find((a) => a.id === appId);
 
@@ -23,6 +28,15 @@ const AppContainer: React.FC<AppContainerProps> = ({ apps, user }) => {
       </div>
     );
   }
+
+  // Build the iframe URL with user context
+  const iframeUrl = app.type === 'iframe' && app.url
+    ? buildAppUrl(app, {
+        userId: user.email,
+        userName: user.name,
+        gameId,
+      })
+    : null;
 
   return (
     <div className="app-container">
@@ -37,15 +51,20 @@ const AppContainer: React.FC<AppContainerProps> = ({ apps, user }) => {
       </div>
 
       <div className="app-content">
-        {app.type === 'static' && app.url ? (
+        {app.type === 'iframe' && iframeUrl ? (
           <iframe
-            src={`${app.url}?user=${encodeURIComponent(user.email)}&name=${encodeURIComponent(user.name)}&admin=${user.is_admin || false}`}
+            src={iframeUrl}
             title={app.name}
             className="app-iframe"
-            sandbox="allow-same-origin allow-scripts allow-forms"
+            sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
           />
-        ) : app.type === 'interactive' && app.component ? (
-          <app.component user={user} />
+        ) : app.type === 'internal' ? (
+          <div className="app-placeholder">
+            <div className="app-icon-large">{app.icon}</div>
+            <h3>{app.name}</h3>
+            <p>{app.description}</p>
+            <p className="coming-soon">Internal app - handled by shell routing</p>
+          </div>
         ) : (
           <div className="app-placeholder">
             <div className="app-icon-large">{app.icon}</div>

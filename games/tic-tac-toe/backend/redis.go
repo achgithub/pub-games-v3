@@ -147,7 +147,7 @@ func UpdateGameScore(gameID string, player1Score, player2Score, currentRound int
 }
 
 // CompleteGame marks a game as completed
-func CompleteGame(gameID string, winnerID *int) error {
+func CompleteGame(gameID string, winnerID *string) error {
 	game, err := GetGame(gameID)
 	if err != nil {
 		return err

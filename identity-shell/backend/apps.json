@@ -1,0 +1,44 @@
+{
+  "apps": [
+    {
+      "id": "lobby",
+      "name": "Lobby",
+      "icon": "🏠",
+      "type": "internal",
+      "description": "View online users and challenges",
+      "category": "utility"
+    },
+    {
+      "id": "tic-tac-toe",
+      "name": "Tic-Tac-Toe",
+      "icon": "⭕",
+      "type": "iframe",
+      "description": "Classic grid game - first to 3 wins!",
+      "category": "game",
+      "url": "http://{host}:4001",
+      "backendPort": 4001,
+      "realtime": "websocket"
+    },
+    {
+      "id": "smoke-test",
+      "name": "Smoke Test",
+      "icon": "🧪",
+      "type": "iframe",
+      "description": "Template validation and smoke testing",
+      "category": "utility",
+      "url": "http://{host}:5010",
+      "backendPort": 5010
+    },
+    {
+      "id": "sweepstakes",
+      "name": "Sweepstakes",
+      "icon": "🎁",
+      "type": "iframe",
+      "description": "Draw competitions",
+      "category": "game",
+      "url": "http://{host}:5020",
+      "backendPort": 5020,
+      "realtime": "none"
+    }
+  ]
+}

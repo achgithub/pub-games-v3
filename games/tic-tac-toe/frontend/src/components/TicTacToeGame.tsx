@@ -1,0 +1,133 @@
+import React from 'react';
+import TicTacToeBoard from './TicTacToeBoard';
+import { useGameSocket, Game } from '../hooks/useGameSocket';
+import '../styles/tictactoe.css';
+
+// User type from identity shell
+interface User {
+  email: string;
+  name: string;
+  is_admin?: boolean;
+}
+
+interface TicTacToeGameProps {
+  gameId: string | null;
+  user: User;
+}
+
+const TicTacToeGame: React.FC<TicTacToeGameProps> = ({ gameId, user }) => {
+  const userId = user.email;
+  const { game, connected, ready, error, opponentDisconnected, makeMove } = useGameSocket(gameId, userId);
+
+  // No gameId provided - show instructions
+  if (!gameId) {
+    return (
+      <div className="ttt-container">
+        <div className="ttt-message">
+          <h2>Tic-Tac-Toe</h2>
+          <p>Challenge another player from the lobby to start a game!</p>
+          <p className="ttt-hint">Go back to the lobby and click on a player to send a challenge.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Loading state
+  if (!game) {
+    return (
+      <div className="ttt-container">
+        <div className="ttt-message">
+          <div className="ttt-loading">Connecting to game...</div>
+          {error && <div className="ttt-error">{error}</div>}
+        </div>
+      </div>
+    );
+  }
+
+  // Determine player info
+  const isPlayer1 = userId === game.player1Id;
+  const mySymbol = isPlayer1 ? game.player1Symbol : game.player2Symbol;
+  const myName = isPlayer1 ? game.player1Name : game.player2Name;
+  const opponentName = isPlayer1 ? game.player2Name : game.player1Name;
+  const myScore = isPlayer1 ? game.player1Score : game.player2Score;
+  const opponentScore = isPlayer1 ? game.player2Score : game.player1Score;
+
+  // Determine turn
+  const myPlayerNumber = isPlayer1 ? 1 : 2;
+  const isMyTurn = game.currentTurn === myPlayerNumber;
+
+  // Game status
+  const gameEnded = game.status === 'completed';
+  const iWon = game.winnerId === userId;
+  const isDraw = gameEnded && game.winnerId === null;
+
+  // Status message
+  const getStatusMessage = () => {
+    if (opponentDisconnected) {
+      return 'Opponent disconnected';
+    }
+    if (!connected) {
+      return 'Reconnecting...';
+    }
+    if (!ready) {
+      return 'Waiting for opponent to connect...';
+    }
+    if (gameEnded) {
+      if (isDraw) {
+        return "It's a draw!";
+      }
+      return iWon ? 'You won!' : 'You lost!';
+    }
+    return isMyTurn ? 'Your turn' : "Opponent's turn";
+  };
+
+  return (
+    <div className="ttt-container">
+      {/* Header with scores */}
+      <div className="ttt-header">
+        <div className="ttt-player ttt-player-me">
+          <span className="ttt-player-symbol">{mySymbol}</span>
+          <span className="ttt-player-name">{myName} (You)</span>
+          <span className="ttt-player-score">{myScore}</span>
+        </div>
+
+        <div className="ttt-vs">
+          <span className="ttt-round">Round {game.currentRound}</span>
+          <span className="ttt-first-to">First to {game.firstTo}</span>
+        </div>
+
+        <div className="ttt-player ttt-player-opponent">
+          <span className="ttt-player-score">{opponentScore}</span>
+          <span className="ttt-player-name">{opponentName}</span>
+          <span className="ttt-player-symbol">{isPlayer1 ? game.player2Symbol : game.player1Symbol}</span>
+        </div>
+      </div>
+
+      {/* Status message */}
+      <div className={`ttt-status ${isMyTurn && !gameEnded ? 'ttt-status-myturn' : ''} ${gameEnded ? (iWon ? 'ttt-status-won' : 'ttt-status-lost') : ''}`}>
+        {getStatusMessage()}
+      </div>
+
+      {/* Game board */}
+      <TicTacToeBoard
+        board={game.board}
+        onCellClick={makeMove}
+        myTurn={isMyTurn}
+        mySymbol={mySymbol}
+        disabled={!ready || !connected || gameEnded}
+      />
+
+      {/* Connection status */}
+      {!connected && (
+        <div className="ttt-connection-status">
+          <span className="ttt-connection-dot ttt-disconnected"></span>
+          Disconnected
+        </div>
+      )}
+
+      {error && <div className="ttt-error">{error}</div>}
+    </div>
+  );
+};
+
+export default TicTacToeGame;

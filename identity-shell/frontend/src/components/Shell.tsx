@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import './Shell.css';
-import { User, AppDefinition } from '../types';
+import { User } from '../types';
 import { useLobby } from '../hooks/useLobby';
+import { useApps } from '../hooks/useApps';
 import Lobby from './Lobby';
 import AppContainer from './AppContainer';
 import ChallengeToast from './ChallengeToast';
@@ -12,46 +13,12 @@ interface ShellProps {
   onLogout: () => void;
 }
 
-// Demo app registry
-const APPS: AppDefinition[] = [
-  {
-    id: 'lobby',
-    name: 'Lobby',
-    icon: '🏠',
-    type: 'interactive',
-    description: 'View online users and challenges',
-    category: 'utility',
-  },
-  {
-    id: 'smoke-test',
-    name: 'Smoke Test',
-    icon: '🧪',
-    type: 'static',
-    description: 'Template validation and smoke testing',
-    category: 'utility',
-    url: `http://${window.location.hostname}:5010`,
-  },
-  {
-    id: 'tic-tac-toe',
-    name: 'Tic-Tac-Toe',
-    icon: '⭕',
-    type: 'interactive',
-    description: 'Classic grid game',
-    category: 'game',
-  },
-  {
-    id: 'sweepstakes',
-    name: 'Sweepstakes',
-    icon: '🎁',
-    type: 'interactive',
-    description: 'Draw competitions',
-    category: 'game',
-  },
-];
-
 const Shell: React.FC<ShellProps> = ({ user, onLogout }) => {
   const navigate = useNavigate();
   const [toastChallenge, setToastChallenge] = useState<any | null>(null);
+
+  // Fetch apps from registry
+  const { apps, loading: appsLoading, error: appsError } = useApps();
 
   const handleNewChallenge = (challenge: any) => {
     setToastChallenge(challenge);
@@ -130,40 +97,44 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout }) => {
 
       {/* Main Content Area */}
       <main className="shell-content">
-        <Routes>
-          <Route path="/" element={<Navigate to="/lobby" replace />} />
-          <Route
-            path="/lobby"
-            element={
-              <Lobby
-                apps={APPS}
-                onAppClick={handleAppClick}
-                userEmail={user.email}
-                onlineUsers={onlineUsers}
-                receivedChallenges={receivedChallenges}
-                sentChallenges={sentChallenges}
-                notification={notification}
-                onSendChallenge={sendChallenge}
-                onAcceptChallenge={acceptChallenge}
-                onRejectChallenge={rejectChallenge}
-              />
-            }
-          />
-          <Route
-            path="/app/:appId"
-            element={<AppContainer apps={APPS} user={user} />}
-          />
-          <Route
-            path="/profile"
-            element={
-              <div className="placeholder-view">
-                <h2>👤 Profile</h2>
-                <p>Profile management coming soon...</p>
-              </div>
-            }
-          />
-          <Route path="*" element={<Navigate to="/lobby" replace />} />
-        </Routes>
+        {appsLoading ? (
+          <div className="loading-apps">Loading apps...</div>
+        ) : (
+          <Routes>
+            <Route path="/" element={<Navigate to="/lobby" replace />} />
+            <Route
+              path="/lobby"
+              element={
+                <Lobby
+                  apps={apps}
+                  onAppClick={handleAppClick}
+                  userEmail={user.email}
+                  onlineUsers={onlineUsers}
+                  receivedChallenges={receivedChallenges}
+                  sentChallenges={sentChallenges}
+                  notification={notification}
+                  onSendChallenge={sendChallenge}
+                  onAcceptChallenge={acceptChallenge}
+                  onRejectChallenge={rejectChallenge}
+                />
+              }
+            />
+            <Route
+              path="/app/:appId"
+              element={<AppContainer apps={apps} user={user} />}
+            />
+            <Route
+              path="/profile"
+              element={
+                <div className="placeholder-view">
+                  <h2>👤 Profile</h2>
+                  <p>Profile management coming soon...</p>
+                </div>
+              }
+            />
+            <Route path="*" element={<Navigate to="/lobby" replace />} />
+          </Routes>
+        )}
       </main>
     </div>
   );

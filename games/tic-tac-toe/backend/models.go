@@ -21,10 +21,10 @@ const (
 type Game struct {
 	ID            string     `json:"id"`
 	ChallengeID   string     `json:"challengeId,omitempty"`
-	Player1ID     int        `json:"player1Id"`
+	Player1ID     string     `json:"player1Id"`     // Email address
 	Player1Name   string     `json:"player1Name"`
 	Player1Symbol string     `json:"player1Symbol"` // "X" or "O"
-	Player2ID     int        `json:"player2Id"`
+	Player2ID     string     `json:"player2Id"`     // Email address
 	Player2Name   string     `json:"player2Name"`
 	Player2Symbol string     `json:"player2Symbol"` // "X" or "O"
 	Board         []string   `json:"board"`         // Array of 9 cells
@@ -36,7 +36,7 @@ type Game struct {
 	Player1Score  int        `json:"player1Score"`  // Wins in this series
 	Player2Score  int        `json:"player2Score"`  // Wins in this series
 	CurrentRound  int        `json:"currentRound"`  // Which round in the series
-	WinnerID      *int       `json:"winnerId"`      // NULL during play
+	WinnerID      *string    `json:"winnerId"`      // NULL during play
 	LastMoveAt    int64      `json:"lastMoveAt"`    // Unix timestamp
 	CreatedAt     int64      `json:"createdAt"`     // Unix timestamp
 	CompletedAt   *int64     `json:"completedAt,omitempty"`
@@ -45,7 +45,7 @@ type Game struct {
 // Move represents a single move in a game
 type Move struct {
 	GameID     string `json:"gameId"`
-	PlayerID   int    `json:"playerId"`
+	PlayerID   string `json:"playerId"`
 	Position   int    `json:"position"`   // 0-8
 	Symbol     string `json:"symbol"`     // "X" or "O"
 	MoveNumber int    `json:"moveNumber"` // 1, 2, 3, etc.
@@ -54,13 +54,13 @@ type Move struct {
 // MoveRequest represents a move request from client
 type MoveRequest struct {
 	GameID   string `json:"gameId"`
-	PlayerID int    `json:"playerId"`
+	PlayerID string `json:"playerId"`
 	Position int    `json:"position"` // 0-8
 }
 
 // PlayerStats represents player statistics
 type PlayerStats struct {
-	UserID         int     `json:"userId"`
+	UserID         string  `json:"userId"`
 	UserName       string  `json:"userName"`
 	GamesPlayed    int     `json:"gamesPlayed"`
 	GamesWon       int     `json:"gamesWon"`

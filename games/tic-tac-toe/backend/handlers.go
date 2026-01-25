@@ -28,9 +28,9 @@ func handleGetGame(w http.ResponseWriter, r *http.Request) {
 func handleCreateGame(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		ChallengeID   string   `json:"challengeId"`
-		Player1ID     int      `json:"player1Id"`
+		Player1ID     string   `json:"player1Id"`
 		Player1Name   string   `json:"player1Name"`
-		Player2ID     int      `json:"player2Id"`
+		Player2ID     string   `json:"player2Id"`
 		Player2Name   string   `json:"player2Name"`
 		Mode          GameMode `json:"mode"`
 		MoveTimeLimit int      `json:"moveTimeLimit"`
@@ -43,7 +43,7 @@ func handleCreateGame(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate inputs
-	if req.Player1ID == 0 || req.Player2ID == 0 {
+	if req.Player1ID == "" || req.Player2ID == "" {
 		sendError(w, "Missing player IDs", 400)
 		return
 	}
@@ -169,14 +169,12 @@ func handleGetStats(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userID := vars["userId"]
 
-	// Convert to int
-	var uid int
-	if _, err := fmt.Sscanf(userID, "%d", &uid); err != nil {
+	if userID == "" {
 		sendError(w, "Invalid user ID", 400)
 		return
 	}
 
-	stats, err := GetPlayerStats(uid)
+	stats, err := GetPlayerStats(userID)
 	if err != nil {
 		log.Printf("Failed to get player stats: %v", err)
 		sendError(w, "Failed to get stats", 500)

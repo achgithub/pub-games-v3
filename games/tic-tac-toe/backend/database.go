@@ -81,7 +81,7 @@ func SaveMove(move *Move) error {
 }
 
 // UpdatePlayerStats updates player statistics
-func UpdatePlayerStats(userID int, userName string, won bool, lost bool, draw bool, moves int) error {
+func UpdatePlayerStats(userID string, userName string, won bool, lost bool, draw bool, moves int) error {
 	query := `
 		INSERT INTO player_stats (user_id, user_name, games_played, games_won, games_lost, games_draw, total_moves, last_played)
 		VALUES ($1, $2, 1, $3, $4, $5, $6, CURRENT_TIMESTAMP)
@@ -117,7 +117,7 @@ func UpdatePlayerStats(userID int, userName string, won bool, lost bool, draw bo
 }
 
 // GetPlayerStats retrieves player statistics
-func GetPlayerStats(userID int) (*PlayerStats, error) {
+func GetPlayerStats(userID string) (*PlayerStats, error) {
 	query := `
 		SELECT user_id, user_name, games_played, games_won, games_lost, games_draw, total_moves, fastest_win_moves
 		FROM player_stats
