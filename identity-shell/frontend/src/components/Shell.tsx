@@ -18,7 +18,7 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout }) => {
   const [toastChallenge, setToastChallenge] = useState<any | null>(null);
 
   // Fetch apps from registry
-  const { apps, loading: appsLoading, error: appsError } = useApps();
+  const { apps, loading: appsLoading } = useApps();
 
   const handleNewChallenge = (challenge: any) => {
     setToastChallenge(challenge);
