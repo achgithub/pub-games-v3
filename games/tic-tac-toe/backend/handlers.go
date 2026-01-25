@@ -55,7 +55,7 @@ func handleCreateGame(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create game
-	gameID := fmt.Sprintf("%d-%d", time.Now().UnixNano(), req.Player1ID)
+	gameID := fmt.Sprintf("%d-%s", time.Now().UnixNano(), req.Player1ID)
 	now := time.Now().Unix()
 
 	game := &Game{
