@@ -46,15 +46,57 @@ wait_for_port() {
     return 1
 }
 
+# Build frontend if needed
+build_frontend() {
+    local name=$1
+    local frontend_dir=$2
+    local static_dir=$3
+
+    # Check if build is needed (no static files or frontend is newer)
+    if [ ! -f "$static_dir/index.html" ] || [ "$frontend_dir/src" -nt "$static_dir/index.html" ]; then
+        echo -e "  ${YELLOW}Building frontend...${NC}"
+
+        cd "$frontend_dir"
+
+        # Install dependencies if needed
+        if [ ! -d "node_modules" ]; then
+            echo "  Installing npm dependencies..."
+            npm install --silent
+        fi
+
+        # Build
+        npm run build --silent
+
+        # Copy to static dir
+        if [ -d "build" ]; then
+            mkdir -p "$static_dir"
+            cp -r build/* "$static_dir/"
+            echo -e "  ${GREEN}✓ Frontend built${NC}"
+        else
+            echo -e "  ${RED}✗ Frontend build failed${NC}"
+            cd "$BASE_DIR"
+            return 1
+        fi
+
+        cd "$BASE_DIR"
+    else
+        echo -e "  ${GREEN}✓ Frontend up to date${NC}"
+    fi
+    return 0
+}
+
 # Start a service (single port: backend serves frontend)
 start_service() {
     local name=$1
     local backend_dir=$2
-    local port=$3
+    local frontend_dir=$3
+    local port=$4
     local pid_file="$PID_DIR/${name}.pid"
     local log_file="$LOG_DIR/${name}.log"
 
-    echo -e "${YELLOW}Starting $name (port $port)...${NC}"
+    echo -e "${BLUE}════════════════════════════════════${NC}"
+    echo -e "${BLUE}$name (port $port)${NC}"
+    echo -e "${BLUE}════════════════════════════════════${NC}"
 
     # Check if already running
     if [ -f "$pid_file" ]; then
@@ -72,7 +114,16 @@ start_service() {
         return 1
     fi
 
+    # Build frontend if directory exists
+    if [ -n "$frontend_dir" ] && [ -d "$frontend_dir" ]; then
+        local static_dir="$backend_dir/static"
+        if ! build_frontend "$name" "$frontend_dir" "$static_dir"; then
+            return 1
+        fi
+    fi
+
     # Start backend
+    echo -e "  ${YELLOW}Starting backend...${NC}"
     cd "$backend_dir"
     nohup go run *.go > "$log_file" 2>&1 &
     local pid=$!
@@ -81,7 +132,7 @@ start_service() {
 
     # Wait for startup
     if wait_for_port $port 30 "$name"; then
-        echo -e "  ${GREEN}✓ Started (PID: $pid)${NC}"
+        echo -e "  ${GREEN}✓ Running (PID: $pid)${NC}"
         return 0
     else
         echo -e "  ${RED}✗ Failed to start${NC}"
@@ -93,7 +144,10 @@ start_service() {
 }
 
 # Start Identity Shell (required)
-if ! start_service "identity-shell" "$BASE_DIR/identity-shell/backend" 3001; then
+if ! start_service "Identity Shell" \
+    "$BASE_DIR/identity-shell/backend" \
+    "$BASE_DIR/identity-shell/frontend" \
+    3001; then
     echo -e "${RED}✗ Identity Shell failed - cannot continue${NC}"
     exit 1
 fi
@@ -102,13 +156,19 @@ echo ""
 
 # Start Tic-Tac-Toe (optional)
 if [ -d "$BASE_DIR/games/tic-tac-toe/backend" ]; then
-    start_service "tic-tac-toe" "$BASE_DIR/games/tic-tac-toe/backend" 4001
+    start_service "Tic-Tac-Toe" \
+        "$BASE_DIR/games/tic-tac-toe/backend" \
+        "$BASE_DIR/games/tic-tac-toe/frontend" \
+        4001
     echo ""
 fi
 
-# Start Smoke Test (optional)
+# Start Smoke Test (optional, no frontend build needed)
 if [ -d "$BASE_DIR/static-apps/smoke-test" ]; then
-    start_service "smoke-test" "$BASE_DIR/static-apps/smoke-test" 5010
+    start_service "Smoke Test" \
+        "$BASE_DIR/static-apps/smoke-test" \
+        "" \
+        5010
     echo ""
 fi
 
