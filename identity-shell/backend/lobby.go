@@ -253,11 +253,16 @@ func HandleAcceptChallenge(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Notify both players that game has started
+	log.Printf("📢 Notifying players: %s and %s about game %s", challenge.FromUser, challenge.ToUser, gameID)
 	if err := PublishGameStarted(challenge.FromUser, challenge.AppID, gameID); err != nil {
 		log.Printf("Failed to notify challenger: %v", err)
+	} else {
+		log.Printf("✅ Notified challenger: %s", challenge.FromUser)
 	}
 	if err := PublishGameStarted(challenge.ToUser, challenge.AppID, gameID); err != nil {
 		log.Printf("Failed to notify accepter: %v", err)
+	} else {
+		log.Printf("✅ Notified accepter: %s", challenge.ToUser)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -395,6 +400,7 @@ func HandleLobbyStream(w http.ResponseWriter, r *http.Request) {
 			// Parse and send event to client
 			event := parseSSEPayload(msg.Payload)
 			data, _ := json.Marshal(event)
+			log.Printf("📤 SSE to %s: %s", email, string(data))
 			fmt.Fprintf(w, "data: %s\n\n", data)
 			if flusher, ok := w.(http.Flusher); ok {
 				flusher.Flush()
