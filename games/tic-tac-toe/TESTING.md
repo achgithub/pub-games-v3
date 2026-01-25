@@ -2,15 +2,15 @@
 
 ## Overview
 
-This document describes how to test the tic-tac-toe backend. We're building up a suite of automated tests that can be run on the Pi.
+This document describes how to test the tic-tac-toe backend.
 
 ## Prerequisites
 
 1. PostgreSQL running on port 5555
-2. Redis running
+2. Redis running on port 6379
 3. Database setup complete (`./database/setup.sh`)
 4. Backend running (`go run *.go` in `backend/`)
-5. `jq` installed for JSON formatting (optional but recommended)
+5. `jq` installed for JSON formatting (optional)
 
 ## Running Tests
 
@@ -21,47 +21,55 @@ This document describes how to test the tic-tac-toe backend. We're building up a
 curl http://localhost:4001/api/health
 
 # Get stats (empty for new user)
-curl http://localhost:4001/api/stats/1
+curl http://localhost:4001/api/stats/alice@test.com
 ```
 
-### Automated Test Scripts
-
-All test scripts are in the `tests/` directory.
+### Create a Game
 
 ```bash
-cd ~/pub-games-v3/games/tic-tac-toe/tests
-chmod +x *.sh
-
-# Run basic game test
-./test_basic_game.sh
+curl -X POST http://localhost:4001/api/game \
+  -H "Content-Type: application/json" \
+  -d '{
+    "challengeId": "test-challenge",
+    "player1Id": "alice@test.com",
+    "player1Name": "Alice",
+    "player2Id": "bob@test.com",
+    "player2Name": "Bob",
+    "mode": "normal",
+    "moveTimeLimit": 0,
+    "firstTo": 1
+  }' | jq
 ```
 
-## Test Scripts
+### Make Moves
 
-| Script | Description |
-|--------|-------------|
-| `test_basic_game.sh` | Creates a game, plays to completion (Alice wins), verifies stats |
+```bash
+# Get game ID from create response, then:
+GAME_ID="your-game-id"
 
-## Test Coverage
+# Alice (X) moves to center
+curl -X POST http://localhost:4001/api/move \
+  -H "Content-Type: application/json" \
+  -d "{\"gameId\": \"$GAME_ID\", \"playerId\": \"alice@test.com\", \"position\": 4}" | jq
 
-### Currently Tested
-- [x] Health endpoint
-- [x] Game creation
-- [x] Making moves
-- [x] Turn validation (implicit)
-- [x] Win detection (top row)
-- [x] Game completion
-- [x] Player stats update
+# Bob (O) moves to corner
+curl -X POST http://localhost:4001/api/move \
+  -H "Content-Type: application/json" \
+  -d "{\"gameId\": \"$GAME_ID\", \"playerId\": \"bob@test.com\", \"position\": 0}" | jq
+```
 
-### TODO - Future Tests
-- [ ] Draw detection
-- [ ] Invalid move rejection (occupied cell)
-- [ ] Wrong turn rejection
-- [ ] Series games (first-to-3, first-to-5)
-- [ ] All win patterns (rows, columns, diagonals)
-- [ ] Game retrieval by ID
-- [ ] Redis state persistence
-- [ ] PostgreSQL game history
+### WebSocket Test
+
+```bash
+# Use wscat or similar WebSocket client
+wscat -c "ws://localhost:4001/api/ws/game/$GAME_ID?userId=alice@test.com"
+
+# Send ack to mark ready
+{"type": "ack"}
+
+# Send move
+{"type": "move", "payload": {"position": 4}}
+```
 
 ## API Endpoints
 
@@ -71,25 +79,40 @@ chmod +x *.sh
 | GET | `/api/game/{gameId}` | Get game state |
 | POST | `/api/game` | Create new game |
 | POST | `/api/move` | Make a move |
-| GET | `/api/stats/{userId}` | Get player stats |
-| WS | `/api/ws/game/{gameId}` | WebSocket (not yet implemented) |
+| GET | `/api/stats/{userId}` | Get player stats (userId is email) |
+| WS | `/api/ws/game/{gameId}?userId={email}` | WebSocket connection |
 
-## Adding New Tests
+## User IDs
 
-1. Create a new script in `tests/` following the naming convention `test_*.sh`
-2. Include 1-second sleeps between API calls for readability
-3. Use `jq` for JSON formatting
-4. Echo clear descriptions of what's being tested
-5. Update this document with the new test
+User IDs are **email addresses** (strings), not numeric IDs:
 
-## Running All Tests
-
-```bash
-# Run all test scripts (to be created)
-cd ~/pub-games-v3/games/tic-tac-toe/tests
-for test in test_*.sh; do
-  echo "Running $test..."
-  ./$test
-  echo ""
-done
+```json
+{
+  "player1Id": "alice@test.com",
+  "player2Id": "bob@test.com"
+}
 ```
+
+## Test Coverage
+
+### Currently Tested
+- [x] Health endpoint
+- [x] Game creation
+- [x] Making moves via HTTP
+- [x] Turn validation
+- [x] Win detection
+- [x] Game completion
+- [x] Player stats update
+
+### WebSocket Tests
+- [x] Connection with userId
+- [x] Ack/ready handshake
+- [x] Move via WebSocket
+- [x] Broadcast to both players
+- [x] Disconnect notification
+
+### TODO
+- [ ] Draw detection
+- [ ] Series games (first-to-3, etc.)
+- [ ] All win patterns
+- [ ] Reconnection handling

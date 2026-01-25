@@ -1,144 +1,118 @@
 # PubGames V3 - Current Status Summary
 
-**Last Updated**: January 24, 2026
+**Last Updated**: January 25, 2026
 
 ## What's Working
 
 ### Identity Shell (Complete)
 - ✅ React frontend with persistent shell UI
 - ✅ User authentication (email + password with bcrypt)
-- ✅ App routing and navigation
-- ✅ Iframe embedding for static apps (full-height rendering)
-- ✅ React component embedding for interactive games
+- ✅ Dynamic app registry (`/api/apps`)
+- ✅ Iframe embedding for all apps
 
 ### Lobby System (Complete)
-- ✅ **Real-time presence tracking** (Redis-backed, 30s TTL)
-- ✅ **Challenge system** (send, accept, decline, 60s expiration)
-- ✅ **Server-Sent Events** for instant updates (no polling)
-- ✅ **Challenge notifications** (subtle toast, auto-dismiss after 5s)
-- ✅ **Duplicate prevention** (can't send multiple challenges between same users)
-- ✅ **Auto-expiration** (expired challenges removed from UI automatically)
-- ✅ **PostgreSQL persistence** (challenge history)
-- ✅ **Redis for live data** (presence, active challenges, pub/sub)
+- ✅ Real-time presence tracking (Redis-backed, 30s TTL)
+- ✅ Challenge system (send, accept, decline, 60s expiration)
+- ✅ Server-Sent Events for instant updates
+- ✅ Challenge notifications (toast popup)
 
-### Static Apps
-- ✅ Smoke Test app (template validation, working)
-- ✅ Template for new static apps
-
-### Interactive Games
-- ⚠️ Tic-Tac-Toe exists but not integrated with challenge flow
+### Tic-Tac-Toe (In Progress)
+- ✅ Backend with WebSocket support
+- ✅ Redis for live game state
+- ✅ PostgreSQL for game history
+- ✅ React frontend (standalone app)
+- ⏳ Challenge → game flow integration
+- ⏳ End-to-end testing
 
 ## Technology Stack
 
-**Frontend**:
-- React (hooks-based)
-- React Router (client-side routing)
-- TypeScript
+| Layer | Technology |
+|-------|------------|
+| Frontend | React + TypeScript |
+| Backend | Go 1.25 |
+| Persistent Data | PostgreSQL (port 5555) |
+| Live Data | Redis (port 6379) |
+| Shell Real-Time | Server-Sent Events |
+| Game Real-Time | WebSocket |
 
-**Backend**:
-- Go 1.25
-- PostgreSQL (persistent data)
-- Redis (ephemeral/live data, pub/sub)
-- Server-Sent Events (real-time updates)
+## Architecture
 
-## Architecture Highlights
+### Single Port Per App
+Every mini-app serves **frontend + API from one port**:
 
-### Hybrid Data Strategy
-- **Redis**: Live game state, presence, active challenges, real-time pub/sub
-- **PostgreSQL**: User accounts, challenge history, game results, persistent data
+```
+Identity Shell (3001) ──iframe──> Tic-Tac-Toe (4001)
+                      ──iframe──> Smoke Test (5010)
+                      ──iframe──> Sweepstakes (5020)
+```
 
-### Real-Time Architecture by App Type
+**Benefits:**
+- No CORS issues
+- Simple deployment (one process per app)
+- Adding apps requires NO shell rebuild
 
-**Fast Interactive Games** (Tic-Tac-Toe, Dots):
-- WebSocket for real-time moves (low latency)
-- Redis for live game state (crash recovery)
-- PostgreSQL for game history
+### Dynamic App Registry
+Shell fetches apps from `/api/apps` instead of hardcoding:
 
-**Slow Interactive Games** (Chess, future):
-- SSE for move updates (simpler than WebSocket)
-- Redis for live game state
-- PostgreSQL for game history
+```json
+{
+  "apps": [
+    {"id": "tic-tac-toe", "url": "http://{host}:4001", "type": "iframe"}
+  ]
+}
+```
 
-**Multi-Player Broadcast** (Quiz):
-- SSE for question/leaderboard updates (one-to-many)
-- Redis for live leaderboard and session state
-- PostgreSQL for questions and results
+### Real-Time Patterns
 
-**Static Apps** (Sweepstakes, Last Man Standing):
-- PostgreSQL only (no real-time needed)
-- Users make selections and wait for results
-- Optional: Simple polling or SSE for "results ready" notification
-- iframe-embedded, self-contained
+| App Type | Pattern | Example |
+|----------|---------|---------|
+| Fast games | WebSocket | Tic-Tac-Toe, Dots |
+| Slow games | SSE | Chess, Quiz |
+| Static apps | None/Polling | Sweepstakes, LMS |
 
-### Challenge Flow
-1. User A sends challenge to User B
-2. Redis stores challenge with 60s TTL
-3. SSE notification sent to User B
-4. Toast appears on User B's screen (5s auto-dismiss)
-5. User B accepts/declines in lobby
-6. Challenge result saved to PostgreSQL
-7. Expired challenges auto-removed from UI
+## Port Allocation
 
-### Port Allocation
-- `3000` - Identity Shell (serves both frontend static files and API)
-- `3001` - Identity Shell Backend API
-- `5010` - Smoke Test (iframe-embedded static app)
-- `6379` - Redis
-- `5555` - PostgreSQL
+```
+3001  - Identity Shell (frontend + API)
+4001  - Tic-Tac-Toe
+5010  - Smoke Test
+5020  - Sweepstakes (planned)
+5555  - PostgreSQL
+6379  - Redis
+```
 
 ## Current Phase
 
-**Phase 2.5: Lobby System Complete, Game Integration Pending**
+**Phase 3: Game Integration**
 
-We've completed the lobby infrastructure but haven't connected it to actual gameplay yet.
+- [x] Dynamic app registry
+- [x] Single-port architecture
+- [x] Tic-Tac-Toe backend
+- [x] Tic-Tac-Toe frontend
+- [ ] Challenge → game flow
+- [ ] End-to-end testing
 
-## File Structure (Actual)
+## Known Limitations
+
+1. Challenge acceptance doesn't launch game yet
+2. No game result reporting to shell
+3. Basic auth only (no OAuth)
+4. Single-device sessions
+
+## File Structure
 
 ```
 pub-games-v3/
 ├── identity-shell/
-│   ├── backend/
-│   │   ├── main.go           # HTTP server, auth, routing
-│   │   ├── lobby.go          # Lobby API handlers
-│   │   └── redis.go          # Redis operations, presence, challenges
-│   ├── frontend/
-│   │   └── src/
-│   │       ├── components/
-│   │       │   ├── Shell.tsx       # Main shell container
-│   │       │   ├── Lobby.tsx       # Lobby UI with challenges
-│   │       │   ├── ChallengeToast.tsx  # Notification popup
-│   │       │   └── AppContainer.tsx    # Game/app loader
-│   │       ├── hooks/
-│   │       │   └── useLobby.ts     # SSE, presence, challenges
-│   │       └── types.ts            # TypeScript definitions
-│   └── data/                 # PostgreSQL migrations
-│
+│   ├── backend/         # Go server + apps.json
+│   └── frontend/        # React shell UI
 ├── games/
-│   └── tic-tac-toe/          # Exists but not integrated
-│
+│   └── tic-tac-toe/
+│       ├── backend/     # Go + WebSocket + static/
+│       └── frontend/    # React game UI
 ├── static-apps/
-│   ├── smoke-test/           # Working iframe-embedded app
-│   └── template/             # Template for static apps
-│
-└── scripts/
-    ├── migrate_lobby.sh      # Database setup
-    └── README.md
+│   └── smoke-test/
+├── CLAUDE.md            # Architecture decisions
+├── README.md            # Project overview
+└── TODO.md              # Task list
 ```
-
-## Known Limitations
-
-1. **No game integration**: Accepting a challenge doesn't launch the game
-2. **Basic auth**: Email/password only, no OAuth or SSO
-3. **No game state management**: Redis setup exists but not used by games
-4. **Single-device only**: No cross-device presence sync
-5. **No mobile optimization**: UI works but not touch-optimized
-6. **No error recovery**: Lost connections require page refresh
-
-## Recent Improvements (Jan 24, 2026)
-
-- Made challenge toast more subtle (bottom-right, semi-transparent)
-- Removed accept/decline from toast (informational only)
-- Auto-dismiss toast after 5 seconds
-- Prevent duplicate challenges between users
-- Auto-remove expired challenges from UI
-- Fixed TypeScript compilation errors

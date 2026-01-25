@@ -1,11 +1,11 @@
 # PubGames V3 - Shell Architecture
 
-**Status**: 🟢 Lobby System Complete, Game Integration Pending
+**Status**: 🟢 Tic-Tac-Toe Integration In Progress
 **Repository**: https://github.com/achgithub/pub-games-v3
 **Created**: January 21, 2026
-**Last Updated**: January 24, 2026
+**Last Updated**: January 25, 2026
 
-📋 See [SUMMARY.md](./SUMMARY.md) for detailed status and [TODO.md](./TODO.md) for task list
+📋 See [CLAUDE.md](./CLAUDE.md) for architecture decisions and [TODO.md](./TODO.md) for task list
 
 ---
 
@@ -24,18 +24,25 @@ PubGames V3 introduces a **shell architecture** where the Identity Service acts 
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│ Identity Shell (Always Running)                         │
+│ Identity Shell (port 3001)                              │
 │ ┌─────────────────────────────────────────────────────┐ │
-│ │ [🎮 Lobby] [👤 Profile]          🔔 (1) [Settings] │ │
+│ │ [🎮 Lobby] [👤 Profile]          🔔 (1) [Logout]   │ │
 │ ├─────────────────────────────────────────────────────┤ │
-│ │                                                      │ │
-│ │              Embedded App Area                       │ │
-│ │        (Static apps via iframe OR                   │ │
-│ │         Interactive games as components)            │ │
-│ │                                                      │ │
+│ │                                                     │ │
+│ │  <iframe src="http://pi:4001?userId=x&gameId=y">   │ │
+│ │                                                     │ │
+│ │    ┌─────────────────────────────────────────┐     │ │
+│ │    │ Tic-Tac-Toe App (port 4001)             │     │ │
+│ │    │ - Go backend serves API + static files  │     │ │
+│ │    │ - React frontend                        │     │ │
+│ │    │ - WebSocket for real-time moves         │     │ │
+│ │    └─────────────────────────────────────────┘     │ │
+│ │                                                     │ │
 │ └─────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────┘
 ```
+
+**Key principle**: All apps embedded via **iframe only**. No React component imports in shell.
 
 ---
 
@@ -47,39 +54,33 @@ PubGames V3 introduces a **shell architecture** where the Identity Service acts 
 | Auth | Each app handles SSO | Shell handles auth once |
 | Challenges | Not implemented | Real-time notifications |
 | Presence | Not tracked | Always tracked |
-| UI | Inconsistent across apps | Unified shell + chrome |
+| UI | Inconsistent across apps | Unified shell chrome |
+| App serving | Dual ports (frontend + API) | **Single port per app** |
+| App discovery | Hardcoded | **Dynamic registry** |
 
 ---
 
 ## Components
 
 ### Identity Shell
-**Port**: 3000 (frontend), 3001 (backend)
+**Port**: 3001 (serves both frontend and API)
 **Location**: `/identity-shell/`
+
 **Purpose**:
 - User authentication (bcrypt password hashing)
-- App container/router (iframe + React components)
+- App registry (`/api/apps`)
 - Lobby system (presence + challenges)
 - Real-time notifications (SSE)
-- Presence management (Redis)
+- App embedding via iframe
 
-**Tech Stack**:
-- Go 1.25 backend
-- React + TypeScript frontend
-- PostgreSQL (persistent data)
-- Redis (live data, pub/sub)
+### Mini-Apps (All iframe embedded)
+**Pattern**: Single port serves frontend + API
 
-### Static Apps (iframe embedded)
-Examples: Sweepstakes, Last Man Standing (solo mode)
-- Self-contained
-- Loaded via iframe
-- Minimal changes from V2
-
-### Interactive Games (component embedded)
-Examples: Tic-Tac-Toe, Chess, Checkers
-- Lightweight (no auth, no navigation)
-- Loaded as React components
-- Designed for 2-player matches
+| App | Port | Real-Time | Status |
+|-----|------|-----------|--------|
+| Tic-Tac-Toe | 4001 | WebSocket | In Progress |
+| Smoke Test | 5010 | None | Working |
+| Sweepstakes | 5020 | None | Planned |
 
 ---
 
@@ -87,132 +88,94 @@ Examples: Tic-Tac-Toe, Chess, Checkers
 
 ```
 pub-games-v3/
-├── identity-shell/          # Main shell application
-│   ├── backend/            # Go API (lobby, auth, presence)
-│   │   ├── main.go         # HTTP server, auth, routing
+├── identity-shell/
+│   ├── backend/
+│   │   ├── main.go         # HTTP server, auth, app registry
 │   │   ├── lobby.go        # Lobby API handlers
-│   │   └── redis.go        # Redis operations
-│   ├── frontend/           # React + TypeScript shell UI
-│   │   ├── src/
-│   │   │   ├── components/
-│   │   │   │   ├── Shell.tsx         # Main shell container
-│   │   │   │   ├── Lobby.tsx         # Lobby UI
-│   │   │   │   ├── ChallengeToast.tsx # Notification popup
-│   │   │   │   └── AppContainer.tsx  # Game/app loader
-│   │   │   ├── hooks/
-│   │   │   │   └── useLobby.ts       # SSE, presence, challenges
-│   │   │   └── types.ts              # TypeScript definitions
-│   │   └── package.json
-│   └── data/               # PostgreSQL migrations
+│   │   ├── redis.go        # Redis operations
+│   │   └── apps.json       # App registry config
+│   ├── frontend/
+│   │   └── src/
+│   │       ├── components/
+│   │       │   ├── Shell.tsx
+│   │       │   ├── Lobby.tsx
+│   │       │   └── AppContainer.tsx  # iframe loader
+│   │       └── hooks/
+│   │           ├── useLobby.ts
+│   │           └── useApps.ts        # fetches /api/apps
+│   └── data/
 │
 ├── games/
-│   ├── tic-tac-toe/        # Interactive game prototype
-│   │   ├── backend/
-│   │   │   ├── main.go     # Game logic API
-│   │   │   └── game.go     # Match management
-│   │   ├── src/
-│   │   │   ├── GameBoard.js
-│   │   │   └── GameLogic.js
-│   │   └── data/
-│   │
-│   └── game-template/      # Template for new games
+│   └── tic-tac-toe/
 │       ├── backend/
+│       │   ├── main.go         # Serves API + static files
+│       │   ├── websocket.go    # WebSocket handlers
+│       │   ├── game_logic.go
+│       │   ├── redis.go
+│       │   └── static/         # React build output
 │       ├── frontend/
-│       └── README.md
+│       │   └── src/
+│       │       ├── App.tsx
+│       │       ├── components/
+│       │       └── hooks/
+│       └── database/
+│           └── schema.sql
 │
-├── static-apps/            # Static apps (iframe-embedded)
-│   ├── smoke-test/         # Template validation app (working)
-│   │   ├── main.go         # Serves both frontend + API
-│   │   ├── handlers.go     # API endpoints
-│   │   ├── database.go     # PostgreSQL setup
-│   │   ├── src/            # React frontend
-│   │   └── public/
-│   └── static-template/    # Template for new static apps
-│
-├── shared/                 # Shared utilities
-│   ├── auth/              # Auth helpers
-│   └── components/        # Shared React components
-│
-├── docs/
-│   ├── ARCHITECTURE.md
-│   ├── LOBBY-SYSTEM.md
-│   └── GAME-TEMPLATE-GUIDE.md
+├── static-apps/
+│   └── smoke-test/
 │
 ├── scripts/
-│   ├── start_all.sh
-│   ├── stop_all.sh
-│   └── dev.sh
 │
-└── README.md              # This file
+└── CLAUDE.md               # Architecture decisions
 ```
 
 ---
 
 ## Port Allocation
 
+**Single port per app** - each app serves frontend + API together.
+
 ```
-3000  - Identity Shell Frontend
-3001  - Identity Shell Backend
+Identity Shell:
+  3001  - Shell (frontend + API)
 
-4000  - Tic-Tac-Toe Frontend (dev only, embedded in production)
-4001  - Tic-Tac-Toe Backend
+Interactive Games (WebSocket):
+  4001  - Tic-Tac-Toe
+  4011  - Dots (future)
+  4021  - Chess (future)
 
-4010  - Chess Frontend
-4011  - Chess Backend
-
-5010  - Smoke Test Frontend (iframe)
-5011  - Smoke Test Backend API
-
-5020  - Static App Frontend (template pattern)
-5021  - Static App Backend API
-
-... etc
+Static Apps (no real-time):
+  5010  - Smoke Test
+  5020  - Sweepstakes
+  5030  - Last Man Standing
 ```
-
-**Pattern**:
-- Shell uses 3000-3099
-- Interactive games use 4000-4999 (dev only, embedded as components)
-- Static apps use 5000+ (iframe embedded, dual ports: frontend + API)
 
 ---
 
 ## Development Phases
 
-### Phase 1: Identity Shell Prototype ✅ COMPLETE
-- [x] Basic shell UI (header + content area)
+### Phase 1: Identity Shell ✅ COMPLETE
+- [x] Shell UI with header navigation
 - [x] Auth system (email/password with bcrypt)
-- [x] App routing (load different apps)
-- [x] Iframe embedding with full-height rendering
-- [x] Static app template (smoke-test working)
+- [x] Iframe embedding
 
 ### Phase 2: Lobby System ✅ COMPLETE
-- [x] Redis + PostgreSQL hybrid architecture
 - [x] Presence tracking (Redis, 30s TTL)
-- [x] Challenge system (send, accept, decline, 60s expiration)
+- [x] Challenge system (send, accept, decline)
 - [x] Server-Sent Events for real-time updates
-- [x] Lobby UI (online users, challenges)
-- [x] Challenge notifications (subtle toast)
-- [x] Duplicate challenge prevention
-- [x] Auto-expiration and cleanup
 
-### Phase 3: Interactive Game Integration ⬅️ **WE ARE HERE**
-- [ ] Connect challenge acceptance to game launch
-- [ ] Pass challenge context to game
-- [ ] Game state management (Redis)
-- [ ] Match completion and result tracking
-- [ ] Tic-Tac-Toe fully integrated
+### Phase 3: Game Integration ⬅️ **WE ARE HERE**
+- [x] Dynamic app registry
+- [x] Single-port app architecture
+- [x] Tic-Tac-Toe backend (WebSocket, Redis, PostgreSQL)
+- [x] Tic-Tac-Toe frontend
+- [ ] Challenge → game flow integration
+- [ ] End-to-end testing
 
-### Phase 4: Additional Games & Features
-- [ ] Chess, Checkers, other games
-- [ ] Spectator mode
-- [ ] Game history and statistics
-- [ ] User profiles and avatars
-
-### Phase 5: Migration & Polish
-- [ ] Migrate useful V2 apps
-- [ ] Mobile UI optimization
-- [ ] Complete documentation
-- [ ] Production deployment
+### Phase 4: Additional Games
+- [ ] Migrate Sweepstakes from V2
+- [ ] Dots game
+- [ ] Quiz app
 
 ---
 
@@ -221,31 +184,28 @@ pub-games-v3/
 ### Prerequisites
 - Go 1.25+
 - Node.js 18+
-- PostgreSQL 13+
-- Redis 6+
+- PostgreSQL 13+ (port 5555)
+- Redis 6+ (port 6379)
 
-### Development Setup
+### Running the Shell
 ```bash
-# Clone repository
-git clone https://github.com/achgithub/pub-games-v3.git
-cd pub-games-v3
-
-# Setup database (see scripts/migrate_lobby.sh)
-# Ensure PostgreSQL is running on port 5555
-# Ensure Redis is running on port 6379
-
-# Start Identity Shell (backend)
 cd identity-shell/backend
-go run *.go
+go run *.go &
 
-# Build and serve frontend (production)
 cd ../frontend
-npm install
-npm run build
-# Backend serves the build/ folder on port 3001
-
+npm install && npm run build
 # Access at http://localhost:3001
-# Or run frontend dev server on http://localhost:3000
+```
+
+### Running Tic-Tac-Toe
+```bash
+cd games/tic-tac-toe/frontend
+npm install && npm run build
+cp -r build/* ../backend/static/
+
+cd ../backend
+go run *.go
+# Serves on http://localhost:4001
 ```
 
 ---
@@ -253,45 +213,13 @@ npm run build
 ## Design Principles
 
 1. **Shell First**: Identity Shell is always the entry point
-2. **Minimal Games**: Interactive games should be lightweight (no auth, minimal chrome)
-3. **Backward Compatible**: Static V2 apps can run in iframes
-4. **Hybrid Data**: Redis for live/ephemeral, PostgreSQL for persistent
-5. **Real-time**: Server-Sent Events for instant updates (WebSocket future consideration)
-6. **Mobile Friendly**: Responsive design (touch optimization pending)
-
----
-
-## Known Issues & Solutions
-
-### ✅ Iframe Height Issue (FIXED)
-**Problem**: Static apps appeared in small box instead of filling iframe.
-
-**Solution**:
-- Shell side: Use flexbox in `AppContainer.css` (not `position: relative`)
-- App side: Set `html/body/root` to `height: 100%` with flexbox in `index.css`
-- See commits: `b3227e8`, `7e32a2c`
-
-### ✅ Static App Serving (FIXED)
-**Problem**: Go backend only served API, frontend required separate `npm start`.
-
-**Solution**:
-- Modified `main.go` to run two HTTP servers (goroutine for API)
-- Port 5010: serves React static files (build/ or public/)
-- Port 5011: serves API endpoints
-- See commit: `f125b08`
-
----
-
-## Contributing
-
-This is a prototype/experimental repository. Structure may change frequently during Phase 1.
+2. **Single Port**: Each app serves frontend + API from one port
+3. **Iframe Only**: No React component imports across apps
+4. **Dynamic Registry**: Apps discovered via `/api/apps`, not hardcoded
+5. **Hybrid Data**: Redis for live state, PostgreSQL for history
 
 ---
 
 ## License
 
 MIT
-
----
-
-**Next Steps**: See `docs/ARCHITECTURE.md` for detailed design
