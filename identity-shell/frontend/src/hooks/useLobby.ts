@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { LobbyState, Challenge } from '../types';
 
 const API_BASE = `http://${window.location.hostname}:3001/api`;
