@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import TicTacToeBoard from './TicTacToeBoard';
 import { useGameSocket, Game } from '../hooks/useGameSocket';
 import '../styles/tictactoe.css';
@@ -17,7 +17,20 @@ interface TicTacToeGameProps {
 
 const TicTacToeGame: React.FC<TicTacToeGameProps> = ({ gameId, user }) => {
   const userId = user.email;
-  const { game, connected, ready, error, opponentDisconnected, makeMove } = useGameSocket(gameId, userId);
+  const [showForfeitConfirm, setShowForfeitConfirm] = useState(false);
+
+  const {
+    game,
+    connected,
+    ready,
+    error,
+    opponentDisconnected,
+    claimWinAvailable,
+    claimWinCountdown,
+    makeMove,
+    forfeit,
+    claimWin,
+  } = useGameSocket(gameId, userId);
 
   // No gameId provided - show instructions
   if (!gameId) {
@@ -64,6 +77,9 @@ const TicTacToeGame: React.FC<TicTacToeGameProps> = ({ gameId, user }) => {
   // Status message
   const getStatusMessage = () => {
     if (opponentDisconnected) {
+      if (claimWinCountdown !== null && claimWinCountdown > 0) {
+        return `Opponent disconnected - Claim win in ${claimWinCountdown}s`;
+      }
       return 'Opponent disconnected';
     }
     if (!connected) {
@@ -79,6 +95,22 @@ const TicTacToeGame: React.FC<TicTacToeGameProps> = ({ gameId, user }) => {
       return iWon ? 'You won!' : 'You lost!';
     }
     return isMyTurn ? 'Your turn' : "Opponent's turn";
+  };
+
+  // Handle forfeit click
+  const handleForfeitClick = () => {
+    setShowForfeitConfirm(true);
+  };
+
+  // Confirm forfeit
+  const handleConfirmForfeit = () => {
+    forfeit();
+    setShowForfeitConfirm(false);
+  };
+
+  // Cancel forfeit
+  const handleCancelForfeit = () => {
+    setShowForfeitConfirm(false);
   };
 
   return (
@@ -104,9 +136,18 @@ const TicTacToeGame: React.FC<TicTacToeGameProps> = ({ gameId, user }) => {
       </div>
 
       {/* Status message */}
-      <div className={`ttt-status ${isMyTurn && !gameEnded ? 'ttt-status-myturn' : ''} ${gameEnded ? (iWon ? 'ttt-status-won' : 'ttt-status-lost') : ''}`}>
+      <div className={`ttt-status ${isMyTurn && !gameEnded ? 'ttt-status-myturn' : ''} ${gameEnded ? (iWon ? 'ttt-status-won' : 'ttt-status-lost') : ''} ${opponentDisconnected ? 'ttt-status-disconnected' : ''}`}>
         {getStatusMessage()}
       </div>
+
+      {/* Claim Win button - appears when opponent has been disconnected long enough */}
+      {opponentDisconnected && claimWinAvailable && !gameEnded && (
+        <div className="ttt-claim-win">
+          <button className="ttt-claim-win-btn" onClick={claimWin}>
+            Claim Win
+          </button>
+        </div>
+      )}
 
       {/* Game board */}
       <TicTacToeBoard
@@ -114,8 +155,35 @@ const TicTacToeGame: React.FC<TicTacToeGameProps> = ({ gameId, user }) => {
         onCellClick={makeMove}
         myTurn={isMyTurn}
         mySymbol={mySymbol}
-        disabled={!ready || !connected || gameEnded}
+        disabled={!ready || !connected || gameEnded || opponentDisconnected}
       />
+
+      {/* Game actions */}
+      {!gameEnded && connected && ready && (
+        <div className="ttt-actions">
+          <button className="ttt-leave-btn" onClick={handleForfeitClick}>
+            Leave Game
+          </button>
+        </div>
+      )}
+
+      {/* Forfeit confirmation modal */}
+      {showForfeitConfirm && (
+        <div className="ttt-modal-overlay" onClick={handleCancelForfeit}>
+          <div className="ttt-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Leave Game?</h3>
+            <p>If you leave, your opponent wins.</p>
+            <div className="ttt-modal-buttons">
+              <button className="ttt-modal-cancel" onClick={handleCancelForfeit}>
+                Stay
+              </button>
+              <button className="ttt-modal-confirm" onClick={handleConfirmForfeit}>
+                Leave
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Connection status */}
       {!connected && (

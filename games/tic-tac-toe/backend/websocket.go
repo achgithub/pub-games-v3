@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 	"sync"
@@ -9,6 +8,13 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
+)
+
+const (
+	// Grace period before notifying opponent of disconnect
+	disconnectGracePeriod = 15 * time.Second
+	// Time opponent must wait before claiming win
+	claimWinDelay = 15 * time.Second
 )
 
 var upgrader = websocket.Upgrader{
@@ -27,9 +33,11 @@ type GameHub struct {
 
 // GameRoom manages connections for a single game
 type GameRoom struct {
-	gameID      string
-	connections map[string]*PlayerConnection // key: playerID (email)
-	mu          sync.RWMutex
+	gameID           string
+	connections      map[string]*PlayerConnection // key: playerID (email)
+	disconnectTimers map[string]*time.Timer       // pending disconnect notifications
+	disconnectedAt   map[string]time.Time         // when player disconnected (for claim win timing)
+	mu               sync.RWMutex
 }
 
 // PlayerConnection represents a connected player
@@ -53,8 +61,10 @@ func (h *GameHub) getOrCreateRoom(gameID string) *GameRoom {
 	}
 
 	room := &GameRoom{
-		gameID:      gameID,
-		connections: make(map[string]*PlayerConnection),
+		gameID:           gameID,
+		connections:      make(map[string]*PlayerConnection),
+		disconnectTimers: make(map[string]*time.Timer),
+		disconnectedAt:   make(map[string]time.Time),
 	}
 	h.rooms[gameID] = room
 	return room
@@ -143,6 +153,84 @@ func (r *GameRoom) notifyOthers(senderID string, msg *WSMessage) {
 	}
 }
 
+// getOpponentID returns the other player's ID
+func (r *GameRoom) getOpponentID(playerID string, game *Game) string {
+	if playerID == game.Player1ID {
+		return game.Player2ID
+	}
+	return game.Player1ID
+}
+
+// startDisconnectTimer starts a grace period timer for a disconnecting player
+func (r *GameRoom) startDisconnectTimer(playerID string, game *Game) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	// Cancel any existing timer
+	if timer, exists := r.disconnectTimers[playerID]; exists {
+		timer.Stop()
+	}
+
+	opponentID := r.getOpponentID(playerID, game)
+
+	// Start grace period timer
+	r.disconnectTimers[playerID] = time.AfterFunc(disconnectGracePeriod, func() {
+		r.mu.Lock()
+		// Record when disconnect notification was sent (for claim win timing)
+		r.disconnectedAt[playerID] = time.Now()
+		delete(r.disconnectTimers, playerID)
+		r.mu.Unlock()
+
+		log.Printf("⏰ Grace period expired for %s, notifying opponent", playerID)
+
+		// Notify opponent that player disconnected
+		r.sendTo(opponentID, &WSMessage{
+			Type: "opponent_disconnected",
+			Payload: map[string]interface{}{
+				"claimWinAfter": claimWinDelay.Seconds(),
+			},
+		})
+	})
+
+	log.Printf("⏳ Started %v disconnect grace period for %s", disconnectGracePeriod, playerID)
+}
+
+// cancelDisconnectTimer cancels a pending disconnect notification (player reconnected)
+func (r *GameRoom) cancelDisconnectTimer(playerID string, game *Game) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	// Check if there was a pending timer
+	if timer, exists := r.disconnectTimers[playerID]; exists {
+		timer.Stop()
+		delete(r.disconnectTimers, playerID)
+		log.Printf("✅ Cancelled disconnect timer for %s (reconnected during grace period)", playerID)
+		return true
+	}
+
+	// Check if opponent was already notified of disconnect
+	if _, wasDisconnected := r.disconnectedAt[playerID]; wasDisconnected {
+		delete(r.disconnectedAt, playerID)
+		log.Printf("✅ Player %s reconnected after disconnect notification", playerID)
+		return true
+	}
+
+	return false
+}
+
+// canClaimWin checks if enough time has passed for opponent to claim win
+func (r *GameRoom) canClaimWin(disconnectedPlayerID string) bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	disconnectTime, exists := r.disconnectedAt[disconnectedPlayerID]
+	if !exists {
+		return false
+	}
+
+	return time.Since(disconnectTime) >= claimWinDelay
+}
+
 // gameWebSocketHandler handles WebSocket connections for a game
 func gameWebSocketHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -164,6 +252,13 @@ func gameWebSocketHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check if game is already completed
+	if game.Status == GameStatusCompleted {
+		log.Printf("❌ WebSocket: Game %s is already completed", gameID)
+		http.Error(w, "Game is already completed", http.StatusBadRequest)
+		return
+	}
+
 	// Validate user is a player in this game
 	if userID != game.Player1ID && userID != game.Player2ID {
 		log.Printf("❌ WebSocket: User %s is not a player in game %s", userID, gameID)
@@ -174,8 +269,12 @@ func gameWebSocketHandler(w http.ResponseWriter, r *http.Request) {
 	// Get or create room
 	room := hub.getOrCreateRoom(gameID)
 
-	// Check if user already has a connection (prevent multiple tabs)
-	if room.hasConnection(userID) {
+	// Check if this is a reconnection
+	wasReconnecting := room.cancelDisconnectTimer(userID, game)
+
+	// Check if user already has an active connection (prevent multiple tabs)
+	// But allow if they're reconnecting
+	if room.hasConnection(userID) && !wasReconnecting {
 		log.Printf("⚠️ WebSocket: User %s already connected to game %s", userID, gameID)
 		http.Error(w, "Already connected in another tab", http.StatusConflict)
 		return
@@ -191,23 +290,43 @@ func gameWebSocketHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Register connection
 	room.addConnection(userID, conn)
+
+	// Handle disconnect with grace period
 	defer func() {
-		log.Printf("🔌 WebSocket disconnected: game=%s, user=%s", gameID, userID)
+		log.Printf("🔌 WebSocket disconnecting: game=%s, user=%s", gameID, userID)
 		room.removeConnection(userID)
 
-		// Notify other player of disconnect
-		room.notifyOthers(userID, &WSMessage{
-			Type: "opponent_disconnected",
-		})
-
-		// Check if room is empty
-		if room.connectionCount() == 0 {
-			hub.removeRoom(gameID)
-			log.Printf("🗑️ Cleaned up empty room for game %s", gameID)
+		// Check if game is still active before starting disconnect timer
+		currentGame, err := GetGame(gameID)
+		if err != nil || currentGame.Status == GameStatusCompleted {
+			// Game ended, no need for disconnect handling
+			if room.connectionCount() == 0 {
+				hub.removeRoom(gameID)
+				log.Printf("🗑️ Cleaned up room for completed game %s", gameID)
+			}
+			return
 		}
+
+		// Start grace period timer instead of immediate notification
+		room.startDisconnectTimer(userID, currentGame)
+
+		// Clean up room if empty after a delay
+		time.AfterFunc(disconnectGracePeriod+claimWinDelay+time.Minute, func() {
+			if room.connectionCount() == 0 {
+				hub.removeRoom(gameID)
+				log.Printf("🗑️ Cleaned up empty room for game %s", gameID)
+			}
+		})
 	}()
 
-	log.Printf("✅ WebSocket upgraded: game=%s, user=%s", gameID, userID)
+	log.Printf("✅ WebSocket upgraded: game=%s, user=%s, reconnecting=%v", gameID, userID, wasReconnecting)
+
+	// Notify opponent if this is a reconnection after they were notified
+	if wasReconnecting {
+		room.notifyOthers(userID, &WSMessage{
+			Type: "opponent_reconnected",
+		})
+	}
 
 	// Perform bidirectional handshake (v2 pattern)
 	// Flow: Client PING -> Server PONG -> Client ACK -> Server READY with game state
@@ -327,6 +446,14 @@ func handleGameConnection(conn *websocket.Conn, room *GameRoom, gameID, userID s
 					Payload: game,
 				})
 
+			case "forfeit":
+				// Player intentionally leaving - opponent wins
+				handleForfeit(room, userID, gameID)
+
+			case "claim_win":
+				// Player claiming win after opponent disconnect
+				handleClaimWin(room, userID, gameID)
+
 			default:
 				log.Printf("Unknown message type from %s: %s", userID, msg.Type)
 			}
@@ -346,6 +473,138 @@ func handleGameConnection(conn *websocket.Conn, room *GameRoom, gameID, userID s
 			}
 		}
 	}
+}
+
+// handleForfeit processes a forfeit (intentional leave)
+func handleForfeit(room *GameRoom, playerID, gameID string) {
+	game, err := GetGame(gameID)
+	if err != nil {
+		room.sendTo(playerID, &WSMessage{
+			Type:    "error",
+			Payload: map[string]string{"message": "Game not found"},
+		})
+		return
+	}
+
+	if game.Status == GameStatusCompleted {
+		room.sendTo(playerID, &WSMessage{
+			Type:    "error",
+			Payload: map[string]string{"message": "Game already ended"},
+		})
+		return
+	}
+
+	// Determine winner (opponent of the forfeiting player)
+	var winnerID string
+	if playerID == game.Player1ID {
+		winnerID = game.Player2ID
+	} else {
+		winnerID = game.Player1ID
+	}
+
+	log.Printf("🏳️ Player %s forfeited game %s, winner: %s", playerID, gameID, winnerID)
+
+	// Update game state
+	game.Status = GameStatusCompleted
+	game.WinnerID = &winnerID
+	now := time.Now().Unix()
+	game.CompletedAt = &now
+
+	// Save to Redis
+	if err := UpdateGame(game); err != nil {
+		log.Printf("Failed to update game after forfeit: %v", err)
+		return
+	}
+
+	// Save to PostgreSQL and update stats
+	if err := SaveCompletedGame(game); err != nil {
+		log.Printf("Warning: Failed to save forfeited game to PostgreSQL: %v", err)
+	}
+
+	// Update player stats
+	player1Won := winnerID == game.Player1ID
+	player2Won := winnerID == game.Player2ID
+
+	UpdatePlayerStats(game.Player1ID, game.Player1Name, player1Won, player2Won, false, 0)
+	UpdatePlayerStats(game.Player2ID, game.Player2Name, player2Won, player1Won, false, 0)
+
+	// Notify both players
+	room.broadcast(&WSMessage{
+		Type: "game_ended",
+		Payload: map[string]interface{}{
+			"game":    game,
+			"message": "Opponent forfeited",
+			"reason":  "forfeit",
+		},
+	})
+}
+
+// handleClaimWin processes a claim win after opponent disconnect
+func handleClaimWin(room *GameRoom, playerID, gameID string) {
+	game, err := GetGame(gameID)
+	if err != nil {
+		room.sendTo(playerID, &WSMessage{
+			Type:    "error",
+			Payload: map[string]string{"message": "Game not found"},
+		})
+		return
+	}
+
+	if game.Status == GameStatusCompleted {
+		room.sendTo(playerID, &WSMessage{
+			Type:    "error",
+			Payload: map[string]string{"message": "Game already ended"},
+		})
+		return
+	}
+
+	// Get opponent ID
+	opponentID := room.getOpponentID(playerID, game)
+
+	// Check if opponent is actually disconnected and enough time has passed
+	if !room.canClaimWin(opponentID) {
+		room.sendTo(playerID, &WSMessage{
+			Type:    "error",
+			Payload: map[string]string{"message": "Cannot claim win yet - opponent may still reconnect"},
+		})
+		return
+	}
+
+	log.Printf("🏆 Player %s claiming win after %s disconnected in game %s", playerID, opponentID, gameID)
+
+	// Update game state
+	game.Status = GameStatusCompleted
+	game.WinnerID = &playerID
+	now := time.Now().Unix()
+	game.CompletedAt = &now
+
+	// Save to Redis
+	if err := UpdateGame(game); err != nil {
+		log.Printf("Failed to update game after claim win: %v", err)
+		return
+	}
+
+	// Save to PostgreSQL and update stats
+	if err := SaveCompletedGame(game); err != nil {
+		log.Printf("Warning: Failed to save claimed game to PostgreSQL: %v", err)
+	}
+
+	// Update player stats
+	player1Won := playerID == game.Player1ID
+	player2Won := playerID == game.Player2ID
+
+	UpdatePlayerStats(game.Player1ID, game.Player1Name, player1Won, player2Won, false, 0)
+	UpdatePlayerStats(game.Player2ID, game.Player2Name, player2Won, player1Won, false, 0)
+
+	// Notify claiming player
+	room.sendTo(playerID, &WSMessage{
+		Type: "game_ended",
+		Payload: map[string]interface{}{
+			"game":    game,
+			"message": "You won - opponent disconnected",
+			"reason":  "disconnect",
+		},
+	})
 }
 
 // handleWebSocketMove processes a move received via WebSocket

@@ -39,7 +39,11 @@ interface UseGameSocketResult {
   ready: boolean;
   error: string | null;
   opponentDisconnected: boolean;
+  claimWinAvailable: boolean;
+  claimWinCountdown: number | null;
   makeMove: (position: number) => void;
+  forfeit: () => void;
+  claimWin: () => void;
 }
 
 export function useGameSocket(gameId: string | null, userId: string): UseGameSocketResult {
@@ -48,9 +52,27 @@ export function useGameSocket(gameId: string | null, userId: string): UseGameSoc
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [opponentDisconnected, setOpponentDisconnected] = useState(false);
+  const [claimWinAvailable, setClaimWinAvailable] = useState(false);
+  const [claimWinCountdown, setClaimWinCountdown] = useState<number | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const claimWinTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const handshakeStateRef = useRef<HandshakeState>('connecting');
+
+  // Clear claim win timers
+  const clearClaimWinTimers = useCallback(() => {
+    if (claimWinTimerRef.current) {
+      clearTimeout(claimWinTimerRef.current);
+      claimWinTimerRef.current = null;
+    }
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
+    setClaimWinAvailable(false);
+    setClaimWinCountdown(null);
+  }, []);
 
   const connect = useCallback(() => {
     if (!gameId || !userId) return;
@@ -71,7 +93,6 @@ export function useGameSocket(gameId: string | null, userId: string): UseGameSoc
       console.log('[WS] Connected, starting handshake');
       setConnected(true);
       setError(null);
-      setOpponentDisconnected(false);
 
       // Step 1: Send PING to start handshake
       console.log('[WS] Handshake: Sending PING');
@@ -124,15 +145,43 @@ export function useGameSocket(gameId: string | null, userId: string): UseGameSoc
             if (msg.payload?.game) {
               setGame(msg.payload.game as Game);
             }
+            // Clear any disconnect state since game ended
+            clearClaimWinTimers();
+            setOpponentDisconnected(false);
             break;
 
           case 'opponent_disconnected':
-            console.log('[WS] Opponent disconnected');
+            console.log('[WS] Opponent disconnected, starting claim win timer');
             setOpponentDisconnected(true);
+
+            // Start countdown for claim win
+            const claimWinDelay = msg.payload?.claimWinAfter || 15;
+            setClaimWinCountdown(claimWinDelay);
+
+            // Countdown interval
+            countdownIntervalRef.current = setInterval(() => {
+              setClaimWinCountdown(prev => {
+                if (prev === null || prev <= 1) {
+                  if (countdownIntervalRef.current) {
+                    clearInterval(countdownIntervalRef.current);
+                    countdownIntervalRef.current = null;
+                  }
+                  return 0;
+                }
+                return prev - 1;
+              });
+            }, 1000);
+
+            // Enable claim win after delay
+            claimWinTimerRef.current = setTimeout(() => {
+              setClaimWinAvailable(true);
+              setClaimWinCountdown(0);
+            }, claimWinDelay * 1000);
             break;
 
           case 'opponent_reconnected':
             console.log('[WS] Opponent reconnected');
+            clearClaimWinTimers();
             setOpponentDisconnected(false);
             break;
 
@@ -169,7 +218,7 @@ export function useGameSocket(gameId: string | null, userId: string): UseGameSoc
         }, 3000);
       }
     };
-  }, [gameId, userId]);
+  }, [gameId, userId, clearClaimWinTimers]);
 
   // Connect when gameId changes
   useEffect(() => {
@@ -177,6 +226,7 @@ export function useGameSocket(gameId: string | null, userId: string): UseGameSoc
 
     return () => {
       // Cleanup on unmount
+      clearClaimWinTimers();
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }
@@ -184,7 +234,7 @@ export function useGameSocket(gameId: string | null, userId: string): UseGameSoc
         wsRef.current.close(1000, 'Component unmounted');
       }
     };
-  }, [connect]);
+  }, [connect, clearClaimWinTimers]);
 
   // Make a move
   const makeMove = useCallback((position: number) => {
@@ -207,13 +257,44 @@ export function useGameSocket(gameId: string | null, userId: string): UseGameSoc
     wsRef.current.send(JSON.stringify(msg));
   }, [ready]);
 
+  // Forfeit the game (intentional leave)
+  const forfeit = useCallback(() => {
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+      console.error('[WS] Cannot forfeit: not connected');
+      return;
+    }
+
+    console.log('[WS] Sending forfeit');
+    wsRef.current.send(JSON.stringify({ type: 'forfeit' }));
+  }, []);
+
+  // Claim win after opponent disconnect
+  const claimWin = useCallback(() => {
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+      console.error('[WS] Cannot claim win: not connected');
+      return;
+    }
+
+    if (!claimWinAvailable) {
+      console.error('[WS] Cannot claim win: not available yet');
+      return;
+    }
+
+    console.log('[WS] Sending claim_win');
+    wsRef.current.send(JSON.stringify({ type: 'claim_win' }));
+  }, [claimWinAvailable]);
+
   return {
     game,
     connected,
     ready,
     error,
     opponentDisconnected,
+    claimWinAvailable,
+    claimWinCountdown,
     makeMove,
+    forfeit,
+    claimWin,
   };
 }
 

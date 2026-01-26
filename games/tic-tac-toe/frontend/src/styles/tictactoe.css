@@ -107,6 +107,33 @@
   color: white;
 }
 
+.ttt-status-disconnected {
+  background: #fff3cd;
+  color: #856404;
+}
+
+/* Claim Win button */
+.ttt-claim-win {
+  margin-bottom: 15px;
+}
+
+.ttt-claim-win-btn {
+  background: linear-gradient(135deg, #28a745, #20c997);
+  color: white;
+  border: none;
+  padding: 12px 30px;
+  font-size: 16px;
+  font-weight: bold;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.ttt-claim-win-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+}
+
 /* Game board */
 .ttt-board {
   display: flex;
@@ -235,6 +262,98 @@
   color: #721c24;
   border-radius: 4px;
   font-size: 14px;
+}
+
+/* Game actions */
+.ttt-actions {
+  margin-top: 20px;
+}
+
+.ttt-leave-btn {
+  background: transparent;
+  color: #6c757d;
+  border: 1px solid #dee2e6;
+  padding: 8px 16px;
+  font-size: 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ttt-leave-btn:hover {
+  background: #f8d7da;
+  border-color: #f5c6cb;
+  color: #721c24;
+}
+
+/* Forfeit confirmation modal */
+.ttt-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.ttt-modal {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 320px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.ttt-modal h3 {
+  margin: 0 0 12px 0;
+  color: #212529;
+  font-size: 20px;
+}
+
+.ttt-modal p {
+  margin: 0 0 20px 0;
+  color: #6c757d;
+  font-size: 14px;
+}
+
+.ttt-modal-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.ttt-modal-cancel,
+.ttt-modal-confirm {
+  padding: 10px 24px;
+  font-size: 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+}
+
+.ttt-modal-cancel {
+  background: #e9ecef;
+  color: #495057;
+}
+
+.ttt-modal-cancel:hover {
+  background: #dee2e6;
+}
+
+.ttt-modal-confirm {
+  background: #dc3545;
+  color: white;
+}
+
+.ttt-modal-confirm:hover {
+  background: #c82333;
 }
 
 /* Responsive adjustments */
