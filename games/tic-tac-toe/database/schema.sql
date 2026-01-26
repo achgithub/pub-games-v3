@@ -58,3 +58,11 @@ CREATE INDEX IF NOT EXISTS idx_games_status ON games(status);
 CREATE INDEX IF NOT EXISTS idx_games_created ON games(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_moves_game ON moves(game_id);
 CREATE INDEX IF NOT EXISTS idx_moves_player ON moves(player_id);
+
+-- Grant permissions to pubgames user
+GRANT ALL ON ALL TABLES IN SCHEMA public TO pubgames;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO pubgames;
+
+-- Grant on future tables
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO pubgames;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO pubgames;

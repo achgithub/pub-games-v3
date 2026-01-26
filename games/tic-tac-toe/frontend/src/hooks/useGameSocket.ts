@@ -222,10 +222,14 @@ export function useGameSocket(gameId: string | null, userId: string): UseGameSoc
 
   // Connect when gameId changes
   useEffect(() => {
-    connect();
+    // Small delay before connecting - helps iOS Safari in iframes settle
+    const connectTimeout = setTimeout(() => {
+      connect();
+    }, 100);
 
     return () => {
       // Cleanup on unmount
+      clearTimeout(connectTimeout);
       clearClaimWinTimers();
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
