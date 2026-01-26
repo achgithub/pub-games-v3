@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import TicTacToeBoard from './TicTacToeBoard';
-import { useGameSocket, Game } from '../hooks/useGameSocket';
+import { useGameSocket } from '../hooks/useGameSocket';
 import '../styles/tictactoe.css';
 
 // User type from identity shell

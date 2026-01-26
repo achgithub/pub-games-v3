@@ -107,7 +107,8 @@ export function useLobby(userEmail: string, options?: UseLobbyOptions) {
   };
 
   // Fetch game config from mini-app
-  const fetchGameConfig = async (appId: string, backendPort: number): Promise<GameConfig | null> => {
+  // appId reserved for future use (e.g., caching by app)
+  const fetchGameConfig = async (_appId: string, backendPort: number): Promise<GameConfig | null> => {
     try {
       const host = window.location.hostname;
       const response = await fetch(`http://${host}:${backendPort}/api/config`);
