@@ -30,20 +30,30 @@ interface WSMessage {
   payload?: any;
 }
 
+// Connection states for UI feedback
+type ConnectionStatus = 'connecting' | 'connected' | 'reconnecting' | 'failed';
+
 // Handshake states
 type HandshakeState = 'connecting' | 'sent_ping' | 'received_pong' | 'sent_ack' | 'ready' | 'failed';
+
+const MAX_RETRIES = 5;
+const INITIAL_RETRY_DELAY = 1000; // 1 second
+const CONNECT_DELAY = 300; // Initial delay for iOS Safari
 
 interface UseGameSocketResult {
   game: Game | null;
   connected: boolean;
   ready: boolean;
   error: string | null;
+  connectionStatus: ConnectionStatus;
+  retryCount: number;
   opponentDisconnected: boolean;
   claimWinAvailable: boolean;
   claimWinCountdown: number | null;
   makeMove: (position: number) => void;
   forfeit: () => void;
   claimWin: () => void;
+  retry: () => void;
 }
 
 export function useGameSocket(gameId: string | null, userId: string): UseGameSocketResult {
@@ -51,6 +61,8 @@ export function useGameSocket(gameId: string | null, userId: string): UseGameSoc
   const [connected, setConnected] = useState(false);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting');
+  const [retryCount, setRetryCount] = useState(0);
   const [opponentDisconnected, setOpponentDisconnected] = useState(false);
   const [claimWinAvailable, setClaimWinAvailable] = useState(false);
   const [claimWinCountdown, setClaimWinCountdown] = useState<number | null>(null);
@@ -59,6 +71,7 @@ export function useGameSocket(gameId: string | null, userId: string): UseGameSoc
   const claimWinTimerRef = useRef<NodeJS.Timeout | null>(null);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const handshakeStateRef = useRef<HandshakeState>('connecting');
+  const retryCountRef = useRef(0);
 
   // Clear claim win timers
   const clearClaimWinTimers = useCallback(() => {
@@ -77,14 +90,21 @@ export function useGameSocket(gameId: string | null, userId: string): UseGameSoc
   const connect = useCallback(() => {
     if (!gameId || !userId) return;
 
+    // Close existing connection if any
+    if (wsRef.current) {
+      wsRef.current.close(1000, 'Reconnecting');
+      wsRef.current = null;
+    }
+
     // Construct WebSocket URL
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.hostname;
     const port = '4001'; // Tic-tac-toe backend port
     const wsUrl = `${protocol}//${host}:${port}/api/ws/game/${gameId}?userId=${encodeURIComponent(userId)}`;
 
-    console.log('[WS] Connecting to:', wsUrl);
+    console.log('[WS] Connecting to:', wsUrl, `(attempt ${retryCountRef.current + 1})`);
     handshakeStateRef.current = 'connecting';
+    setConnectionStatus(retryCountRef.current > 0 ? 'reconnecting' : 'connecting');
 
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
@@ -116,11 +136,15 @@ export function useGameSocket(gameId: string | null, userId: string): UseGameSoc
         }
 
         if (handshakeStateRef.current === 'sent_ack' && msg.type === 'ready') {
-          // Step 3: Received READY with game state
+          // Step 3: Received READY with game state - success!
           console.log('[WS] Handshake: Received READY with game state');
           handshakeStateRef.current = 'ready';
           setGame(msg.payload as Game);
           setReady(true);
+          setConnectionStatus('connected');
+          // Reset retry count on successful connection
+          retryCountRef.current = 0;
+          setRetryCount(0);
           return;
         }
 
@@ -200,7 +224,6 @@ export function useGameSocket(gameId: string | null, userId: string): UseGameSoc
 
     ws.onerror = (event) => {
       console.error('[WS] Error:', event);
-      setError('Connection error');
       handshakeStateRef.current = 'failed';
     };
 
@@ -210,22 +233,56 @@ export function useGameSocket(gameId: string | null, userId: string): UseGameSoc
       setReady(false);
       handshakeStateRef.current = 'connecting';
 
-      // Attempt reconnect if not intentional close
-      if (event.code !== 1000 && gameId) {
+      // Don't retry if intentional close or game ended
+      if (event.code === 1000) {
+        return;
+      }
+
+      // Check if we should retry
+      if (gameId && retryCountRef.current < MAX_RETRIES) {
+        retryCountRef.current += 1;
+        setRetryCount(retryCountRef.current);
+        setConnectionStatus('reconnecting');
+
+        // Exponential backoff: 1s, 2s, 4s, 8s, 16s
+        const delay = INITIAL_RETRY_DELAY * Math.pow(2, retryCountRef.current - 1);
+        console.log(`[WS] Retry ${retryCountRef.current}/${MAX_RETRIES} in ${delay}ms`);
+
         reconnectTimeoutRef.current = setTimeout(() => {
-          console.log('[WS] Attempting reconnect...');
           connect();
-        }, 3000);
+        }, delay);
+      } else if (retryCountRef.current >= MAX_RETRIES) {
+        // Max retries reached
+        setConnectionStatus('failed');
+        setError('Connection failed after multiple attempts. Tap to retry.');
       }
     };
   }, [gameId, userId, clearClaimWinTimers]);
 
+  // Manual retry function
+  const retry = useCallback(() => {
+    console.log('[WS] Manual retry triggered');
+    retryCountRef.current = 0;
+    setRetryCount(0);
+    setError(null);
+    setConnectionStatus('connecting');
+
+    // Small delay then connect
+    setTimeout(() => connect(), CONNECT_DELAY);
+  }, [connect]);
+
   // Connect when gameId changes
   useEffect(() => {
+    // Reset state for new game
+    retryCountRef.current = 0;
+    setRetryCount(0);
+    setError(null);
+    setConnectionStatus('connecting');
+
     // Small delay before connecting - helps iOS Safari in iframes settle
     const connectTimeout = setTimeout(() => {
       connect();
-    }, 300);
+    }, CONNECT_DELAY);
 
     return () => {
       // Cleanup on unmount
@@ -293,12 +350,15 @@ export function useGameSocket(gameId: string | null, userId: string): UseGameSoc
     connected,
     ready,
     error,
+    connectionStatus,
+    retryCount,
     opponentDisconnected,
     claimWinAvailable,
     claimWinCountdown,
     makeMove,
     forfeit,
     claimWin,
+    retry,
   };
 }
 

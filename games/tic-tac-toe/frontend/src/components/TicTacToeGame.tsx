@@ -24,12 +24,15 @@ const TicTacToeGame: React.FC<TicTacToeGameProps> = ({ gameId, user }) => {
     connected,
     ready,
     error,
+    connectionStatus,
+    retryCount,
     opponentDisconnected,
     claimWinAvailable,
     claimWinCountdown,
     makeMove,
     forfeit,
     claimWin,
+    retry,
   } = useGameSocket(gameId, userId);
 
   // No gameId provided - show instructions
@@ -45,13 +48,35 @@ const TicTacToeGame: React.FC<TicTacToeGameProps> = ({ gameId, user }) => {
     );
   }
 
-  // Loading state
+  // Loading/connecting state
   if (!game) {
+    const getConnectionMessage = () => {
+      switch (connectionStatus) {
+        case 'connecting':
+          return 'Connecting to game...';
+        case 'reconnecting':
+          return `Reconnecting... (attempt ${retryCount}/5)`;
+        case 'failed':
+          return 'Connection failed';
+        default:
+          return 'Connecting...';
+      }
+    };
+
     return (
       <div className="ttt-container">
         <div className="ttt-message">
-          <div className="ttt-loading">Connecting to game...</div>
-          {error && <div className="ttt-error">{error}</div>}
+          <div className={`ttt-loading ${connectionStatus === 'failed' ? 'ttt-loading-failed' : ''}`}>
+            {getConnectionMessage()}
+          </div>
+          {connectionStatus === 'failed' && (
+            <button className="ttt-retry-btn" onClick={retry}>
+              Tap to Retry
+            </button>
+          )}
+          {error && connectionStatus !== 'failed' && (
+            <div className="ttt-error">{error}</div>
+          )}
         </div>
       </div>
     );
@@ -82,11 +107,14 @@ const TicTacToeGame: React.FC<TicTacToeGameProps> = ({ gameId, user }) => {
       }
       return 'Opponent disconnected';
     }
+    if (connectionStatus === 'reconnecting') {
+      return `Reconnecting... (${retryCount}/5)`;
+    }
     if (!connected) {
       return 'Reconnecting...';
     }
     if (!ready) {
-      return 'Waiting for opponent to connect...';
+      return 'Waiting for opponent...';
     }
     if (gameEnded) {
       if (isDraw) {
@@ -136,7 +164,7 @@ const TicTacToeGame: React.FC<TicTacToeGameProps> = ({ gameId, user }) => {
       </div>
 
       {/* Status message */}
-      <div className={`ttt-status ${isMyTurn && !gameEnded ? 'ttt-status-myturn' : ''} ${gameEnded ? (iWon ? 'ttt-status-won' : 'ttt-status-lost') : ''} ${opponentDisconnected ? 'ttt-status-disconnected' : ''}`}>
+      <div className={`ttt-status ${isMyTurn && !gameEnded ? 'ttt-status-myturn' : ''} ${gameEnded ? (iWon ? 'ttt-status-won' : 'ttt-status-lost') : ''} ${opponentDisconnected ? 'ttt-status-disconnected' : ''} ${connectionStatus === 'reconnecting' ? 'ttt-status-reconnecting' : ''}`}>
         {getStatusMessage()}
       </div>
 
@@ -182,14 +210,6 @@ const TicTacToeGame: React.FC<TicTacToeGameProps> = ({ gameId, user }) => {
               </button>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Connection status */}
-      {!connected && (
-        <div className="ttt-connection-status">
-          <span className="ttt-connection-dot ttt-disconnected"></span>
-          Disconnected
         </div>
       )}
 

@@ -255,6 +255,33 @@
   color: #6c757d;
 }
 
+.ttt-loading-failed {
+  color: #dc3545;
+}
+
+.ttt-retry-btn {
+  margin-top: 20px;
+  padding: 12px 30px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.ttt-retry-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.ttt-status-reconnecting {
+  background: #fff3cd;
+  color: #856404;
+  animation: pulse 1.5s infinite;
+}
+
 .ttt-error {
   margin-top: 15px;
   padding: 10px 15px;
