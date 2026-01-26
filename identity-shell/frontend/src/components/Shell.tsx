@@ -24,7 +24,7 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout }) => {
     setToastChallenge(challenge);
   };
 
-  // Open game in new tab (more reliable than iframe, especially on iOS)
+  // Redirect to game (not popup - iOS Safari blocks popups from SSE handlers)
   const handleGameStart = (appId: string, gameId: string) => {
     const app = apps.find(a => a.id === appId);
     if (app) {
@@ -33,7 +33,9 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout }) => {
         userName: user.name,
         gameId,
       });
-      window.open(gameUrl, '_blank');
+      console.log('🎮 Redirecting to game:', gameUrl);
+      // Use location.href to redirect entirely - leaves the shell
+      window.location.href = gameUrl;
     }
   };
 
@@ -52,7 +54,7 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout }) => {
   });
   const notificationCount = receivedChallenges.filter(c => c.status === 'pending').length;
 
-  // Open app in new tab
+  // Redirect to app (leaves the shell entirely)
   const handleAppClick = (appId: string) => {
     const app = apps.find(a => a.id === appId);
     if (app) {
@@ -60,7 +62,8 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout }) => {
         userId: user.email,
         userName: user.name,
       });
-      window.open(appUrl, '_blank');
+      console.log('🎮 Redirecting to app:', appUrl);
+      window.location.href = appUrl;
     }
   };
 

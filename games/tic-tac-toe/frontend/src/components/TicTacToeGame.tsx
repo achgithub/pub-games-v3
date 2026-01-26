@@ -43,6 +43,17 @@ const TicTacToeGame: React.FC<TicTacToeGameProps> = ({ gameId, user }) => {
           <h2>Tic-Tac-Toe</h2>
           <p>Challenge another player from the lobby to start a game!</p>
           <p className="ttt-hint">Go back to the lobby and click on a player to send a challenge.</p>
+          <div className="ttt-back-to-lobby" style={{ marginTop: 30 }}>
+            <button
+              className="ttt-lobby-btn"
+              onClick={() => {
+                const shellUrl = `http://${window.location.hostname}:3001`;
+                window.location.href = shellUrl;
+              }}
+            >
+              Go to Lobby
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -70,9 +81,22 @@ const TicTacToeGame: React.FC<TicTacToeGameProps> = ({ gameId, user }) => {
             {getConnectionMessage()}
           </div>
           {connectionStatus === 'failed' && (
-            <button className="ttt-retry-btn" onClick={retry}>
-              Tap to Retry
-            </button>
+            <>
+              <button className="ttt-retry-btn" onClick={retry}>
+                Tap to Retry
+              </button>
+              <div className="ttt-back-to-lobby" style={{ marginTop: 15 }}>
+                <button
+                  className="ttt-leave-btn"
+                  onClick={() => {
+                    const shellUrl = `http://${window.location.hostname}:3001`;
+                    window.location.href = shellUrl;
+                  }}
+                >
+                  Back to Lobby
+                </button>
+              </div>
+            </>
           )}
           {error && connectionStatus !== 'failed' && (
             <div className="ttt-error">{error}</div>
@@ -214,6 +238,22 @@ const TicTacToeGame: React.FC<TicTacToeGameProps> = ({ gameId, user }) => {
       )}
 
       {error && <div className="ttt-error">{error}</div>}
+
+      {/* Back to Lobby - shown when game ends */}
+      {gameEnded && (
+        <div className="ttt-back-to-lobby">
+          <button
+            className="ttt-lobby-btn"
+            onClick={() => {
+              // Navigate back to shell/lobby
+              const shellUrl = `http://${window.location.hostname}:3001`;
+              window.location.href = shellUrl;
+            }}
+          >
+            Back to Lobby
+          </button>
+        </div>
+      )}
     </div>
   );
 };

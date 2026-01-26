@@ -123,7 +123,7 @@ export function useGameSocket(gameId: string | null, userId: string): UseGameSoc
     ws.onmessage = (event) => {
       try {
         const msg: WSMessage = JSON.parse(event.data);
-        console.log('[WS] Received:', msg.type, handshakeStateRef.current);
+        console.log('[WS] Received:', msg.type, 'handshakeState:', handshakeStateRef.current, 'payload:', msg.payload ? 'yes' : 'no');
 
         // Handle handshake sequence
         if (handshakeStateRef.current === 'sent_ping' && msg.type === 'pong') {
@@ -137,9 +137,12 @@ export function useGameSocket(gameId: string | null, userId: string): UseGameSoc
 
         if (handshakeStateRef.current === 'sent_ack' && msg.type === 'ready') {
           // Step 3: Received READY with game state - success!
-          console.log('[WS] Handshake: Received READY with game state');
+          console.log('[WS] Handshake: Received READY with game state:', JSON.stringify(msg.payload));
           handshakeStateRef.current = 'ready';
-          setGame(msg.payload as Game);
+          const gameData = msg.payload as Game;
+          console.log('[WS] Setting game state:', gameData?.id, 'status:', gameData?.status);
+          setGame(gameData);
+          console.log('[WS] Setting ready=true, connectionStatus=connected');
           setReady(true);
           setConnectionStatus('connected');
           // Reset retry count on successful connection
@@ -148,11 +151,19 @@ export function useGameSocket(gameId: string | null, userId: string): UseGameSoc
           return;
         }
 
+        // Log unexpected handshake messages
+        if (msg.type === 'ready' && handshakeStateRef.current !== 'sent_ack') {
+          console.warn('[WS] Received READY but handshake state is:', handshakeStateRef.current, '(expected sent_ack)');
+        }
+        if (msg.type === 'pong' && handshakeStateRef.current !== 'sent_ping') {
+          console.log('[WS] Received PONG outside handshake (game refresh)');
+        }
+
         // Normal message handling (after handshake)
         switch (msg.type) {
           case 'pong':
-            // Game state refresh response
-            if (msg.payload) {
+            // Game state refresh response (only after handshake complete)
+            if (handshakeStateRef.current === 'ready' && msg.payload) {
               setGame(msg.payload as Game);
             }
             break;

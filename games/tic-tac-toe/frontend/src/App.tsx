@@ -24,6 +24,25 @@ function App() {
         <p style={{ color: '#666', marginTop: 20 }}>
           Missing user information. Please access this game through the lobby.
         </p>
+        <button
+          onClick={() => {
+            const shellUrl = `http://${window.location.hostname}:3001`;
+            window.location.href = shellUrl;
+          }}
+          style={{
+            marginTop: 20,
+            background: 'linear-gradient(135deg, #667eea, #764ba2)',
+            color: 'white',
+            border: 'none',
+            padding: '12px 30px',
+            fontSize: 16,
+            fontWeight: 500,
+            borderRadius: 8,
+            cursor: 'pointer',
+          }}
+        >
+          Go to Lobby
+        </button>
       </div>
     );
   }

@@ -383,6 +383,28 @@
   background: #c82333;
 }
 
+/* Back to Lobby */
+.ttt-back-to-lobby {
+  margin-top: 20px;
+}
+
+.ttt-lobby-btn {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  padding: 12px 30px;
+  font-size: 16px;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.ttt-lobby-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
 /* Responsive adjustments */
 @media (max-width: 480px) {
   .ttt-cell {
