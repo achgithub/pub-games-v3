@@ -30,6 +30,9 @@ interface WSMessage {
   payload?: any;
 }
 
+// Handshake states
+type HandshakeState = 'connecting' | 'sent_ping' | 'received_pong' | 'sent_ack' | 'ready' | 'failed';
+
 interface UseGameSocketResult {
   game: Game | null;
   connected: boolean;
@@ -47,6 +50,7 @@ export function useGameSocket(gameId: string | null, userId: string): UseGameSoc
   const [opponentDisconnected, setOpponentDisconnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const handshakeStateRef = useRef<HandshakeState>('connecting');
 
   const connect = useCallback(() => {
     if (!gameId || !userId) return;
@@ -58,34 +62,54 @@ export function useGameSocket(gameId: string | null, userId: string): UseGameSoc
     const wsUrl = `${protocol}//${host}:${port}/api/ws/game/${gameId}?userId=${encodeURIComponent(userId)}`;
 
     console.log('[WS] Connecting to:', wsUrl);
+    handshakeStateRef.current = 'connecting';
 
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
     ws.onopen = () => {
-      console.log('[WS] Connected');
+      console.log('[WS] Connected, starting handshake');
       setConnected(true);
       setError(null);
       setOpponentDisconnected(false);
 
-      // Send ack to signal we're ready
-      ws.send(JSON.stringify({ type: 'ack' }));
+      // Step 1: Send PING to start handshake
+      console.log('[WS] Handshake: Sending PING');
+      ws.send(JSON.stringify({ type: 'ping' }));
+      handshakeStateRef.current = 'sent_ping';
     };
 
     ws.onmessage = (event) => {
       try {
         const msg: WSMessage = JSON.parse(event.data);
-        console.log('[WS] Received:', msg.type, msg.payload);
+        console.log('[WS] Received:', msg.type, handshakeStateRef.current);
 
+        // Handle handshake sequence
+        if (handshakeStateRef.current === 'sent_ping' && msg.type === 'pong') {
+          // Step 2: Received PONG, send ACK
+          console.log('[WS] Handshake: Received PONG, sending ACK');
+          handshakeStateRef.current = 'received_pong';
+          ws.send(JSON.stringify({ type: 'ack' }));
+          handshakeStateRef.current = 'sent_ack';
+          return;
+        }
+
+        if (handshakeStateRef.current === 'sent_ack' && msg.type === 'ready') {
+          // Step 3: Received READY with game state
+          console.log('[WS] Handshake: Received READY with game state');
+          handshakeStateRef.current = 'ready';
+          setGame(msg.payload as Game);
+          setReady(true);
+          return;
+        }
+
+        // Normal message handling (after handshake)
         switch (msg.type) {
           case 'pong':
-            // Initial game state or ping response
-            setGame(msg.payload as Game);
-            break;
-
-          case 'ready':
-            // Both players connected and ready
-            setReady(true);
+            // Game state refresh response
+            if (msg.payload) {
+              setGame(msg.payload as Game);
+            }
             break;
 
           case 'move_update':
@@ -103,7 +127,13 @@ export function useGameSocket(gameId: string | null, userId: string): UseGameSoc
             break;
 
           case 'opponent_disconnected':
+            console.log('[WS] Opponent disconnected');
             setOpponentDisconnected(true);
+            break;
+
+          case 'opponent_reconnected':
+            console.log('[WS] Opponent reconnected');
+            setOpponentDisconnected(false);
             break;
 
           case 'error':
@@ -122,12 +152,14 @@ export function useGameSocket(gameId: string | null, userId: string): UseGameSoc
     ws.onerror = (event) => {
       console.error('[WS] Error:', event);
       setError('Connection error');
+      handshakeStateRef.current = 'failed';
     };
 
     ws.onclose = (event) => {
       console.log('[WS] Closed:', event.code, event.reason);
       setConnected(false);
       setReady(false);
+      handshakeStateRef.current = 'connecting';
 
       // Attempt reconnect if not intentional close
       if (event.code !== 1000 && gameId) {
@@ -161,13 +193,19 @@ export function useGameSocket(gameId: string | null, userId: string): UseGameSoc
       return;
     }
 
+    if (!ready) {
+      console.error('[WS] Cannot make move: handshake not complete');
+      return;
+    }
+
     const msg: WSMessage = {
       type: 'move',
       payload: { position },
     };
 
+    console.log('[WS] Sending move:', position);
     wsRef.current.send(JSON.stringify(msg));
-  }, []);
+  }, [ready]);
 
   return {
     game,

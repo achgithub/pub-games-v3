@@ -21,14 +21,15 @@ type UserPresence struct {
 
 // Challenge represents a game challenge between users
 type Challenge struct {
-	ID         string `json:"id"`
-	FromUser   string `json:"fromUser"`
-	ToUser     string `json:"toUser"`
-	AppID      string `json:"appId"`
-	Status     string `json:"status"`
-	CreatedAt  int64  `json:"createdAt"`
-	ExpiresAt  int64  `json:"expiresAt"`
-	RespondedAt int64  `json:"respondedAt,omitempty"`
+	ID          string                 `json:"id"`
+	FromUser    string                 `json:"fromUser"`
+	ToUser      string                 `json:"toUser"`
+	AppID       string                 `json:"appId"`
+	Status      string                 `json:"status"`
+	CreatedAt   int64                  `json:"createdAt"`
+	ExpiresAt   int64                  `json:"expiresAt"`
+	RespondedAt int64                  `json:"respondedAt,omitempty"`
+	Options     map[string]interface{} `json:"options,omitempty"`
 }
 
 // HandleGetPresence - GET /api/lobby/presence
@@ -144,9 +145,10 @@ func HandleGetSentChallenges(w http.ResponseWriter, r *http.Request) {
 // Sends a challenge from one user to another
 func HandleSendChallenge(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		FromUser string `json:"fromUser"`
-		ToUser   string `json:"toUser"`
-		AppID    string `json:"appId"`
+		FromUser string                 `json:"fromUser"`
+		ToUser   string                 `json:"toUser"`
+		AppID    string                 `json:"appId"`
+		Options  map[string]interface{} `json:"options"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -171,8 +173,8 @@ func HandleSendChallenge(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create challenge in Redis
-	challengeID, err := CreateChallenge(req.FromUser, req.ToUser, req.AppID)
+	// Create challenge in Redis (with game options)
+	challengeID, err := CreateChallenge(req.FromUser, req.ToUser, req.AppID, req.Options)
 	if err != nil {
 		log.Printf("Failed to create challenge: %v", err)
 		http.Error(w, "Failed to create challenge", http.StatusInternalServerError)
@@ -281,6 +283,23 @@ func createGameForChallenge(challenge *Challenge, player1Name, player2Name strin
 		return "", fmt.Errorf("unknown app: %s", challenge.AppID)
 	}
 
+	// Extract game options from challenge (with defaults)
+	mode := "normal"
+	moveTimeLimit := 0
+	firstTo := 1
+
+	if challenge.Options != nil {
+		if m, ok := challenge.Options["mode"].(string); ok {
+			mode = m
+			if mode == "timed" {
+				moveTimeLimit = 30 // 30 seconds per move
+			}
+		}
+		if ft, ok := challenge.Options["firstTo"].(float64); ok {
+			firstTo = int(ft)
+		}
+	}
+
 	// Create game request
 	reqBody := map[string]interface{}{
 		"challengeId":   challenge.ID,
@@ -288,9 +307,9 @@ func createGameForChallenge(challenge *Challenge, player1Name, player2Name strin
 		"player1Name":   player1Name,
 		"player2Id":     challenge.ToUser, // Accepter is player 2 (O)
 		"player2Name":   player2Name,
-		"mode":          "normal",
-		"moveTimeLimit": 0,
-		"firstTo":       1,
+		"mode":          mode,
+		"moveTimeLimit": moveTimeLimit,
+		"firstTo":       firstTo,
 	}
 
 	jsonBody, err := json.Marshal(reqBody)

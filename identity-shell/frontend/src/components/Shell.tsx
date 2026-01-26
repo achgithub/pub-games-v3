@@ -37,6 +37,7 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout }) => {
     sendChallenge,
     acceptChallenge,
     rejectChallenge,
+    fetchGameConfig,
   } = useLobby(user.email, {
     onNewChallenge: handleNewChallenge,
     onGameStart: handleGameStart,
@@ -124,6 +125,7 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout }) => {
                   onSendChallenge={sendChallenge}
                   onAcceptChallenge={acceptChallenge}
                   onRejectChallenge={rejectChallenge}
+                  fetchGameConfig={fetchGameConfig}
                 />
               }
             />

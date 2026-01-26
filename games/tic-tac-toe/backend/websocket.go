@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
@@ -14,6 +15,8 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		return true // Allow all origins for development
 	},
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
 }
 
 // GameHub manages all active game connections
@@ -26,7 +29,6 @@ type GameHub struct {
 type GameRoom struct {
 	gameID      string
 	connections map[string]*PlayerConnection // key: playerID (email)
-	readyCount  int
 	mu          sync.RWMutex
 }
 
@@ -34,7 +36,6 @@ type GameRoom struct {
 type PlayerConnection struct {
 	playerID string
 	conn     *websocket.Conn
-	ready    bool
 }
 
 // Global hub instance
@@ -80,7 +81,6 @@ func (r *GameRoom) addConnection(playerID string, conn *websocket.Conn) {
 	r.connections[playerID] = &PlayerConnection{
 		playerID: playerID,
 		conn:     conn,
-		ready:    false,
 	}
 }
 
@@ -91,16 +91,19 @@ func (r *GameRoom) removeConnection(playerID string) {
 	delete(r.connections, playerID)
 }
 
-// markReady marks a player as ready
-func (r *GameRoom) markReady(playerID string) bool {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+// hasConnection checks if a player already has a connection
+func (r *GameRoom) hasConnection(playerID string) bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	_, exists := r.connections[playerID]
+	return exists
+}
 
-	if conn, exists := r.connections[playerID]; exists && !conn.ready {
-		conn.ready = true
-		r.readyCount++
-	}
-	return r.readyCount >= 2
+// connectionCount returns the number of connected players
+func (r *GameRoom) connectionCount() int {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return len(r.connections)
 }
 
 // broadcast sends a message to all connected players
@@ -108,34 +111,22 @@ func (r *GameRoom) broadcast(msg *WSMessage) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	data, err := json.Marshal(msg)
-	if err != nil {
-		log.Printf("Error marshaling broadcast message: %v", err)
-		return
-	}
-
 	for _, pc := range r.connections {
-		if err := pc.conn.WriteMessage(websocket.TextMessage, data); err != nil {
+		if err := pc.conn.WriteJSON(msg); err != nil {
 			log.Printf("Error sending to player %s: %v", pc.playerID, err)
 		}
 	}
 }
 
 // sendTo sends a message to a specific player
-func (r *GameRoom) sendTo(playerID string, msg *WSMessage) {
+func (r *GameRoom) sendTo(playerID string, msg *WSMessage) error {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
 	if pc, exists := r.connections[playerID]; exists {
-		data, err := json.Marshal(msg)
-		if err != nil {
-			log.Printf("Error marshaling message: %v", err)
-			return
-		}
-		if err := pc.conn.WriteMessage(websocket.TextMessage, data); err != nil {
-			log.Printf("Error sending to player %s: %v", playerID, err)
-		}
+		return pc.conn.WriteJSON(msg)
 	}
+	return nil
 }
 
 // notifyOthers sends a message to all players except the sender
@@ -143,15 +134,9 @@ func (r *GameRoom) notifyOthers(senderID string, msg *WSMessage) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	data, err := json.Marshal(msg)
-	if err != nil {
-		log.Printf("Error marshaling message: %v", err)
-		return
-	}
-
 	for playerID, pc := range r.connections {
 		if playerID != senderID {
-			if err := pc.conn.WriteMessage(websocket.TextMessage, data); err != nil {
+			if err := pc.conn.WriteJSON(msg); err != nil {
 				log.Printf("Error sending to player %s: %v", playerID, err)
 			}
 		}
@@ -169,41 +154,43 @@ func gameWebSocketHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("🔌 WebSocket connection attempt: game=%s, user=%s", gameID, userID)
+
 	// Validate game exists in Redis
 	game, err := GetGame(gameID)
 	if err != nil {
-		log.Printf("WebSocket: Game not found: %s", gameID)
+		log.Printf("❌ WebSocket: Game not found in Redis: %s", gameID)
 		http.Error(w, "Game not found", http.StatusNotFound)
 		return
 	}
 
 	// Validate user is a player in this game
 	if userID != game.Player1ID && userID != game.Player2ID {
-		log.Printf("WebSocket: User %s is not a player in game %s", userID, gameID)
+		log.Printf("❌ WebSocket: User %s is not a player in game %s", userID, gameID)
 		http.Error(w, "Not a player in this game", http.StatusForbidden)
+		return
+	}
+
+	// Get or create room
+	room := hub.getOrCreateRoom(gameID)
+
+	// Check if user already has a connection (prevent multiple tabs)
+	if room.hasConnection(userID) {
+		log.Printf("⚠️ WebSocket: User %s already connected to game %s", userID, gameID)
+		http.Error(w, "Already connected in another tab", http.StatusConflict)
 		return
 	}
 
 	// Upgrade to WebSocket
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Printf("WebSocket upgrade failed: %v", err)
+		log.Printf("❌ WebSocket upgrade failed: %v", err)
 		return
 	}
+	defer conn.Close()
 
-	log.Printf("🔌 WebSocket connected: game=%s, user=%s", gameID, userID)
-
-	// Get or create room and add connection
-	room := hub.getOrCreateRoom(gameID)
+	// Register connection
 	room.addConnection(userID, conn)
-
-	// Send initial game state (pong message)
-	room.sendTo(userID, &WSMessage{
-		Type:    "pong",
-		Payload: game,
-	})
-
-	// Handle disconnect
 	defer func() {
 		log.Printf("🔌 WebSocket disconnected: game=%s, user=%s", gameID, userID)
 		room.removeConnection(userID)
@@ -214,76 +201,149 @@ func gameWebSocketHandler(w http.ResponseWriter, r *http.Request) {
 		})
 
 		// Check if room is empty
-		room.mu.RLock()
-		isEmpty := len(room.connections) == 0
-		room.mu.RUnlock()
-
-		if isEmpty {
+		if room.connectionCount() == 0 {
 			hub.removeRoom(gameID)
+			log.Printf("🗑️ Cleaned up empty room for game %s", gameID)
 		}
 	}()
 
-	// Read loop
-	for {
-		_, message, err := conn.ReadMessage()
-		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Printf("WebSocket error: %v", err)
+	log.Printf("✅ WebSocket upgraded: game=%s, user=%s", gameID, userID)
+
+	// Perform bidirectional handshake (v2 pattern)
+	// Flow: Client PING -> Server PONG -> Client ACK -> Server READY with game state
+	if !performHandshake(conn, gameID, userID) {
+		log.Printf("❌ Handshake failed: game=%s, user=%s", gameID, userID)
+		return
+	}
+
+	log.Printf("✅ Handshake complete: game=%s, user=%s", gameID, userID)
+
+	// Start the game connection handler (message loop + keepalive)
+	handleGameConnection(conn, room, gameID, userID)
+}
+
+// performHandshake conducts the bidirectional handshake
+// Flow: Client PING -> Server PONG -> Client ACK -> Server READY with game state
+func performHandshake(conn *websocket.Conn, gameID, userID string) bool {
+	// 1. Wait for client PING (5 second timeout)
+	conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	var msg WSMessage
+	if err := conn.ReadJSON(&msg); err != nil {
+		log.Printf("❌ Handshake: Failed to read PING from %s: %v", userID, err)
+		return false
+	}
+	if msg.Type != "ping" {
+		log.Printf("❌ Handshake: Expected PING, got %s from %s", msg.Type, userID)
+		return false
+	}
+	log.Printf("📨 Handshake: Received PING from %s", userID)
+
+	// 2. Send PONG
+	if err := conn.WriteJSON(&WSMessage{Type: "pong"}); err != nil {
+		log.Printf("❌ Handshake: Failed to send PONG to %s: %v", userID, err)
+		return false
+	}
+	log.Printf("📤 Handshake: Sent PONG to %s", userID)
+
+	// 3. Wait for client ACK (5 second timeout)
+	conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	if err := conn.ReadJSON(&msg); err != nil {
+		log.Printf("❌ Handshake: Failed to read ACK from %s: %v", userID, err)
+		return false
+	}
+	if msg.Type != "ack" {
+		log.Printf("❌ Handshake: Expected ACK, got %s from %s", msg.Type, userID)
+		return false
+	}
+	log.Printf("📨 Handshake: Received ACK from %s", userID)
+
+	// 4. Fetch current game state
+	game, err := GetGame(gameID)
+	if err != nil {
+		log.Printf("❌ Handshake: Failed to fetch game state: %v", err)
+		return false
+	}
+
+	// 5. Send READY with game state
+	if err := conn.WriteJSON(&WSMessage{
+		Type:    "ready",
+		Payload: game,
+	}); err != nil {
+		log.Printf("❌ Handshake: Failed to send READY to %s: %v", userID, err)
+		return false
+	}
+	log.Printf("📤 Handshake: Sent READY with game state to %s", userID)
+
+	// Reset read deadline for normal operation
+	conn.SetReadDeadline(time.Time{})
+
+	return true
+}
+
+// handleGameConnection maintains the WebSocket connection with keepalive
+func handleGameConnection(conn *websocket.Conn, room *GameRoom, gameID, userID string) {
+	// Set up ping/pong for connection health monitoring
+	conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+	conn.SetPongHandler(func(string) error {
+		conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+		return nil
+	})
+
+	// Start ping ticker to keep connection alive
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+
+	done := make(chan struct{})
+
+	// Read messages in goroutine
+	go func() {
+		defer close(done)
+		for {
+			var msg WSMessage
+			if err := conn.ReadJSON(&msg); err != nil {
+				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+					log.Printf("WebSocket read error: %v", err)
+				}
+				return
 			}
-			break
-		}
 
-		// Parse message
-		var msg WSMessage
-		if err := json.Unmarshal(message, &msg); err != nil {
-			log.Printf("Failed to parse WebSocket message: %v", err)
-			room.sendTo(userID, &WSMessage{
-				Type:    "error",
-				Payload: map[string]string{"message": "Invalid message format"},
-			})
-			continue
-		}
+			// Handle message types
+			switch msg.Type {
+			case "move":
+				handleWebSocketMove(room, userID, gameID, msg.Payload)
 
-		// Handle message types
-		switch msg.Type {
-		case "ping":
-			// Refresh game state and respond with pong
-			game, err := GetGame(gameID)
-			if err != nil {
+			case "ping":
+				// Client requesting game state refresh
+				game, err := GetGame(gameID)
+				if err != nil {
+					room.sendTo(userID, &WSMessage{
+						Type:    "error",
+						Payload: map[string]string{"message": "Game not found"},
+					})
+					continue
+				}
 				room.sendTo(userID, &WSMessage{
-					Type:    "error",
-					Payload: map[string]string{"message": "Game not found"},
+					Type:    "pong",
+					Payload: game,
 				})
-				continue
+
+			default:
+				log.Printf("Unknown message type from %s: %s", userID, msg.Type)
 			}
-			room.sendTo(userID, &WSMessage{
-				Type:    "pong",
-				Payload: game,
-			})
+		}
+	}()
 
-		case "ack":
-			// Player acknowledges connection, mark as ready
-			allReady := room.markReady(userID)
-			log.Printf("📍 Player %s acknowledged, allReady=%v", userID, allReady)
+	// Keep connection alive with pings
+	for {
+		select {
+		case <-done:
+			return
 
-			if allReady {
-				// Both players ready, broadcast ready message
-				room.broadcast(&WSMessage{
-					Type: "ready",
-				})
-				log.Printf("✅ Both players ready in game %s", gameID)
+		case <-ticker.C:
+			if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				log.Printf("Ping failed for %s: %v", userID, err)
+				return
 			}
-
-		case "move":
-			// Handle move
-			handleWebSocketMove(room, userID, gameID, msg.Payload)
-
-		default:
-			log.Printf("Unknown message type: %s", msg.Type)
-			room.sendTo(userID, &WSMessage{
-				Type:    "error",
-				Payload: map[string]string{"message": "Unknown message type"},
-			})
 		}
 	}
 }

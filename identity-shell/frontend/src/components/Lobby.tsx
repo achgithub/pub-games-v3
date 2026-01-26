@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './Lobby.css';
-import { AppDefinition, UserPresence, Challenge } from '../types';
+import { AppDefinition, UserPresence, Challenge, ChallengeOptions, GameConfig } from '../types';
+import ChallengeModal from './ChallengeModal';
 
 interface LobbyProps {
   apps: AppDefinition[];
@@ -10,9 +11,10 @@ interface LobbyProps {
   receivedChallenges: Challenge[];
   sentChallenges: Challenge[];
   notification: string | null;
-  onSendChallenge: (toUser: string, appId: string) => Promise<boolean>;
+  onSendChallenge: (toUser: string, appId: string, options?: ChallengeOptions) => Promise<boolean>;
   onAcceptChallenge: (challengeId: string) => Promise<boolean>;
   onRejectChallenge: (challengeId: string) => Promise<boolean>;
+  fetchGameConfig: (appId: string, backendPort: number) => Promise<GameConfig | null>;
 }
 
 const Lobby: React.FC<LobbyProps> = ({
@@ -26,9 +28,16 @@ const Lobby: React.FC<LobbyProps> = ({
   onSendChallenge,
   onAcceptChallenge,
   onRejectChallenge,
+  fetchGameConfig,
 }) => {
   // Force re-render every second to update timers and filter expired challenges
   const [, setTick] = useState(0);
+
+  // Challenge modal state
+  const [challengeModal, setChallengeModal] = useState<{
+    targetUser: string;
+    app: AppDefinition;
+  } | null>(null);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -50,8 +59,20 @@ const Lobby: React.FC<LobbyProps> = ({
   // Filter out lobby itself from the grid
   const availableGames = apps.filter(app => app.id !== 'lobby');
 
-  const handleChallengeUser = async (opponentEmail: string, appId: string) => {
-    await onSendChallenge(opponentEmail, appId);
+  // Open challenge modal for a user
+  const handleChallengeUser = (opponentEmail: string, appId: string) => {
+    const app = apps.find(a => a.id === appId);
+    if (app) {
+      setChallengeModal({ targetUser: opponentEmail, app });
+    }
+  };
+
+  // Send challenge from modal
+  const handleConfirmChallenge = async (options: ChallengeOptions) => {
+    if (challengeModal) {
+      await onSendChallenge(challengeModal.targetUser, challengeModal.app.id, options);
+      setChallengeModal(null);
+    }
   };
 
   const handleAcceptChallenge = async (challengeId: string) => {
@@ -191,6 +212,17 @@ const Lobby: React.FC<LobbyProps> = ({
           </div>
         </section>
       </div>
+
+      {/* Challenge Modal */}
+      {challengeModal && (
+        <ChallengeModal
+          targetUser={challengeModal.targetUser}
+          app={challengeModal.app}
+          onConfirm={handleConfirmChallenge}
+          onCancel={() => setChallengeModal(null)}
+          fetchGameConfig={fetchGameConfig}
+        />
+      )}
     </div>
   );
 };

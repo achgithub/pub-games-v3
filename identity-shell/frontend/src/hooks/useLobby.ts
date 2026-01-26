@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { LobbyState, Challenge } from '../types';
+import { LobbyState, Challenge, ChallengeOptions, GameConfig } from '../types';
 
 const API_BASE = `http://${window.location.hostname}:3001/api`;
 
@@ -106,8 +106,21 @@ export function useLobby(userEmail: string, options?: UseLobbyOptions) {
     }
   };
 
-  // Send a challenge
-  const sendChallenge = async (toUser: string, appId: string) => {
+  // Fetch game config from mini-app
+  const fetchGameConfig = async (appId: string, backendPort: number): Promise<GameConfig | null> => {
+    try {
+      const host = window.location.hostname;
+      const response = await fetch(`http://${host}:${backendPort}/api/config`);
+      if (!response.ok) return null;
+      return await response.json();
+    } catch (err) {
+      console.error('Failed to fetch game config:', err);
+      return null;
+    }
+  };
+
+  // Send a challenge with optional game options
+  const sendChallenge = async (toUser: string, appId: string, options?: ChallengeOptions) => {
     try {
       const response = await fetch(`${API_BASE}/lobby/challenge`, {
         method: 'POST',
@@ -116,6 +129,7 @@ export function useLobby(userEmail: string, options?: UseLobbyOptions) {
           fromUser: userEmail,
           toUser,
           appId,
+          options: options || {},
         }),
       });
 
@@ -268,5 +282,6 @@ export function useLobby(userEmail: string, options?: UseLobbyOptions) {
     sendChallenge,
     acceptChallenge,
     rejectChallenge,
+    fetchGameConfig,
   };
 }

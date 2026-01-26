@@ -44,6 +44,7 @@ func main() {
 
 	// HTTP endpoints
 	r.HandleFunc("/api/health", handleHealth).Methods("GET")
+	r.HandleFunc("/api/config", handleGetConfig).Methods("GET")
 	r.HandleFunc("/api/game/{gameId}", handleGetGame).Methods("GET")
 	r.HandleFunc("/api/game", handleCreateGame).Methods("POST")
 	r.HandleFunc("/api/move", handleMakeMove).Methods("POST")

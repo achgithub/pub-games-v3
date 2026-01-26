@@ -147,7 +147,7 @@ func HasPendingChallengeBetween(user1, user2 string) (bool, error) {
 }
 
 // CreateChallenge creates a new challenge in Redis with 60s TTL
-func CreateChallenge(fromUser, toUser, appID string) (string, error) {
+func CreateChallenge(fromUser, toUser, appID string, options map[string]interface{}) (string, error) {
 	// Check if there's already a pending challenge between these users
 	hasPending, err := HasPendingChallengeBetween(fromUser, toUser)
 	if err != nil {
@@ -168,6 +168,7 @@ func CreateChallenge(fromUser, toUser, appID string) (string, error) {
 		"status":    "pending",
 		"createdAt": time.Now().Unix(),
 		"expiresAt": time.Now().Add(60 * time.Second).Unix(),
+		"options":   options,
 	}
 
 	data, err := json.Marshal(challenge)

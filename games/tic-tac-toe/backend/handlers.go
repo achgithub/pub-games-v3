@@ -164,6 +164,43 @@ func handleMakeMove(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// handleGetConfig returns game configuration and options schema
+// This allows the identity shell to dynamically render challenge options
+func handleGetConfig(w http.ResponseWriter, r *http.Request) {
+	config := map[string]interface{}{
+		"appId":       "tic-tac-toe",
+		"name":        "Tic-Tac-Toe",
+		"icon":        "⭕",
+		"description": "Classic 3x3 grid game. Get three in a row to win!",
+		"gameOptions": []map[string]interface{}{
+			{
+				"id":      "firstTo",
+				"type":    "select",
+				"label":   "First to",
+				"default": 1,
+				"options": []map[string]interface{}{
+					{"value": 1, "label": "1 win"},
+					{"value": 2, "label": "2 wins"},
+					{"value": 3, "label": "3 wins (Best of 5)"},
+					{"value": 5, "label": "5 wins (Best of 9)"},
+				},
+			},
+			{
+				"id":      "mode",
+				"type":    "select",
+				"label":   "Mode",
+				"default": "normal",
+				"options": []map[string]interface{}{
+					{"value": "normal", "label": "Normal"},
+					{"value": "timed", "label": "Timed (30s/move)"},
+				},
+			},
+		},
+	}
+
+	respondJSON(w, config)
+}
+
 // handleGetStats retrieves player statistics
 func handleGetStats(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
