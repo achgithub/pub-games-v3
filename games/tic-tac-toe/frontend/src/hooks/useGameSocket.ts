@@ -225,7 +225,7 @@ export function useGameSocket(gameId: string | null, userId: string): UseGameSoc
     // Small delay before connecting - helps iOS Safari in iframes settle
     const connectTimeout = setTimeout(() => {
       connect();
-    }, 100);
+    }, 300);
 
     return () => {
       // Cleanup on unmount
