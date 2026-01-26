@@ -3,7 +3,7 @@ import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import './Shell.css';
 import { User } from '../types';
 import { useLobby } from '../hooks/useLobby';
-import { useApps } from '../hooks/useApps';
+import { useApps, buildAppUrl } from '../hooks/useApps';
 import Lobby from './Lobby';
 import AppContainer from './AppContainer';
 import ChallengeToast from './ChallengeToast';
@@ -24,9 +24,17 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout }) => {
     setToastChallenge(challenge);
   };
 
+  // Open game in new tab (more reliable than iframe, especially on iOS)
   const handleGameStart = (appId: string, gameId: string) => {
-    // Navigate to the game with the gameId
-    navigate(`/app/${appId}?gameId=${encodeURIComponent(gameId)}`);
+    const app = apps.find(a => a.id === appId);
+    if (app) {
+      const gameUrl = buildAppUrl(app, {
+        userId: user.email,
+        userName: user.name,
+        gameId,
+      });
+      window.open(gameUrl, '_blank');
+    }
   };
 
   const {
@@ -44,8 +52,16 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout }) => {
   });
   const notificationCount = receivedChallenges.filter(c => c.status === 'pending').length;
 
+  // Open app in new tab
   const handleAppClick = (appId: string) => {
-    navigate(`/app/${appId}`);
+    const app = apps.find(a => a.id === appId);
+    if (app) {
+      const appUrl = buildAppUrl(app, {
+        userId: user.email,
+        userName: user.name,
+      });
+      window.open(appUrl, '_blank');
+    }
   };
 
   const handleDismissToast = () => {

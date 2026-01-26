@@ -37,8 +37,8 @@ type ConnectionStatus = 'connecting' | 'connected' | 'reconnecting' | 'failed';
 type HandshakeState = 'connecting' | 'sent_ping' | 'received_pong' | 'sent_ack' | 'ready' | 'failed';
 
 const MAX_RETRIES = 5;
-const INITIAL_RETRY_DELAY = 1000; // 1 second
-const CONNECT_DELAY = 300; // Initial delay for iOS Safari
+const INITIAL_RETRY_DELAY = 1000; // 1 second between retries
+const CONNECT_DELAY = 100; // Small delay before connecting
 
 interface UseGameSocketResult {
   game: Game | null;
