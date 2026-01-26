@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { LobbyState, Challenge } from '../types';
 
 const API_BASE = `http://${window.location.hostname}:3001/api`;
@@ -10,6 +10,16 @@ interface UseLobbyOptions {
 
 export function useLobby(userEmail: string, options?: UseLobbyOptions) {
   const { onNewChallenge, onGameStart } = options || {};
+
+  // Use refs to avoid stale closures in SSE handler
+  const onNewChallengeRef = useRef(onNewChallenge);
+  const onGameStartRef = useRef(onGameStart);
+
+  // Keep refs updated
+  useEffect(() => {
+    onNewChallengeRef.current = onNewChallenge;
+    onGameStartRef.current = onGameStart;
+  }, [onNewChallenge, onGameStart]);
   const [lobbyState, setLobbyState] = useState<LobbyState>({
     onlineUsers: [],
     receivedChallenges: [],
@@ -191,8 +201,10 @@ export function useLobby(userEmail: string, options?: UseLobbyOptions) {
         fetchSentChallenges();
       } else if (data.type === 'game_started') {
         // Game has been created - navigate to it
-        if (onGameStart && data.appId && data.gameId) {
-          onGameStart(data.appId, data.gameId);
+        // Use ref to avoid stale closure
+        if (onGameStartRef.current && data.appId && data.gameId) {
+          console.log('🎮 game_started received, navigating to:', data.appId, data.gameId);
+          onGameStartRef.current(data.appId, data.gameId);
         }
       }
     };
