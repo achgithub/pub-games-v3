@@ -135,11 +135,9 @@ func handleMakeMove(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Broadcast update to connected players via WebSocket
-	broadcastGameUpdate(req.GameID, game)
-
-	// If game ended, save to PostgreSQL and update stats
+	// Publish update to connected players via SSE (through Redis pub/sub)
 	if gameEnded {
+		// Save to PostgreSQL and update stats
 		if err := SaveCompletedGame(game); err != nil {
 			log.Printf("Warning: Failed to save completed game to PostgreSQL: %v", err)
 		}
@@ -152,8 +150,18 @@ func handleMakeMove(w http.ResponseWriter, r *http.Request) {
 		UpdatePlayerStats(game.Player1ID, game.Player1Name, player1Won, player2Won, isDraw, 0)
 		UpdatePlayerStats(game.Player2ID, game.Player2Name, player2Won, player1Won, isDraw, 0)
 
-		// Broadcast game_ended
-		broadcastGameEnded(req.GameID, game)
+		// Publish game_ended event
+		PublishGameEvent(req.GameID, "game_ended", map[string]interface{}{
+			"game":    game,
+			"message": message,
+			"reason":  "game_complete",
+		})
+	} else {
+		// Publish move_update event
+		PublishGameEvent(req.GameID, "move_update", map[string]interface{}{
+			"game":    game,
+			"message": message,
+		})
 	}
 
 	respondJSON(w, map[string]interface{}{
@@ -235,4 +243,284 @@ func sendError(w http.ResponseWriter, message string, code int) {
 func respondJSON(w http.ResponseWriter, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(data)
+}
+
+// handleGameStream handles SSE connections for real-time game updates
+func handleGameStream(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	gameID := vars["gameId"]
+	userID := r.URL.Query().Get("userId")
+
+	if gameID == "" || userID == "" {
+		sendError(w, "Missing gameId or userId", 400)
+		return
+	}
+
+	log.Printf("📡 SSE connection attempt: game=%s, user=%s", gameID, userID)
+
+	// Validate game exists
+	game, err := GetGame(gameID)
+	if err != nil {
+		log.Printf("❌ SSE: Game not found: %s", gameID)
+		sendError(w, "Game not found", 404)
+		return
+	}
+
+	// Validate user is a player
+	if userID != game.Player1ID && userID != game.Player2ID {
+		log.Printf("❌ SSE: User %s is not a player in game %s", userID, gameID)
+		sendError(w, "Not a player in this game", 403)
+		return
+	}
+
+	// Set SSE headers
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("X-Accel-Buffering", "no") // Disable nginx buffering
+
+	// Make sure we can flush
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		log.Printf("❌ SSE: Streaming not supported")
+		sendError(w, "Streaming not supported", 500)
+		return
+	}
+
+	// Check if this is a reconnection (cancel pending disconnect timer)
+	wasReconnecting := CancelDisconnectTimer(gameID, userID)
+	if wasReconnecting {
+		log.Printf("✅ SSE: Player %s reconnected to game %s", userID, gameID)
+		// Notify opponent they reconnected
+		PublishGameEvent(gameID, "opponent_reconnected", map[string]interface{}{
+			"reconnectedUserId": userID,
+		})
+	}
+
+	// Register connection
+	AddSSEConnection(gameID, userID)
+
+	// Subscribe to game events
+	pubsub, msgChan := SubscribeToGame(gameID)
+	defer func() {
+		pubsub.Close()
+		// Only handle disconnect if game is still active
+		currentGame, err := GetGame(gameID)
+		if err == nil && currentGame.Status == GameStatusActive {
+			RemoveSSEConnection(gameID, userID, currentGame)
+		}
+		log.Printf("📡 SSE disconnected: game=%s, user=%s", gameID, userID)
+	}()
+
+	log.Printf("✅ SSE connected: game=%s, user=%s, reconnecting=%v", gameID, userID, wasReconnecting)
+
+	// Send initial connected event with current game state
+	initialEvent := SSEEvent{
+		Type:    "connected",
+		Payload: game,
+	}
+	initialData, _ := json.Marshal(initialEvent)
+	fmt.Fprintf(w, "data: %s\n\n", initialData)
+	flusher.Flush()
+
+	// Set up ping ticker for keepalive (every 30 seconds)
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+
+	// Listen for events
+	ctx := r.Context()
+	for {
+		select {
+		case <-ctx.Done():
+			// Client disconnected
+			return
+
+		case msg := <-msgChan:
+			// Forward Redis message to SSE stream
+			fmt.Fprintf(w, "data: %s\n\n", msg.Payload)
+			flusher.Flush()
+
+		case <-ticker.C:
+			// Send keepalive ping
+			pingEvent := SSEEvent{Type: "ping"}
+			pingData, _ := json.Marshal(pingEvent)
+			fmt.Fprintf(w, "data: %s\n\n", pingData)
+			flusher.Flush()
+		}
+	}
+}
+
+// handleForfeitHTTP handles HTTP forfeit requests
+func handleForfeitHTTP(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	gameID := vars["gameId"]
+
+	var req struct {
+		UserID string `json:"userId"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		sendError(w, "Invalid request body", 400)
+		return
+	}
+
+	if req.UserID == "" {
+		sendError(w, "Missing userId", 400)
+		return
+	}
+
+	game, err := GetGame(gameID)
+	if err != nil {
+		sendError(w, "Game not found", 404)
+		return
+	}
+
+	// Validate user is a player
+	if req.UserID != game.Player1ID && req.UserID != game.Player2ID {
+		sendError(w, "Not a player in this game", 403)
+		return
+	}
+
+	if game.Status == GameStatusCompleted {
+		sendError(w, "Game already ended", 400)
+		return
+	}
+
+	// Determine winner (opponent of the forfeiting player)
+	var winnerID string
+	if req.UserID == game.Player1ID {
+		winnerID = game.Player2ID
+	} else {
+		winnerID = game.Player1ID
+	}
+
+	log.Printf("🏳️ Player %s forfeited game %s, winner: %s", req.UserID, gameID, winnerID)
+
+	// Update game state
+	game.Status = GameStatusCompleted
+	game.WinnerID = &winnerID
+	now := time.Now().Unix()
+	game.CompletedAt = &now
+
+	// Save to Redis
+	if err := UpdateGame(game); err != nil {
+		log.Printf("Failed to update game after forfeit: %v", err)
+		sendError(w, "Failed to update game", 500)
+		return
+	}
+
+	// Save to PostgreSQL and update stats
+	if err := SaveCompletedGame(game); err != nil {
+		log.Printf("Warning: Failed to save forfeited game to PostgreSQL: %v", err)
+	}
+
+	// Update player stats
+	player1Won := winnerID == game.Player1ID
+	player2Won := winnerID == game.Player2ID
+
+	UpdatePlayerStats(game.Player1ID, game.Player1Name, player1Won, player2Won, false, 0)
+	UpdatePlayerStats(game.Player2ID, game.Player2Name, player2Won, player1Won, false, 0)
+
+	// Publish game_ended event
+	PublishGameEvent(gameID, "game_ended", map[string]interface{}{
+		"game":    game,
+		"message": "Opponent forfeited",
+		"reason":  "forfeit",
+	})
+
+	respondJSON(w, map[string]interface{}{
+		"success": true,
+		"game":    game,
+	})
+}
+
+// handleClaimWinHTTP handles HTTP claim-win requests
+func handleClaimWinHTTP(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	gameID := vars["gameId"]
+
+	var req struct {
+		UserID string `json:"userId"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		sendError(w, "Invalid request body", 400)
+		return
+	}
+
+	if req.UserID == "" {
+		sendError(w, "Missing userId", 400)
+		return
+	}
+
+	game, err := GetGame(gameID)
+	if err != nil {
+		sendError(w, "Game not found", 404)
+		return
+	}
+
+	// Validate user is a player
+	if req.UserID != game.Player1ID && req.UserID != game.Player2ID {
+		sendError(w, "Not a player in this game", 403)
+		return
+	}
+
+	if game.Status == GameStatusCompleted {
+		sendError(w, "Game already ended", 400)
+		return
+	}
+
+	// Get opponent ID
+	var opponentID string
+	if req.UserID == game.Player1ID {
+		opponentID = game.Player2ID
+	} else {
+		opponentID = game.Player1ID
+	}
+
+	// Check if opponent is disconnected
+	if !WasPlayerDisconnected(gameID, opponentID) {
+		sendError(w, "Cannot claim win - opponent is still connected or may reconnect", 400)
+		return
+	}
+
+	log.Printf("🏆 Player %s claiming win after %s disconnected in game %s", req.UserID, opponentID, gameID)
+
+	// Update game state
+	game.Status = GameStatusCompleted
+	game.WinnerID = &req.UserID
+	now := time.Now().Unix()
+	game.CompletedAt = &now
+
+	// Save to Redis
+	if err := UpdateGame(game); err != nil {
+		log.Printf("Failed to update game after claim win: %v", err)
+		sendError(w, "Failed to update game", 500)
+		return
+	}
+
+	// Save to PostgreSQL and update stats
+	if err := SaveCompletedGame(game); err != nil {
+		log.Printf("Warning: Failed to save claimed game to PostgreSQL: %v", err)
+	}
+
+	// Update player stats
+	player1Won := req.UserID == game.Player1ID
+	player2Won := req.UserID == game.Player2ID
+
+	UpdatePlayerStats(game.Player1ID, game.Player1Name, player1Won, player2Won, false, 0)
+	UpdatePlayerStats(game.Player2ID, game.Player2Name, player2Won, player1Won, false, 0)
+
+	// Publish game_ended event
+	PublishGameEvent(gameID, "game_ended", map[string]interface{}{
+		"game":    game,
+		"message": "You won - opponent disconnected",
+		"reason":  "disconnect",
+	})
+
+	respondJSON(w, map[string]interface{}{
+		"success": true,
+		"game":    game,
+	})
 }

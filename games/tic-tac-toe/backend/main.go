@@ -39,8 +39,8 @@ func main() {
 	// Setup router
 	r := mux.NewRouter()
 
-	// WebSocket endpoint
-	r.HandleFunc("/api/ws/game/{gameId}", gameWebSocketHandler)
+	// SSE endpoint for real-time updates
+	r.HandleFunc("/api/game/{gameId}/stream", handleGameStream).Methods("GET")
 
 	// HTTP endpoints
 	r.HandleFunc("/api/health", handleHealth).Methods("GET")
@@ -48,6 +48,8 @@ func main() {
 	r.HandleFunc("/api/game/{gameId}", handleGetGame).Methods("GET")
 	r.HandleFunc("/api/game", handleCreateGame).Methods("POST")
 	r.HandleFunc("/api/move", handleMakeMove).Methods("POST")
+	r.HandleFunc("/api/game/{gameId}/forfeit", handleForfeitHTTP).Methods("POST")
+	r.HandleFunc("/api/game/{gameId}/claim-win", handleClaimWinHTTP).Methods("POST")
 	r.HandleFunc("/api/stats/{userId}", handleGetStats).Methods("GET")
 
 	// Serve static frontend files (React build output)

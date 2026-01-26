@@ -25,7 +25,7 @@ export interface Game {
   completedAt?: number;
 }
 
-interface WSMessage {
+interface SSEEvent {
   type: string;
   payload?: any;
 }
@@ -33,12 +33,9 @@ interface WSMessage {
 // Connection states for UI feedback
 type ConnectionStatus = 'connecting' | 'connected' | 'reconnecting' | 'failed';
 
-// Handshake states
-type HandshakeState = 'connecting' | 'sent_ping' | 'received_pong' | 'sent_ack' | 'ready' | 'failed';
-
 const MAX_RETRIES = 5;
-const INITIAL_RETRY_DELAY = 1000; // 1 second between retries
-const CONNECT_DELAY = 100; // Small delay before connecting
+const INITIAL_RETRY_DELAY = 1000;
+const CONNECT_DELAY = 100;
 
 interface UseGameSocketResult {
   game: Game | null;
@@ -66,12 +63,20 @@ export function useGameSocket(gameId: string | null, userId: string): UseGameSoc
   const [opponentDisconnected, setOpponentDisconnected] = useState(false);
   const [claimWinAvailable, setClaimWinAvailable] = useState(false);
   const [claimWinCountdown, setClaimWinCountdown] = useState<number | null>(null);
-  const wsRef = useRef<WebSocket | null>(null);
+
+  const eventSourceRef = useRef<EventSource | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const claimWinTimerRef = useRef<NodeJS.Timeout | null>(null);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const handshakeStateRef = useRef<HandshakeState>('connecting');
   const retryCountRef = useRef(0);
+  const gameIdRef = useRef<string | null>(null);
+
+  // Build API base URL
+  const getApiBase = useCallback(() => {
+    const host = window.location.hostname;
+    const port = '4001';
+    return `http://${host}:${port}`;
+  }, []);
 
   // Clear claim win timers
   const clearClaimWinTimers = useCallback(() => {
@@ -91,81 +96,43 @@ export function useGameSocket(gameId: string | null, userId: string): UseGameSoc
     if (!gameId || !userId) return;
 
     // Close existing connection if any
-    if (wsRef.current) {
-      wsRef.current.close(1000, 'Reconnecting');
-      wsRef.current = null;
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
     }
 
-    // Construct WebSocket URL
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.hostname;
-    const port = '4001'; // Tic-tac-toe backend port
-    const wsUrl = `${protocol}//${host}:${port}/api/ws/game/${gameId}?userId=${encodeURIComponent(userId)}`;
+    // Build SSE URL
+    const apiBase = getApiBase();
+    const sseUrl = `${apiBase}/api/game/${gameId}/stream?userId=${encodeURIComponent(userId)}`;
 
-    console.log('[WS] Connecting to:', wsUrl, `(attempt ${retryCountRef.current + 1})`);
-    handshakeStateRef.current = 'connecting';
+    console.log('[SSE] Connecting to:', sseUrl, `(attempt ${retryCountRef.current + 1})`);
     setConnectionStatus(retryCountRef.current > 0 ? 'reconnecting' : 'connecting');
 
-    const ws = new WebSocket(wsUrl);
-    wsRef.current = ws;
+    const eventSource = new EventSource(sseUrl);
+    eventSourceRef.current = eventSource;
 
-    ws.onopen = () => {
-      console.log('[WS] Connected, starting handshake');
+    eventSource.onopen = () => {
+      console.log('[SSE] Connection opened');
       setConnected(true);
       setError(null);
-
-      // Step 1: Send PING to start handshake
-      console.log('[WS] Handshake: Sending PING');
-      ws.send(JSON.stringify({ type: 'ping' }));
-      handshakeStateRef.current = 'sent_ping';
     };
 
-    ws.onmessage = (event) => {
+    eventSource.onmessage = (event) => {
       try {
-        const msg: WSMessage = JSON.parse(event.data);
-        console.log('[WS] Received:', msg.type, 'handshakeState:', handshakeStateRef.current, 'payload:', msg.payload ? 'yes' : 'no');
+        const msg: SSEEvent = JSON.parse(event.data);
+        console.log('[SSE] Received:', msg.type);
 
-        // Handle handshake sequence
-        if (handshakeStateRef.current === 'sent_ping' && msg.type === 'pong') {
-          // Step 2: Received PONG, send ACK
-          console.log('[WS] Handshake: Received PONG, sending ACK');
-          handshakeStateRef.current = 'received_pong';
-          ws.send(JSON.stringify({ type: 'ack' }));
-          handshakeStateRef.current = 'sent_ack';
-          return;
-        }
-
-        if (handshakeStateRef.current === 'sent_ack' && msg.type === 'ready') {
-          // Step 3: Received READY with game state - success!
-          console.log('[WS] Handshake: Received READY with game state:', JSON.stringify(msg.payload));
-          handshakeStateRef.current = 'ready';
-          const gameData = msg.payload as Game;
-          console.log('[WS] Setting game state:', gameData?.id, 'status:', gameData?.status);
-          setGame(gameData);
-          console.log('[WS] Setting ready=true, connectionStatus=connected');
-          setReady(true);
-          setConnectionStatus('connected');
-          // Reset retry count on successful connection
-          retryCountRef.current = 0;
-          setRetryCount(0);
-          return;
-        }
-
-        // Log unexpected handshake messages
-        if (msg.type === 'ready' && handshakeStateRef.current !== 'sent_ack') {
-          console.warn('[WS] Received READY but handshake state is:', handshakeStateRef.current, '(expected sent_ack)');
-        }
-        if (msg.type === 'pong' && handshakeStateRef.current !== 'sent_ping') {
-          console.log('[WS] Received PONG outside handshake (game refresh)');
-        }
-
-        // Normal message handling (after handshake)
         switch (msg.type) {
-          case 'pong':
-            // Game state refresh response (only after handshake complete)
-            if (handshakeStateRef.current === 'ready' && msg.payload) {
-              setGame(msg.payload as Game);
-            }
+          case 'connected':
+            // Initial connection with game state
+            console.log('[SSE] Connected with game state');
+            const gameData = msg.payload as Game;
+            setGame(gameData);
+            setReady(true);
+            setConnectionStatus('connected');
+            // Reset retry count on successful connection
+            retryCountRef.current = 0;
+            setRetryCount(0);
             break;
 
           case 'move_update':
@@ -186,7 +153,7 @@ export function useGameSocket(gameId: string | null, userId: string): UseGameSoc
             break;
 
           case 'opponent_disconnected':
-            console.log('[WS] Opponent disconnected, starting claim win timer');
+            console.log('[SSE] Opponent disconnected, starting claim win timer');
             setOpponentDisconnected(true);
 
             // Start countdown for claim win
@@ -215,82 +182,80 @@ export function useGameSocket(gameId: string | null, userId: string): UseGameSoc
             break;
 
           case 'opponent_reconnected':
-            console.log('[WS] Opponent reconnected');
+            console.log('[SSE] Opponent reconnected');
             clearClaimWinTimers();
             setOpponentDisconnected(false);
             break;
 
+          case 'ping':
+            // Keepalive ping, no action needed
+            break;
+
           case 'error':
-            console.error('[WS] Server error:', msg.payload?.message);
+            console.error('[SSE] Server error:', msg.payload?.message);
             setError(msg.payload?.message || 'Unknown error');
             break;
 
           default:
-            console.log('[WS] Unknown message type:', msg.type);
+            console.log('[SSE] Unknown message type:', msg.type);
         }
       } catch (e) {
-        console.error('[WS] Failed to parse message:', e);
+        console.error('[SSE] Failed to parse message:', e, event.data);
       }
     };
 
-    ws.onerror = (event) => {
-      console.error('[WS] Error:', event);
-      handshakeStateRef.current = 'failed';
-    };
-
-    ws.onclose = (event) => {
-      console.log('[WS] Closed:', event.code, event.reason);
+    eventSource.onerror = (event) => {
+      console.error('[SSE] Error:', event);
       setConnected(false);
       setReady(false);
-      handshakeStateRef.current = 'connecting';
 
-      // Don't retry if intentional close or game ended
-      if (event.code === 1000) {
-        return;
-      }
+      // EventSource will auto-reconnect, but we track retries for UI feedback
+      if (eventSource.readyState === EventSource.CLOSED) {
+        // Connection was closed, need to manually reconnect
+        if (gameIdRef.current && retryCountRef.current < MAX_RETRIES) {
+          retryCountRef.current += 1;
+          setRetryCount(retryCountRef.current);
+          setConnectionStatus('reconnecting');
 
-      // Check if we should retry
-      if (gameId && retryCountRef.current < MAX_RETRIES) {
-        retryCountRef.current += 1;
-        setRetryCount(retryCountRef.current);
-        setConnectionStatus('reconnecting');
+          // Exponential backoff: 1s, 2s, 4s, 8s, 16s
+          const delay = INITIAL_RETRY_DELAY * Math.pow(2, retryCountRef.current - 1);
+          console.log(`[SSE] Retry ${retryCountRef.current}/${MAX_RETRIES} in ${delay}ms`);
 
-        // Exponential backoff: 1s, 2s, 4s, 8s, 16s
-        const delay = INITIAL_RETRY_DELAY * Math.pow(2, retryCountRef.current - 1);
-        console.log(`[WS] Retry ${retryCountRef.current}/${MAX_RETRIES} in ${delay}ms`);
-
-        reconnectTimeoutRef.current = setTimeout(() => {
-          connect();
-        }, delay);
-      } else if (retryCountRef.current >= MAX_RETRIES) {
-        // Max retries reached
-        setConnectionStatus('failed');
-        setError('Connection failed after multiple attempts. Tap to retry.');
+          reconnectTimeoutRef.current = setTimeout(() => {
+            connect();
+          }, delay);
+        } else if (retryCountRef.current >= MAX_RETRIES) {
+          setConnectionStatus('failed');
+          setError('Connection failed after multiple attempts. Tap to retry.');
+        }
       }
     };
-  }, [gameId, userId, clearClaimWinTimers]);
+  }, [gameId, userId, getApiBase, clearClaimWinTimers]);
 
   // Manual retry function
   const retry = useCallback(() => {
-    console.log('[WS] Manual retry triggered');
+    console.log('[SSE] Manual retry triggered');
     retryCountRef.current = 0;
     setRetryCount(0);
     setError(null);
     setConnectionStatus('connecting');
 
-    // Small delay then connect
     setTimeout(() => connect(), CONNECT_DELAY);
   }, [connect]);
 
   // Connect when gameId changes
   useEffect(() => {
+    gameIdRef.current = gameId;
+
     // Reset state for new game
     retryCountRef.current = 0;
     setRetryCount(0);
     setError(null);
     setConnectionStatus('connecting');
+    setGame(null);
+    setReady(false);
 
-    // Small delay before connecting - helps iOS Safari in iframes settle
+    // Small delay before connecting - helps iOS Safari settle
     const connectTimeout = setTimeout(() => {
       connect();
     }, CONNECT_DELAY);
@@ -302,59 +267,103 @@ export function useGameSocket(gameId: string | null, userId: string): UseGameSoc
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }
-      if (wsRef.current) {
-        wsRef.current.close(1000, 'Component unmounted');
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
       }
     };
-  }, [connect, clearClaimWinTimers]);
+  }, [gameId, connect, clearClaimWinTimers]);
 
-  // Make a move
-  const makeMove = useCallback((position: number) => {
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-      console.error('[WS] Cannot make move: not connected');
+  // Make a move via HTTP POST
+  const makeMove = useCallback(async (position: number) => {
+    if (!gameId || !ready) {
+      console.error('[SSE] Cannot make move: not ready');
       return;
     }
 
-    if (!ready) {
-      console.error('[WS] Cannot make move: handshake not complete');
+    const apiBase = getApiBase();
+    console.log('[SSE] Making move:', position);
+
+    try {
+      const response = await fetch(`${apiBase}/api/move`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          gameId,
+          playerId: userId,
+          position,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        console.error('[SSE] Move failed:', data.error);
+        setError(data.error || 'Move failed');
+      }
+      // Game state will be updated via SSE
+    } catch (err) {
+      console.error('[SSE] Move request failed:', err);
+      setError('Failed to make move');
+    }
+  }, [gameId, userId, ready, getApiBase]);
+
+  // Forfeit the game via HTTP POST
+  const forfeit = useCallback(async () => {
+    if (!gameId) {
+      console.error('[SSE] Cannot forfeit: no game');
       return;
     }
 
-    const msg: WSMessage = {
-      type: 'move',
-      payload: { position },
-    };
+    const apiBase = getApiBase();
+    console.log('[SSE] Forfeiting game');
 
-    console.log('[WS] Sending move:', position);
-    wsRef.current.send(JSON.stringify(msg));
-  }, [ready]);
+    try {
+      const response = await fetch(`${apiBase}/api/game/${gameId}/forfeit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
 
-  // Forfeit the game (intentional leave)
-  const forfeit = useCallback(() => {
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-      console.error('[WS] Cannot forfeit: not connected');
+      if (!response.ok) {
+        const data = await response.json();
+        console.error('[SSE] Forfeit failed:', data.error);
+        setError(data.error || 'Forfeit failed');
+      }
+      // Game state will be updated via SSE
+    } catch (err) {
+      console.error('[SSE] Forfeit request failed:', err);
+      setError('Failed to forfeit');
+    }
+  }, [gameId, userId, getApiBase]);
+
+  // Claim win after opponent disconnect via HTTP POST
+  const claimWin = useCallback(async () => {
+    if (!gameId || !claimWinAvailable) {
+      console.error('[SSE] Cannot claim win: not available');
       return;
     }
 
-    console.log('[WS] Sending forfeit');
-    wsRef.current.send(JSON.stringify({ type: 'forfeit' }));
-  }, []);
+    const apiBase = getApiBase();
+    console.log('[SSE] Claiming win');
 
-  // Claim win after opponent disconnect
-  const claimWin = useCallback(() => {
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-      console.error('[WS] Cannot claim win: not connected');
-      return;
+    try {
+      const response = await fetch(`${apiBase}/api/game/${gameId}/claim-win`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        console.error('[SSE] Claim win failed:', data.error);
+        setError(data.error || 'Claim win failed');
+      }
+      // Game state will be updated via SSE
+    } catch (err) {
+      console.error('[SSE] Claim win request failed:', err);
+      setError('Failed to claim win');
     }
-
-    if (!claimWinAvailable) {
-      console.error('[WS] Cannot claim win: not available yet');
-      return;
-    }
-
-    console.log('[WS] Sending claim_win');
-    wsRef.current.send(JSON.stringify({ type: 'claim_win' }));
-  }, [claimWinAvailable]);
+  }, [gameId, userId, claimWinAvailable, getApiBase]);
 
   return {
     game,

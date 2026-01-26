@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -160,4 +161,134 @@ func CompleteGame(gameID string, winnerID *string) error {
 
 	// Update with shorter TTL
 	return UpdateGame(game)
+}
+
+// SSEEvent represents an event published via Redis pub/sub
+type SSEEvent struct {
+	Type    string      `json:"type"`
+	Payload interface{} `json:"payload,omitempty"`
+}
+
+// PublishGameEvent publishes an event to a game's event channel
+func PublishGameEvent(gameID string, eventType string, payload interface{}) error {
+	channel := fmt.Sprintf("game:%s:events", gameID)
+
+	event := SSEEvent{
+		Type:    eventType,
+		Payload: payload,
+	}
+
+	data, err := json.Marshal(event)
+	if err != nil {
+		return fmt.Errorf("failed to marshal event: %w", err)
+	}
+
+	err = redisClient.Publish(ctx, channel, string(data)).Err()
+	if err != nil {
+		return fmt.Errorf("failed to publish event: %w", err)
+	}
+
+	return nil
+}
+
+// SubscribeToGame subscribes to a game's event channel and returns a channel for receiving messages
+// The caller is responsible for calling the returned cancel function to clean up
+func SubscribeToGame(gameID string) (*redis.PubSub, <-chan *redis.Message) {
+	channel := fmt.Sprintf("game:%s:events", gameID)
+	pubsub := redisClient.Subscribe(ctx, channel)
+	return pubsub, pubsub.Channel()
+}
+
+// Connection tracking for SSE disconnect detection
+var (
+	connectionsMu sync.RWMutex
+	connections   = make(map[string]map[string]bool) // gameID -> map[userID]bool
+	disconnectTimers = make(map[string]*time.Timer)  // gameID:userID -> timer
+)
+
+// AddSSEConnection registers a player's SSE connection
+func AddSSEConnection(gameID, userID string) {
+	connectionsMu.Lock()
+	defer connectionsMu.Unlock()
+
+	if connections[gameID] == nil {
+		connections[gameID] = make(map[string]bool)
+	}
+	connections[gameID][userID] = true
+
+	// Cancel any pending disconnect timer
+	timerKey := fmt.Sprintf("%s:%s", gameID, userID)
+	if timer, exists := disconnectTimers[timerKey]; exists {
+		timer.Stop()
+		delete(disconnectTimers, timerKey)
+	}
+}
+
+// RemoveSSEConnection removes a player's SSE connection and starts disconnect timer
+func RemoveSSEConnection(gameID, userID string, game *Game) {
+	connectionsMu.Lock()
+	defer connectionsMu.Unlock()
+
+	if connections[gameID] != nil {
+		delete(connections[gameID], userID)
+		if len(connections[gameID]) == 0 {
+			delete(connections, gameID)
+		}
+	}
+
+	// Start disconnect timer (15 seconds grace period)
+	timerKey := fmt.Sprintf("%s:%s", gameID, userID)
+	disconnectTimers[timerKey] = time.AfterFunc(15*time.Second, func() {
+		connectionsMu.Lock()
+		delete(disconnectTimers, timerKey)
+		connectionsMu.Unlock()
+
+		// Notify opponent that player disconnected
+		PublishGameEvent(gameID, "opponent_disconnected", map[string]interface{}{
+			"disconnectedUserId": userID,
+			"claimWinAfter":      15,
+		})
+	})
+}
+
+// IsPlayerConnected checks if a player has an active SSE connection
+func IsPlayerConnected(gameID, userID string) bool {
+	connectionsMu.RLock()
+	defer connectionsMu.RUnlock()
+
+	if connections[gameID] == nil {
+		return false
+	}
+	return connections[gameID][userID]
+}
+
+// WasPlayerDisconnected checks if a player was disconnected (timer expired)
+func WasPlayerDisconnected(gameID, userID string) bool {
+	connectionsMu.RLock()
+	defer connectionsMu.RUnlock()
+
+	timerKey := fmt.Sprintf("%s:%s", gameID, userID)
+	_, hasTimer := disconnectTimers[timerKey]
+
+	// If no timer and not connected, they were disconnected
+	connected := false
+	if connections[gameID] != nil {
+		connected = connections[gameID][userID]
+	}
+
+	return !connected && !hasTimer
+}
+
+// CancelDisconnectTimer cancels a pending disconnect timer (player reconnected)
+func CancelDisconnectTimer(gameID, userID string) bool {
+	connectionsMu.Lock()
+	defer connectionsMu.Unlock()
+
+	timerKey := fmt.Sprintf("%s:%s", gameID, userID)
+	if timer, exists := disconnectTimers[timerKey]; exists {
+		timer.Stop()
+		delete(disconnectTimers, timerKey)
+		return true
+	}
+	return false
 }
