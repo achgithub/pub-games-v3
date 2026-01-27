@@ -169,6 +169,11 @@
 
 ## 🔵 Low Priority (Future Enhancements)
 
+### Dots Polish
+- [ ] **Revisit line drawn and box complete messages**
+  - Current messages may need better wording/timing
+  - Consider visual feedback improvements
+
 ### Infrastructure
 - [ ] **Error recovery improvements**
   - Resume game state after disconnect
