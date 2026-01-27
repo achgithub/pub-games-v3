@@ -163,6 +163,12 @@
   - Friends list in lobby
   - Challenge friends button
 
+### Simple Utilities
+- [ ] **Flip a Coin**
+  - Static app, no real-time needed
+  - Simple heads/tails result with animation
+  - History of recent flips (optional)
+
 ### Darts Scorer
 - [ ] **Darts Scoring App**
   - All possible scores on one screen (1-20, doubles, triples, bull, outer bull)
