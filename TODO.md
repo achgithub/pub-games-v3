@@ -163,6 +163,19 @@
   - Friends list in lobby
   - Challenge friends button
 
+### Darts Scorer
+- [ ] **Darts Scoring App**
+  - All possible scores on one screen (1-20, doubles, triples, bull, outer bull)
+  - Tap-to-score during live game
+  - Tracks remaining score per player
+  - Checkout suggestions when score is reachable
+  - Common game modes (501, 301, etc.)
+  - **Split architecture:**
+    - Mobile app for input (players tap scores)
+    - Display screen for output (pub TV shows live score)
+  - SSE to sync input app with display
+  - Multi-player support (2-4 players)
+
 ### Additional Game Features
 - [ ] **Spectator mode**
   - Watch ongoing games in real-time
