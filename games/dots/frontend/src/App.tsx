@@ -1,25 +1,72 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 
 const API_BASE = '/api';
 
-function App() {
-  // Get params from URL
-  const params = new URLSearchParams(window.location.search);
-  const gameId = params.get('gameId');
-  const userId = params.get('userId');
-  const userName = params.get('userName') || userId || 'Player';
+// Types
+interface Line {
+  row: number;
+  col: number;
+  horizontal: boolean;
+  drawnBy: number;
+}
 
-  const [game, setGame] = useState(null);
+interface Box {
+  row: number;
+  col: number;
+  ownedBy: number;
+}
+
+interface Game {
+  id: string;
+  player1Id: string;
+  player2Id: string;
+  player1Name: string;
+  player2Name: string;
+  player1Score: number;
+  player2Score: number;
+  gridSize: number;
+  lines: Line[];
+  boxes: Box[];
+  currentTurn: number;
+  status: 'waiting' | 'active' | 'completed';
+  winner: number;
+}
+
+interface SSEMessage {
+  type: string;
+  payload: {
+    game?: Game;
+    message?: string;
+    [key: string]: unknown;
+  };
+}
+
+// Parse query params from URL
+function useQueryParams() {
+  return useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    return {
+      gameId: params.get('gameId'),
+      userId: params.get('userId'),
+      userName: params.get('userName') || params.get('userId') || 'Player',
+    };
+  }, []);
+}
+
+function App() {
+  const { gameId, userId, userName } = useQueryParams();
+
+  const [game, setGame] = useState<Game | null>(null);
   const [connected, setConnected] = useState(false);
   const [opponentConnected, setOpponentConnected] = useState(false);
   const [message, setMessage] = useState('');
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const eventSourceRef = useRef(null);
-  const reconnectTimeoutRef = useRef(null);
+  const eventSourceRef = useRef<EventSource | null>(null);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Get player number
-  const getPlayerNum = useCallback(() => {
+  const getPlayerNum = useCallback((): number => {
     if (!game) return 0;
     if (userId === game.player1Id) return 1;
     if (userId === game.player2Id) return 2;
@@ -27,7 +74,7 @@ function App() {
   }, [game, userId]);
 
   // Check if it's my turn
-  const isMyTurn = useCallback(() => {
+  const isMyTurn = useCallback((): boolean => {
     if (!game || game.status !== 'active') return false;
     return game.currentTurn === getPlayerNum();
   }, [game, getPlayerNum]);
@@ -50,9 +97,9 @@ function App() {
       setError(null);
     };
 
-    es.onmessage = (event) => {
+    es.onmessage = (event: MessageEvent) => {
       try {
-        const data = JSON.parse(event.data);
+        const data: SSEMessage = JSON.parse(event.data);
         console.log('SSE message:', data.type, data);
 
         switch (data.type) {
@@ -61,7 +108,7 @@ function App() {
             break;
           case 'game_state':
           case 'move_update':
-            setGame(data.payload.game || data.payload);
+            setGame(data.payload.game || data.payload as unknown as Game);
             if (data.payload.message) {
               setMessage(data.payload.message);
               setTimeout(() => setMessage(''), 3000);
@@ -74,11 +121,13 @@ function App() {
             setOpponentConnected(false);
             break;
           case 'game_ended':
-            setGame(data.payload.game);
-            setMessage(data.payload.message);
+            if (data.payload.game) {
+              setGame(data.payload.game);
+            }
+            setMessage(data.payload.message || '');
             break;
           case 'error':
-            setError(data.payload.message);
+            setError(data.payload.message || 'Unknown error');
             break;
           default:
             break;
@@ -118,7 +167,7 @@ function App() {
   }, [gameId, userId, connectSSE]);
 
   // Make a move
-  const makeMove = async (row, col, horizontal) => {
+  const makeMove = async (row: number, col: number, horizontal: boolean) => {
     if (!isMyTurn()) return;
 
     try {
@@ -186,13 +235,27 @@ function App() {
     window.location.href = shellUrl;
   };
 
-  // Render loading state
-  if (!gameId || !userId) {
+  // No userId - must access through shell
+  if (!userId) {
     return (
       <div className="app error">
-        <h2>Missing Parameters</h2>
-        <p>This game must be accessed through the Identity Shell.</p>
-        <button className="btn-lobby" onClick={returnToLobby}>Return to Lobby</button>
+        <h2>Dots & Boxes</h2>
+        <p>Missing user information. Please access this game through the lobby.</p>
+        <button className="btn-lobby" onClick={returnToLobby}>Go to Lobby</button>
+      </div>
+    );
+  }
+
+  // No gameId - show friendly challenge prompt
+  if (!gameId) {
+    return (
+      <div className="app error">
+        <h2>Dots & Boxes</h2>
+        <p>Challenge another player from the lobby to start a game!</p>
+        <p style={{ fontSize: '0.9em', color: '#adb5bd', marginTop: '10px' }}>
+          Go back to the lobby and click on a player to send a challenge.
+        </p>
+        <button className="btn-lobby" onClick={returnToLobby}>Go to Lobby</button>
       </div>
     );
   }
@@ -210,7 +273,7 @@ function App() {
   if (!game) {
     return (
       <div className="app loading">
-        <h2>🔵 Connecting to game...</h2>
+        <h2>Connecting to game...</h2>
         <p>Please wait</p>
       </div>
     );
@@ -218,8 +281,6 @@ function App() {
 
   const playerNum = getPlayerNum();
   const isPlayer1 = playerNum === 1;
-  const myScore = isPlayer1 ? game.player1Score : game.player2Score;
-  const opponentScore = isPlayer1 ? game.player2Score : game.player1Score;
   const myName = isPlayer1 ? game.player1Name : game.player2Name;
   const opponentName = isPlayer1 ? game.player2Name : game.player1Name;
   const gameEnded = game.status === 'completed';
@@ -231,7 +292,7 @@ function App() {
       </div>
 
       <div className="header">
-        <h1>🔵 Dots & Boxes</h1>
+        <h1>Dots & Boxes</h1>
         {!gameEnded && (
           <div className={`status ${isMyTurn() ? 'your-turn' : 'waiting'}`}>
             {isMyTurn() ? "Your turn!" : `Waiting for ${opponentName}...`}
@@ -239,7 +300,7 @@ function App() {
         )}
         {!gameEnded && !opponentConnected && (
           <div className="opponent-status disconnected">
-            ⚠️ Opponent disconnected
+            Opponent disconnected
           </div>
         )}
       </div>
@@ -261,7 +322,6 @@ function App() {
             game={game}
             onLineClick={makeMove}
             canMove={isMyTurn()}
-            playerNum={playerNum}
           />
 
           {message && (
@@ -295,23 +355,29 @@ function App() {
 }
 
 // DotsBoard component
-function DotsBoard({ game, onLineClick, canMove, playerNum }) {
+interface DotsBoardProps {
+  game: Game;
+  onLineClick: (row: number, col: number, horizontal: boolean) => void;
+  canMove: boolean;
+}
+
+function DotsBoard({ game, onLineClick, canMove }: DotsBoardProps) {
   const size = game.gridSize;
 
   // Helper to find a line
-  const findLine = (row, col, horizontal) => {
+  const findLine = (row: number, col: number, horizontal: boolean): Line | undefined => {
     return game.lines.find(l => l.row === row && l.col === col && l.horizontal === horizontal);
   };
 
   // Helper to find a box
-  const findBox = (row, col) => {
+  const findBox = (row: number, col: number): Box | undefined => {
     return game.boxes.find(b => b.row === row && b.col === col);
   };
 
   // Build grid
-  const rows = [];
+  const rows: JSX.Element[] = [];
   for (let row = 0; row < size * 2 - 1; row++) {
-    const cells = [];
+    const cells: JSX.Element[] = [];
     const isLineRow = row % 2 === 0;
 
     for (let col = 0; col < size * 2 - 1; col++) {

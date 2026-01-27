@@ -1,15 +1,18 @@
 {
-  "name": "pubgames-dots",
-  "version": "1.0.0",
-  "description": "Dots and Boxes game for PubGames V3",
+  "name": "dots-frontend",
+  "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@types/node": "^20.10.0",
+    "@types/react": "^18.2.45",
+    "@types/react-dom": "^18.2.18",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-scripts": "5.0.1"
+    "react-scripts": "5.0.1",
+    "typescript": "^4.9.5"
   },
   "scripts": {
-    "start": "PORT=4011 react-scripts start",
+    "start": "PORT=4012 react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
