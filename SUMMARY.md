@@ -31,9 +31,10 @@
 ### Dots & Boxes (Complete)
 - ✅ Classic dots-and-boxes game for two players
 - ✅ Same SSE + HTTP pattern as tic-tac-toe
-- ✅ Configurable grid sizes (3x3 to 6x6)
+- ✅ Configurable grid sizes including rectangular (4x4, 6x6, 6x9 mobile, 8x8)
 - ✅ Complete a box = score point + extra turn
 - ✅ Reports results to Leaderboard service
+- ✅ Improved UI: lighter dots for visibility, claim-win only shows after opponent disconnects
 
 ### Leaderboard (Complete)
 - ✅ Centralized stats service for all games

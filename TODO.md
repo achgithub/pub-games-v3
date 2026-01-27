@@ -43,6 +43,8 @@
   - PostgreSQL for game history
   - Challenge integration working
   - Reports to Leaderboard service
+  - Rectangular grid support (4x4, 6x6, 6x9 mobile, 8x8)
+  - Challenge options forwarded dynamically to game backends
 
 - [ ] **Build Local Quizzing App**
   - Pub quiz application (multi-player)
@@ -224,6 +226,9 @@
 - [x] Game result reporting to Leaderboard (Jan 27)
 - [x] Dots & Boxes game (port 4011) (Jan 27)
 - [x] Dynamic game selection in challenges (Jan 27)
+- [x] Dots rectangular grid support (6x9 mobile option) (Jan 27)
+- [x] Challenge options forwarded dynamically to game backends (Jan 27)
+- [x] Dots UI improvements: lighter dots, claim-win timing (Jan 27)
 
 ## Notes
 

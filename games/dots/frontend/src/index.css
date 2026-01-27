@@ -116,7 +116,7 @@ body {
 .dot {
   width: 16px;
   height: 16px;
-  background: #212529;
+  background: #adb5bd;
   border-radius: 50%;
   z-index: 10;
 }

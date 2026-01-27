@@ -96,13 +96,16 @@ func handleGetGame(w http.ResponseWriter, r *http.Request) {
 
 // handleCreateGame creates a new game (called by identity shell)
 func handleCreateGame(w http.ResponseWriter, r *http.Request) {
+	// Use interface{} for GridSize to handle both string "WxH" and int formats
 	var req struct {
-		ChallengeID string `json:"challengeId"`
-		Player1ID   string `json:"player1Id"`
-		Player1Name string `json:"player1Name"`
-		Player2ID   string `json:"player2Id"`
-		Player2Name string `json:"player2Name"`
-		GridSize    int    `json:"gridSize"`
+		ChallengeID string      `json:"challengeId"`
+		Player1ID   string      `json:"player1Id"`
+		Player1Name string      `json:"player1Name"`
+		Player2ID   string      `json:"player2Id"`
+		Player2Name string      `json:"player2Name"`
+		GridSize    interface{} `json:"gridSize"`   // Can be "WxH" string or int
+		GridWidth   int         `json:"gridWidth"`  // Explicit width
+		GridHeight  int         `json:"gridHeight"` // Explicit height
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -115,9 +118,36 @@ func handleCreateGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	gridSize := req.GridSize
-	if gridSize < 2 || gridSize > 8 {
-		gridSize = 4 // Default 4x4 dots = 3x3 boxes
+	// Determine grid dimensions
+	gridWidth := req.GridWidth
+	gridHeight := req.GridHeight
+
+	// Parse GridSize - can be string "WxH" or int
+	if gridWidth == 0 && gridHeight == 0 && req.GridSize != nil {
+		switch v := req.GridSize.(type) {
+		case string:
+			// Parse "WxH" format
+			var w, h int
+			if _, err := fmt.Sscanf(v, "%dx%d", &w, &h); err == nil {
+				gridWidth = w
+				gridHeight = h
+			}
+		case float64:
+			// JSON numbers are float64
+			gridWidth = int(v)
+			gridHeight = int(v)
+		case int:
+			gridWidth = v
+			gridHeight = v
+		}
+	}
+
+	// Apply defaults and limits
+	if gridWidth < 2 || gridWidth > 10 {
+		gridWidth = 4
+	}
+	if gridHeight < 2 || gridHeight > 10 {
+		gridHeight = 4
 	}
 
 	gameID := fmt.Sprintf("%d-%s", time.Now().UnixNano(), req.Player1ID)
@@ -130,7 +160,9 @@ func handleCreateGame(w http.ResponseWriter, r *http.Request) {
 		Player1Name: req.Player1Name,
 		Player2ID:   req.Player2ID,
 		Player2Name: req.Player2Name,
-		GridSize:    gridSize,
+		GridSize:    gridWidth, // Legacy field
+		GridWidth:   gridWidth,
+		GridHeight:  gridHeight,
 		Status:      GameStatusActive,
 		CreatedAt:   now,
 		LastMoveAt:  now,
@@ -146,7 +178,7 @@ func handleCreateGame(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("✅ Created dots game: %s (Challenge: %s, P1: %s, P2: %s, Grid: %dx%d)",
-		gameID, req.ChallengeID, req.Player1Name, req.Player2Name, gridSize, gridSize)
+		gameID, req.ChallengeID, req.Player1Name, req.Player2Name, gridWidth, gridHeight)
 
 	respondJSON(w, map[string]interface{}{
 		"success": true,
@@ -241,11 +273,12 @@ func handleGetConfig(w http.ResponseWriter, r *http.Request) {
 				"id":      "gridSize",
 				"type":    "select",
 				"label":   "Grid Size",
-				"default": 4,
+				"default": "4x4",
 				"options": []map[string]interface{}{
-					{"value": 4, "label": "Small (4x4)"},
-					{"value": 6, "label": "Medium (6x6)"},
-					{"value": 8, "label": "Large (8x8)"},
+					{"value": "4x4", "label": "Small (4x4)"},
+					{"value": "6x6", "label": "Medium (6x6)"},
+					{"value": "6x9", "label": "Mobile (6x9)"},
+					{"value": "8x8", "label": "Large (8x8)"},
 				},
 			},
 		},

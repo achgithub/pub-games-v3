@@ -24,7 +24,9 @@ interface Game {
   player2Name: string;
   player1Score: number;
   player2Score: number;
-  gridSize: number;
+  gridSize: number;    // Legacy (deprecated)
+  gridWidth: number;   // Number of dots horizontally
+  gridHeight: number;  // Number of dots vertically
   lines: Line[];
   boxes: Box[];
   currentTurn: number;
@@ -59,6 +61,7 @@ function App() {
   const [game, setGame] = useState<Game | null>(null);
   const [connected, setConnected] = useState(false);
   const [opponentConnected, setOpponentConnected] = useState(false);
+  const [opponentEverConnected, setOpponentEverConnected] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
 
@@ -116,6 +119,7 @@ function App() {
             break;
           case 'opponent_connected':
             setOpponentConnected(true);
+            setOpponentEverConnected(true);
             break;
           case 'opponent_disconnected':
             setOpponentConnected(false);
@@ -332,7 +336,7 @@ function App() {
 
           <div className="controls">
             <button className="btn-forfeit" onClick={forfeit}>Forfeit</button>
-            {!opponentConnected && (
+            {opponentEverConnected && !opponentConnected && (
               <button className="btn-claim" onClick={claimWin}>Claim Win</button>
             )}
             <button className="btn-lobby" onClick={returnToLobby}>Leave Game</button>
@@ -362,7 +366,9 @@ interface DotsBoardProps {
 }
 
 function DotsBoard({ game, onLineClick, canMove }: DotsBoardProps) {
-  const size = game.gridSize;
+  // Use gridWidth/gridHeight, fall back to gridSize for backward compat
+  const width = game.gridWidth || game.gridSize || 4;
+  const height = game.gridHeight || game.gridSize || 4;
 
   // Helper to find a line
   const findLine = (row: number, col: number, horizontal: boolean): Line | undefined => {
@@ -374,13 +380,13 @@ function DotsBoard({ game, onLineClick, canMove }: DotsBoardProps) {
     return game.boxes.find(b => b.row === row && b.col === col);
   };
 
-  // Build grid
-  const rows: JSX.Element[] = [];
-  for (let row = 0; row < size * 2 - 1; row++) {
+  // Build grid: height*2-1 rows, width*2-1 columns
+  const gridRows: JSX.Element[] = [];
+  for (let row = 0; row < height * 2 - 1; row++) {
     const cells: JSX.Element[] = [];
     const isLineRow = row % 2 === 0;
 
-    for (let col = 0; col < size * 2 - 1; col++) {
+    for (let col = 0; col < width * 2 - 1; col++) {
       const isLineCol = col % 2 === 0;
       const key = `${row}-${col}`;
 
@@ -433,7 +439,7 @@ function DotsBoard({ game, onLineClick, canMove }: DotsBoardProps) {
       }
     }
 
-    rows.push(
+    gridRows.push(
       <div key={row} style={{ display: 'flex', alignItems: 'center' }}>
         {cells}
       </div>
@@ -442,7 +448,7 @@ function DotsBoard({ game, onLineClick, canMove }: DotsBoardProps) {
 
   return (
     <div className="game-board">
-      <div className="grid">{rows}</div>
+      <div className="grid">{gridRows}</div>
     </div>
   );
 }

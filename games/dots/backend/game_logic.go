@@ -2,22 +2,38 @@ package main
 
 import "time"
 
-// InitializeGame sets up a new game with the given grid size
+// InitializeGame sets up a new game with the given grid dimensions
 func InitializeGame(game *Game) {
-	size := game.GridSize
-	if size < 2 {
-		size = 4 // Default to 4x4 dots (3x3 boxes)
+	width := game.GridWidth
+	height := game.GridHeight
+
+	// Fall back to GridSize for backward compatibility
+	if width < 2 && game.GridSize >= 2 {
+		width = game.GridSize
 	}
-	game.GridSize = size
+	if height < 2 && game.GridSize >= 2 {
+		height = game.GridSize
+	}
+
+	// Apply defaults
+	if width < 2 {
+		width = 4
+	}
+	if height < 2 {
+		height = 4
+	}
+
+	game.GridWidth = width
+	game.GridHeight = height
+	game.GridSize = width // Keep for backward compat (use width as legacy value)
 
 	// Initialize horizontal lines
-	// For a grid of N dots, there are N rows of (N-1) horizontal lines
-	// Plus (N-1) rows of N vertical lines
+	// For a grid of W x H dots, there are H rows of (W-1) horizontal lines
 	lines := []Line{}
 
-	// Horizontal lines: N rows, N-1 columns each
-	for row := 0; row < size; row++ {
-		for col := 0; col < size-1; col++ {
+	// Horizontal lines: H rows, W-1 columns each
+	for row := 0; row < height; row++ {
+		for col := 0; col < width-1; col++ {
 			lines = append(lines, Line{
 				Row:        row,
 				Col:        col,
@@ -27,9 +43,9 @@ func InitializeGame(game *Game) {
 		}
 	}
 
-	// Vertical lines: N-1 rows, N columns each
-	for row := 0; row < size-1; row++ {
-		for col := 0; col < size; col++ {
+	// Vertical lines: H-1 rows, W columns each
+	for row := 0; row < height-1; row++ {
+		for col := 0; col < width; col++ {
 			lines = append(lines, Line{
 				Row:        row,
 				Col:        col,
@@ -41,10 +57,10 @@ func InitializeGame(game *Game) {
 
 	game.Lines = lines
 
-	// Initialize boxes: (N-1) x (N-1) grid
+	// Initialize boxes: (H-1) x (W-1) grid
 	boxes := []Box{}
-	for row := 0; row < size-1; row++ {
-		for col := 0; col < size-1; col++ {
+	for row := 0; row < height-1; row++ {
+		for col := 0; col < width-1; col++ {
 			boxes = append(boxes, Box{
 				Row:     row,
 				Col:     col,
@@ -98,7 +114,7 @@ func MakeMove(game *Game, playerNum int, row, col int, horizontal bool) (int, bo
 	}
 
 	// Check if game is over (all boxes filled)
-	totalBoxes := (game.GridSize - 1) * (game.GridSize - 1)
+	totalBoxes := (game.GridWidth - 1) * (game.GridHeight - 1)
 	filledBoxes := game.Player1Score + game.Player2Score
 
 	if filledBoxes >= totalBoxes {
@@ -137,7 +153,8 @@ func MakeMove(game *Game, playerNum int, row, col int, horizontal bool) (int, bo
 // checkCompletedBoxes checks if drawing a line completed any boxes
 func checkCompletedBoxes(game *Game, row, col int, horizontal bool, playerNum int) int {
 	completed := 0
-	size := game.GridSize
+	width := game.GridWidth
+	height := game.GridHeight
 
 	if horizontal {
 		// A horizontal line can complete boxes above and below it
@@ -147,8 +164,8 @@ func checkCompletedBoxes(game *Game, row, col int, horizontal bool, playerNum in
 				completed++
 			}
 		}
-		// Box below: row, col (if row < size-1)
-		if row < size-1 {
+		// Box below: row, col (if row < height-1)
+		if row < height-1 {
 			if checkBox(game, row, col, playerNum) {
 				completed++
 			}
@@ -161,8 +178,8 @@ func checkCompletedBoxes(game *Game, row, col int, horizontal bool, playerNum in
 				completed++
 			}
 		}
-		// Box to right: row, col (if col < size-1)
-		if col < size-1 {
+		// Box to right: row, col (if col < width-1)
+		if col < width-1 {
 			if checkBox(game, row, col, playerNum) {
 				completed++
 			}
@@ -233,15 +250,16 @@ func ValidateMove(game *Game, playerID string, row, col int, horizontal bool) (i
 	}
 
 	// Validate line position
-	size := game.GridSize
+	width := game.GridWidth
+	height := game.GridHeight
 	if horizontal {
-		// Horizontal lines: row 0 to size-1, col 0 to size-2
-		if row < 0 || row >= size || col < 0 || col >= size-1 {
+		// Horizontal lines: row 0 to height-1, col 0 to width-2
+		if row < 0 || row >= height || col < 0 || col >= width-1 {
 			return 0, "Invalid line position"
 		}
 	} else {
-		// Vertical lines: row 0 to size-2, col 0 to size-1
-		if row < 0 || row >= size-1 || col < 0 || col >= size {
+		// Vertical lines: row 0 to height-2, col 0 to width-1
+		if row < 0 || row >= height-1 || col < 0 || col >= width {
 			return 0, "Invalid line position"
 		}
 	}

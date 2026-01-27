@@ -139,6 +139,42 @@ When a user clicks "Challenge" on another player, the shell shows a **game selec
 
 **Implementation:** `identity-shell/frontend/src/components/ChallengeModal.tsx`
 
+### Dynamic Challenge Options
+
+Games can define custom options via their `/api/config` endpoint. The ChallengeModal fetches this config and renders options dynamically (dropdowns, checkboxes, etc.).
+
+**Key principle:** All options are forwarded automatically to the game backend when creating a game. Game backends read the options they need - no identity shell code changes required for new options.
+
+**Config endpoint example** (from Dots):
+```go
+config := map[string]interface{}{
+    "appId": "dots",
+    "gameOptions": []map[string]interface{}{
+        {
+            "id":      "gridSize",
+            "type":    "select",
+            "label":   "Grid Size",
+            "default": "4x4",
+            "options": []map[string]interface{}{
+                {"value": "4x4", "label": "Small (4x4)"},
+                {"value": "6x6", "label": "Medium (6x6)"},
+                {"value": "6x9", "label": "Mobile (6x9)"},
+                {"value": "8x8", "label": "Large (8x8)"},
+            },
+        },
+    },
+}
+```
+
+**Flow:**
+1. ChallengeModal calls game's `/api/config` → gets `gameOptions`
+2. User selects options → stored as `{gridSize: "6x9"}`
+3. Challenge sent to shell with options
+4. On accept, shell forwards ALL options to game's `/api/game`
+5. Game backend parses options it needs (e.g., "6x9" → width=6, height=9)
+
+**Adding new options:** Just add them to your game's `/api/config` and read them in `/api/game` - the shell handles forwarding automatically.
+
 ### Shell → App URL Parameters
 
 **IMPORTANT:** The shell passes user context to apps via URL query parameters. All apps MUST use these exact parameter names:

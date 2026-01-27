@@ -34,7 +34,9 @@ type Game struct {
 	Player1Name   string     `json:"player1Name"`
 	Player2ID     string     `json:"player2Id"`
 	Player2Name   string     `json:"player2Name"`
-	GridSize      int        `json:"gridSize"`      // Number of dots per side (e.g., 4 = 3x3 boxes)
+	GridSize      int        `json:"gridSize"`      // Deprecated: use GridWidth/GridHeight. Kept for backward compat
+	GridWidth     int        `json:"gridWidth"`     // Number of dots horizontally (columns)
+	GridHeight    int        `json:"gridHeight"`    // Number of dots vertically (rows)
 	Lines         []Line     `json:"lines"`         // All lines on the grid
 	Boxes         []Box      `json:"boxes"`         // All boxes on the grid
 	CurrentTurn   int        `json:"currentTurn"`   // 1 or 2
