@@ -283,33 +283,34 @@ func createGameForChallenge(challenge *Challenge, player1Name, player2Name strin
 		return "", fmt.Errorf("unknown app: %s", challenge.AppID)
 	}
 
-	// Extract game options from challenge (with defaults)
-	mode := "normal"
-	moveTimeLimit := 0
-	firstTo := 1
+	// Create game request with base fields
+	reqBody := map[string]interface{}{
+		"challengeId": challenge.ID,
+		"player1Id":   challenge.FromUser, // Challenger is player 1
+		"player1Name": player1Name,
+		"player2Id":   challenge.ToUser, // Accepter is player 2
+		"player2Name": player2Name,
+	}
 
+	// Forward all challenge options to the game backend
+	// Each game backend can use the options it needs
 	if challenge.Options != nil {
-		if m, ok := challenge.Options["mode"].(string); ok {
-			mode = m
-			if mode == "timed" {
-				moveTimeLimit = 30 // 30 seconds per move
-			}
-		}
-		if ft, ok := challenge.Options["firstTo"].(float64); ok {
-			firstTo = int(ft)
+		for key, value := range challenge.Options {
+			reqBody[key] = value
 		}
 	}
 
-	// Create game request
-	reqBody := map[string]interface{}{
-		"challengeId":   challenge.ID,
-		"player1Id":     challenge.FromUser, // Challenger is player 1 (X)
-		"player1Name":   player1Name,
-		"player2Id":     challenge.ToUser, // Accepter is player 2 (O)
-		"player2Name":   player2Name,
-		"mode":          mode,
-		"moveTimeLimit": moveTimeLimit,
-		"firstTo":       firstTo,
+	// Apply defaults for tic-tac-toe specific options
+	if _, exists := reqBody["mode"]; !exists {
+		reqBody["mode"] = "normal"
+	}
+	if _, exists := reqBody["firstTo"]; !exists {
+		reqBody["firstTo"] = 1
+	}
+	if reqBody["mode"] == "timed" {
+		if _, exists := reqBody["moveTimeLimit"]; !exists {
+			reqBody["moveTimeLimit"] = 30
+		}
 	}
 
 	jsonBody, err := json.Marshal(reqBody)
