@@ -54,6 +54,15 @@
   - Visual hangman progression
   - Word categories/difficulty options
 
+- [ ] **Build Spoof Game**
+  - Classic pub coin guessing game
+  - Multi-player (3+ players ideal)
+  - Each player secretly holds 0-3 coins
+  - Players take turns guessing total coins
+  - No duplicate guesses allowed
+  - Elimination when wrong, last player wins
+  - SSE for real-time sync between players
+
 - [ ] **Build Local Quizzing App**
   - Pub quiz application (multi-player)
   - Question bank management (PostgreSQL)
