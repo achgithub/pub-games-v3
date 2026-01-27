@@ -1,6 +1,8 @@
 # Tic-Tac-Toe Redis Schema
 
-**Purpose**: Store live game state with automatic expiration
+**Purpose**: Store live game state with automatic expiration, plus pub/sub for SSE real-time updates
+
+**Last Updated**: January 27, 2026
 
 ---
 
@@ -82,25 +84,76 @@ DEL game:{gameId}
 
 ---
 
-## Connection Tracking (Optional)
+## Connection Tracking
 
-If we need to track active WebSocket connections in Redis:
+Track active SSE connections in Redis (enables multi-server scaling):
 
 ```
 Key: game:{gameId}:connections
-Type: Set
+Type: Hash
 TTL: 3600 seconds
-Members: ["1", "2"]  # User IDs
+Fields: {userId}: {timestamp}
 ```
 
 **Operations:**
 ```redis
-SADD game:{gameId}:connections {userId}
-SREM game:{gameId}:connections {userId}
-SMEMBERS game:{gameId}:connections
+# Player connects
+HSET game:{gameId}:connections {userId} {timestamp}
+
+# Player disconnects
+HDEL game:{gameId}:connections {userId}
+
+# Check if player connected
+HGET game:{gameId}:connections {userId}
+
+# Get all connected players
+HGETALL game:{gameId}:connections
 ```
 
-**Note**: V2 tracks connections in memory (ConnectionManager). We'll keep that pattern for now since WebSocket connections are ephemeral. Redis game state is the source of truth for game data, not connections.
+**Timeout Logic:**
+- Connections are tracked with timestamps
+- A player is considered "disconnected" if their timestamp is >15 seconds old
+- Background cleanup or on-demand checks validate connection freshness
+
+---
+
+## Pub/Sub for Real-Time Updates
+
+SSE streams subscribe to Redis pub/sub channels to receive game updates:
+
+```
+Channel: game:{gameId}:updates
+Message Format: JSON
+```
+
+**Message Types:**
+```json
+{"type": "game_state", "payload": {...game state...}}
+{"type": "opponent_connected", "payload": {"userId": "...", "name": "..."}}
+{"type": "opponent_disconnected", "payload": {"userId": "..."}}
+{"type": "game_ended", "payload": {...final state...}}
+```
+
+**Operations:**
+```redis
+# Publish update to all listeners
+PUBLISH game:{gameId}:updates {jsonMessage}
+
+# Subscribe (done in Go code, one goroutine per SSE connection)
+SUBSCRIBE game:{gameId}:updates
+```
+
+**Flow:**
+1. Player makes move via HTTP POST `/api/move`
+2. Server updates game state in Redis hash
+3. Server publishes `game_state` to `game:{gameId}:updates` channel
+4. All SSE connections subscribed to that channel receive the update
+5. SSE streams forward the update to connected clients
+
+**Benefits:**
+- Multiple server instances can handle SSE connections
+- All clients get updates regardless of which server they're connected to
+- Decouples HTTP move handling from SSE streaming
 
 ---
 
@@ -157,16 +210,30 @@ Board indices:
    HSET game:123 id 123 challengeId abc player1Id 1 ...
    EXPIRE game:123 3600
 4. Navigate both players to /app/tic-tac-toe?gameId=123
+5. Players connect to SSE stream: GET /api/game/123/stream?userId=...
+```
+
+### Player Connects (SSE)
+```
+1. Client opens EventSource to /api/game/{gameId}/stream?userId={email}
+2. Server creates Redis pub/sub subscription for game:{gameId}:updates
+3. Server updates connection tracking:
+   HSET game:123:connections alice@test.com {timestamp}
+4. Server sends initial game state via SSE
+5. Server notifies opponent via pub/sub:
+   PUBLISH game:123:updates {"type":"opponent_connected",...}
 ```
 
 ### Player Makes Move
 ```
-1. Client sends WebSocket message: {type: "move", position: 4}
-2. Server validates move
+1. Client sends HTTP POST to /api/move with {gameId, playerId, position}
+2. Server validates move (correct turn, valid position)
 3. Server updates Redis:
    HSET game:123 board ["X","","","","X","","","",""] currentTurn 2
-4. Server broadcasts update via WebSocket to both players
-5. Clients re-render board
+4. Server publishes update via pub/sub:
+   PUBLISH game:123:updates {"type":"game_state","payload":{...}}
+5. All SSE connections receive update and forward to clients
+6. Clients re-render board
 ```
 
 ### Game Completes (Round)
@@ -178,7 +245,19 @@ Board indices:
    - HSET game:123 status "completed" winnerId 1
    - Save to PostgreSQL games table
    - EXPIRE game:123 300 (5 min for post-game view)
-4. Broadcast game_ended to both players
+4. Server publishes:
+   PUBLISH game:123:updates {"type":"game_ended","payload":{...}}
+```
+
+### Player Disconnects
+```
+1. SSE connection closes (client closes tab, network drops)
+2. Server removes from connection tracking:
+   HDEL game:123:connections alice@test.com
+3. Server publishes disconnect notification:
+   PUBLISH game:123:updates {"type":"opponent_disconnected",...}
+4. Remaining player sees "Opponent disconnected" message
+5. After 15 seconds, remaining player can claim win
 ```
 
 ### Abandoned Game Cleanup
@@ -193,16 +272,20 @@ Board indices:
 
 ## Migration from V2
 
-**V2 used SQLite for live state:**
+**V2 used SQLite for live state + WebSocket:**
 ```sql
 -- V2: Games table stored everything
 SELECT * FROM games WHERE status = 'active';
+-- WebSocket connections tracked in memory
 ```
 
-**V3 uses Redis for live state:**
+**V3 uses Redis for live state + SSE + pub/sub:**
 ```redis
 # V3: Redis for active games
 HGETALL game:123
+
+# V3: Pub/sub for real-time updates
+PUBLISH game:123:updates {...}
 ```
 
 **V3 PostgreSQL for history:**
@@ -215,8 +298,19 @@ SELECT * FROM games WHERE status = 'completed';
 - ✅ Faster reads/writes for moves
 - ✅ Automatic cleanup (TTL)
 - ✅ Survives server restarts
-- ✅ Horizontal scaling ready
+- ✅ Horizontal scaling ready (Redis pub/sub)
+- ✅ Better iOS Safari support (SSE over WebSocket)
+- ✅ Simpler debugging (HTTP + SSE vs WebSocket)
 
 ---
 
-**Next**: Implement Redis operations in `backend/redis.go`
+## Implementation
+
+Redis operations are implemented in `backend/redis.go`:
+- `SaveGameToRedis()` - Store game state
+- `GetGameFromRedis()` - Retrieve game state
+- `DeleteGameFromRedis()` - Remove game
+- `PublishGameUpdate()` - Send update via pub/sub
+- `SubscribeToGame()` - Listen for updates (used by SSE handler)
+- `TrackConnection()` / `RemoveConnection()` - Connection tracking
+- `GetConnectedPlayers()` - Check who's connected

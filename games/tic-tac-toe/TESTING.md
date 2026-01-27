@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes how to test the tic-tac-toe backend.
+This document describes how to test the tic-tac-toe backend using SSE + HTTP.
 
 ## Prerequisites
 
@@ -58,17 +58,35 @@ curl -X POST http://localhost:4001/api/move \
   -d "{\"gameId\": \"$GAME_ID\", \"playerId\": \"bob@test.com\", \"position\": 0}" | jq
 ```
 
-### WebSocket Test
+### SSE Stream Test
 
 ```bash
-# Use wscat or similar WebSocket client
-wscat -c "ws://localhost:4001/api/ws/game/$GAME_ID?userId=alice@test.com"
+# Connect to SSE stream (use -N to disable buffering)
+curl -N "http://localhost:4001/api/game/$GAME_ID/stream?userId=alice@test.com"
 
-# Send ack to mark ready
-{"type": "ack"}
+# You should see:
+# data: {"type":"connected","payload":{...}}
+# data: {"type":"game_state","payload":{...}}
+#
+# And then updates as moves are made via /api/move
+```
 
-# Send move
-{"type": "move", "payload": {"position": 4}}
+### Forfeit Test
+
+```bash
+# Forfeit a game
+curl -X POST "http://localhost:4001/api/game/$GAME_ID/forfeit" \
+  -H "Content-Type: application/json" \
+  -d '{"userId":"alice@test.com"}' | jq
+```
+
+### Claim Win (Opponent Disconnected)
+
+```bash
+# After opponent disconnects for 15+ seconds
+curl -X POST "http://localhost:4001/api/game/$GAME_ID/claim-win" \
+  -H "Content-Type: application/json" \
+  -d '{"userId":"alice@test.com"}' | jq
 ```
 
 ## API Endpoints
@@ -79,8 +97,21 @@ wscat -c "ws://localhost:4001/api/ws/game/$GAME_ID?userId=alice@test.com"
 | GET | `/api/game/{gameId}` | Get game state |
 | POST | `/api/game` | Create new game |
 | POST | `/api/move` | Make a move |
+| POST | `/api/game/{gameId}/forfeit` | Forfeit game |
+| POST | `/api/game/{gameId}/claim-win` | Claim win if opponent disconnected |
 | GET | `/api/stats/{userId}` | Get player stats (userId is email) |
-| WS | `/api/ws/game/{gameId}?userId={email}` | WebSocket connection |
+| GET | `/api/game/{gameId}/stream?userId={email}` | SSE stream for real-time updates |
+
+## SSE Event Types
+
+| Event Type | Description |
+|------------|-------------|
+| `connected` | Initial connection confirmation |
+| `game_state` | Full game state (sent on connect and after moves) |
+| `opponent_connected` | Opponent joined the game |
+| `opponent_disconnected` | Opponent left (15s timeout to reconnect) |
+| `game_ended` | Game completed (win/draw/forfeit) |
+| `error` | Error message |
 
 ## User IDs
 
@@ -98,21 +129,48 @@ User IDs are **email addresses** (strings), not numeric IDs:
 ### Currently Tested
 - [x] Health endpoint
 - [x] Game creation
-- [x] Making moves via HTTP
+- [x] Making moves via HTTP POST
 - [x] Turn validation
 - [x] Win detection
+- [x] Draw detection
 - [x] Game completion
 - [x] Player stats update
+- [x] SSE stream connection
+- [x] Real-time move updates via SSE
+- [x] Opponent connection/disconnection events
+- [x] Forfeit functionality
+- [x] Claim-win functionality
 
-### WebSocket Tests
-- [x] Connection with userId
-- [x] Ack/ready handshake
-- [x] Move via WebSocket
-- [x] Broadcast to both players
-- [x] Disconnect notification
+### Browser Testing
+- [x] Chrome (desktop)
+- [x] Safari (desktop)
+- [x] iOS Safari (mobile)
+- [x] Multiple browser tabs simultaneously
 
-### TODO
-- [ ] Draw detection
-- [ ] Series games (first-to-3, etc.)
-- [ ] All win patterns
-- [ ] Reconnection handling
+### Connection Handling
+- [x] 15-second disconnection timeout
+- [x] Reconnection restores game state
+- [x] Redis pub/sub message delivery
+- [x] Connection tracking in Redis
+
+## Multi-Player Test Scenario
+
+1. Open two terminal windows or browser tabs
+2. Create a game
+3. Connect both players to SSE stream:
+   ```bash
+   # Terminal 1 (Alice)
+   curl -N "http://localhost:4001/api/game/$GAME_ID/stream?userId=alice@test.com"
+
+   # Terminal 2 (Bob)
+   curl -N "http://localhost:4001/api/game/$GAME_ID/stream?userId=bob@test.com"
+   ```
+4. Make moves in a third terminal:
+   ```bash
+   # Alice moves
+   curl -X POST http://localhost:4001/api/move \
+     -H "Content-Type: application/json" \
+     -d "{\"gameId\": \"$GAME_ID\", \"playerId\": \"alice@test.com\", \"position\": 4}"
+   ```
+5. Both SSE streams should receive the `game_state` update
+6. Continue alternating moves until game ends

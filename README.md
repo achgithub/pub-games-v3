@@ -1,9 +1,9 @@
 # PubGames V3 - Shell Architecture
 
-**Status**: 🟢 Tic-Tac-Toe Integration In Progress
+**Status**: 🟢 Tic-Tac-Toe Complete & Working
 **Repository**: https://github.com/achgithub/pub-games-v3
 **Created**: January 21, 2026
-**Last Updated**: January 25, 2026
+**Last Updated**: January 27, 2026
 
 📋 See [CLAUDE.md](./CLAUDE.md) for architecture decisions and [TODO.md](./TODO.md) for task list
 
@@ -35,7 +35,8 @@ PubGames V3 introduces a **shell architecture** where the Identity Service acts 
 │ │    │ Tic-Tac-Toe App (port 4001)             │     │ │
 │ │    │ - Go backend serves API + static files  │     │ │
 │ │    │ - React frontend                        │     │ │
-│ │    │ - WebSocket for real-time moves         │     │ │
+│ │    │ - SSE for real-time updates             │     │ │
+│ │    │ - HTTP POST for moves                   │     │ │
 │ │    └─────────────────────────────────────────┘     │ │
 │ │                                                     │ │
 │ └─────────────────────────────────────────────────────┘ │
@@ -78,7 +79,7 @@ PubGames V3 introduces a **shell architecture** where the Identity Service acts 
 
 | App | Port | Real-Time | Status |
 |-----|------|-----------|--------|
-| Tic-Tac-Toe | 4001 | WebSocket | In Progress |
+| Tic-Tac-Toe | 4001 | SSE + HTTP | Working |
 | Smoke Test | 5010 | None | Working |
 | Sweepstakes | 5020 | None | Planned |
 
@@ -109,15 +110,16 @@ pub-games-v3/
 │   └── tic-tac-toe/
 │       ├── backend/
 │       │   ├── main.go         # Serves API + static files
-│       │   ├── websocket.go    # WebSocket handlers
+│       │   ├── handlers.go     # SSE stream + HTTP endpoints
 │       │   ├── game_logic.go
-│       │   ├── redis.go
+│       │   ├── redis.go        # Redis + pub/sub
 │       │   └── static/         # React build output
 │       ├── frontend/
 │       │   └── src/
 │       │       ├── App.tsx
 │       │       ├── components/
 │       │       └── hooks/
+│       │           └── useGameSocket.ts  # SSE + HTTP client
 │       └── database/
 │           └── schema.sql
 │
@@ -164,15 +166,20 @@ Static Apps (no real-time):
 - [x] Challenge system (send, accept, decline)
 - [x] Server-Sent Events for real-time updates
 
-### Phase 3: Game Integration ⬅️ **WE ARE HERE**
+### Phase 3: Tic-Tac-Toe ✅ COMPLETE
 - [x] Dynamic app registry
 - [x] Single-port app architecture
-- [x] Tic-Tac-Toe backend (WebSocket, Redis, PostgreSQL)
+- [x] Tic-Tac-Toe backend (SSE + HTTP, Redis, PostgreSQL)
 - [x] Tic-Tac-Toe frontend
-- [ ] Challenge → game flow integration
-- [ ] End-to-end testing
+- [x] Real-time game play working (tested multi-browser, iOS Safari)
+- [x] Forfeit and claim-win functionality
 
-### Phase 4: Additional Games
+### Phase 4: Challenge Integration ⬅️ **WE ARE HERE**
+- [ ] Challenge → game flow integration
+- [ ] Game result reporting to shell
+- [ ] End-to-end challenge-to-game testing
+
+### Phase 5: Additional Games
 - [ ] Migrate Sweepstakes from V2
 - [ ] Dots game
 - [ ] Quiz app

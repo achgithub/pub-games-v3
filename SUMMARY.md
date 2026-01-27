@@ -1,6 +1,6 @@
 # PubGames V3 - Current Status Summary
 
-**Last Updated**: January 25, 2026
+**Last Updated**: January 27, 2026
 
 ## What's Working
 
@@ -16,13 +16,14 @@
 - ✅ Server-Sent Events for instant updates
 - ✅ Challenge notifications (toast popup)
 
-### Tic-Tac-Toe (In Progress)
-- ✅ Backend with WebSocket support
-- ✅ Redis for live game state
+### Tic-Tac-Toe (Complete)
+- ✅ Backend with SSE + HTTP (refactored from WebSocket for iOS Safari compatibility)
+- ✅ Redis for live game state + pub/sub for real-time updates
 - ✅ PostgreSQL for game history
-- ✅ React frontend (standalone app)
-- ⏳ Challenge → game flow integration
-- ⏳ End-to-end testing
+- ✅ React frontend with EventSource + fetch
+- ✅ Forfeit and claim-win functionality
+- ✅ Connection tracking with 15-second timeout
+- ✅ Tested on multiple browsers including iOS Safari
 
 ## Technology Stack
 
@@ -33,7 +34,7 @@
 | Persistent Data | PostgreSQL (port 5555) |
 | Live Data | Redis (port 6379) |
 | Shell Real-Time | Server-Sent Events |
-| Game Real-Time | WebSocket |
+| Game Real-Time | SSE + HTTP (better mobile compatibility) |
 
 ## Architecture
 
@@ -66,9 +67,11 @@ Shell fetches apps from `/api/apps` instead of hardcoding:
 
 | App Type | Pattern | Example |
 |----------|---------|---------|
-| Fast games | WebSocket | Tic-Tac-Toe, Dots |
-| Slow games | SSE | Chess, Quiz |
+| Turn-based games | SSE + HTTP | Tic-Tac-Toe, Chess, Dots |
+| Broadcast apps | SSE | Quiz leaderboard, Displays |
 | Static apps | None/Polling | Sweepstakes, LMS |
+
+**Note**: We chose SSE + HTTP over WebSocket for better iOS Safari compatibility and simpler debugging.
 
 ## Port Allocation
 
@@ -83,14 +86,15 @@ Shell fetches apps from `/api/apps` instead of hardcoding:
 
 ## Current Phase
 
-**Phase 3: Game Integration**
+**Phase 4: Challenge Integration**
 
 - [x] Dynamic app registry
 - [x] Single-port architecture
-- [x] Tic-Tac-Toe backend
-- [x] Tic-Tac-Toe frontend
-- [ ] Challenge → game flow
-- [ ] End-to-end testing
+- [x] Tic-Tac-Toe backend (SSE + HTTP)
+- [x] Tic-Tac-Toe frontend (EventSource + fetch)
+- [x] Real-time gameplay tested and working
+- [ ] Challenge → game flow integration
+- [ ] Game result reporting to shell
 
 ## Known Limitations
 
@@ -108,8 +112,12 @@ pub-games-v3/
 │   └── frontend/        # React shell UI
 ├── games/
 │   └── tic-tac-toe/
-│       ├── backend/     # Go + WebSocket + static/
-│       └── frontend/    # React game UI
+│       ├── backend/     # Go + SSE + HTTP + static/
+│       │   ├── main.go
+│       │   ├── handlers.go      # SSE stream + HTTP endpoints
+│       │   ├── redis.go         # Redis + pub/sub
+│       │   └── game_logic.go
+│       └── frontend/    # React game UI (EventSource + fetch)
 ├── static-apps/
 │   └── smoke-test/
 ├── CLAUDE.md            # Architecture decisions

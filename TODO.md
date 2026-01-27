@@ -1,37 +1,23 @@
 # PubGames V3 - TODO List
 
-**Last Updated**: January 24, 2026
+**Last Updated**: January 27, 2026
 
-## 🔴 Critical (Blocks Core Functionality)
+## 🔴 Critical (Next Priority)
 
-### Game Integration
+### Challenge → Game Integration
 - [ ] **Connect challenge acceptance to game launch**
   - When user accepts challenge, navigate to game with challenge context
   - Pass player assignments (who is X, who is O) to game
   - Store game session ID linking to challenge ID
 
-- [ ] **Tic-Tac-Toe integration**
-  - Update tic-tac-toe to receive challenge context
-  - Connect game state to Redis
+- [ ] **Game result reporting**
   - Report game results back to identity shell
   - Update challenge status to "completed" or "abandoned"
+  - Track win/loss/draw statistics
 
-- [ ] **Game state management**
-  - Redis schema for live game boards
-  - Turn tracking and validation
-  - Game completion detection
-  - Result persistence to PostgreSQL
-
-## 🟡 High Priority (After Critical Integration Complete)
+## 🟡 High Priority (After Challenge Integration)
 
 ### Game Migration & Development
-- [ ] **Migrate Tic-Tac-Toe**
-  - Port existing tic-tac-toe from V2 (has working WebSocket implementation)
-  - Full challenge flow integration
-  - WebSocket for real-time move updates (low latency for fast gameplay)
-  - Redis for live game state persistence (crash recovery)
-  - PostgreSQL for game history and player stats
-  - Game completion and result tracking
 
 - [ ] **Migrate Sweepstakes**
   - Port sweepstakes app from V2
@@ -39,7 +25,6 @@
   - Update to use new auth system
   - PostgreSQL only (static app, no real-time needed)
   - Optional: Simple polling or SSE for "results ready" notification
-  - Adapt UI to work within shell chrome
 
 - [ ] **Migrate Last Man Standing**
   - Port last man standing from V2
@@ -47,14 +32,13 @@
   - PostgreSQL only (static app, users pick and wait)
   - Solo mode support (no challenges)
   - Multi-player competitive mode
-  - Optional: SSE for "round complete" notifications
 
 - [ ] **Create Dots Game**
   - New game implementation
   - Classic dots-and-boxes gameplay
-  - 2-player turn-based (can be fast-paced)
-  - WebSocket for real-time line drawing
-  - Redis for live game state persistence
+  - 2-player turn-based
+  - SSE + HTTP (same pattern as tic-tac-toe)
+  - Redis for live game state + pub/sub
   - PostgreSQL for game history
   - Challenge integration
 
@@ -62,14 +46,12 @@
   - Pub quiz application (multi-player)
   - Question bank management (PostgreSQL)
   - Live quiz sessions with host controls
-  - SSE for broadcasting questions and leaderboard updates (one-to-many)
+  - SSE for broadcasting questions and leaderboard updates
   - HTTP POST for answer submissions
   - Real-time scoring and leaderboard (Redis sorted sets)
   - Round-based format (multiple rounds per quiz)
   - Team support (players can join teams)
-  - Answer submission with time limits
   - Display integration (show questions on pub screens via SSE)
-  - Quiz history and statistics (PostgreSQL)
 
 ### Display & Presentation System
 - [ ] **Screen Display / Slideshow Application**
@@ -184,15 +166,10 @@
 ## 🔵 Low Priority (Future Enhancements)
 
 ### Infrastructure
-- [ ] **WebSocket migration**
-  - Replace SSE with WebSocket for bidirectional communication
-  - Reduce latency for game moves
-  - Better mobile support
-
-- [ ] **Error recovery**
-  - Auto-reconnect on connection loss
+- [ ] **Error recovery improvements**
   - Resume game state after disconnect
   - Offline queue for actions
+  - Better handling of network transitions
 
 - [ ] **Performance optimization**
   - Redis connection pooling
@@ -226,26 +203,39 @@
 
 - [x] Lobby presence tracking (Jan 21-22)
 - [x] Challenge system (Jan 22-23)
-- [x] Server-Sent Events for real-time updates (Jan 23)
+- [x] Server-Sent Events for shell real-time updates (Jan 23)
 - [x] Challenge notifications with toast (Jan 23)
 - [x] Prevent duplicate challenges (Jan 24)
 - [x] Auto-remove expired challenges (Jan 24)
 - [x] Subtle notification design (Jan 24)
 - [x] TypeScript compilation fixes (Jan 24)
+- [x] Tic-Tac-Toe backend (Redis + PostgreSQL) (Jan 25)
+- [x] Tic-Tac-Toe frontend (React) (Jan 25)
+- [x] WebSocket → SSE + HTTP refactor for iOS Safari (Jan 26-27)
+- [x] Forfeit and claim-win functionality (Jan 27)
+- [x] Connection tracking with 15s timeout (Jan 27)
+- [x] Multi-browser testing (Chrome, Safari, iOS Safari) (Jan 27)
 
 ## Notes
 
 ### Priority Order
-1. **Critical first**: Get tic-tac-toe working end-to-end with challenge flow
-2. **Then migrate games**: Sweepstakes, Last Man Standing, create Dots
-3. **Then display system**: Screen slideshow with leaderboards and social feeds
-4. **Then polish**: Mobile optimization, additional features, documentation
+1. **Challenge integration**: Connect lobby challenges to tic-tac-toe games
+2. **Migrate static games**: Sweepstakes, Last Man Standing (simpler, no real-time)
+3. **Create Dots**: Second real-time game using same SSE + HTTP pattern
+4. **Quiz app**: Multi-player, real-time, critical for pub engagement
+5. **Display system**: Screen slideshow with leaderboards and social feeds
+6. **Polish**: Mobile optimization, additional features, documentation
+
+### Architecture Decisions Made
+- **SSE + HTTP over WebSocket**: Better iOS Safari compatibility, simpler debugging
+- **Redis pub/sub**: Enables multiple server instances, reliable message delivery
+- **15-second connection timeout**: Balance between quick disconnect detection and network tolerance
 
 ### Game Development Focus
-- Start with simpler games (Tic-Tac-Toe, Dots) to validate architecture
-- Migrate proven V2 games (Sweepstakes, Last Man Standing)
-- Quiz app is critical for pub engagement (multi-player, real-time)
-- Display system enables pub-wide engagement and visibility
+- Tic-Tac-Toe validates the SSE + HTTP pattern for turn-based games
+- Same pattern will work for Dots, Chess, and other turn-based games
+- Quiz uses SSE for broadcasts, HTTP POST for answers (same building blocks)
+- Static apps (Sweepstakes, LMS) are simpler - no real-time needed
 
 ### Display System Vision
 - Central display on pub TVs showing:

@@ -92,5 +92,5 @@ Each app serves frontend + API from a **single port**:
 ## Current Status
 
 ✅ Shell with lobby and challenges
-✅ Tic-Tac-Toe backend and frontend
+✅ Tic-Tac-Toe complete (SSE + HTTP, tested on multiple browsers)
 ⏳ Challenge → game flow integration
