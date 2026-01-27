@@ -10,9 +10,10 @@ import (
 func HandleConfig(w http.ResponseWriter, r *http.Request) {
 	config := Config{
 		AppName: "Smoke Test",
-		AppIcon: "PLACEHOLDER_ICON",
+		AppIcon: "🧪",
 		Version: "1.0.0",
 	}
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(config)
 }
 
