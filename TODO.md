@@ -63,6 +63,20 @@
   - Elimination when wrong, last player wins
   - SSE for real-time sync between players
 
+- [ ] **Build Shut the Box**
+  - Classic dice game
+  - Roll dice, flip down numbered tiles (1-9)
+  - Goal: shut all tiles or lowest score
+  - Solo or multiplayer modes
+  - Simple UI, satisfying tile flip animation
+
+- [ ] **Build Battleships**
+  - 2-player grid guessing game
+  - Place ships on hidden grid
+  - Take turns firing at opponent's grid
+  - SSE + HTTP (same pattern as tic-tac-toe)
+  - Classic 10x10 grid
+
 - [ ] **Build Local Quizzing App**
   - Pub quiz application (multi-player)
   - Question bank management (PostgreSQL)
@@ -217,6 +231,17 @@
 - [ ] **Revisit line drawn and box complete messages**
   - Current messages may need better wording/timing
   - Consider visual feedback improvements
+
+### Future Games
+- [ ] **Cribbage**
+  - Classic card game with pegging board
+  - 2-player, complex scoring rules
+  - Visual pegging board for score tracking
+
+- [ ] **Dominoes**
+  - Classic tile matching game
+  - Multiple game variants (block, draw, etc.)
+  - 2-4 players
 
 ### Infrastructure
 - [ ] **SSL/HTTPS support**
