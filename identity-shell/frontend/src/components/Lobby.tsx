@@ -33,11 +33,18 @@ const Lobby: React.FC<LobbyProps> = ({
   // Force re-render every second to update timers and filter expired challenges
   const [, setTick] = useState(0);
 
-  // Challenge modal state
+  // Challenge modal state - just target user, game is selected in modal
   const [challengeModal, setChallengeModal] = useState<{
     targetUser: string;
-    app: AppDefinition;
   } | null>(null);
+
+  // Get challengeable games (category: game, has realtime support, has backend port)
+  const challengeableApps = apps.filter(app =>
+    app.category === 'game' &&
+    app.realtime &&
+    app.realtime !== 'none' &&
+    app.backendPort
+  );
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -60,17 +67,14 @@ const Lobby: React.FC<LobbyProps> = ({
   const availableGames = apps.filter(app => app.id !== 'lobby');
 
   // Open challenge modal for a user
-  const handleChallengeUser = (opponentEmail: string, appId: string) => {
-    const app = apps.find(a => a.id === appId);
-    if (app) {
-      setChallengeModal({ targetUser: opponentEmail, app });
-    }
+  const handleChallengeUser = (opponentEmail: string) => {
+    setChallengeModal({ targetUser: opponentEmail });
   };
 
-  // Send challenge from modal
-  const handleConfirmChallenge = async (options: ChallengeOptions) => {
+  // Send challenge from modal (appId now comes from modal)
+  const handleConfirmChallenge = async (appId: string, options: ChallengeOptions) => {
     if (challengeModal) {
-      await onSendChallenge(challengeModal.targetUser, challengeModal.app.id, options);
+      await onSendChallenge(challengeModal.targetUser, appId, options);
       setChallengeModal(null);
     }
   };
@@ -115,10 +119,10 @@ const Lobby: React.FC<LobbyProps> = ({
                       <span className="user-app">Playing {user.currentApp}</span>
                     )}
                   </div>
-                  {user.email !== userEmail && (
+                  {user.email !== userEmail && challengeableApps.length > 0 && (
                     <button
                       className="challenge-btn"
-                      onClick={() => handleChallengeUser(user.email, 'tic-tac-toe')}
+                      onClick={() => handleChallengeUser(user.email)}
                     >
                       Challenge
                     </button>
@@ -217,7 +221,7 @@ const Lobby: React.FC<LobbyProps> = ({
       {challengeModal && (
         <ChallengeModal
           targetUser={challengeModal.targetUser}
-          app={challengeModal.app}
+          challengeableApps={challengeableApps}
           onConfirm={handleConfirmChallenge}
           onCancel={() => setChallengeModal(null)}
           fetchGameConfig={fetchGameConfig}
