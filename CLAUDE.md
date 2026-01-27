@@ -1,5 +1,28 @@
 # Pub Games v3 - Project Configuration
 
+## CRITICAL: New App Checklist
+
+**BEFORE creating any new app, Claude MUST:**
+
+1. **Read tic-tac-toe structure first** - It's the reference implementation
+2. **Use TypeScript** - ALL React frontends use `.tsx` files, NEVER `.js`
+3. **Follow the directory pattern:**
+   ```
+   games/{name}/
+   ├── backend/      # Go backend
+   └── frontend/     # React TypeScript frontend
+   ```
+4. **Add database to setup script** - Update `scripts/setup_databases.sh`
+5. **Register in apps.json** - Add entry to `identity-shell/backend/apps.json`
+6. **Use light theme** - Match existing apps (background: #f5f5f5)
+7. **Copy tsconfig.json** - From tic-tac-toe/frontend/
+
+**TypeScript requirements:**
+- package.json must include: `@types/react`, `@types/react-dom`, `typescript`
+- Entry point: `src/index.tsx` (not .js)
+- Main component: `src/App.tsx` (not .js)
+- Add `src/react-app-env.d.ts`
+
 ## Overview
 Multi-app platform for pub-based games and activities. Microservices architecture with each mini-app owning its own data.
 
