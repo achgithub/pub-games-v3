@@ -266,6 +266,13 @@
   - Pi as client for federated features
   - Still works offline for local play
 
+### Testing
+- [ ] **Automated testing**
+  - Unit tests for Go backends
+  - React component tests
+  - Integration tests for game flows
+  - CI pipeline for test automation
+
 ### Documentation
 - [ ] **API documentation**
   - Document all lobby endpoints
