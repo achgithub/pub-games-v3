@@ -183,6 +183,11 @@
   - Consider visual feedback improvements
 
 ### Infrastructure
+- [ ] **SSL/HTTPS support**
+  - Secure connections for all services
+  - Let's Encrypt certificate automation
+  - Reverse proxy configuration (nginx/caddy)
+
 - [ ] **Error recovery improvements**
   - Resume game state after disconnect
   - Offline queue for actions
