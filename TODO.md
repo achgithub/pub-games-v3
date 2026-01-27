@@ -46,6 +46,14 @@
   - Rectangular grid support (4x4, 6x6, 6x9 mobile, 8x8)
   - Challenge options forwarded dynamically to game backends
 
+- [ ] **Build Hangman Game**
+  - Classic word-guessing game
+  - 2-player: one picks word, other guesses
+  - SSE + HTTP (same pattern as tic-tac-toe/dots)
+  - Letter selection UI
+  - Visual hangman progression
+  - Word categories/difficulty options
+
 - [ ] **Build Local Quizzing App**
   - Pub quiz application (multi-player)
   - Question bank management (PostgreSQL)
