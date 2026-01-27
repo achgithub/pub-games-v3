@@ -24,39 +24,49 @@ fi
 echo ""
 echo "📊 Setting up PostgreSQL..."
 
-# Create database (as postgres user)
-sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname = 'pubgames'" | grep -q 1 || \
-    sudo -u postgres psql -c "CREATE DATABASE pubgames;"
-
 # Create user if doesn't exist (use 'pubgames' as password - change in production)
-sudo -u postgres psql -tc "SELECT 1 FROM pg_user WHERE usename = 'pubgames'" | grep -q 1 || \
-    sudo -u postgres psql -c "CREATE USER pubgames WITH PASSWORD 'pubgames';"
+sudo -u postgres psql -p 5555 -tc "SELECT 1 FROM pg_user WHERE usename = 'pubgames'" | grep -q 1 || \
+    sudo -u postgres psql -p 5555 -c "CREATE USER pubgames WITH PASSWORD 'pubgames';"
 
-# Grant privileges
-sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE pubgames TO pubgames;"
+# Grant CREATEDB privilege so user can create databases for new apps
+sudo -u postgres psql -p 5555 -c "ALTER USER pubgames CREATEDB;"
 
-echo "✅ PostgreSQL database 'pubgames' created"
+echo "✅ PostgreSQL user 'pubgames' configured with CREATEDB privilege"
+
+# List of all databases needed by apps
+DATABASES="pubgames tictactoe_db dots_db leaderboard_db"
+
+for DB in $DATABASES; do
+    if sudo -u postgres psql -p 5555 -tc "SELECT 1 FROM pg_database WHERE datname = '$DB'" | grep -q 1; then
+        echo "  ✓ Database '$DB' already exists"
+    else
+        sudo -u postgres psql -p 5555 -c "CREATE DATABASE $DB OWNER pubgames;"
+        echo "  ✓ Database '$DB' created"
+    fi
+done
+
+echo "✅ All databases created"
 
 # Enable TCP/IP connections for localhost (needed for password authentication)
 echo "📝 Configuring PostgreSQL for TCP/IP connections..."
 PG_VERSION=$(psql --version | awk '{print $3}' | cut -d. -f1)
 PG_HBA="/etc/postgresql/${PG_VERSION}/main/pg_hba.conf"
 
-# Check if localhost md5 auth already exists
-if ! sudo grep -q "^host.*pubgames.*127.0.0.1/32.*md5" "$PG_HBA"; then
-    echo "host    pubgames    pubgames    127.0.0.1/32    md5" | sudo tee -a "$PG_HBA" > /dev/null
+# Check if localhost md5 auth already exists for all databases
+if ! sudo grep -q "^host.*all.*pubgames.*127.0.0.1/32.*md5" "$PG_HBA"; then
+    echo "host    all    pubgames    127.0.0.1/32    md5" | sudo tee -a "$PG_HBA" > /dev/null
     sudo systemctl reload postgresql
-    echo "✅ TCP/IP authentication configured"
+    echo "✅ TCP/IP authentication configured for all databases"
 else
     echo "✅ TCP/IP authentication already configured"
 fi
 
-# Run schema initialization
+# Run schema initialization for identity shell (main pubgames db)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCHEMA_FILE="$SCRIPT_DIR/schema.sql"
 
 if [ -f "$SCHEMA_FILE" ]; then
-    echo "📋 Initializing schema..."
+    echo "📋 Initializing identity shell schema..."
     cat "$SCHEMA_FILE" | sudo -u postgres psql -p 5555 -d pubgames
 
     # Grant all permissions to pubgames user
@@ -64,10 +74,13 @@ if [ -f "$SCHEMA_FILE" ]; then
     sudo -u postgres psql -p 5555 -d pubgames -c "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO pubgames;"
     sudo -u postgres psql -p 5555 -d pubgames -c "GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO pubgames;"
 
-    echo "✅ Schema initialized with permissions"
+    echo "✅ Identity shell schema initialized"
 else
-    echo "⚠️  schema.sql not found, skipping schema initialization"
+    echo "⚠️  schema.sql not found, skipping identity shell schema"
 fi
+
+echo ""
+echo "📋 Note: Game tables are created automatically on first app startup"
 
 # Redis setup
 echo ""
@@ -95,16 +108,18 @@ echo ""
 echo "🎉 Database setup complete!"
 echo ""
 echo "PostgreSQL:"
-echo "  - Database: pubgames"
-echo "  - User: pubgames"
+echo "  - User: pubgames (with CREATEDB privilege)"
 echo "  - Password: pubgames (CHANGE THIS IN PRODUCTION)"
 echo "  - Port: 5555"
-echo "  - Connection: postgresql://pubgames:pubgames@127.0.0.1:5555/pubgames"
+echo "  - Databases:"
+echo "      pubgames      - Identity Shell"
+echo "      tictactoe_db  - Tic-Tac-Toe"
+echo "      dots_db       - Dots & Boxes"
+echo "      leaderboard_db - Leaderboard"
 echo ""
 echo "Redis:"
 echo "  - Running on default port 6379"
 echo "  - Connection: localhost:6379"
 echo ""
 echo "Next steps:"
-echo "  1. Update your .env or config files with database credentials"
-echo "  2. Build and run your services"
+echo "  ./start_services.sh"
