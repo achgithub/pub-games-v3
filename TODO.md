@@ -169,6 +169,14 @@
   - Simple heads/tails result with animation
   - History of recent flips (optional)
 
+- [ ] **Killer Draw**
+  - Static app, single player manages game
+  - Enter player names
+  - Randomize button assigns numbers/targets
+  - Configurable lives per player
+  - Track eliminations during game
+  - Option to replicate to display screen
+
 ### Darts Scorer
 - [ ] **Darts Scoring App**
   - All possible scores on one screen (1-20, doubles, triples, bull, outer bull)
