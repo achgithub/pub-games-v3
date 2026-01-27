@@ -103,9 +103,10 @@ body {
 .game-board {
   display: inline-block;
   padding: 20px;
-  background: #343a40;
+  background: #ffffff;
   border-radius: 12px;
   margin: 20px 0;
+  border: 2px solid #dee2e6;
 }
 
 .grid {
@@ -116,13 +117,13 @@ body {
 .dot {
   width: 16px;
   height: 16px;
-  background: #adb5bd;
+  background: #212529;
   border-radius: 50%;
   z-index: 10;
 }
 
 .line {
-  background: #6c757d;
+  background: #dee2e6;
   cursor: pointer;
   transition: background 0.2s;
 }
