@@ -30,7 +30,8 @@ Multi-app platform for pub-based games and activities. Microservices architectur
 │ │   Tic-Tac-Toe (port 4001)          │ │
 │ │   - Go backend serves /api/*       │ │
 │ │   - Go backend serves React build  │ │
-│ │   - WebSocket at /api/ws/game/{id} │ │
+│ │   - SSE at /api/game/{id}/stream   │ │
+│ │   - HTTP POST for moves            │ │
 │ │                                     │ │
 │ └─────────────────────────────────────┘ │
 └─────────────────────────────────────────┘
@@ -87,6 +88,30 @@ cd ../backend && go run *.go  # Serves everything on one port
 2. Add entry to `apps.json`
 3. Done - no shell rebuild needed
 
+### Shell → App URL Parameters
+
+**IMPORTANT:** The shell passes user context to apps via URL query parameters. All apps MUST use these exact parameter names:
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `userId` | Yes | User's email address (e.g., `alice@test.com`) |
+| `userName` | Yes | User's display name |
+| `gameId` | No | Game/session ID (for challenge-based games) |
+| `admin` | No | `"true"` if user is admin |
+
+**Example URL:** `http://pi:4001?userId=alice@test.com&userName=Alice&gameId=ABC123`
+
+**Frontend code to read params:**
+```javascript
+const params = new URLSearchParams(window.location.search);
+const userId = params.get('userId');      // Required
+const userName = params.get('userName');  // Required
+const gameId = params.get('gameId');      // Optional
+const isAdmin = params.get('admin') === 'true';  // Optional
+```
+
+**If `userId` is missing**, the app should show an error: "This app must be accessed through the Identity Shell."
+
 ### Database Architecture
 
 **PostgreSQL** - System of record, persistent data:
@@ -109,16 +134,17 @@ cd ../backend && go run *.go  # Serves everything on one port
 
 ### Real-Time Communication Patterns
 
-**WebSocket** - Fast, bidirectional, low latency:
-- **Use for:** Fast-paced interactive games (tic-tac-toe, dots)
-- **Why:** Rapid moves require instant feedback
-- **Pattern:** Client ↔ Server bidirectional, server broadcasts to game participants
-- **With Redis:** Game state in Redis (crash recovery), WebSocket for speed
+**SSE + HTTP** - Preferred for turn-based games:
+- **Use for:** Turn-based games (tic-tac-toe, dots, chess)
+- **Why:** Better iOS Safari compatibility, simpler debugging
+- **Pattern:** SSE for server → client updates, HTTP POST for client → server actions
+- **With Redis:** Redis pub/sub broadcasts to all SSE listeners
+- **Example:** Tic-tac-toe uses this pattern
 
-**Server-Sent Events (SSE)** - One-way, server → client:
-- **Use for:** Broadcasts, slower games, quizzes, display systems
+**Server-Sent Events (SSE) only** - One-way broadcasts:
+- **Use for:** Quizzes, display systems, leaderboards
 - **Why:** Simpler than WebSocket, efficient for one-to-many
-- **Pattern:** Server pushes updates via SSE, client sends via HTTP POST
+- **Pattern:** Server pushes updates via SSE
 - **With Redis:** Redis pub/sub → SSE stream to clients
 
 **Polling/No Real-Time** - Static apps:
@@ -131,10 +157,10 @@ cd ../backend && go run *.go  # Serves everything on one port
 
 | Game Type | Speed | Real-Time | Storage | Notes |
 |-----------|-------|-----------|---------|-------|
-| Tic-tac-toe | Fast | WebSocket | Redis + PostgreSQL | WebSocket for moves, Redis for state, PostgreSQL for history |
-| Dots | Fast | WebSocket | Redis + PostgreSQL | WebSocket for drawing, Redis for state, PostgreSQL for history |
-| Chess (future) | Slow | SSE | Redis + PostgreSQL | SSE for move updates, Redis for state, PostgreSQL for history |
-| Quiz (30+ players) | Broadcast | SSE | Redis + PostgreSQL | SSE for questions/leaderboard, Redis sorted sets, PostgreSQL for content |
+| Tic-tac-toe | Turn-based | SSE + HTTP | Redis + PostgreSQL | SSE for updates, HTTP POST for moves |
+| Dots | Turn-based | SSE + HTTP | Redis + PostgreSQL | Same pattern as tic-tac-toe |
+| Chess (future) | Turn-based | SSE + HTTP | Redis + PostgreSQL | Same pattern as tic-tac-toe |
+| Quiz (30+ players) | Broadcast | SSE | Redis + PostgreSQL | SSE for questions/leaderboard, HTTP POST for answers |
 | Sweepstakes | Static | None/Polling | PostgreSQL only | Pick-and-wait, no real-time needed |
 | Last Man Standing | Static | None/Polling | PostgreSQL only | Pick-and-wait, optional SSE for "results ready" |
 

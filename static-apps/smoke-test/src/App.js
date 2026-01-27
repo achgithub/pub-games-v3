@@ -22,9 +22,10 @@ function App() {
 
     const initAuth = async () => {
       // Shell passes user info via URL params
+      // Standard params: userId, userName, gameId (optional)
       const params = new URLSearchParams(window.location.search);
-      const userEmail = params.get('user');
-      const userName = params.get('name');
+      const userEmail = params.get('userId');
+      const userName = params.get('userName');
       const isAdmin = params.get('admin') === 'true';
 
       if (!userEmail) {
