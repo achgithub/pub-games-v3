@@ -172,6 +172,15 @@ if [ -d "$BASE_DIR/static-apps/smoke-test/backend" ]; then
     echo ""
 fi
 
+# Start Leaderboard (optional)
+if [ -d "$BASE_DIR/static-apps/leaderboard/backend" ]; then
+    start_service "Leaderboard" \
+        "$BASE_DIR/static-apps/leaderboard/backend" \
+        "$BASE_DIR/static-apps/leaderboard/frontend" \
+        5030
+    echo ""
+fi
+
 echo "========================================"
 echo -e "${GREEN}✓ Services started${NC}"
 echo ""
@@ -182,6 +191,9 @@ if lsof -Pi :4001 -sTCP:LISTEN -t >/dev/null 2>&1; then
 fi
 if lsof -Pi :5010 -sTCP:LISTEN -t >/dev/null 2>&1; then
     echo -e "  ${BLUE}Smoke Test:${NC}      http://localhost:5010"
+fi
+if lsof -Pi :5030 -sTCP:LISTEN -t >/dev/null 2>&1; then
+    echo -e "  ${BLUE}Leaderboard:${NC}     http://localhost:5030"
 fi
 echo ""
 echo "Commands:"

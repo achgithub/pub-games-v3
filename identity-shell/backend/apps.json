@@ -39,6 +39,16 @@
       "url": "http://{host}:5020",
       "backendPort": 5020,
       "realtime": "none"
+    },
+    {
+      "id": "leaderboard",
+      "name": "Leaderboard",
+      "icon": "🏆",
+      "type": "iframe",
+      "description": "Game standings and statistics",
+      "category": "utility",
+      "url": "http://{host}:5030",
+      "backendPort": 5030
     }
   ]
 }

@@ -1,0 +1,155 @@
+/* Ensure the app fills the entire iframe */
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.App {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Main content area - scrollable */
+.App main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+/* Leaderboard specific styles */
+.standings-table {
+  width: 100%;
+}
+
+.standings-table th,
+.standings-table td {
+  text-align: center;
+}
+
+.standings-table td:first-child,
+.standings-table th:first-child {
+  text-align: left;
+}
+
+.rank-badge {
+  display: inline-block;
+  width: 28px;
+  height: 28px;
+  line-height: 28px;
+  text-align: center;
+  border-radius: 50%;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.rank-1 { background: gold; color: #333; }
+.rank-2 { background: silver; color: #333; }
+.rank-3 { background: #cd7f32; color: white; }
+.rank-other { background: #e0e0e0; color: #666; }
+
+.game-type-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.game-type-tabs button {
+  padding: 8px 16px;
+  border: 2px solid #007bff;
+  background: white;
+  color: #007bff;
+  border-radius: 20px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.game-type-tabs button:hover {
+  background: #f0f7ff;
+}
+
+.game-type-tabs button.active {
+  background: #007bff;
+  color: white;
+}
+
+.stat-card {
+  background: white;
+  padding: 16px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #007bff;
+}
+
+.stat-label {
+  color: #666;
+  font-size: 0.875rem;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.recent-result {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+}
+
+.recent-result:last-child {
+  border-bottom: none;
+}
+
+.result-players {
+  flex: 1;
+}
+
+.result-winner {
+  font-weight: 600;
+  color: #28a745;
+}
+
+.result-loser {
+  color: #666;
+}
+
+.result-draw {
+  color: #6c757d;
+  font-style: italic;
+}
+
+.result-meta {
+  text-align: right;
+  font-size: 0.875rem;
+  color: #999;
+}

@@ -1,14 +1,88 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gorilla/mux"
 )
+
+// reportToLeaderboard sends game result to the leaderboard service
+func reportToLeaderboard(game *Game) {
+	leaderboardURL := os.Getenv("LEADERBOARD_URL")
+	if leaderboardURL == "" {
+		leaderboardURL = "http://127.0.0.1:5030"
+	}
+
+	// Determine winner/loser
+	var winnerID, winnerName, loserID, loserName string
+	isDraw := game.WinnerID == nil
+
+	if !isDraw {
+		if *game.WinnerID == game.Player1ID {
+			winnerID = game.Player1ID
+			winnerName = game.Player1Name
+			loserID = game.Player2ID
+			loserName = game.Player2Name
+		} else {
+			winnerID = game.Player2ID
+			winnerName = game.Player2Name
+			loserID = game.Player1ID
+			loserName = game.Player1Name
+		}
+	} else {
+		// For draws, store both players (winner/loser fields used for both)
+		winnerID = game.Player1ID
+		winnerName = game.Player1Name
+		loserID = game.Player2ID
+		loserName = game.Player2Name
+	}
+
+	// Calculate game duration
+	duration := 0
+	if game.CompletedAt != nil {
+		duration = int(*game.CompletedAt - game.CreatedAt)
+	}
+
+	// Format score
+	score := fmt.Sprintf("%d-%d", game.Player1Score, game.Player2Score)
+
+	result := map[string]interface{}{
+		"gameType":   "tic-tac-toe",
+		"gameId":     game.ID,
+		"winnerId":   winnerID,
+		"winnerName": winnerName,
+		"loserId":    loserID,
+		"loserName":  loserName,
+		"isDraw":     isDraw,
+		"score":      score,
+		"duration":   duration,
+	}
+
+	jsonBody, err := json.Marshal(result)
+	if err != nil {
+		log.Printf("Failed to marshal leaderboard result: %v", err)
+		return
+	}
+
+	resp, err := http.Post(leaderboardURL+"/api/result", "application/json", bytes.NewBuffer(jsonBody))
+	if err != nil {
+		log.Printf("Failed to report to leaderboard: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusOK {
+		log.Printf("📊 Reported game %s to leaderboard", game.ID)
+	} else {
+		log.Printf("Leaderboard returned status %d", resp.StatusCode)
+	}
+}
 
 // handleGetGame retrieves game state
 func handleGetGame(w http.ResponseWriter, r *http.Request) {
@@ -149,6 +223,9 @@ func handleMakeMove(w http.ResponseWriter, r *http.Request) {
 
 		UpdatePlayerStats(game.Player1ID, game.Player1Name, player1Won, player2Won, isDraw, 0)
 		UpdatePlayerStats(game.Player2ID, game.Player2Name, player2Won, player1Won, isDraw, 0)
+
+		// Report to leaderboard service
+		go reportToLeaderboard(game)
 
 		// Publish game_ended event
 		PublishGameEvent(req.GameID, "game_ended", map[string]interface{}{
@@ -422,6 +499,9 @@ func handleForfeitHTTP(w http.ResponseWriter, r *http.Request) {
 	UpdatePlayerStats(game.Player1ID, game.Player1Name, player1Won, player2Won, false, 0)
 	UpdatePlayerStats(game.Player2ID, game.Player2Name, player2Won, player1Won, false, 0)
 
+	// Report to leaderboard service
+	go reportToLeaderboard(game)
+
 	// Publish game_ended event
 	PublishGameEvent(gameID, "game_ended", map[string]interface{}{
 		"game":    game,
@@ -511,6 +591,9 @@ func handleClaimWinHTTP(w http.ResponseWriter, r *http.Request) {
 
 	UpdatePlayerStats(game.Player1ID, game.Player1Name, player1Won, player2Won, false, 0)
 	UpdatePlayerStats(game.Player2ID, game.Player2Name, player2Won, player1Won, false, 0)
+
+	// Report to leaderboard service
+	go reportToLeaderboard(game)
 
 	// Publish game_ended event
 	PublishGameEvent(gameID, "game_ended", map[string]interface{}{
