@@ -261,10 +261,15 @@
   - Lazy loading for games
 
 ### Federation (Future)
-- [ ] **Cross-pub challenges**
-  - Central cloud instance
-  - Pi as client for federated features
-  - Still works offline for local play
+- [ ] **Central Hub Service**
+  - Cloud-hosted central hub for multiple pubs
+  - Cross-pub game challenges and leaderboards
+  - Content distribution:
+    - Quiz packs (question banks, themed quizzes)
+    - Sweepstake templates and fixtures
+  - Pi instances connect as clients
+  - Pubs still work offline for local play
+  - Subscription/licensing model potential
 
 ### Testing
 - [ ] **Automated testing**
