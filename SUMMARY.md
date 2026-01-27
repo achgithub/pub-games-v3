@@ -9,12 +9,14 @@
 - ✅ User authentication (email + password with bcrypt)
 - ✅ Dynamic app registry (`/api/apps`)
 - ✅ Iframe embedding for all apps
+- ✅ Dynamic game selection in challenges (auto-discovers games from registry)
 
 ### Lobby System (Complete)
 - ✅ Real-time presence tracking (Redis-backed, 30s TTL)
 - ✅ Challenge system (send, accept, decline, 60s expiration)
 - ✅ Server-Sent Events for instant updates
 - ✅ Challenge notifications (toast popup)
+- ✅ Game selection modal (pick which game when challenging)
 
 ### Tic-Tac-Toe (Complete)
 - ✅ Backend with SSE + HTTP (refactored from WebSocket for iOS Safari compatibility)
@@ -23,7 +25,21 @@
 - ✅ React frontend with EventSource + fetch
 - ✅ Forfeit and claim-win functionality
 - ✅ Connection tracking with 15-second timeout
+- ✅ Reports results to Leaderboard service
 - ✅ Tested on multiple browsers including iOS Safari
+
+### Dots & Boxes (Complete)
+- ✅ Classic dots-and-boxes game for two players
+- ✅ Same SSE + HTTP pattern as tic-tac-toe
+- ✅ Configurable grid sizes (3x3 to 6x6)
+- ✅ Complete a box = score point + extra turn
+- ✅ Reports results to Leaderboard service
+
+### Leaderboard (Complete)
+- ✅ Centralized stats service for all games
+- ✅ Receives game results from games (win/loss/draw/forfeit)
+- ✅ Standings per game type (points: 3 win, 1 draw, 0 loss)
+- ✅ React frontend showing rankings
 
 ## Technology Stack
 
@@ -43,8 +59,9 @@ Every mini-app serves **frontend + API from one port**:
 
 ```
 Identity Shell (3001) ──iframe──> Tic-Tac-Toe (4001)
+                      ──iframe──> Dots & Boxes (4011)
                       ──iframe──> Smoke Test (5010)
-                      ──iframe──> Sweepstakes (5020)
+                      ──iframe──> Leaderboard (5030)
 ```
 
 **Benefits:**
@@ -78,8 +95,10 @@ Shell fetches apps from `/api/apps` instead of hardcoding:
 ```
 3001  - Identity Shell (frontend + API)
 4001  - Tic-Tac-Toe
+4011  - Dots & Boxes
 5010  - Smoke Test
 5020  - Sweepstakes (planned)
+5030  - Leaderboard
 5555  - PostgreSQL
 6379  - Redis
 ```
@@ -94,15 +113,17 @@ Shell fetches apps from `/api/apps` instead of hardcoding:
 - [x] Tic-Tac-Toe frontend (EventSource + fetch)
 - [x] Real-time gameplay tested and working
 - [x] Challenge → game flow integration (accept launches game)
-- [ ] Game result reporting to shell
+- [x] Dynamic game selection in challenges (not hardcoded)
+- [x] Centralized Leaderboard service
+- [x] Game result reporting to Leaderboard
+- [x] Dots & Boxes game (validates multi-game support)
 - [ ] Migrate Sweepstakes
 - [ ] Migrate Last Man Standing
 
 ## Known Limitations
 
-1. No game result reporting to shell
-2. Basic auth only (no OAuth)
-3. Single-device sessions
+1. Basic auth only (no OAuth)
+2. Single-device sessions
 
 ## File Structure
 
@@ -110,17 +131,17 @@ Shell fetches apps from `/api/apps` instead of hardcoding:
 pub-games-v3/
 ├── identity-shell/
 │   ├── backend/         # Go server + apps.json
-│   └── frontend/        # React shell UI
+│   └── frontend/        # React shell UI + ChallengeModal
 ├── games/
-│   └── tic-tac-toe/
+│   ├── tic-tac-toe/
+│   │   ├── backend/     # Go + SSE + HTTP + static/
+│   │   └── frontend/    # React game UI
+│   └── dots/
 │       ├── backend/     # Go + SSE + HTTP + static/
-│       │   ├── main.go
-│       │   ├── handlers.go      # SSE stream + HTTP endpoints
-│       │   ├── redis.go         # Redis + pub/sub
-│       │   └── game_logic.go
-│       └── frontend/    # React game UI (EventSource + fetch)
+│       └── frontend/    # React game UI
 ├── static-apps/
-│   └── smoke-test/
+│   ├── smoke-test/
+│   └── leaderboard/     # Centralized game stats
 ├── CLAUDE.md            # Architecture decisions
 ├── README.md            # Project overview
 └── TODO.md              # Task list

@@ -2,19 +2,20 @@
 
 **Last Updated**: January 27, 2026
 
-## 🔴 Critical (Next Priority)
-
-### Game Result Reporting
-- [ ] **Report game results back to identity shell**
-  - When game ends, notify shell with winner/draw result
-  - Update challenge status to "completed"
-  - Track win/loss/draw statistics in shell
+## ✅ Leaderboard & Game Reporting (Complete)
+- [x] Centralized Leaderboard app (port 5030)
+- [x] Games report results directly to Leaderboard service
+- [x] Standings per game type (points: 3 win, 1 draw, 0 loss)
+- [x] Tic-tac-toe reports on game end, forfeit, claim-win
+- [x] Dots reports on game end, forfeit, claim-win
 
 ## ✅ Challenge → Game Integration (Complete)
 - [x] Connect challenge acceptance to game launch
 - [x] Pass player assignments (who is X, who is O) to game
 - [x] Store game session ID linking to challenge ID
 - [x] Both players redirected to game via SSE notification
+- [x] Dynamic game selection (user picks game when challenging)
+- [x] Games auto-discovered from apps.json (category: game, realtime: sse)
 
 ## 🟡 High Priority (After Challenge Integration)
 
@@ -34,14 +35,14 @@
   - Solo mode support (no challenges)
   - Multi-player competitive mode
 
-- [ ] **Create Dots Game**
-  - New game implementation
+- [x] **Create Dots Game** ✅
   - Classic dots-and-boxes gameplay
-  - 2-player turn-based
+  - 2-player turn-based on port 4011
   - SSE + HTTP (same pattern as tic-tac-toe)
   - Redis for live game state + pub/sub
   - PostgreSQL for game history
-  - Challenge integration
+  - Challenge integration working
+  - Reports to Leaderboard service
 
 - [ ] **Build Local Quizzing App**
   - Pub quiz application (multi-player)
@@ -74,10 +75,10 @@
   - Moderation/filtering capabilities
 
 ### Lobby & Challenges
-- [ ] **Challenge app selection**
-  - Currently hardcoded to 'tic-tac-toe'
-  - Let user choose which game when challenging
-  - Display game name in challenge notification
+- [x] **Challenge app selection** ✅
+  - Dynamic game selection modal when clicking Challenge
+  - Games auto-discovered from apps.json (category: game + realtime support)
+  - Single-game case skips selection for convenience
 
 - [ ] **Challenge rejection handling**
   - Notify challenger when challenge is declined
@@ -219,16 +220,21 @@
 - [x] Smoke test restructured to match tic-tac-toe pattern (Jan 27)
 - [x] URL params standardized: userId, userName, gameId (Jan 27)
 - [x] Challenge → game integration working (Jan 27)
+- [x] Centralized Leaderboard app (port 5030) (Jan 27)
+- [x] Game result reporting to Leaderboard (Jan 27)
+- [x] Dots & Boxes game (port 4011) (Jan 27)
+- [x] Dynamic game selection in challenges (Jan 27)
 
 ## Notes
 
 ### Priority Order
-1. **Challenge integration**: Connect lobby challenges to tic-tac-toe games
-2. **Migrate static games**: Sweepstakes, Last Man Standing (simpler, no real-time)
-3. **Create Dots**: Second real-time game using same SSE + HTTP pattern
-4. **Quiz app**: Multi-player, real-time, critical for pub engagement
-5. **Display system**: Screen slideshow with leaderboards and social feeds
-6. **Polish**: Mobile optimization, additional features, documentation
+1. ~~Challenge integration~~: ✅ Complete with dynamic game selection
+2. ~~Create Dots~~: ✅ Second real-time game validates multi-game support
+3. ~~Leaderboard~~: ✅ Centralized stats service
+4. **Migrate static games**: Sweepstakes, Last Man Standing (simpler, no real-time)
+5. **Quiz app**: Multi-player, real-time, critical for pub engagement
+6. **Display system**: Screen slideshow with leaderboards and social feeds
+7. **Polish**: Mobile optimization, additional features, documentation
 
 ### Architecture Decisions Made
 - **SSE + HTTP over WebSocket**: Better iOS Safari compatibility, simpler debugging

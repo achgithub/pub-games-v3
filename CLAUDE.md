@@ -73,8 +73,19 @@ cd ../backend && go run *.go  # Serves everything on one port
       "icon": "⭕",
       "type": "iframe",
       "url": "http://{host}:4001",
+      "backendPort": 4001,
       "category": "game",
-      "realtime": "websocket"
+      "realtime": "sse"
+    },
+    {
+      "id": "dots",
+      "name": "Dots & Boxes",
+      "icon": "🔵",
+      "type": "iframe",
+      "url": "http://{host}:4011",
+      "backendPort": 4011,
+      "category": "game",
+      "realtime": "sse"
     }
   ]
 }
@@ -87,6 +98,23 @@ cd ../backend && go run *.go  # Serves everything on one port
 1. Create the app (backend + frontend)
 2. Add entry to `apps.json`
 3. Done - no shell rebuild needed
+
+### Challengeable Games (Auto-Discovery)
+
+When a user clicks "Challenge" on another player, the shell shows a **game selection modal**. Games are automatically discovered from `apps.json` based on these criteria:
+
+| Field | Requirement | Why |
+|-------|-------------|-----|
+| `category` | `"game"` | Only games can be challenged |
+| `realtime` | `"sse"` or `"websocket"` | Challenge games need real-time updates |
+| `backendPort` | Must be defined | Shell needs to call game backend to create game |
+
+**Benefits:**
+- No hardcoded game list in challenge code
+- New games automatically appear in challenge modal
+- Single-game case skips selection step for convenience
+
+**Implementation:** `identity-shell/frontend/src/components/ChallengeModal.tsx`
 
 ### Shell → App URL Parameters
 
