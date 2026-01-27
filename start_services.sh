@@ -163,6 +163,15 @@ if [ -d "$BASE_DIR/games/tic-tac-toe/backend" ]; then
     echo ""
 fi
 
+# Start Dots (optional)
+if [ -d "$BASE_DIR/games/dots/backend" ]; then
+    start_service "Dots" \
+        "$BASE_DIR/games/dots/backend" \
+        "$BASE_DIR/games/dots/frontend" \
+        4011
+    echo ""
+fi
+
 # Start Smoke Test (optional)
 if [ -d "$BASE_DIR/static-apps/smoke-test/backend" ]; then
     start_service "Smoke Test" \
@@ -188,6 +197,9 @@ echo "Access:"
 echo -e "  ${BLUE}Identity Shell:${NC}  http://localhost:3001"
 if lsof -Pi :4001 -sTCP:LISTEN -t >/dev/null 2>&1; then
     echo -e "  ${BLUE}Tic-Tac-Toe:${NC}     http://localhost:4001"
+fi
+if lsof -Pi :4011 -sTCP:LISTEN -t >/dev/null 2>&1; then
+    echo -e "  ${BLUE}Dots:${NC}            http://localhost:4011"
 fi
 if lsof -Pi :5010 -sTCP:LISTEN -t >/dev/null 2>&1; then
     echo -e "  ${BLUE}Smoke Test:${NC}      http://localhost:5010"

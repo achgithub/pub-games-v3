@@ -17,7 +17,18 @@
       "category": "game",
       "url": "http://{host}:4001",
       "backendPort": 4001,
-      "realtime": "websocket"
+      "realtime": "sse"
+    },
+    {
+      "id": "dots",
+      "name": "Dots & Boxes",
+      "icon": "🔵",
+      "type": "iframe",
+      "description": "Connect the dots, complete the boxes!",
+      "category": "game",
+      "url": "http://{host}:4011",
+      "backendPort": 4011,
+      "realtime": "sse"
     },
     {
       "id": "smoke-test",
