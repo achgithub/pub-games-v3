@@ -86,22 +86,23 @@ Shell fetches apps from `/api/apps` instead of hardcoding:
 
 ## Current Phase
 
-**Phase 4: Challenge Integration**
+**Phase 5: Additional Games**
 
 - [x] Dynamic app registry
 - [x] Single-port architecture
 - [x] Tic-Tac-Toe backend (SSE + HTTP)
 - [x] Tic-Tac-Toe frontend (EventSource + fetch)
 - [x] Real-time gameplay tested and working
-- [ ] Challenge → game flow integration
+- [x] Challenge → game flow integration (accept launches game)
 - [ ] Game result reporting to shell
+- [ ] Migrate Sweepstakes
+- [ ] Migrate Last Man Standing
 
 ## Known Limitations
 
-1. Challenge acceptance doesn't launch game yet
-2. No game result reporting to shell
-3. Basic auth only (no OAuth)
-4. Single-device sessions
+1. No game result reporting to shell
+2. Basic auth only (no OAuth)
+3. Single-device sessions
 
 ## File Structure
 

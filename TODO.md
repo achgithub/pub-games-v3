@@ -4,16 +4,17 @@
 
 ## 🔴 Critical (Next Priority)
 
-### Challenge → Game Integration
-- [ ] **Connect challenge acceptance to game launch**
-  - When user accepts challenge, navigate to game with challenge context
-  - Pass player assignments (who is X, who is O) to game
-  - Store game session ID linking to challenge ID
+### Game Result Reporting
+- [ ] **Report game results back to identity shell**
+  - When game ends, notify shell with winner/draw result
+  - Update challenge status to "completed"
+  - Track win/loss/draw statistics in shell
 
-- [ ] **Game result reporting**
-  - Report game results back to identity shell
-  - Update challenge status to "completed" or "abandoned"
-  - Track win/loss/draw statistics
+## ✅ Challenge → Game Integration (Complete)
+- [x] Connect challenge acceptance to game launch
+- [x] Pass player assignments (who is X, who is O) to game
+- [x] Store game session ID linking to challenge ID
+- [x] Both players redirected to game via SSE notification
 
 ## 🟡 High Priority (After Challenge Integration)
 
@@ -217,6 +218,7 @@
 - [x] Multi-browser testing (Chrome, Safari, iOS Safari) (Jan 27)
 - [x] Smoke test restructured to match tic-tac-toe pattern (Jan 27)
 - [x] URL params standardized: userId, userName, gameId (Jan 27)
+- [x] Challenge → game integration working (Jan 27)
 
 ## Notes
 
