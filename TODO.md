@@ -215,6 +215,8 @@
 - [x] Forfeit and claim-win functionality (Jan 27)
 - [x] Connection tracking with 15s timeout (Jan 27)
 - [x] Multi-browser testing (Chrome, Safari, iOS Safari) (Jan 27)
+- [x] Smoke test restructured to match tic-tac-toe pattern (Jan 27)
+- [x] URL params standardized: userId, userName, gameId (Jan 27)
 
 ## Notes
 
