@@ -164,21 +164,10 @@ if [ -d "$BASE_DIR/games/tic-tac-toe/backend" ]; then
 fi
 
 # Start Smoke Test (optional)
-# Note: Smoke test has Go + React in same dir, and uses ./build not ./static
-if [ -d "$BASE_DIR/static-apps/smoke-test" ]; then
-    # Build frontend manually since structure differs from other apps
-    SMOKE_DIR="$BASE_DIR/static-apps/smoke-test"
-    if [ ! -f "$SMOKE_DIR/build/index.html" ] || [ "$SMOKE_DIR/src" -nt "$SMOKE_DIR/build/index.html" ]; then
-        echo -e "${YELLOW}Building Smoke Test frontend...${NC}"
-        cd "$SMOKE_DIR"
-        [ ! -d "node_modules" ] && npm install --silent
-        npm run build --silent
-        cd "$BASE_DIR"
-    fi
-
+if [ -d "$BASE_DIR/static-apps/smoke-test/backend" ]; then
     start_service "Smoke Test" \
-        "$BASE_DIR/static-apps/smoke-test" \
-        "" \
+        "$BASE_DIR/static-apps/smoke-test/backend" \
+        "$BASE_DIR/static-apps/smoke-test/frontend" \
         5010
     echo ""
 fi

@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-// Dynamic URLs for mobile access
-const getHostname = () => window.location.hostname;
-const API_BASE = `http://${getHostname()}:5011/api`;
+// API is served from same origin (single port architecture)
+const API_BASE = '/api';
 
 function App() {
   const [user, setUser] = useState(null);

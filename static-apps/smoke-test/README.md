@@ -1,120 +1,79 @@
 # PubGames V3 - Smoke Test
 
-This is the standard template for creating new static (iframe-embedded) apps in the PubGames V3 ecosystem.
+Template for creating new static (iframe-embedded) apps in PubGames V3.
 
 ## Architecture
 
-- **Backend**: Go API (Port 5011)
-- **Frontend**: React app (Port 5010), loaded in iframe by Identity Shell
+- **Single Port**: Go backend serves both API and React frontend on port 5010
 - **Database**: PostgreSQL (own database for microservice isolation)
-- **Authentication**: Handled by Identity Shell, user info passed via URL params
-- **Styling**: Shared CSS loaded from Identity Shell
-
-## Key Differences from V2
-
-| Feature | V2 | V3 |
-|---------|----|----|
-| Navigation | Full app with header | Embedded in shell iframe |
-| Auth | SSO token validation | User params from shell |
-| Database | SQLite per app | PostgreSQL per app |
-| Styling | Local CSS | Shared CSS from shell |
-| Back button | Each app had one | Shell controls navigation |
+- **Authentication**: User info passed via URL params from Identity Shell
+- **Real-time**: None (static app pattern)
 
 ## File Structure
 
 ```
-/template/
-├── main.go           # Entry point, routing, CORS
-├── handlers.go       # HTTP handlers
-├── models.go         # Data structures
-├── database.go       # PostgreSQL initialization
-├── auth.go           # User sync and validation
-├── /src/            # React source
-│   ├── index.js
-│   └── App.js       # Simplified for iframe
-├── /public/         # Static files
-│   └── index.html   # Loads shared CSS
-├── /data/           # Database migrations (optional)
-├── package.json     # NPM config
-└── go.mod           # Go module
+smoke-test/
+├── backend/
+│   ├── main.go           # Entry point, routing, serves static files
+│   ├── handlers.go       # HTTP handlers
+│   ├── models.go         # Data structures
+│   ├── database.go       # PostgreSQL initialization
+│   ├── auth.go           # User sync and validation
+│   ├── go.mod            # Go module
+│   └── static/           # React build output (created by build)
+├── frontend/
+│   ├── src/
+│   │   ├── index.js
+│   │   └── App.js
+│   ├── public/
+│   │   └── index.html
+│   └── package.json
+├── data/                  # Database migrations (optional)
+└── README.md
 ```
 
 ## Quick Start
 
-### Prerequisites
+### Running via start_services.sh (Recommended)
 
-- Go 1.25+
-- Node.js 18+
-- PostgreSQL 13+ (with pubgames user)
-- Identity Shell running on ports 3000/3001
+```bash
+cd ~/pub-games-v3
+./start_services.sh
+```
 
-### Installation
+This automatically builds the frontend and starts the backend.
 
-1. **Create app from template**:
-   ```bash
-   cd pub-games-v3
-   ./scripts/new_static_app.sh --name my-app --number 5
-   ```
+### Manual Start (on Pi)
 
-2. **Install dependencies** (on Pi):
-   ```bash
-   cd static-apps/my-app
-   go mod download
-   npm install
-   ```
+```bash
+# Build frontend
+cd static-apps/smoke-test/frontend
+npm install
+npm run build
+cp -r build/* ../backend/static/
 
-3. **Run** (on Pi):
+# Start backend
+cd ../backend
+go run *.go
+```
 
-   **Development Mode** (recommended - hot reload):
-   ```bash
-   # Terminal 1: React dev server with hot reload
-   npm start
+Access at: `http://pi:5010?userId=test@example.com&userName=Test`
 
-   # Terminal 2: Backend API
-   go run *.go
-   ```
+## URL Parameters (from Shell)
 
-   **Production Mode** (single process):
-   ```bash
-   # Build React app
-   npm run build
+The Identity Shell passes user context via URL query parameters:
 
-   # Start Go server (serves both frontend and API)
-   go run *.go
-   ```
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `userId` | Yes | User's email address |
+| `userName` | Yes | User's display name |
+| `admin` | No | `"true"` if user is admin |
 
-   The Go server automatically detects whether build/ exists:
-   - If build/ exists: serves production build on port 5010
-   - If no build/: serves from public/ (development fallback)
-
-## How It Works
-
-### 1. User Flow
-
-1. User logs into Identity Shell (http://hostname:3000)
-2. User selects app from lobby
-3. Shell opens iframe with URL: `http://hostname:5050?user=admin@pubgames.local&name=Admin&admin=true`
-4. App reads user params, syncs with backend, displays content
-
-### 2. Authentication
-
-- Shell passes user info via URL params: `?user=EMAIL&name=NAME&admin=BOOL`
-- App syncs user to local database on first access
-- Backend validates user param on all protected routes
-
-### 3. Database
-
-- Each app has its own PostgreSQL database (e.g., `myapp_db`)
-- Users table mirrors identity-shell for local reference
-- App-specific tables for business logic
-
-### 4. Styling
-
-- Shared CSS loaded from Identity Shell: `http://hostname:3001/static/pubgames.css`
-- Consistent look & feel across all apps
-- Mobile-responsive by default
+**Example URL**: `http://pi:5010?userId=alice@test.com&userName=Alice&admin=true`
 
 ## API Endpoints
+
+All endpoints served from the same port (5010):
 
 ### Public
 - `GET /api/health` - Health check
@@ -128,97 +87,14 @@ This is the standard template for creating new static (iframe-embedded) apps in 
 ### Admin (require admin user)
 - `GET /api/admin/stats` - Admin statistics
 
-## Customization
+## Creating a New Static App
 
-### Create New App
+Copy this structure and update:
 
-Use the script:
-```bash
-./scripts/new_static_app.sh --name poker-night --number 10 --icon 🃏
-```
-
-This will:
-1. Copy template to `static-apps/poker-night`
-2. Create PostgreSQL database `pokernight_db`
-3. Update ports to 5100 (frontend) and 5101 (backend)
-4. Replace all placeholders with your values
-
-### Modify Database Schema
-
-Edit `database.go` and add your tables:
-
-```go
-func createTables(db *sql.DB) error {
-    schema := `
-    -- Your custom tables here
-    CREATE TABLE IF NOT EXISTS games (
-        id SERIAL PRIMARY KEY,
-        player_email TEXT NOT NULL,
-        score INT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
-    `
-    // ...
-}
-```
-
-### Add Business Logic
-
-Edit `handlers.go` and `models.go`:
-
-```go
-// models.go
-type Game struct {
-    ID    int    `json:"id"`
-    Score int    `json:"score"`
-    // ...
-}
-
-// handlers.go
-func HandleCreateGame(w http.ResponseWriter, r *http.Request) {
-    // Your logic here
-}
-```
-
-## Development Tips
-
-### Hot Reload
-- Backend: Restart with `go run *.go`
-- Frontend: Automatic via React dev server
-
-### Testing Standalone
-- Access directly: `http://hostname:5050?user=test@example.com&name=Test&admin=false`
-- This simulates shell parameters
-
-### Mobile Testing
-- Identity Shell auto-discovers hostname
-- Apps use dynamic hostname for API calls
-- Test on mobile by accessing shell from phone
-
-## Deployment
-
-### Build (on Pi)
-```bash
-# Frontend
-npm run build
-
-# Backend
-go build -o app
-```
-
-### Run
-```bash
-# Set environment variables
-export DB_NAME=myapp_db
-export BACKEND_PORT=5051
-export FRONTEND_PORT=5050
-export HOSTNAME=$(hostname -I | awk '{print $1}')
-
-# Start backend
-./app
-
-# Serve frontend (use nginx or similar in production)
-```
+1. **backend/main.go**: Change `APP_NAME` and `BACKEND_PORT`
+2. **backend/database.go**: Change database name
+3. **frontend/src/App.js**: Update UI and logic
+4. **apps.json**: Add entry in `identity-shell/backend/apps.json`
 
 ## Environment Variables
 
@@ -229,36 +105,19 @@ export HOSTNAME=$(hostname -I | awk '{print $1}')
 | `DB_USER` | pubgames | PostgreSQL user |
 | `DB_PASS` | pubgames | PostgreSQL password |
 | `DB_NAME` | smoke_test_db | Database name |
-| `BACKEND_PORT` | 5011 | Backend API port |
-| `FRONTEND_PORT` | 5010 | Frontend dev server port |
-| `HOSTNAME` | localhost | Server hostname (for CORS) |
+| `BACKEND_PORT` | 5010 | Server port |
+| `STATIC_DIR` | ./static | Frontend build directory |
 
-## Troubleshooting
+## Comparison with Tic-Tac-Toe
 
-### Database Connection Failed
-- Ensure PostgreSQL is running: `sudo systemctl status postgresql`
-- Check database exists: `psql -U pubgames -l`
-- Verify credentials in environment variables
+| Feature | Smoke Test | Tic-Tac-Toe |
+|---------|------------|-------------|
+| Port | 5010 | 4001 |
+| Real-time | None | SSE + HTTP |
+| Redis | No | Yes |
+| Structure | Same | Same |
 
-### CORS Errors
-- Check `main.go` CORS configuration includes your hostname
-- Identity Shell must be on port 3000/3001
-
-### Shared CSS Not Loading
-- Ensure Identity Shell is running and serving `/static/pubgames.css`
-- Check browser console for 404 errors
-
-### Iframe Not Filling Full Height
-If the app appears in a small box instead of filling the iframe:
-- **Shell side**: `identity-shell/frontend/src/components/AppContainer.css` must use flexbox layout
-- **App side**: `src/index.css` must set html/body/root/App to 100% height with flexbox
-- Both files are already configured correctly in this template
-- After changes, rebuild Identity Shell frontend: `cd identity-shell/frontend && npm run build`
-
-## Notes
-
-- All apps use ports 5000+ (static apps)
-- Interactive games use ports 4000+ (different template)
-- Shell uses ports 3000-3099
-- Each app is an independent microservice
-- Apps can be deployed/updated independently
+Both apps follow the same pattern:
+- `backend/` - Go server + `static/` for React build
+- `frontend/` - React source
+- Single port serves everything
