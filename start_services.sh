@@ -46,20 +46,46 @@ wait_for_port() {
     return 1
 }
 
+# Check if frontend needs rebuild
+needs_rebuild() {
+    local frontend_dir=$1
+    local static_dir=$2
+
+    # No build exists
+    if [ ! -f "$static_dir/index.html" ]; then
+        return 0
+    fi
+
+    # Find newest source file (src/, package.json, tsconfig.json)
+    local newest_src=$(find "$frontend_dir/src" "$frontend_dir/package.json" "$frontend_dir/tsconfig.json" \
+        -type f 2>/dev/null | xargs ls -t 2>/dev/null | head -1)
+
+    if [ -z "$newest_src" ]; then
+        return 0
+    fi
+
+    # Compare against build
+    if [ "$newest_src" -nt "$static_dir/index.html" ]; then
+        return 0
+    fi
+
+    return 1
+}
+
 # Build frontend if needed
 build_frontend() {
     local name=$1
     local frontend_dir=$2
     local static_dir=$3
 
-    # Check if build is needed (no static files or frontend is newer)
-    if [ ! -f "$static_dir/index.html" ] || [ "$frontend_dir/src" -nt "$static_dir/index.html" ]; then
+    # Check if build is needed
+    if needs_rebuild "$frontend_dir" "$static_dir"; then
         echo -e "  ${YELLOW}Building frontend...${NC}"
 
         cd "$frontend_dir"
 
-        # Install dependencies if needed
-        if [ ! -d "node_modules" ]; then
+        # Install/update dependencies if package.json changed or node_modules missing
+        if [ ! -d "node_modules" ] || [ "package.json" -nt "node_modules/.package-lock.json" ]; then
             echo "  Installing npm dependencies..."
             npm install --silent
         fi
