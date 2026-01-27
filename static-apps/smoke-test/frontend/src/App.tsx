@@ -1,59 +1,81 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 
-// API is served from same origin (single port architecture)
 const API_BASE = '/api';
 
+interface User {
+  email: string;
+  name: string;
+  is_admin: boolean;
+}
+
+interface AppConfig {
+  app_name: string;
+  app_icon: string;
+}
+
+interface Item {
+  id: number;
+  name: string;
+  description: string;
+  created_by: string;
+  created_at: string;
+}
+
+type ViewType = 'loading' | 'no-user' | 'dashboard' | 'items' | 'admin';
+
+function useQueryParams() {
+  return useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    return {
+      userId: params.get('userId'),
+      userName: params.get('userName'),
+      isAdmin: params.get('admin') === 'true',
+    };
+  }, []);
+}
+
 function App() {
-  const [user, setUser] = useState(null);
-  const [view, setView] = useState('loading');
-  const [items, setItems] = useState([]);
-  const [config, setConfig] = useState({
+  const { userId, userName, isAdmin } = useQueryParams();
+
+  const [user, setUser] = useState<User | null>(null);
+  const [view, setView] = useState<ViewType>('loading');
+  const [items, setItems] = useState<Item[]>([]);
+  const [config, setConfig] = useState<AppConfig>({
     app_name: 'Smoke Test',
     app_icon: '🧪'
   });
   const [newItemName, setNewItemName] = useState('');
   const [newItemDescription, setNewItemDescription] = useState('');
 
-  // Initialize: Get user from URL params (passed by shell)
+  // Initialize: Get user from URL params
   useEffect(() => {
     let isMounted = true;
 
     const initAuth = async () => {
-      // Shell passes user info via URL params
-      // Standard params: userId, userName, gameId (optional)
-      const params = new URLSearchParams(window.location.search);
-      const userEmail = params.get('userId');
-      const userName = params.get('userName');
-      const isAdmin = params.get('admin') === 'true';
-
-      if (!userEmail) {
+      if (!userId) {
         if (isMounted) {
           setView('no-user');
         }
         return;
       }
 
-      // Create user object
-      const userData = {
-        email: userEmail,
-        name: userName || userEmail,
+      const userData: User = {
+        email: userId,
+        name: userName || userId,
         is_admin: isAdmin
       };
 
       // Sync user with backend
       try {
         await axios.post(`${API_BASE}/sync-user`, userData);
-        if (isMounted) {
-          setUser(userData);
-          setView('dashboard');
-        }
       } catch (error) {
         console.error('Failed to sync user:', error);
-        if (isMounted) {
-          setUser(userData);
-          setView('dashboard');
-        }
+      }
+
+      if (isMounted) {
+        setUser(userData);
+        setView('dashboard');
       }
     };
 
@@ -62,7 +84,7 @@ function App() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [userId, userName, isAdmin]);
 
   // Load app config
   useEffect(() => {
@@ -74,7 +96,7 @@ function App() {
           setConfig(res.data);
         }
       })
-      .catch(err => console.log('Using default config'));
+      .catch(() => console.log('Using default config'));
 
     return () => {
       isMounted = false;
@@ -110,9 +132,9 @@ function App() {
     }
   };
 
-  const handleCreateItem = async (e) => {
+  const handleCreateItem = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newItemName.trim()) return;
+    if (!newItemName.trim() || !user) return;
 
     try {
       await axios.post(
@@ -143,15 +165,32 @@ function App() {
     );
   }
 
-  // No user provided (shouldn't happen if loaded from shell)
+  // No user provided
   if (view === 'no-user') {
     return (
       <div className="App" style={{display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
         <div style={{textAlign: 'center', padding: '20px'}}>
-          <h1>⚠️ Access Error</h1>
+          <h1>Smoke Test</h1>
           <p style={{fontSize: '18px', margin: '30px 0', color: '#666'}}>
-            This app must be accessed through the Identity Shell.
+            Please access this app through the Identity Shell.
           </p>
+          <button
+            onClick={() => {
+              window.location.href = `http://${window.location.hostname}:3001`;
+            }}
+            style={{
+              background: 'linear-gradient(135deg, #667eea, #764ba2)',
+              color: 'white',
+              border: 'none',
+              padding: '12px 30px',
+              fontSize: 16,
+              fontWeight: 500,
+              borderRadius: 8,
+              cursor: 'pointer',
+            }}
+          >
+            Go to Lobby
+          </button>
         </div>
       </div>
     );
@@ -194,13 +233,12 @@ function App() {
                 <h3>Getting Started</h3>
                 <p>This is a static app template for PubGames V3.</p>
                 <ul>
-                  <li>✅ Shell-integrated authentication</li>
-                  <li>✅ PostgreSQL database (microservice isolation)</li>
-                  <li>✅ Protected API routes</li>
-                  <li>✅ Shared CSS styling from shell</li>
-                  <li>✅ Admin functionality</li>
-                  <li>✅ Mobile-friendly (dynamic URLs)</li>
-                  <li>✅ Iframe-embeddable</li>
+                  <li>Shell-integrated authentication</li>
+                  <li>PostgreSQL database (microservice isolation)</li>
+                  <li>Protected API routes</li>
+                  <li>TypeScript frontend</li>
+                  <li>Admin functionality</li>
+                  <li>Mobile-friendly</li>
                 </ul>
               </div>
 
@@ -275,7 +313,6 @@ function App() {
               <div className="admin-section">
                 <h3>Admin Tools</h3>
                 <p className="info-text">This section is only visible to administrators.</p>
-                <p>You can add admin-only functionality here.</p>
               </div>
 
               <div className="admin-section">
@@ -304,7 +341,6 @@ function App() {
     );
   }
 
-  // Fallback
   return null;
 }
 

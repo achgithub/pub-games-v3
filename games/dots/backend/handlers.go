@@ -228,23 +228,24 @@ func handleMakeMove(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// handleGetConfig returns game configuration
+// handleGetConfig returns game configuration and options schema
+// This allows the identity shell to dynamically render challenge options
 func handleGetConfig(w http.ResponseWriter, r *http.Request) {
 	config := map[string]interface{}{
 		"appId":       "dots",
-		"appName":     "Dots",
-		"appIcon":     "🔵",
-		"description": "Classic dots and boxes game",
-		"options": map[string]interface{}{
-			"gridSize": map[string]interface{}{
+		"name":        "Dots & Boxes",
+		"icon":        "🔵",
+		"description": "Connect the dots, complete the boxes!",
+		"gameOptions": []map[string]interface{}{
+			{
+				"id":      "gridSize",
 				"type":    "select",
 				"label":   "Grid Size",
 				"default": 4,
 				"options": []map[string]interface{}{
-					{"value": 3, "label": "3x3 (Small)"},
-					{"value": 4, "label": "4x4 (Standard)"},
-					{"value": 5, "label": "5x5 (Large)"},
-					{"value": 6, "label": "6x6 (Extra Large)"},
+					{"value": 4, "label": "Small (4x4)"},
+					{"value": 6, "label": "Medium (6x6)"},
+					{"value": 8, "label": "Large (8x8)"},
 				},
 			},
 		},
