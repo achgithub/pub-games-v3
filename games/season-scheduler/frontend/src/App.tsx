@@ -9,6 +9,12 @@ interface Team {
   createdAt: string;
 }
 
+interface ExcludedDate {
+  date: string;
+  type: 'catchup' | 'free' | 'special';
+  notes: string;
+}
+
 interface Match {
   id?: number;
   scheduleId?: number;
@@ -48,8 +54,10 @@ const App: React.FC = () => {
   const [dayOfWeek, setDayOfWeek] = useState('wednesday');
   const [seasonStart, setSeasonStart] = useState('');
   const [seasonEnd, setSeasonEnd] = useState('');
-  const [excludeDates, setExcludeDates] = useState<string[]>([]);
+  const [excludedDates, setExcludedDates] = useState<ExcludedDate[]>([]);
   const [newExcludeDate, setNewExcludeDate] = useState('');
+  const [showSpecialEventDialog, setShowSpecialEventDialog] = useState(false);
+  const [specialEventNotes, setSpecialEventNotes] = useState('');
   const [generatedMatches, setGeneratedMatches] = useState<Match[]>([]);
   const [scheduleMessage, setScheduleMessage] = useState<string>('');
   const [savedSchedules, setSavedSchedules] = useState<Schedule[]>([]);
@@ -131,16 +139,47 @@ const App: React.FC = () => {
     }
   };
 
-  const addExcludeDate = () => {
-    if (!newExcludeDate) return;
-    if (!excludeDates.includes(newExcludeDate)) {
-      setExcludeDates([...excludeDates, newExcludeDate]);
+  const addExcludeDateWithType = (type: 'catchup' | 'free' | 'special') => {
+    if (!newExcludeDate) {
+      alert('Please select a date first');
+      return;
+    }
+
+    // Check if date already excluded
+    if (excludedDates.some(d => d.date === newExcludeDate)) {
+      alert('This date is already excluded');
+      return;
+    }
+
+    if (type === 'special') {
+      // Show dialog for special event
+      setShowSpecialEventDialog(true);
+    } else {
+      // Add directly for catchup and free
+      const notes = type === 'catchup' ? 'Catch-up Week' : 'Free Week';
+      setExcludedDates([...excludedDates, { date: newExcludeDate, type, notes }]);
       setNewExcludeDate('');
     }
   };
 
+  const addSpecialEvent = () => {
+    if (!specialEventNotes.trim()) {
+      alert('Please enter event details');
+      return;
+    }
+
+    setExcludedDates([...excludedDates, {
+      date: newExcludeDate,
+      type: 'special',
+      notes: specialEventNotes
+    }]);
+    setNewExcludeDate('');
+    setSpecialEventNotes('');
+    setShowSpecialEventDialog(false);
+  };
+
   const removeExcludeDate = (date: string) => {
-    setExcludeDates(excludeDates.filter(d => d !== date));
+    setExcludedDates(excludedDates.filter(d => d.date !== date));
   };
 
   const generateSchedule = async () => {
@@ -158,6 +197,9 @@ const App: React.FC = () => {
     setError('');
     try {
       const teamNames = teams.map(t => t.name);
+      // Send just the dates for exclusion, save the full info for later
+      const excludeDateStrings = excludedDates.map(d => d.date);
+
       const res = await fetch(`${API_BASE}/api/schedule/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -168,7 +210,7 @@ const App: React.FC = () => {
           dayOfWeek,
           seasonStart,
           seasonEnd,
-          excludeDates,
+          excludeDates: excludeDateStrings,
         }),
       });
 
@@ -242,13 +284,20 @@ const App: React.FC = () => {
         seasonEnd,
       };
 
+      // Convert excluded dates to schedule_dates format
+      const scheduleDates = excludedDates.map(ed => ({
+        matchDate: ed.date,
+        dateType: ed.type,
+        notes: ed.notes
+      }));
+
       const res = await fetch(`${API_BASE}/api/schedule/0`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           schedule,
           matches: generatedMatches,
-          dates: [],
+          dates: scheduleDates,
         }),
       });
 
@@ -464,29 +513,119 @@ const App: React.FC = () => {
           <div style={{ marginBottom: '20px' }}>
             <h3>Exclude Dates (Optional)</h3>
             <p style={{ fontSize: '14px', color: '#666', marginBottom: '10px' }}>
-              Mark specific dates to skip (e.g., holidays, tournaments, venue closures)
+              Mark dates to exclude from scheduling - select a date then choose the type
             </p>
-            <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+            <div style={{ marginBottom: '10px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Select Date:</label>
               <input
                 type="date"
                 value={newExcludeDate}
                 onChange={(e) => setNewExcludeDate(e.target.value)}
-                style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
               />
-              <button onClick={addExcludeDate} style={{ padding: '8px 16px', backgroundColor: '#FF9800', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-                Exclude Date
+            </div>
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '15px', flexWrap: 'wrap' }}>
+              <button
+                onClick={() => addExcludeDateWithType('catchup')}
+                style={{ padding: '8px 16px', backgroundColor: '#2196F3', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', flex: 1, minWidth: '150px' }}
+              >
+                📅 Catch-up Week
+              </button>
+              <button
+                onClick={() => addExcludeDateWithType('free')}
+                style={{ padding: '8px 16px', backgroundColor: '#4CAF50', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', flex: 1, minWidth: '150px' }}
+              >
+                🏖️ Free Week
+              </button>
+              <button
+                onClick={() => addExcludeDateWithType('special')}
+                style={{ padding: '8px 16px', backgroundColor: '#FF9800', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', flex: 1, minWidth: '150px' }}
+              >
+                🏆 Special Event
               </button>
             </div>
-            {excludeDates.length > 0 && (
+
+            {/* Special Event Dialog */}
+            {showSpecialEventDialog && (
+              <div style={{ padding: '15px', backgroundColor: '#fff3cd', marginBottom: '15px', borderRadius: '4px', border: '2px solid #FF9800' }}>
+                <h4 style={{ marginTop: 0 }}>Special Event Details</h4>
+                <input
+                  type="text"
+                  placeholder="e.g., Knockout Competition, Captain's Cup"
+                  value={specialEventNotes}
+                  onChange={(e) => setSpecialEventNotes(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && addSpecialEvent()}
+                  style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', marginBottom: '10px' }}
+                  autoFocus
+                />
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button
+                    onClick={addSpecialEvent}
+                    style={{ padding: '8px 16px', backgroundColor: '#FF9800', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                  >
+                    Add Event
+                  </button>
+                  <button
+                    onClick={() => { setShowSpecialEventDialog(false); setSpecialEventNotes(''); }}
+                    style={{ padding: '8px 16px', backgroundColor: '#ccc', color: '#333', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Excluded Dates List */}
+            {excludedDates.length > 0 && (
               <ul style={{ listStyle: 'none', padding: 0 }}>
-                {excludeDates.map((date) => (
-                  <li key={date} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px', backgroundColor: '#fff3cd', marginBottom: '5px', borderRadius: '4px', border: '1px solid #ffc107' }}>
-                    <span>{new Date(date + 'T00:00:00').toLocaleDateString()}</span>
-                    <button onClick={() => removeExcludeDate(date)} style={{ padding: '4px 8px', backgroundColor: '#f44336', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>
-                      Remove
-                    </button>
-                  </li>
-                ))}
+                {excludedDates.map((excluded, index) => {
+                  const bgColors = {
+                    catchup: '#E3F2FD',
+                    free: '#E8F5E9',
+                    special: '#FFF3E0'
+                  };
+                  const borderColors = {
+                    catchup: '#2196F3',
+                    free: '#4CAF50',
+                    special: '#FF9800'
+                  };
+                  const icons = {
+                    catchup: '📅',
+                    free: '🏖️',
+                    special: '🏆'
+                  };
+
+                  return (
+                    <li
+                      key={index}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '10px',
+                        backgroundColor: bgColors[excluded.type],
+                        marginBottom: '5px',
+                        borderRadius: '4px',
+                        border: `2px solid ${borderColors[excluded.type]}`
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 'bold' }}>
+                          {icons[excluded.type]} {new Date(excluded.date + 'T00:00:00').toLocaleDateString()}
+                        </div>
+                        <div style={{ fontSize: '14px', color: '#666' }}>
+                          {excluded.notes}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => removeExcludeDate(excluded.date)}
+                        style={{ padding: '4px 8px', backgroundColor: '#f44336', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                      >
+                        Remove
+                      </button>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>
@@ -579,6 +718,39 @@ const App: React.FC = () => {
                   </div>
                 </div>
               ))}
+
+              {/* Show excluded dates if any */}
+              {excludedDates.length > 0 && (
+                <div style={{ marginTop: '30px', padding: '15px', backgroundColor: '#f9f9f9', borderRadius: '4px', border: '1px solid #ddd' }}>
+                  <h3 style={{ marginTop: 0 }}>Excluded Dates</h3>
+                  <p style={{ fontSize: '14px', color: '#666', marginBottom: '10px' }}>
+                    These dates are not included in the schedule:
+                  </p>
+                  {excludedDates.map((excluded, index) => {
+                    const icons = {
+                      catchup: '📅',
+                      free: '🏖️',
+                      special: '🏆'
+                    };
+                    return (
+                      <div
+                        key={index}
+                        style={{
+                          padding: '8px 12px',
+                          backgroundColor: '#fff',
+                          marginBottom: '5px',
+                          borderRadius: '4px',
+                          borderLeft: '4px solid #FF9800'
+                        }}
+                      >
+                        <strong>{icons[excluded.type]} {new Date(excluded.date + 'T00:00:00').toLocaleDateString()}</strong>
+                        {' - '}
+                        <span>{excluded.notes}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
               <button onClick={saveSchedule} style={{ marginTop: '20px', padding: '12px 24px', backgroundColor: '#4CAF50', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '16px', fontWeight: 'bold' }}>
                 Save Schedule
