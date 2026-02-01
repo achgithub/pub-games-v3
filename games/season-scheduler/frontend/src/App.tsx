@@ -177,6 +177,12 @@ const App: React.FC = () => {
         throw new Error(errorText || 'Failed to generate schedule');
       }
 
+      const contentType = res.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        const text = await res.text();
+        throw new Error(`Server error: ${text.substring(0, 200)}`);
+      }
+
       const data = await res.json();
       setGeneratedMatches(data.matches || []);
       setScheduleMessage(data.message || '');
