@@ -33,12 +33,13 @@ type ScheduleResponse struct {
 
 // ScheduleRow represents a single week/date in the schedule
 type ScheduleRow struct {
-	Date     time.Time `json:"date"`
-	RowType  string    `json:"rowType"` // "match", "catchup", "free", "special", "bye"
-	HomeTeam string    `json:"homeTeam,omitempty"`
-	AwayTeam *string   `json:"awayTeam,omitempty"` // NULL for bye weeks
-	Notes    string    `json:"notes,omitempty"`    // For special events
-	RowOrder int       `json:"rowOrder"`           // Order in schedule
+	Date           time.Time `json:"date"`
+	RowType        string    `json:"rowType"` // "match", "catchup", "free", "special", "bye"
+	HomeTeam       string    `json:"homeTeam,omitempty"`
+	AwayTeam       *string   `json:"awayTeam,omitempty"`   // NULL for bye weeks
+	Notes          string    `json:"notes,omitempty"`      // For special events
+	RowOrder       int       `json:"rowOrder"`             // Order in schedule
+	HolidayWarning string    `json:"holidayWarning,omitempty"` // Warning if near UK bank holiday
 }
 
 // GenerateSchedule creates a balanced home/away schedule
@@ -118,6 +119,19 @@ func GenerateSchedule(req ScheduleRequest) (*ScheduleResponse, error) {
 		matches = generateRoundRobin(req.Teams, availableDates, hasbye)
 	}
 
+	// Fetch UK bank holidays for warning checks
+	holidays, err := FetchUKBankHolidays()
+	if err != nil {
+		// Non-critical - just log and continue without holiday warnings
+		fmt.Printf("Warning: Failed to fetch UK holidays: %v\n", err)
+	}
+
+	// Filter holidays to season range
+	var seasonHolidays []Holiday
+	if holidays != nil {
+		seasonHolidays = FilterHolidaysInRange(holidays, seasonStart, seasonEnd)
+	}
+
 	// Create ScheduleRow for each date in season
 	var rows []ScheduleRow
 	matchIndex := 0
@@ -125,13 +139,24 @@ func GenerateSchedule(req ScheduleRequest) (*ScheduleResponse, error) {
 	for rowOrder, date := range allDates {
 		dateStr := date.Format("2006-01-02")
 
+		// Check for nearby holidays (within 7 days)
+		var holidayWarning string
+		if len(seasonHolidays) > 0 {
+			nearby := CheckNearbyHolidays(date, seasonHolidays, 7)
+			if len(nearby) > 0 {
+				// Build warning message
+				holidayWarning = fmt.Sprintf("⚠️ Near %s (%s)", nearby[0].Title, nearby[0].Date.Format("Jan 2"))
+			}
+		}
+
 		// Check if this date is excluded
 		if excluded, isExcluded := excludeMap[dateStr]; isExcluded {
 			rows = append(rows, ScheduleRow{
-				Date:     date,
-				RowType:  excluded.Type,
-				Notes:    excluded.Notes,
-				RowOrder: rowOrder,
+				Date:           date,
+				RowType:        excluded.Type,
+				Notes:          excluded.Notes,
+				RowOrder:       rowOrder,
+				HolidayWarning: holidayWarning,
 			})
 			continue
 		}
@@ -140,20 +165,22 @@ func GenerateSchedule(req ScheduleRequest) (*ScheduleResponse, error) {
 		if matchIndex < len(matches) && matches[matchIndex].MatchDate.Format("2006-01-02") == dateStr {
 			match := matches[matchIndex]
 			rows = append(rows, ScheduleRow{
-				Date:     date,
-				RowType:  "match",
-				HomeTeam: match.HomeTeam,
-				AwayTeam: match.AwayTeam,
-				RowOrder: rowOrder,
+				Date:           date,
+				RowType:        "match",
+				HomeTeam:       match.HomeTeam,
+				AwayTeam:       match.AwayTeam,
+				RowOrder:       rowOrder,
+				HolidayWarning: holidayWarning,
 			})
 			matchIndex++
 		} else {
 			// This is a spare week - mark as free
 			rows = append(rows, ScheduleRow{
-				Date:     date,
-				RowType:  "free",
-				Notes:    "Free Week",
-				RowOrder: rowOrder,
+				Date:           date,
+				RowType:        "free",
+				Notes:          "Free Week",
+				RowOrder:       rowOrder,
+				HolidayWarning: holidayWarning,
 			})
 		}
 	}

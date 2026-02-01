@@ -22,6 +22,7 @@ interface ScheduleRow {
   awayTeam?: string | null;
   notes?: string;
   rowOrder: number;
+  holidayWarning?: string; // Warning if near UK bank holiday
 }
 
 interface Match {
@@ -252,14 +253,6 @@ const App: React.FC = () => {
   };
 
   const moveRow = (fromIndex: number, direction: 'up' | 'down' | 'top' | 'bottom') => {
-    // Find the row to move
-    const fromRow = scheduleRows[fromIndex];
-
-    // Only allow moving matches, not fixed exclusions
-    if (fromRow.rowType !== 'match' && fromRow.rowType !== 'free') {
-      return; // Can't move catchup, special, or bye rows
-    }
-
     let toIndex = fromIndex;
 
     if (direction === 'up' && fromIndex > 0) {
@@ -274,17 +267,10 @@ const App: React.FC = () => {
       return;
     }
 
-    const toRow = scheduleRows[toIndex];
-
-    // Can't swap with catchup or special rows (they're fixed to their dates)
-    if (toRow.rowType === 'catchup' || toRow.rowType === 'special') {
-      return;
-    }
-
     // Swap the row contents (keep dates fixed)
     const newRows = [...scheduleRows];
 
-    // Swap match/free content while keeping dates the same
+    // Swap content while keeping dates the same
     const fromDate = newRows[fromIndex].date;
     const toDate = newRows[toIndex].date;
 
@@ -748,15 +734,19 @@ const App: React.FC = () => {
                   bye: '#f5f5f5'
                 };
 
-                const canMove = row.rowType === 'match' || row.rowType === 'free';
-                const canMoveUp = index > 0 && canMove;
-                const canMoveDown = index < scheduleRows.length - 1 && canMove;
+                const canMoveUp = index > 0;
+                const canMoveDown = index < scheduleRows.length - 1;
 
                 return (
-                  <div key={index} style={{ display: 'grid', gridTemplateColumns: '150px 250px 1fr 200px', gap: '10px', alignItems: 'center', padding: '10px', backgroundColor: rowColors[row.rowType as keyof typeof rowColors], marginBottom: '5px', borderRadius: '4px', border: '1px solid #ddd' }}>
+                  <div key={index} style={{ display: 'grid', gridTemplateColumns: '150px 250px 1fr 200px', gap: '10px', alignItems: 'center', padding: '10px', backgroundColor: rowColors[row.rowType as keyof typeof rowColors], marginBottom: '5px', borderRadius: '4px', border: row.holidayWarning ? '2px solid #ff9800' : '1px solid #ddd' }}>
                     <span style={{ fontWeight: 'bold' }}>{new Date(row.date).toLocaleDateString()}</span>
                     <span>{rowIcons[row.rowType as keyof typeof rowIcons]} {row.rowType === 'match' ? 'Match' : row.rowType === 'catchup' ? 'Catch-up Week' : row.rowType === 'free' ? 'Free Week' : row.rowType === 'special' ? 'Special Event' : 'Bye Week'}</span>
                     <span>
+                      {row.holidayWarning && (
+                        <div style={{ color: '#ff6f00', fontWeight: 'bold', fontSize: '12px', marginBottom: '5px' }}>
+                          {row.holidayWarning}
+                        </div>
+                      )}
                       {row.rowType === 'match' && (
                         <>{row.homeTeam} vs {row.awayTeam || 'BYE'}</>
                       )}
@@ -765,40 +755,34 @@ const App: React.FC = () => {
                       )}
                     </span>
                     <div>
-                      {canMove ? (
-                        <>
-                          <button
-                            onClick={() => moveRow(index, 'top')}
-                            disabled={!canMoveUp}
-                            style={{ padding: '5px 10px', margin: '0 2px', backgroundColor: canMoveUp ? '#2196F3' : '#ccc', color: '#fff', border: 'none', borderRadius: '3px', cursor: canMoveUp ? 'pointer' : 'not-allowed', fontSize: '12px' }}
-                          >
-                            ⬆️ Top
-                          </button>
-                          <button
-                            onClick={() => moveRow(index, 'up')}
-                            disabled={!canMoveUp}
-                            style={{ padding: '5px 10px', margin: '0 2px', backgroundColor: canMoveUp ? '#2196F3' : '#ccc', color: '#fff', border: 'none', borderRadius: '3px', cursor: canMoveUp ? 'pointer' : 'not-allowed', fontSize: '12px' }}
-                          >
-                            ↑ Up
-                          </button>
-                          <button
-                            onClick={() => moveRow(index, 'down')}
-                            disabled={!canMoveDown}
-                            style={{ padding: '5px 10px', margin: '0 2px', backgroundColor: canMoveDown ? '#2196F3' : '#ccc', color: '#fff', border: 'none', borderRadius: '3px', cursor: canMoveDown ? 'pointer' : 'not-allowed', fontSize: '12px' }}
-                          >
-                            ↓ Down
-                          </button>
-                          <button
-                            onClick={() => moveRow(index, 'bottom')}
-                            disabled={!canMoveDown}
-                            style={{ padding: '5px 10px', margin: '0 2px', backgroundColor: canMoveDown ? '#2196F3' : '#ccc', color: '#fff', border: 'none', borderRadius: '3px', cursor: canMoveDown ? 'pointer' : 'not-allowed', fontSize: '12px' }}
-                          >
-                            ⬇️ Bottom
-                          </button>
-                        </>
-                      ) : (
-                        <span style={{ fontSize: '12px', color: '#999' }}>Fixed Date</span>
-                      )}
+                      <button
+                        onClick={() => moveRow(index, 'top')}
+                        disabled={!canMoveUp}
+                        style={{ padding: '5px 10px', margin: '0 2px', backgroundColor: canMoveUp ? '#2196F3' : '#ccc', color: '#fff', border: 'none', borderRadius: '3px', cursor: canMoveUp ? 'pointer' : 'not-allowed', fontSize: '12px' }}
+                      >
+                        ⬆️ Top
+                      </button>
+                      <button
+                        onClick={() => moveRow(index, 'up')}
+                        disabled={!canMoveUp}
+                        style={{ padding: '5px 10px', margin: '0 2px', backgroundColor: canMoveUp ? '#2196F3' : '#ccc', color: '#fff', border: 'none', borderRadius: '3px', cursor: canMoveUp ? 'pointer' : 'not-allowed', fontSize: '12px' }}
+                      >
+                        ↑ Up
+                      </button>
+                      <button
+                        onClick={() => moveRow(index, 'down')}
+                        disabled={!canMoveDown}
+                        style={{ padding: '5px 10px', margin: '0 2px', backgroundColor: canMoveDown ? '#2196F3' : '#ccc', color: '#fff', border: 'none', borderRadius: '3px', cursor: canMoveDown ? 'pointer' : 'not-allowed', fontSize: '12px' }}
+                      >
+                        ↓ Down
+                      </button>
+                      <button
+                        onClick={() => moveRow(index, 'bottom')}
+                        disabled={!canMoveDown}
+                        style={{ padding: '5px 10px', margin: '0 2px', backgroundColor: canMoveDown ? '#2196F3' : '#ccc', color: '#fff', border: 'none', borderRadius: '3px', cursor: canMoveDown ? 'pointer' : 'not-allowed', fontSize: '12px' }}
+                      >
+                        ⬇️ Bottom
+                      </button>
                     </div>
                   </div>
                 );
