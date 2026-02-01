@@ -1,263 +1,183 @@
-# Pub Games v3 - Project Configuration
+# Pub Games v3 - Documentation Index
 
-## CRITICAL: New App Checklist
+## Quick Start
 
-**BEFORE creating any new app, Claude MUST:**
+**Creating a new app?** → Start here: [docs/NEW-APP-GUIDE.md](./docs/NEW-APP-GUIDE.md)
 
-1. **Read tic-tac-toe structure first** - It's the reference implementation
-2. **Use TypeScript** - ALL React frontends use `.tsx` files, NEVER `.js`
-3. **Follow the directory pattern:**
-   ```
-   games/{name}/
-   ├── backend/      # Go backend
-   └── frontend/     # React TypeScript frontend
-   ```
-4. **Add database to setup script** - Update `scripts/setup_databases.sh`
-5. **Register in apps.json** - Add entry to `identity-shell/backend/apps.json`
-6. **Use light theme** - Match existing apps (background: #f5f5f5)
-7. **Copy tsconfig.json** - From tic-tac-toe/frontend/
-
-**TypeScript requirements:**
-- package.json must include: `@types/react`, `@types/react-dom`, `typescript`
-- Entry point: `src/index.tsx` (not .js)
-- Main component: `src/App.tsx` (not .js)
-- Add `src/react-app-env.d.ts`
+**Reference implementation:** `games/tic-tac-toe/` (check this first for examples)
 
 ## Overview
-Multi-app platform for pub-based games and activities. Microservices architecture with each mini-app owning its own data.
 
-## Architecture
+Multi-app platform for pub-based games and activities. Microservices architecture where each mini-app is a standalone service with its own data.
 
-### Service Structure
-- **Identity Shell** - Core identity service, hosts mini-apps
-- **Mini-apps** - Independent games/activities (tic-tac-toe, quizzes, etc.)
-- Each mini-app has its own database - enables independent deployments
+**Core concept:** Identity Shell hosts independent mini-apps via iframe embedding. Each app serves both its API and frontend from a single port.
 
-### Mini-App Architecture (Single Port per App)
+## Documentation Structure
 
-**Key Decision:** Each mini-app is a **standalone service** that serves both its API and frontend from a single port. The shell embeds apps via **iframe only** - no React component imports.
+### Getting Started
 
-**Why single port:**
-- Simpler deployment (one process per app)
-- No CORS issues (frontend and API same origin)
-- Independent scaling and updates
-- Adding new apps requires NO shell rebuilds
+- **[NEW-APP-GUIDE.md](./docs/NEW-APP-GUIDE.md)** - Step-by-step guide for creating new apps
+  - Directory structure
+  - TypeScript setup
+  - Frontend/backend skeleton
+  - Registration and integration
+  - Complete checklist
 
-**How it works:**
+### System Architecture
+
+- **[ARCHITECTURE.md](./docs/ARCHITECTURE.md)** - System overview and design
+  - Service structure
+  - Mini-app architecture
+  - App registry system
+  - Shell ↔ App communication
+  - Port allocation
+  - Future federation plans
+
+- **[ARCHITECTURE-DECISIONS.md](./docs/ARCHITECTURE-DECISIONS.md)** - Why we made key choices
+  - ADR-001: Single port per app
+  - ADR-002: Iframe embedding
+  - ADR-003: Dynamic app registry
+  - ADR-004: Auto-discovery of challengeable games
+  - ADR-005: PostgreSQL + Redis hybrid
+  - ADR-006: SSE over WebSocket
+  - ADR-007: Local-first federation strategy
+  - ADR-008: Dynamic challenge options
+
+### Development Guides
+
+- **[FRONTEND.md](./docs/FRONTEND.md)** - React/TypeScript development
+  - TypeScript setup (required)
+  - URL parameter handling (critical)
+  - Component patterns
+  - Styling conventions
+  - SSE client implementation
+  - API communication
+  - Error handling
+
+- **[BACKEND.md](./docs/BACKEND.md)** - Go backend development
+  - Server setup
+  - API patterns
+  - Config endpoint
+  - Error handling
+  - Logging and debugging
+  - Build and deployment
+
+- **[DATABASE.md](./docs/DATABASE.md)** - Data storage patterns
+  - PostgreSQL (persistent data)
+  - Redis (ephemeral/real-time data)
+  - When to use each
+  - Common patterns
+  - Connection setup
+  - Query examples
+
+- **[REALTIME.md](./docs/REALTIME.md)** - Real-time communication
+  - SSE + HTTP pattern (preferred)
+  - SSE only (broadcasts)
+  - Polling/no real-time
+  - Implementation examples
+  - Redis pub/sub integration
+  - Performance tips
+
+## Critical Requirements
+
+### For ALL new apps:
+
+1. **TypeScript required** - ALL React frontends use `.tsx` files, NEVER `.js`
+2. **URL parameters required** - Apps MUST read `userId`, `userName`, `gameId` from URL
+3. **Registry required** - Apps MUST be registered in `identity-shell/backend/apps.json`
+4. **Reference first** - Check `games/tic-tac-toe/` before creating new patterns
+
+### TypeScript checklist:
+- ✅ package.json includes: `typescript`, `@types/react`, `@types/react-dom`
+- ✅ Entry point: `src/index.tsx` (not .js)
+- ✅ Main component: `src/App.tsx` (not .js)
+- ✅ Copy `tsconfig.json` from tic-tac-toe
+- ✅ Add `src/react-app-env.d.ts`
+
+## Quick Reference
+
+### App structure template
+
 ```
-┌─────────────────────────────────────────┐
-│ Identity Shell (port 3001)              │
-│ ┌─────────────────────────────────────┐ │
-│ │ iframe src="http://pi:4001?userId=x"│ │
-│ │                                     │ │
-│ │   Tic-Tac-Toe (port 4001)          │ │
-│ │   - Go backend serves /api/*       │ │
-│ │   - Go backend serves React build  │ │
-│ │   - SSE at /api/game/{id}/stream   │ │
-│ │   - HTTP POST for moves            │ │
-│ │                                     │ │
-│ └─────────────────────────────────────┘ │
-└─────────────────────────────────────────┘
-```
-
-**App structure:**
-```
-games/tic-tac-toe/
+games/{app-name}/
 ├── backend/
-│   ├── main.go          # Serves API + static files
-│   ├── static/          # React build output
-│   └── ...
+│   ├── main.go          # Entry point
+│   ├── handlers.go      # HTTP handlers
+│   ├── game.go          # Game logic
+│   └── static/          # React build output
 ├── frontend/
-│   ├── src/             # React source
-│   ├── public/
-│   └── package.json
+│   ├── src/
+│   │   ├── index.tsx    # TypeScript entry
+│   │   └── App.tsx      # Main component
+│   ├── package.json
+│   └── tsconfig.json
 └── database/
-    └── schema.sql
+    └── schema.sql       # PostgreSQL schema (if needed)
 ```
 
-**Build process:**
+### Common commands (run on Pi)
+
 ```bash
-cd frontend && npm run build
+# Build frontend
+cd games/{app}/frontend && npm run build
+
+# Copy to backend
 cp -r build/* ../backend/static/
-cd ../backend && go run *.go  # Serves everything on one port
+
+# Run backend
+cd ../backend && go run *.go
+
+# Test
+curl http://localhost:4XXX/api/config
 ```
 
-### App Registry
+### Decision matrix
 
-**Dynamic app discovery** - Shell fetches available apps from API, no hardcoding.
-
-**Registry file:** `identity-shell/backend/apps.json`
-```json
-{
-  "apps": [
-    {
-      "id": "tic-tac-toe",
-      "name": "Tic-Tac-Toe",
-      "icon": "⭕",
-      "type": "iframe",
-      "url": "http://{host}:4001",
-      "backendPort": 4001,
-      "category": "game",
-      "realtime": "sse"
-    },
-    {
-      "id": "dots",
-      "name": "Dots & Boxes",
-      "icon": "🔵",
-      "type": "iframe",
-      "url": "http://{host}:4011",
-      "backendPort": 4011,
-      "category": "game",
-      "realtime": "sse"
-    }
-  ]
-}
-```
-
-**Shell fetches:** `GET /api/apps` → returns registry
-**Shell embeds:** `<iframe src="http://pi:4001?userId=x&gameId=y" />`
-
-**Adding a new app:**
-1. Create the app (backend + frontend)
-2. Add entry to `apps.json`
-3. Done - no shell rebuild needed
-
-### Challengeable Games (Auto-Discovery)
-
-When a user clicks "Challenge" on another player, the shell shows a **game selection modal**. Games are automatically discovered from `apps.json` based on these criteria:
-
-| Field | Requirement | Why |
-|-------|-------------|-----|
-| `category` | `"game"` | Only games can be challenged |
-| `realtime` | `"sse"` or `"websocket"` | Challenge games need real-time updates |
-| `backendPort` | Must be defined | Shell needs to call game backend to create game |
-
-**Benefits:**
-- No hardcoded game list in challenge code
-- New games automatically appear in challenge modal
-- Single-game case skips selection step for convenience
-
-**Implementation:** `identity-shell/frontend/src/components/ChallengeModal.tsx`
-
-### Dynamic Challenge Options
-
-Games can define custom options via their `/api/config` endpoint. The ChallengeModal fetches this config and renders options dynamically (dropdowns, checkboxes, etc.).
-
-**Key principle:** All options are forwarded automatically to the game backend when creating a game. Game backends read the options they need - no identity shell code changes required for new options.
-
-**Config endpoint example** (from Dots):
-```go
-config := map[string]interface{}{
-    "appId": "dots",
-    "gameOptions": []map[string]interface{}{
-        {
-            "id":      "gridSize",
-            "type":    "select",
-            "label":   "Grid Size",
-            "default": "4x4",
-            "options": []map[string]interface{}{
-                {"value": "4x4", "label": "Small (4x4)"},
-                {"value": "6x6", "label": "Medium (6x6)"},
-                {"value": "6x9", "label": "Mobile (6x9)"},
-                {"value": "8x8", "label": "Large (8x8)"},
-            },
-        },
-    },
-}
-```
-
-**Flow:**
-1. ChallengeModal calls game's `/api/config` → gets `gameOptions`
-2. User selects options → stored as `{gridSize: "6x9"}`
-3. Challenge sent to shell with options
-4. On accept, shell forwards ALL options to game's `/api/game`
-5. Game backend parses options it needs (e.g., "6x9" → width=6, height=9)
-
-**Adding new options:** Just add them to your game's `/api/config` and read them in `/api/game` - the shell handles forwarding automatically.
-
-### Shell → App URL Parameters
-
-**IMPORTANT:** The shell passes user context to apps via URL query parameters. All apps MUST use these exact parameter names:
-
-| Parameter | Required | Description |
-|-----------|----------|-------------|
-| `userId` | Yes | User's email address (e.g., `alice@test.com`) |
-| `userName` | Yes | User's display name |
-| `gameId` | No | Game/session ID (for challenge-based games) |
-| `admin` | No | `"true"` if user is admin |
-
-**Example URL:** `http://pi:4001?userId=alice@test.com&userName=Alice&gameId=ABC123`
-
-**Frontend code to read params:**
-```javascript
-const params = new URLSearchParams(window.location.search);
-const userId = params.get('userId');      // Required
-const userName = params.get('userName');  // Required
-const gameId = params.get('gameId');      // Optional
-const isAdmin = params.get('admin') === 'true';  // Optional
-```
-
-**If `userId` is missing**, the app should show an error: "This app must be accessed through the Identity Shell."
-
-### Database Architecture
-
-**PostgreSQL** - System of record, persistent data:
-- User accounts/identity
-- Quiz content (questions, media references)
-- Game history and results (after game ends)
-- Persistent leaderboards (all-time stats)
-- Configuration and templates
-- Static app data (sweepstakes picks, LMS selections)
-
-**Redis** - Live/ephemeral data:
-- Real-time game state (tic-tac-toe board, active turns)
-- Live leaderboards during quiz (sorted sets)
-- Answer submission bursts (30+ writes in seconds)
-- Active session state (current question, timer, who's answered)
-- Pub/sub for instant updates (player made a move, scores updated)
-- Game state persistence (survives server crashes with TTL)
-
-**Simple rule:** If it's live and ephemeral, Redis. If it needs to survive a restart, PostgreSQL.
-
-### Real-Time Communication Patterns
-
-**SSE + HTTP** - Preferred for turn-based games:
-- **Use for:** Turn-based games (tic-tac-toe, dots, chess)
-- **Why:** Better iOS Safari compatibility, simpler debugging
-- **Pattern:** SSE for server → client updates, HTTP POST for client → server actions
-- **With Redis:** Redis pub/sub broadcasts to all SSE listeners
-- **Example:** Tic-tac-toe uses this pattern
-
-**Server-Sent Events (SSE) only** - One-way broadcasts:
-- **Use for:** Quizzes, display systems, leaderboards
-- **Why:** Simpler than WebSocket, efficient for one-to-many
-- **Pattern:** Server pushes updates via SSE
-- **With Redis:** Redis pub/sub → SSE stream to clients
-
-**Polling/No Real-Time** - Static apps:
-- **Use for:** Sweepstakes, Last Man Standing, pick-and-wait apps
-- **Why:** No real-time updates needed
-- **Pattern:** PostgreSQL only, optional periodic polling
-- **Simple:** User makes picks, waits for results
-
-### Game Patterns
-
-| Game Type | Speed | Real-Time | Storage | Notes |
-|-----------|-------|-----------|---------|-------|
-| Tic-tac-toe | Turn-based | SSE + HTTP | Redis + PostgreSQL | SSE for updates, HTTP POST for moves |
-| Dots | Turn-based | SSE + HTTP | Redis + PostgreSQL | Same pattern as tic-tac-toe |
-| Chess (future) | Turn-based | SSE + HTTP | Redis + PostgreSQL | Same pattern as tic-tac-toe |
-| Quiz (30+ players) | Broadcast | SSE | Redis + PostgreSQL | SSE for questions/leaderboard, HTTP POST for answers |
-| Sweepstakes | Static | None/Polling | PostgreSQL only | Pick-and-wait, no real-time needed |
-| Last Man Standing | Static | None/Polling | PostgreSQL only | Pick-and-wait, optional SSE for "results ready" |
-
-### Future: Cross-Pub Federation
-- Central cloud instance (PostgreSQL + Redis on VPS)
-- Pi becomes a client of cloud services for federated features
-- Pi remains self-sufficient for local play (works offline)
-- Local-first: build everything to work on single Pi, federation bolts on later
+| Need | Solution | Doc Reference |
+|------|----------|---------------|
+| Create new app | Follow checklist | [NEW-APP-GUIDE.md](./docs/NEW-APP-GUIDE.md) |
+| Real-time updates | Use SSE + Redis | [REALTIME.md](./docs/REALTIME.md) |
+| Persistent data | PostgreSQL | [DATABASE.md](./docs/DATABASE.md) |
+| Ephemeral state | Redis | [DATABASE.md](./docs/DATABASE.md) |
+| Turn-based game | SSE + HTTP pattern | [REALTIME.md](./docs/REALTIME.md) |
+| Static picks app | No real-time, PostgreSQL only | [DATABASE.md](./docs/DATABASE.md) |
+| Frontend styling | Light theme, inline CSS | [FRONTEND.md](./docs/FRONTEND.md) |
+| Game options | `/api/config` endpoint | [BACKEND.md](./docs/BACKEND.md) |
 
 ## Deployment
+
 - **Mac**: Code editing, Git operations, Claude Code
 - **Pi**: Go builds, npm, PostgreSQL, Redis, running services
-- See global CLAUDE.md for workflow details
+- **Workflow**: Write on Mac → Commit → Push → Pull on Pi → Build/test
+
+See global `~/.claude/CLAUDE.md` for detailed workflow.
+
+## Getting Help
+
+1. **Check reference implementation:** `games/tic-tac-toe/`
+2. **Read relevant doc:** See structure above
+3. **Search codebase:** Look for similar patterns in existing apps
+4. **Ask specific questions:** Provide context about what you've already tried
+
+## File Organization
+
+```
+pub-games-v3/
+├── CLAUDE.md (this file)           # Main index
+├── docs/                           # All documentation
+│   ├── ARCHITECTURE.md
+│   ├── ARCHITECTURE-DECISIONS.md
+│   ├── FRONTEND.md
+│   ├── BACKEND.md
+│   ├── DATABASE.md
+│   ├── REALTIME.md
+│   └── NEW-APP-GUIDE.md
+├── games/
+│   ├── tic-tac-toe/               # Reference implementation
+│   ├── dots/
+│   └── {your-app}/
+├── identity-shell/
+│   └── backend/
+│       └── apps.json              # App registry
+└── scripts/
+    └── setup_databases.sh         # Database setup

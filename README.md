@@ -5,7 +5,7 @@
 **Created**: January 21, 2026
 **Last Updated**: January 27, 2026
 
-📋 See [CLAUDE.md](./CLAUDE.md) for architecture decisions and [TODO.md](./TODO.md) for task list
+📋 **Documentation**: [CLAUDE.md](./CLAUDE.md) (index) | [QUICKSTART.md](./QUICKSTART.md) | [TODO.md](./TODO.md) | [docs/](./docs/)
 
 ---
 
@@ -80,8 +80,11 @@ PubGames V3 introduces a **shell architecture** where the Identity Service acts 
 | App | Port | Real-Time | Status |
 |-----|------|-----------|--------|
 | Tic-Tac-Toe | 4001 | SSE + HTTP | Working |
+| Dots & Boxes | 4011 | SSE + HTTP | Working |
 | Smoke Test | 5010 | None | Working |
-| Sweepstakes | 5020 | None | Planned |
+| Sweepstakes | 5020 | None | Working |
+| Leaderboard | 5030 | None | Working |
+| Season Scheduler | 5040 | None | Working |
 
 ---
 

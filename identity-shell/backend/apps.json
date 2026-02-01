@@ -60,6 +60,16 @@
       "category": "utility",
       "url": "http://{host}:5030",
       "backendPort": 5030
+    },
+    {
+      "id": "season-scheduler",
+      "name": "Season Scheduler",
+      "icon": "🗓️",
+      "type": "iframe",
+      "description": "Schedule pub league seasons for Darts, Pool, and Crib",
+      "category": "utility",
+      "url": "http://{host}:5040",
+      "backendPort": 5040
     }
   ]
 }
