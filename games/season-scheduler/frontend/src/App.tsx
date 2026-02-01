@@ -23,6 +23,8 @@ interface ScheduleRow {
   notes?: string;
   rowOrder: number;
   holidayWarning?: string; // Warning if near UK bank holiday
+  hasConflict?: boolean; // True if team plays multiple games same day
+  conflictMessage?: string; // Description of conflict
 }
 
 interface Match {
@@ -71,6 +73,7 @@ const App: React.FC = () => {
   const [scheduleRows, setScheduleRows] = useState<ScheduleRow[]>([]);
   const [scheduleMessage, setScheduleMessage] = useState<string>('');
   const [savedSchedules, setSavedSchedules] = useState<Schedule[]>([]);
+  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
   const [scheduleName, setScheduleName] = useState('');
   const [scheduleVersion, setScheduleVersion] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -234,7 +237,8 @@ const App: React.FC = () => {
       }
 
       const data = await res.json();
-      setScheduleRows(data.rows || []);
+      const rowsWithConflicts = detectConflicts(data.rows || []);
+      setScheduleRows(rowsWithConflicts);
       setScheduleMessage(data.message || '');
 
       if (data.status === 'ok' || data.status === 'too_many_dates') {
@@ -250,6 +254,58 @@ const App: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Detect conflicts - teams playing multiple games on same date
+  const detectConflicts = (rows: ScheduleRow[]): ScheduleRow[] => {
+    // Group rows by date
+    const rowsByDate = new Map<string, ScheduleRow[]>();
+    rows.forEach(row => {
+      const existing = rowsByDate.get(row.date) || [];
+      existing.push(row);
+      rowsByDate.set(row.date, existing);
+    });
+
+    // Check each date for team conflicts
+    const updatedRows = rows.map(row => {
+      const sameDate = rowsByDate.get(row.date) || [];
+      const teams = new Set<string>();
+      const conflicts: string[] = [];
+
+      sameDate.forEach(r => {
+        if (r.rowType === 'match' && r.homeTeam) {
+          if (teams.has(r.homeTeam)) {
+            conflicts.push(r.homeTeam);
+          }
+          teams.add(r.homeTeam);
+
+          if (r.awayTeam && r.awayTeam !== 'BYE') {
+            if (teams.has(r.awayTeam)) {
+              conflicts.push(r.awayTeam);
+            }
+            teams.add(r.awayTeam);
+          }
+        }
+      });
+
+      // Check if this row involves a conflicted team
+      let hasConflict = false;
+      let conflictMessage = '';
+
+      if (row.rowType === 'match' && conflicts.length > 0) {
+        if (row.homeTeam && conflicts.includes(row.homeTeam)) {
+          hasConflict = true;
+          conflictMessage = `${row.homeTeam} plays multiple times on this date`;
+        } else if (row.awayTeam && conflicts.includes(row.awayTeam)) {
+          hasConflict = true;
+          conflictMessage = `${row.awayTeam} plays multiple times on this date`;
+        }
+      }
+
+      return { ...row, hasConflict, conflictMessage };
+    });
+
+    return updatedRows;
   };
 
   const moveRow = (fromIndex: number, direction: 'up' | 'down' | 'top' | 'bottom') => {
@@ -290,7 +346,107 @@ const App: React.FC = () => {
       holidayWarning: toWarning // Keep warning tied to date
     };
 
-    setScheduleRows(newRows);
+    // Detect conflicts after move
+    const rowsWithConflicts = detectConflicts(newRows);
+    setScheduleRows(rowsWithConflicts);
+  };
+
+  const moveSelectedRows = (direction: 'up' | 'down' | 'top' | 'bottom') => {
+    if (selectedRows.size === 0) {
+      alert('Please select rows to move');
+      return;
+    }
+
+    const selectedIndices = Array.from(selectedRows).sort((a, b) => a - b);
+    let newRows = [...scheduleRows];
+
+    if (direction === 'up') {
+      // Move each selected row up by 1
+      for (const index of selectedIndices) {
+        if (index > 0) {
+          const fromDate = newRows[index].date;
+          const toDate = newRows[index - 1].date;
+          const fromWarning = newRows[index].holidayWarning;
+          const toWarning = newRows[index - 1].holidayWarning;
+
+          const temp = { ...newRows[index] };
+          newRows[index] = { ...newRows[index - 1], date: fromDate, rowOrder: index, holidayWarning: fromWarning };
+          newRows[index - 1] = { ...temp, date: toDate, rowOrder: index - 1, holidayWarning: toWarning };
+        }
+      }
+      // Update selection indices
+      setSelectedRows(new Set(selectedIndices.map(i => Math.max(0, i - 1))));
+    } else if (direction === 'down') {
+      // Move each selected row down by 1 (reverse order to avoid conflicts)
+      for (let i = selectedIndices.length - 1; i >= 0; i--) {
+        const index = selectedIndices[i];
+        if (index < newRows.length - 1) {
+          const fromDate = newRows[index].date;
+          const toDate = newRows[index + 1].date;
+          const fromWarning = newRows[index].holidayWarning;
+          const toWarning = newRows[index + 1].holidayWarning;
+
+          const temp = { ...newRows[index] };
+          newRows[index] = { ...newRows[index + 1], date: fromDate, rowOrder: index, holidayWarning: fromWarning };
+          newRows[index + 1] = { ...temp, date: toDate, rowOrder: index + 1, holidayWarning: toWarning };
+        }
+      }
+      // Update selection indices
+      setSelectedRows(new Set(selectedIndices.map(i => Math.min(newRows.length - 1, i + 1))));
+    } else if (direction === 'top') {
+      // Move all selected to top (preserve their relative order)
+      const selectedRowObjects = selectedIndices.map(i => newRows[i]);
+      const unselectedRowObjects = newRows.filter((_, i) => !selectedRows.has(i));
+      newRows = [...selectedRowObjects, ...unselectedRowObjects];
+
+      // Reassign dates and warnings
+      newRows.forEach((row, i) => {
+        row.rowOrder = i;
+        row.date = scheduleRows[i].date;
+        row.holidayWarning = scheduleRows[i].holidayWarning;
+      });
+
+      // Update selection indices
+      setSelectedRows(new Set(selectedRowObjects.map((_, i) => i)));
+    } else if (direction === 'bottom') {
+      // Move all selected to bottom (preserve their relative order)
+      const selectedRowObjects = selectedIndices.map(i => newRows[i]);
+      const unselectedRowObjects = newRows.filter((_, i) => !selectedRows.has(i));
+      newRows = [...unselectedRowObjects, ...selectedRowObjects];
+
+      // Reassign dates and warnings
+      newRows.forEach((row, i) => {
+        row.rowOrder = i;
+        row.date = scheduleRows[i].date;
+        row.holidayWarning = scheduleRows[i].holidayWarning;
+      });
+
+      // Update selection indices
+      const startIndex = unselectedRowObjects.length;
+      setSelectedRows(new Set(selectedRowObjects.map((_, i) => startIndex + i)));
+    }
+
+    // Detect conflicts after move
+    const rowsWithConflicts = detectConflicts(newRows);
+    setScheduleRows(rowsWithConflicts);
+  };
+
+  const toggleRowSelection = (index: number) => {
+    const newSelected = new Set(selectedRows);
+    if (newSelected.has(index)) {
+      newSelected.delete(index);
+    } else {
+      newSelected.add(index);
+    }
+    setSelectedRows(newSelected);
+  };
+
+  const selectAll = () => {
+    setSelectedRows(new Set(scheduleRows.map((_, i) => i)));
+  };
+
+  const deselectAll = () => {
+    setSelectedRows(new Set());
   };
 
   const saveSchedule = async () => {
@@ -722,7 +878,53 @@ const App: React.FC = () => {
                 />
               </div>
 
-              <div style={{ marginBottom: '10px', fontWeight: 'bold', display: 'grid', gridTemplateColumns: '150px 250px 1fr 200px', gap: '10px', padding: '10px', backgroundColor: '#f0f0f0', borderRadius: '4px' }}>
+              {/* Multi-select controls */}
+              <div style={{ marginBottom: '15px', padding: '10px', backgroundColor: '#f9f9f9', borderRadius: '4px', border: '1px solid #ddd' }}>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '10px' }}>
+                  <button onClick={selectAll} style={{ padding: '6px 12px', backgroundColor: '#2196F3', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>
+                    Select All
+                  </button>
+                  <button onClick={deselectAll} style={{ padding: '6px 12px', backgroundColor: '#757575', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>
+                    Deselect All
+                  </button>
+                  <span style={{ marginLeft: '10px', color: '#666', fontSize: '14px' }}>
+                    {selectedRows.size} selected
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button
+                    onClick={() => moveSelectedRows('top')}
+                    disabled={selectedRows.size === 0}
+                    style={{ padding: '8px 16px', backgroundColor: selectedRows.size === 0 ? '#ccc' : '#4CAF50', color: '#fff', border: 'none', borderRadius: '4px', cursor: selectedRows.size === 0 ? 'not-allowed' : 'pointer', fontSize: '14px' }}
+                  >
+                    ⬆️ Move Selected to Top
+                  </button>
+                  <button
+                    onClick={() => moveSelectedRows('up')}
+                    disabled={selectedRows.size === 0}
+                    style={{ padding: '8px 16px', backgroundColor: selectedRows.size === 0 ? '#ccc' : '#4CAF50', color: '#fff', border: 'none', borderRadius: '4px', cursor: selectedRows.size === 0 ? 'not-allowed' : 'pointer', fontSize: '14px' }}
+                  >
+                    ↑ Move Selected Up
+                  </button>
+                  <button
+                    onClick={() => moveSelectedRows('down')}
+                    disabled={selectedRows.size === 0}
+                    style={{ padding: '8px 16px', backgroundColor: selectedRows.size === 0 ? '#ccc' : '#4CAF50', color: '#fff', border: 'none', borderRadius: '4px', cursor: selectedRows.size === 0 ? 'not-allowed' : 'pointer', fontSize: '14px' }}
+                  >
+                    ↓ Move Selected Down
+                  </button>
+                  <button
+                    onClick={() => moveSelectedRows('bottom')}
+                    disabled={selectedRows.size === 0}
+                    style={{ padding: '8px 16px', backgroundColor: selectedRows.size === 0 ? '#ccc' : '#4CAF50', color: '#fff', border: 'none', borderRadius: '4px', cursor: selectedRows.size === 0 ? 'not-allowed' : 'pointer', fontSize: '14px' }}
+                  >
+                    ⬇️ Move Selected to Bottom
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '10px', fontWeight: 'bold', display: 'grid', gridTemplateColumns: '40px 150px 250px 1fr 200px', gap: '10px', padding: '10px', backgroundColor: '#f0f0f0', borderRadius: '4px' }}>
+                <span></span>
                 <span>Date</span>
                 <span>Type</span>
                 <span>Details</span>
@@ -749,11 +951,50 @@ const App: React.FC = () => {
                 const canMoveUp = index > 0;
                 const canMoveDown = index < scheduleRows.length - 1;
 
+                // Determine border color: red for conflicts, orange for holidays, default gray
+                let borderColor = '#ddd';
+                let borderWidth = '1px';
+                if (row.hasConflict) {
+                  borderColor = '#f44336';
+                  borderWidth = '3px';
+                } else if (row.holidayWarning) {
+                  borderColor = '#ff9800';
+                  borderWidth = '2px';
+                }
+
+                const backgroundColor = row.hasConflict
+                  ? '#ffebee' // Light red for conflicts
+                  : rowColors[row.rowType as keyof typeof rowColors];
+
                 return (
-                  <div key={index} style={{ display: 'grid', gridTemplateColumns: '150px 250px 1fr 200px', gap: '10px', alignItems: 'center', padding: '10px', backgroundColor: rowColors[row.rowType as keyof typeof rowColors], marginBottom: '5px', borderRadius: '4px', border: row.holidayWarning ? '2px solid #ff9800' : '1px solid #ddd' }}>
+                  <div
+                    key={index}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '40px 150px 250px 1fr 200px',
+                      gap: '10px',
+                      alignItems: 'center',
+                      padding: '10px',
+                      backgroundColor,
+                      marginBottom: '5px',
+                      borderRadius: '4px',
+                      border: `${borderWidth} solid ${borderColor}`
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedRows.has(index)}
+                      onChange={() => toggleRowSelection(index)}
+                      style={{ width: '20px', height: '20px', cursor: 'pointer' }}
+                    />
                     <span style={{ fontWeight: 'bold' }}>{new Date(row.date).toLocaleDateString()}</span>
                     <span>{rowIcons[row.rowType as keyof typeof rowIcons]} {row.rowType === 'match' ? 'Match' : row.rowType === 'catchup' ? 'Catch-up Week' : row.rowType === 'free' ? 'Free Week' : row.rowType === 'special' ? 'Special Event' : 'Bye Week'}</span>
                     <span>
+                      {row.hasConflict && (
+                        <div style={{ color: '#d32f2f', fontWeight: 'bold', fontSize: '12px', marginBottom: '5px' }}>
+                          🚨 CONFLICT: {row.conflictMessage}
+                        </div>
+                      )}
                       {row.holidayWarning && (
                         <div style={{ color: '#ff6f00', fontWeight: 'bold', fontSize: '12px', marginBottom: '5px' }}>
                           {row.holidayWarning}
