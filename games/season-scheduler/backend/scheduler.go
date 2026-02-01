@@ -113,7 +113,9 @@ func GenerateSchedule(req ScheduleRequest) (*ScheduleResponse, error) {
 	// Generate matches using round-robin algorithm for available dates
 	var matches []Match
 	if len(availableDates) >= requiredDates {
+		fmt.Printf("DEBUG: Generating schedule with %d teams, %d dates, hasbye=%v\n", len(req.Teams), requiredDates, hasbye)
 		matches = generateRoundRobin(req.Teams, availableDates[:requiredDates], hasbye)
+		fmt.Printf("DEBUG: Generated %d matches\n", len(matches))
 	} else if status == "too_few_dates" {
 		// Generate partial schedule
 		matches = generateRoundRobin(req.Teams, availableDates, hasbye)
@@ -198,10 +200,12 @@ func GenerateSchedule(req ScheduleRequest) (*ScheduleResponse, error) {
 // Each team alternates home/away week-to-week where possible
 // All matches in a round happen on the same date
 func generateRoundRobin(teams []string, dates []time.Time, hasBye bool) []Match {
+	fmt.Printf("DEBUG generateRoundRobin: teams=%d, dates=%d, hasBye=%v\n", len(teams), len(dates), hasBye)
 	numTeams := len(teams)
 	if hasBye {
 		numTeams++ // Add phantom team
 	}
+	fmt.Printf("DEBUG: numTeams=%d, will generate %d rounds\n", numTeams, (numTeams-1)*2)
 
 	// Create team rotation array (fix team 0, rotate others)
 	teamRotation := make([]int, numTeams)
@@ -350,15 +354,18 @@ func generateRoundRobin(teams []string, dates []time.Time, hasBye bool) []Match 
 
 	// Convert rounds to matches with dates
 	// All matches in a round share the same date
+	fmt.Printf("DEBUG: Generated %d rounds total\n", len(rounds))
 	var matches []Match
 	matchOrder := 0
 
 	for roundNum, roundPairings := range rounds {
 		if roundNum >= len(dates) {
+			fmt.Printf("DEBUG: Breaking at roundNum=%d, len(dates)=%d\n", roundNum, len(dates))
 			break // Run out of dates
 		}
 
 		roundDate := dates[roundNum]
+		fmt.Printf("DEBUG: Round %d has %d pairings on %s\n", roundNum, len(roundPairings), roundDate.Format("2006-01-02"))
 
 		for _, pair := range roundPairings {
 			homeIdx := pair[0]
@@ -400,6 +407,7 @@ func generateRoundRobin(teams []string, dates []time.Time, hasBye bool) []Match 
 		}
 	}
 
+	fmt.Printf("DEBUG: Returning %d matches\n", len(matches))
 	return matches
 }
 
