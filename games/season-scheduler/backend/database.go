@@ -9,7 +9,14 @@ import (
 
 // InitDatabase initializes the PostgreSQL connection
 func InitDatabase() (*sql.DB, error) {
-	connStr := getEnv("DATABASE_URL", "postgres://pubgames:pubgames@localhost/pubgames?sslmode=disable")
+	dbHost := getEnv("DB_HOST", "127.0.0.1")
+	dbPort := getEnv("DB_PORT", "5555")
+	dbUser := getEnv("DB_USER", "pubgames")
+	dbPass := getEnv("DB_PASS", "pubgames")
+	dbName := getEnv("DB_NAME", "season_scheduler_db")
+
+	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		dbHost, dbPort, dbUser, dbPass, dbName)
 
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {

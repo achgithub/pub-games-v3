@@ -34,7 +34,7 @@ sudo -u postgres psql -p 5555 -c "ALTER USER pubgames CREATEDB;"
 echo "✅ PostgreSQL user 'pubgames' configured with CREATEDB privilege"
 
 # List of all databases needed by apps
-DATABASES="pubgames tictactoe_db dots_db leaderboard_db"
+DATABASES="pubgames tictactoe_db dots_db leaderboard_db season_scheduler_db"
 
 for DB in $DATABASES; do
     if sudo -u postgres psql -p 5555 -tc "SELECT 1 FROM pg_database WHERE datname = '$DB'" | grep -q 1; then
@@ -112,10 +112,11 @@ echo "  - User: pubgames (with CREATEDB privilege)"
 echo "  - Password: pubgames (CHANGE THIS IN PRODUCTION)"
 echo "  - Port: 5555"
 echo "  - Databases:"
-echo "      pubgames      - Identity Shell"
-echo "      tictactoe_db  - Tic-Tac-Toe"
-echo "      dots_db       - Dots & Boxes"
-echo "      leaderboard_db - Leaderboard"
+echo "      pubgames              - Identity Shell"
+echo "      tictactoe_db          - Tic-Tac-Toe"
+echo "      dots_db               - Dots & Boxes"
+echo "      leaderboard_db        - Leaderboard"
+echo "      season_scheduler_db   - Season Scheduler"
 echo ""
 echo "Redis:"
 echo "  - Running on default port 6379"

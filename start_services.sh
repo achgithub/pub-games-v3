@@ -216,6 +216,24 @@ if [ -d "$BASE_DIR/static-apps/leaderboard/backend" ]; then
     echo ""
 fi
 
+# Start Sweepstakes (optional)
+if [ -d "$BASE_DIR/static-apps/sweepstakes/backend" ]; then
+    start_service "Sweepstakes" \
+        "$BASE_DIR/static-apps/sweepstakes/backend" \
+        "$BASE_DIR/static-apps/sweepstakes/frontend" \
+        5020
+    echo ""
+fi
+
+# Start Season Scheduler (optional)
+if [ -d "$BASE_DIR/games/season-scheduler/backend" ]; then
+    start_service "Season Scheduler" \
+        "$BASE_DIR/games/season-scheduler/backend" \
+        "$BASE_DIR/games/season-scheduler/frontend" \
+        5040
+    echo ""
+fi
+
 echo "========================================"
 echo -e "${GREEN}✓ Services started${NC}"
 echo ""
@@ -232,6 +250,12 @@ if lsof -Pi :5010 -sTCP:LISTEN -t >/dev/null 2>&1; then
 fi
 if lsof -Pi :5030 -sTCP:LISTEN -t >/dev/null 2>&1; then
     echo -e "  ${BLUE}Leaderboard:${NC}     http://localhost:5030"
+fi
+if lsof -Pi :5020 -sTCP:LISTEN -t >/dev/null 2>&1; then
+    echo -e "  ${BLUE}Sweepstakes:${NC}     http://localhost:5020"
+fi
+if lsof -Pi :5040 -sTCP:LISTEN -t >/dev/null 2>&1; then
+    echo -e "  ${BLUE}Season Scheduler:${NC} http://localhost:5040"
 fi
 echo ""
 echo "Commands:"

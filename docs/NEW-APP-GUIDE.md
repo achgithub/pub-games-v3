@@ -262,15 +262,20 @@ CREATE INDEX idx_your_app_games_player2 ON your_app_games(player2);
 
 ### Step 9: Update Database Setup Script
 
-Add to `scripts/setup_databases.sh`:
+Add your database to the DATABASES list in `scripts/setup_databases.sh`:
 
 ```bash
-# Create database for your app
-echo "Creating your-app database..."
-psql -U postgres -c "CREATE DATABASE your_app_db;"
-psql -U postgres -d your_app_db < games/your-app/database/schema.sql
-echo "✓ your-app database created"
+# List of all databases needed by apps
+DATABASES="pubgames tictactoe_db dots_db leaderboard_db your_app_db"
 ```
+
+And add to the output section:
+
+```bash
+echo "      your_app_db           - Your App Name"
+```
+
+The database will be created automatically when the script runs.
 
 ### Step 10: Register in App Registry
 
@@ -299,7 +304,30 @@ Add to `identity-shell/backend/apps.json`:
 - `category`: `"game"` or `"activity"`
 - `realtime`: `"sse"`, `"websocket"`, or `"none"`
 
-### Step 11: Build and Test
+### Step 11: Update Start Services Script
+
+Add your app to `start_services.sh` so it starts automatically:
+
+```bash
+# Start Your App (optional)
+if [ -d "$BASE_DIR/games/your-app/backend" ]; then
+    start_service "Your App Name" \
+        "$BASE_DIR/games/your-app/backend" \
+        "$BASE_DIR/games/your-app/frontend" \
+        4XXX
+    echo ""
+fi
+```
+
+And add to the "Access:" section:
+
+```bash
+if lsof -Pi :4XXX -sTCP:LISTEN -t >/dev/null 2>&1; then
+    echo -e "  ${BLUE}Your App Name:${NC}    http://localhost:4XXX"
+fi
+```
+
+### Step 12: Build and Test
 
 **On Mac:**
 ```bash
@@ -351,6 +379,7 @@ go run *.go
 - [ ] App shows error if `userId` missing
 - [ ] App added to `apps.json`
 - [ ] Database added to `setup_databases.sh`
+- [ ] App added to `start_services.sh`
 - [ ] `/api/config` endpoint implemented
 - [ ] `/api/game` (POST) creates game
 - [ ] `/api/game/{id}` (GET) fetches state
