@@ -169,10 +169,14 @@ func handleValidateDates(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		nearby := CheckNearbyHolidays(date, holidays)
+		nearbyHolidays := CheckNearbyHolidays(date, holidays, 10)
+		var holiday *Holiday
+		if len(nearbyHolidays) > 0 {
+			holiday = &nearbyHolidays[0]
+		}
 		validations = append(validations, DateValidation{
 			Date:    dateStr,
-			Holiday: nearby,
+			Holiday: holiday,
 		})
 	}
 
