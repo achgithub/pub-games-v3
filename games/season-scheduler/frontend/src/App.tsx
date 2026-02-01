@@ -32,12 +32,6 @@ interface Schedule {
   matches?: Match[];
 }
 
-interface Holiday {
-  date: string;
-  title: string;
-  notes: string;
-}
-
 type TabType = 'setup' | 'schedule' | 'output';
 
 const App: React.FC = () => {
