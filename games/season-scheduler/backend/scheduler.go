@@ -134,11 +134,18 @@ func GenerateSchedule(req ScheduleRequest) (*ScheduleResponse, error) {
 		seasonHolidays = FilterHolidaysInRange(holidays, seasonStart, seasonEnd)
 	}
 
+	// Group matches by date for easier lookup
+	matchesByDate := make(map[string][]Match)
+	for _, match := range matches {
+		dateStr := match.MatchDate.Format("2006-01-02")
+		matchesByDate[dateStr] = append(matchesByDate[dateStr], match)
+	}
+
 	// Create ScheduleRow for each date in season
 	var rows []ScheduleRow
-	matchIndex := 0
+	rowOrder := 0
 
-	for rowOrder, date := range allDates {
+	for _, date := range allDates {
 		dateStr := date.Format("2006-01-02")
 
 		// Check for nearby holidays (within 7 days)
@@ -160,21 +167,24 @@ func GenerateSchedule(req ScheduleRequest) (*ScheduleResponse, error) {
 				RowOrder:       rowOrder,
 				HolidayWarning: holidayWarning,
 			})
+			rowOrder++
 			continue
 		}
 
-		// Check if we have a match for this date
-		if matchIndex < len(matches) && matches[matchIndex].MatchDate.Format("2006-01-02") == dateStr {
-			match := matches[matchIndex]
-			rows = append(rows, ScheduleRow{
-				Date:           date,
-				RowType:        "match",
-				HomeTeam:       match.HomeTeam,
-				AwayTeam:       match.AwayTeam,
-				RowOrder:       rowOrder,
-				HolidayWarning: holidayWarning,
-			})
-			matchIndex++
+		// Check if we have matches for this date
+		if dateMatches, hasMatches := matchesByDate[dateStr]; hasMatches {
+			// Add a row for each match on this date
+			for _, match := range dateMatches {
+				rows = append(rows, ScheduleRow{
+					Date:           date,
+					RowType:        "match",
+					HomeTeam:       match.HomeTeam,
+					AwayTeam:       match.AwayTeam,
+					RowOrder:       rowOrder,
+					HolidayWarning: holidayWarning,
+				})
+				rowOrder++
+			}
 		} else {
 			// This is a spare week - mark as free
 			rows = append(rows, ScheduleRow{
@@ -184,6 +194,25 @@ func GenerateSchedule(req ScheduleRequest) (*ScheduleResponse, error) {
 				RowOrder:       rowOrder,
 				HolidayWarning: holidayWarning,
 			})
+			rowOrder++
+		}
+	}
+
+	fmt.Printf("DEBUG: Created %d total rows from %d dates\n", len(rows), len(allDates))
+
+	// Validate schedule - check every team plays every other team twice
+	validationErrors := validateScheduleBalance(req.Teams, matches)
+	if len(validationErrors) > 0 {
+		fmt.Printf("WARNING: Schedule validation errors:\n")
+		for _, err := range validationErrors {
+			fmt.Printf("  - %s\n", err)
+		}
+		if message != "" {
+			message += "\n\n"
+		}
+		message += "⚠️ Validation warnings:\n" + validationErrors[0]
+		if len(validationErrors) > 1 {
+			message += fmt.Sprintf("\n(+%d more warnings)", len(validationErrors)-1)
 		}
 	}
 
@@ -193,6 +222,53 @@ func GenerateSchedule(req ScheduleRequest) (*ScheduleResponse, error) {
 		Status:        status,
 		Message:       message,
 	}, nil
+}
+
+// validateScheduleBalance checks that every team plays every other team exactly twice (once home, once away)
+func validateScheduleBalance(teams []string, matches []Match) []string {
+	var errors []string
+
+	// Track home and away games for each pairing
+	homeGames := make(map[string]map[string]int) // homeGames[team1][team2] = count
+	awayGames := make(map[string]map[string]int) // awayGames[team1][team2] = count
+
+	for _, team := range teams {
+		homeGames[team] = make(map[string]int)
+		awayGames[team] = make(map[string]int)
+	}
+
+	// Count games
+	for _, match := range matches {
+		if match.AwayTeam == nil {
+			// Bye week - skip
+			continue
+		}
+
+		homeGames[match.HomeTeam][*match.AwayTeam]++
+		awayGames[*match.AwayTeam][match.HomeTeam]++
+	}
+
+	// Validate each pairing
+	for i, team1 := range teams {
+		for j, team2 := range teams {
+			if i >= j {
+				continue // Skip self and duplicates
+			}
+
+			// Check team1 home vs team2 away
+			homeCount := homeGames[team1][team2]
+			awayCount := awayGames[team1][team2]
+
+			if homeCount != 1 {
+				errors = append(errors, fmt.Sprintf("%s should play home vs %s exactly once, but plays %d times", team1, team2, homeCount))
+			}
+			if awayCount != 1 {
+				errors = append(errors, fmt.Sprintf("%s should play away vs %s exactly once, but plays %d times", team1, team2, awayCount))
+			}
+		}
+	}
+
+	return errors
 }
 
 // generateRoundRobin creates a balanced round-robin schedule

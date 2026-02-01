@@ -270,13 +270,25 @@ const App: React.FC = () => {
     // Swap the row contents (keep dates fixed)
     const newRows = [...scheduleRows];
 
-    // Swap content while keeping dates the same
+    // Swap content while keeping dates and warnings the same
     const fromDate = newRows[fromIndex].date;
     const toDate = newRows[toIndex].date;
+    const fromWarning = newRows[fromIndex].holidayWarning;
+    const toWarning = newRows[toIndex].holidayWarning;
 
     const tempRow = { ...newRows[fromIndex] };
-    newRows[fromIndex] = { ...newRows[toIndex], date: fromDate, rowOrder: fromIndex };
-    newRows[toIndex] = { ...tempRow, date: toDate, rowOrder: toIndex };
+    newRows[fromIndex] = {
+      ...newRows[toIndex],
+      date: fromDate,
+      rowOrder: fromIndex,
+      holidayWarning: fromWarning // Keep warning tied to date
+    };
+    newRows[toIndex] = {
+      ...tempRow,
+      date: toDate,
+      rowOrder: toIndex,
+      holidayWarning: toWarning // Keep warning tied to date
+    };
 
     setScheduleRows(newRows);
   };
