@@ -43,7 +43,11 @@ running=0
 
 check_service "Identity Shell" 3001 && running=$((running + 1))
 check_service "Tic-Tac-Toe" 4001 && running=$((running + 1))
+check_service "Dots" 4011 && running=$((running + 1))
 check_service "Smoke Test" 5010 && running=$((running + 1))
+check_service "Sweepstakes" 5020 && running=$((running + 1))
+check_service "Leaderboard" 5030 && running=$((running + 1))
+check_service "Season Scheduler" 5040 && running=$((running + 1))
 
 echo ""
 echo "========================================"
@@ -54,13 +58,25 @@ echo ""
 if [ $running -gt 0 ]; then
     echo "Access:"
     if lsof -Pi :3001 -sTCP:LISTEN -t >/dev/null 2>&1; then
-        echo -e "  ${BLUE}Identity Shell:${NC}  http://localhost:3001"
+        echo -e "  ${BLUE}Identity Shell:${NC}    http://localhost:3001"
     fi
     if lsof -Pi :4001 -sTCP:LISTEN -t >/dev/null 2>&1; then
-        echo -e "  ${BLUE}Tic-Tac-Toe:${NC}     http://localhost:4001"
+        echo -e "  ${BLUE}Tic-Tac-Toe:${NC}       http://localhost:4001"
+    fi
+    if lsof -Pi :4011 -sTCP:LISTEN -t >/dev/null 2>&1; then
+        echo -e "  ${BLUE}Dots:${NC}              http://localhost:4011"
     fi
     if lsof -Pi :5010 -sTCP:LISTEN -t >/dev/null 2>&1; then
-        echo -e "  ${BLUE}Smoke Test:${NC}      http://localhost:5010"
+        echo -e "  ${BLUE}Smoke Test:${NC}        http://localhost:5010"
+    fi
+    if lsof -Pi :5020 -sTCP:LISTEN -t >/dev/null 2>&1; then
+        echo -e "  ${BLUE}Sweepstakes:${NC}       http://localhost:5020"
+    fi
+    if lsof -Pi :5030 -sTCP:LISTEN -t >/dev/null 2>&1; then
+        echo -e "  ${BLUE}Leaderboard:${NC}       http://localhost:5030"
+    fi
+    if lsof -Pi :5040 -sTCP:LISTEN -t >/dev/null 2>&1; then
+        echo -e "  ${BLUE}Season Scheduler:${NC}  http://localhost:5040"
     fi
     echo ""
 fi
