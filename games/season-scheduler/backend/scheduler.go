@@ -7,13 +7,13 @@ import (
 
 // ScheduleRequest represents a request to generate a schedule
 type ScheduleRequest struct {
-	UserID      string    `json:"userId"`
-	Sport       string    `json:"sport"`
-	Teams       []string  `json:"teams"`
-	DayOfWeek   string    `json:"dayOfWeek"`
-	SeasonStart time.Time `json:"seasonStart"`
-	SeasonEnd   time.Time `json:"seasonEnd"`
-	ExcludeDates []time.Time `json:"excludeDates"`
+	UserID       string   `json:"userId"`
+	Sport        string   `json:"sport"`
+	Teams        []string `json:"teams"`
+	DayOfWeek    string   `json:"dayOfWeek"`
+	SeasonStart  string   `json:"seasonStart"`  // Date string in YYYY-MM-DD format
+	SeasonEnd    string   `json:"seasonEnd"`    // Date string in YYYY-MM-DD format
+	ExcludeDates []string `json:"excludeDates"` // Array of date strings in YYYY-MM-DD format
 }
 
 // ScheduleResponse represents the generated schedule
@@ -27,14 +27,38 @@ type ScheduleResponse struct {
 
 // GenerateSchedule creates a balanced home/away schedule
 func GenerateSchedule(req ScheduleRequest) (*ScheduleResponse, error) {
+	// Parse date strings
+	seasonStart, err := time.Parse("2006-01-02", req.SeasonStart)
+	if err != nil {
+		return nil, fmt.Errorf("invalid season start date: %w", err)
+	}
+
+	seasonEnd, err := time.Parse("2006-01-02", req.SeasonEnd)
+	if err != nil {
+		return nil, fmt.Errorf("invalid season end date: %w", err)
+	}
+
+	// Parse excluded dates
+	var excludeDates []time.Time
+	for _, dateStr := range req.ExcludeDates {
+		if dateStr == "" {
+			continue
+		}
+		date, err := time.Parse("2006-01-02", dateStr)
+		if err != nil {
+			return nil, fmt.Errorf("invalid exclude date %s: %w", dateStr, err)
+		}
+		excludeDates = append(excludeDates, date)
+	}
+
 	// Generate all possible dates
-	allDates, err := GenerateDates(req.DayOfWeek, req.SeasonStart, req.SeasonEnd)
+	allDates, err := GenerateDates(req.DayOfWeek, seasonStart, seasonEnd)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate dates: %w", err)
 	}
 
 	// Filter out excluded dates
-	availableDates := filterExcludedDates(allDates, req.ExcludeDates)
+	availableDates := filterExcludedDates(allDates, excludeDates)
 
 	// Calculate required matches
 	numTeams := len(req.Teams)
