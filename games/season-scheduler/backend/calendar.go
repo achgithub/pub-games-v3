@@ -77,15 +77,16 @@ func FilterHolidaysInRange(holidays []Holiday, start, end time.Time) []Holiday {
 	return filtered
 }
 
-// CheckNearbyHolidays checks if a date is within 10 days of any holiday
-func CheckNearbyHolidays(date time.Time, holidays []Holiday) *Holiday {
+// CheckNearbyHolidays checks if a date is within N days of any holiday
+func CheckNearbyHolidays(date time.Time, holidays []Holiday, days int) []Holiday {
+	var nearby []Holiday
 	for _, h := range holidays {
 		daysDiff := int(h.Date.Sub(date).Hours() / 24)
-		if daysDiff >= -10 && daysDiff <= 10 {
-			return &h
+		if daysDiff >= -days && daysDiff <= days {
+			nearby = append(nearby, h)
 		}
 	}
-	return nil
+	return nearby
 }
 
 // GenerateDates generates all dates for a given day of week within a range
