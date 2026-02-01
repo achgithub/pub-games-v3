@@ -49,7 +49,6 @@ func GenerateSchedule(req ScheduleRequest) (*ScheduleResponse, error) {
 	}
 
 	// Each team plays every other team twice (home and away)
-	matchesPerRound := numTeams / 2
 	totalRounds := (numTeams - 1) * 2 // Each team plays all others twice
 	requiredDates := totalRounds
 
