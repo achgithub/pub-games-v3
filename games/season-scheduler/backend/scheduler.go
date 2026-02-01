@@ -102,43 +102,155 @@ func GenerateSchedule(req ScheduleRequest) (*ScheduleResponse, error) {
 }
 
 // generateRoundRobin creates a balanced round-robin schedule
-// Teams play each other twice - once in first half, once in second half
+// Uses standard round-robin algorithm with home/away alternation
+// Each team alternates home/away week-to-week where possible
 func generateRoundRobin(teams []string, dates []time.Time, hasBye bool) []Match {
 	numTeams := len(teams)
 	if hasBye {
 		numTeams++ // Add phantom team
 	}
 
-	// Round-robin rotation algorithm
-	// Fix one team (team 0), rotate others
+	// Create team rotation array (fix team 0, rotate others)
+	teamRotation := make([]int, numTeams)
+	for i := range teamRotation {
+		teamRotation[i] = i
+	}
+
+	// Track each team's last home/away status (true = was home last)
+	lastWasHome := make(map[int]bool)
+
 	var allPairings [][2]int
 
-	// First half of season - each team plays all others once
+	// Generate first round-robin (numTeams-1 rounds)
 	for round := 0; round < numTeams-1; round++ {
+		// Each round has numTeams/2 matches
 		for i := 0; i < numTeams/2; i++ {
-			home := i
-			away := numTeams - 1 - i
+			team1 := teamRotation[i]
+			team2 := teamRotation[numTeams-1-i]
 
-			if round > 0 {
-				if home != 0 {
-					home = (home + round - 1) % (numTeams - 1) + 1
+			// Decide who is home based on alternation preference
+			home, away := team1, team2
+
+			// Check if we should swap based on last game
+			team1WasHome, team1Played := lastWasHome[team1]
+			team2WasHome, team2Played := lastWasHome[team2]
+
+			if team1Played && team2Played {
+				// Both teams played before - prefer to alternate
+				if team1WasHome && !team2WasHome {
+					home, away = team2, team1 // Swap so team1 is away, team2 is home
+				} else if !team1WasHome && team2WasHome {
+					home, away = team1, team2 // Keep as-is
+				} else {
+					// Both were same, use round parity for variety
+					if round%2 == 1 {
+						home, away = team2, team1
+					}
 				}
-				if away != 0 {
-					away = (away + round - 1) % (numTeams - 1) + 1
+			} else if team1Played {
+				// Only team1 played before - give them opposite
+				if team1WasHome {
+					home, away = team2, team1 // team1 away
+				} else {
+					home, away = team1, team2 // team1 home
+				}
+			} else if team2Played {
+				// Only team2 played before - give them opposite
+				if team2WasHome {
+					home, away = team1, team2 // team2 away
+				} else {
+					home, away = team2, team1 // team2 home
+				}
+			} else {
+				// Neither played before - use round parity
+				if round%2 == 1 {
+					home, away = team2, team1
 				}
 			}
 
 			allPairings = append(allPairings, [2]int{home, away})
+			lastWasHome[home] = true
+			lastWasHome[away] = false
+		}
+
+		// Rotate teams (except team 0 which stays fixed)
+		if round < numTeams-2 {
+			lastTeam := teamRotation[numTeams-1]
+			for i := numTeams - 1; i > 1; i-- {
+				teamRotation[i] = teamRotation[i-1]
+			}
+			teamRotation[1] = lastTeam
 		}
 	}
 
-	// Second half of season - reverse home/away
-	firstHalfPairings := make([][2]int, len(allPairings))
-	copy(firstHalfPairings, allPairings)
+	// Generate second round-robin (reverse home/away from first round-robin)
+	// Reset rotation
+	for i := range teamRotation {
+		teamRotation[i] = i
+	}
 
-	for _, pair := range firstHalfPairings {
-		// Reverse home and away
-		allPairings = append(allPairings, [2]int{pair[1], pair[0]})
+	for round := 0; round < numTeams-1; round++ {
+		// Each round has numTeams/2 matches
+		for i := 0; i < numTeams/2; i++ {
+			team1 := teamRotation[i]
+			team2 := teamRotation[numTeams-1-i]
+
+			// Find the corresponding first-round pairing and reverse it
+			// In first round-robin, we had this pairing with some home/away
+			// Now we need to reverse who was home
+
+			// Determine what the home/away was in first round
+			firstRoundHome, firstRoundAway := team1, team2
+
+			// Check alternation for this second round
+			team1WasHome, team1Played := lastWasHome[team1]
+			team2WasHome, team2Played := lastWasHome[team2]
+
+			if team1Played && team2Played {
+				// Prefer to alternate from last game
+				if team1WasHome && !team2WasHome {
+					firstRoundHome, firstRoundAway = team2, team1
+				} else if !team1WasHome && team2WasHome {
+					firstRoundHome, firstRoundAway = team1, team2
+				} else {
+					if round%2 == 1 {
+						firstRoundHome, firstRoundAway = team2, team1
+					}
+				}
+			} else if team1Played {
+				if team1WasHome {
+					firstRoundHome, firstRoundAway = team2, team1
+				} else {
+					firstRoundHome, firstRoundAway = team1, team2
+				}
+			} else if team2Played {
+				if team2WasHome {
+					firstRoundHome, firstRoundAway = team1, team2
+				} else {
+					firstRoundHome, firstRoundAway = team2, team1
+				}
+			} else {
+				if round%2 == 1 {
+					firstRoundHome, firstRoundAway = team2, team1
+				}
+			}
+
+			// Reverse from first round to ensure each pairing occurs once each way
+			home, away := firstRoundAway, firstRoundHome
+
+			allPairings = append(allPairings, [2]int{home, away})
+			lastWasHome[home] = true
+			lastWasHome[away] = false
+		}
+
+		// Rotate teams (except team 0 which stays fixed)
+		if round < numTeams-2 {
+			lastTeam := teamRotation[numTeams-1]
+			for i := numTeams - 1; i > 1; i-- {
+				teamRotation[i] = teamRotation[i-1]
+			}
+			teamRotation[1] = lastTeam
+		}
 	}
 
 	// Convert pairings to matches with dates
