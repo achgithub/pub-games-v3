@@ -5,24 +5,40 @@ import (
 	"time"
 )
 
+// ExcludedDateRequest represents an excluded date with metadata
+type ExcludedDateRequest struct {
+	Date  string `json:"date"`
+	Type  string `json:"type"`  // "catchup", "free", "special"
+	Notes string `json:"notes"` // For special events
+}
+
 // ScheduleRequest represents a request to generate a schedule
 type ScheduleRequest struct {
-	UserID       string   `json:"userId"`
-	Sport        string   `json:"sport"`
-	Teams        []string `json:"teams"`
-	DayOfWeek    string   `json:"dayOfWeek"`
-	SeasonStart  string   `json:"seasonStart"`  // Date string in YYYY-MM-DD format
-	SeasonEnd    string   `json:"seasonEnd"`    // Date string in YYYY-MM-DD format
-	ExcludeDates []string `json:"excludeDates"` // Array of date strings in YYYY-MM-DD format
+	UserID       string                 `json:"userId"`
+	Sport        string                 `json:"sport"`
+	Teams        []string               `json:"teams"`
+	DayOfWeek    string                 `json:"dayOfWeek"`
+	SeasonStart  string                 `json:"seasonStart"`  // Date string in YYYY-MM-DD format
+	SeasonEnd    string                 `json:"seasonEnd"`    // Date string in YYYY-MM-DD format
+	ExcludeDates []ExcludedDateRequest `json:"excludeDates"` // Array of excluded dates with metadata
 }
 
 // ScheduleResponse represents the generated schedule
 type ScheduleResponse struct {
-	Matches      []Match    `json:"matches"`
-	AvailableDates []time.Time `json:"availableDates"`
-	RequiredDates int       `json:"requiredDates"`
-	Status       string    `json:"status"` // "ok", "too_few_dates", "too_many_dates"
-	Message      string    `json:"message"`
+	Rows         []ScheduleRow `json:"rows"`
+	RequiredDates int          `json:"requiredDates"`
+	Status       string        `json:"status"` // "ok", "too_few_dates", "too_many_dates"
+	Message      string        `json:"message"`
+}
+
+// ScheduleRow represents a single week/date in the schedule
+type ScheduleRow struct {
+	Date     time.Time `json:"date"`
+	RowType  string    `json:"rowType"` // "match", "catchup", "free", "special", "bye"
+	HomeTeam string    `json:"homeTeam,omitempty"`
+	AwayTeam *string   `json:"awayTeam,omitempty"` // NULL for bye weeks
+	Notes    string    `json:"notes,omitempty"`    // For special events
+	RowOrder int       `json:"rowOrder"`           // Order in schedule
 }
 
 // GenerateSchedule creates a balanced home/away schedule
@@ -38,27 +54,29 @@ func GenerateSchedule(req ScheduleRequest) (*ScheduleResponse, error) {
 		return nil, fmt.Errorf("invalid season end date: %w", err)
 	}
 
-	// Parse excluded dates
-	var excludeDates []time.Time
-	for _, dateStr := range req.ExcludeDates {
-		if dateStr == "" {
+	// Parse excluded dates with metadata
+	excludeMap := make(map[string]ExcludedDateRequest)
+	for _, excluded := range req.ExcludeDates {
+		if excluded.Date == "" {
 			continue
 		}
-		date, err := time.Parse("2006-01-02", dateStr)
-		if err != nil {
-			return nil, fmt.Errorf("invalid exclude date %s: %w", dateStr, err)
-		}
-		excludeDates = append(excludeDates, date)
+		excludeMap[excluded.Date] = excluded
 	}
 
-	// Generate all possible dates
+	// Generate ALL dates in the season (not filtered)
 	allDates, err := GenerateDates(req.DayOfWeek, seasonStart, seasonEnd)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate dates: %w", err)
 	}
 
-	// Filter out excluded dates
-	availableDates := filterExcludedDates(allDates, excludeDates)
+	// Count available (non-excluded) dates for match generation
+	var availableDates []time.Time
+	for _, d := range allDates {
+		dateStr := d.Format("2006-01-02")
+		if _, isExcluded := excludeMap[dateStr]; !isExcluded {
+			availableDates = append(availableDates, d)
+		}
+	}
 
 	// Calculate required matches
 	numTeams := len(req.Teams)
@@ -68,12 +86,13 @@ func GenerateSchedule(req ScheduleRequest) (*ScheduleResponse, error) {
 
 	// Handle odd number of teams
 	hasbye := numTeams%2 == 1
+	adjustedTeams := numTeams
 	if hasbye {
-		numTeams++ // Add phantom team for bye
+		adjustedTeams++ // Add phantom team for bye
 	}
 
 	// Each team plays every other team twice (home and away)
-	totalRounds := (numTeams - 1) * 2 // Each team plays all others twice
+	totalRounds := (adjustedTeams - 1) * 2
 	requiredDates := totalRounds
 
 	// Validate date count
@@ -81,23 +100,69 @@ func GenerateSchedule(req ScheduleRequest) (*ScheduleResponse, error) {
 	message := ""
 	if len(availableDates) < requiredDates {
 		status = "too_few_dates"
-		message = fmt.Sprintf("Need %d dates but only %d available. Need %d more dates.",
+		message = fmt.Sprintf("Need %d dates but only %d available (after exclusions). Need %d more dates.",
 			requiredDates, len(availableDates), requiredDates-len(availableDates))
 	} else if len(availableDates) > requiredDates {
-		status = "too_many_dates"
-		message = fmt.Sprintf("Have %d dates but only need %d. %d extra dates.",
-			len(availableDates), requiredDates, len(availableDates)-requiredDates)
+		spareDates := len(availableDates) - requiredDates
+		status = "ok"
+		message = fmt.Sprintf("Schedule generated successfully. %d spare week(s) assigned as Free Week.",
+			spareDates)
 	}
 
-	// Generate matches using round-robin algorithm
-	matches := generateRoundRobin(req.Teams, availableDates[:min(len(availableDates), requiredDates)], hasbye)
+	// Generate matches using round-robin algorithm for available dates
+	var matches []Match
+	if len(availableDates) >= requiredDates {
+		matches = generateRoundRobin(req.Teams, availableDates[:requiredDates], hasbye)
+	} else if status == "too_few_dates" {
+		// Generate partial schedule
+		matches = generateRoundRobin(req.Teams, availableDates, hasbye)
+	}
+
+	// Create ScheduleRow for each date in season
+	var rows []ScheduleRow
+	matchIndex := 0
+
+	for rowOrder, date := range allDates {
+		dateStr := date.Format("2006-01-02")
+
+		// Check if this date is excluded
+		if excluded, isExcluded := excludeMap[dateStr]; isExcluded {
+			rows = append(rows, ScheduleRow{
+				Date:     date,
+				RowType:  excluded.Type,
+				Notes:    excluded.Notes,
+				RowOrder: rowOrder,
+			})
+			continue
+		}
+
+		// Check if we have a match for this date
+		if matchIndex < len(matches) && matches[matchIndex].MatchDate.Format("2006-01-02") == dateStr {
+			match := matches[matchIndex]
+			rows = append(rows, ScheduleRow{
+				Date:     date,
+				RowType:  "match",
+				HomeTeam: match.HomeTeam,
+				AwayTeam: match.AwayTeam,
+				RowOrder: rowOrder,
+			})
+			matchIndex++
+		} else {
+			// This is a spare week - mark as free
+			rows = append(rows, ScheduleRow{
+				Date:     date,
+				RowType:  "free",
+				Notes:    "Free Week",
+				RowOrder: rowOrder,
+			})
+		}
+	}
 
 	return &ScheduleResponse{
-		Matches:        matches,
-		AvailableDates: availableDates,
-		RequiredDates:  requiredDates,
-		Status:         status,
-		Message:        message,
+		Rows:          rows,
+		RequiredDates: requiredDates,
+		Status:        status,
+		Message:       message,
 	}, nil
 }
 

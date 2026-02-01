@@ -15,6 +15,15 @@ interface ExcludedDate {
   notes: string;
 }
 
+interface ScheduleRow {
+  date: string;
+  rowType: 'match' | 'catchup' | 'free' | 'special' | 'bye';
+  homeTeam?: string;
+  awayTeam?: string | null;
+  notes?: string;
+  rowOrder: number;
+}
+
 interface Match {
   id?: number;
   scheduleId?: number;
@@ -58,7 +67,7 @@ const App: React.FC = () => {
   const [newExcludeDate, setNewExcludeDate] = useState('');
   const [showSpecialEventDialog, setShowSpecialEventDialog] = useState(false);
   const [specialEventNotes, setSpecialEventNotes] = useState('');
-  const [generatedMatches, setGeneratedMatches] = useState<Match[]>([]);
+  const [scheduleRows, setScheduleRows] = useState<ScheduleRow[]>([]);
   const [scheduleMessage, setScheduleMessage] = useState<string>('');
   const [savedSchedules, setSavedSchedules] = useState<Schedule[]>([]);
   const [scheduleName, setScheduleName] = useState('');
@@ -197,8 +206,6 @@ const App: React.FC = () => {
     setError('');
     try {
       const teamNames = teams.map(t => t.name);
-      // Send just the dates for exclusion, save the full info for later
-      const excludeDateStrings = excludedDates.map(d => d.date);
 
       const res = await fetch(`${API_BASE}/api/schedule/generate`, {
         method: 'POST',
@@ -210,7 +217,7 @@ const App: React.FC = () => {
           dayOfWeek,
           seasonStart,
           seasonEnd,
-          excludeDates: excludeDateStrings,
+          excludeDates: excludedDates,
         }),
       });
 
@@ -226,10 +233,10 @@ const App: React.FC = () => {
       }
 
       const data = await res.json();
-      setGeneratedMatches(data.matches || []);
+      setScheduleRows(data.rows || []);
       setScheduleMessage(data.message || '');
 
-      if (data.status === 'ok') {
+      if (data.status === 'ok' || data.status === 'too_many_dates') {
         setActiveTab('schedule');
       } else {
         setError(data.message || 'Schedule generation issue');
@@ -244,27 +251,48 @@ const App: React.FC = () => {
     }
   };
 
-  const moveMatch = (fromIndex: number, direction: 'up' | 'down' | 'top' | 'bottom') => {
+  const moveRow = (fromIndex: number, direction: 'up' | 'down' | 'top' | 'bottom') => {
+    // Find the row to move
+    const fromRow = scheduleRows[fromIndex];
+
+    // Only allow moving matches, not fixed exclusions
+    if (fromRow.rowType !== 'match' && fromRow.rowType !== 'free') {
+      return; // Can't move catchup, special, or bye rows
+    }
+
     let toIndex = fromIndex;
 
     if (direction === 'up' && fromIndex > 0) {
       toIndex = fromIndex - 1;
-    } else if (direction === 'down' && fromIndex < generatedMatches.length - 1) {
+    } else if (direction === 'down' && fromIndex < scheduleRows.length - 1) {
       toIndex = fromIndex + 1;
     } else if (direction === 'top') {
       toIndex = 0;
     } else if (direction === 'bottom') {
-      toIndex = generatedMatches.length - 1;
+      toIndex = scheduleRows.length - 1;
     } else {
       return;
     }
 
-    const newMatches = [...generatedMatches];
-    const [removed] = newMatches.splice(fromIndex, 1);
-    newMatches.splice(toIndex, 0, removed);
+    const toRow = scheduleRows[toIndex];
 
-    const updated = newMatches.map((m, i) => ({ ...m, matchOrder: i }));
-    setGeneratedMatches(updated);
+    // Can't swap with catchup or special rows (they're fixed to their dates)
+    if (toRow.rowType === 'catchup' || toRow.rowType === 'special') {
+      return;
+    }
+
+    // Swap the row contents (keep dates fixed)
+    const newRows = [...scheduleRows];
+
+    // Swap match/free content while keeping dates the same
+    const fromDate = newRows[fromIndex].date;
+    const toDate = newRows[toIndex].date;
+
+    const tempRow = { ...newRows[fromIndex] };
+    newRows[fromIndex] = { ...newRows[toIndex], date: fromDate, rowOrder: fromIndex };
+    newRows[toIndex] = { ...tempRow, date: toDate, rowOrder: toIndex };
+
+    setScheduleRows(newRows);
   };
 
   const saveSchedule = async () => {
@@ -284,19 +312,41 @@ const App: React.FC = () => {
         seasonEnd,
       };
 
-      // Convert excluded dates to schedule_dates format
-      const scheduleDates = excludedDates.map(ed => ({
-        matchDate: ed.date,
-        dateType: ed.type,
-        notes: ed.notes
-      }));
+      // Convert rows to matches and schedule_dates
+      const matches: Match[] = [];
+      const scheduleDates: any[] = [];
+      let matchOrder = 0;
+
+      scheduleRows.forEach((row) => {
+        if (row.rowType === 'match') {
+          matches.push({
+            matchDate: row.date,
+            homeTeam: row.homeTeam!,
+            awayTeam: row.awayTeam || null,
+            matchOrder: matchOrder++,
+          });
+          // Also add to schedule_dates as "normal"
+          scheduleDates.push({
+            matchDate: row.date,
+            dateType: 'normal',
+            notes: null
+          });
+        } else {
+          // Non-match rows go to schedule_dates
+          scheduleDates.push({
+            matchDate: row.date,
+            dateType: row.rowType,
+            notes: row.notes || null
+          });
+        }
+      });
 
       const res = await fetch(`${API_BASE}/api/schedule/0`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           schedule,
-          matches: generatedMatches,
+          matches,
           dates: scheduleDates,
         }),
       });
@@ -651,7 +701,7 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {generatedMatches.length === 0 ? (
+          {scheduleRows.length === 0 ? (
             <p>No schedule generated yet. Go to Setup tab to create one.</p>
           ) : (
             <>
@@ -674,83 +724,85 @@ const App: React.FC = () => {
                 />
               </div>
 
-              <div style={{ marginBottom: '10px', fontWeight: 'bold', display: 'grid', gridTemplateColumns: '150px 1fr 1fr 200px', gap: '10px', padding: '10px', backgroundColor: '#f0f0f0', borderRadius: '4px' }}>
+              <div style={{ marginBottom: '10px', fontWeight: 'bold', display: 'grid', gridTemplateColumns: '150px 250px 1fr 200px', gap: '10px', padding: '10px', backgroundColor: '#f0f0f0', borderRadius: '4px' }}>
                 <span>Date</span>
-                <span>Home Team</span>
-                <span>Away Team</span>
+                <span>Type</span>
+                <span>Details</span>
                 <span>Reorder</span>
               </div>
 
-              {generatedMatches.map((match, index) => (
-                <div key={index} style={{ display: 'grid', gridTemplateColumns: '150px 1fr 1fr 200px', gap: '10px', alignItems: 'center', padding: '10px', backgroundColor: '#f9f9f9', marginBottom: '5px', borderRadius: '4px' }}>
-                  <span>{new Date(match.matchDate).toLocaleDateString()}</span>
-                  <span>{match.homeTeam}</span>
-                  <span>{match.awayTeam || 'BYE'}</span>
-                  <div>
-                    <button
-                      onClick={() => moveMatch(index, 'top')}
-                      disabled={index === 0}
-                      style={{ padding: '5px 10px', margin: '0 2px', backgroundColor: index === 0 ? '#ccc' : '#2196F3', color: '#fff', border: 'none', borderRadius: '3px', cursor: index === 0 ? 'not-allowed' : 'pointer', fontSize: '12px' }}
-                    >
-                      ⬆️ Top
-                    </button>
-                    <button
-                      onClick={() => moveMatch(index, 'up')}
-                      disabled={index === 0}
-                      style={{ padding: '5px 10px', margin: '0 2px', backgroundColor: index === 0 ? '#ccc' : '#2196F3', color: '#fff', border: 'none', borderRadius: '3px', cursor: index === 0 ? 'not-allowed' : 'pointer', fontSize: '12px' }}
-                    >
-                      ↑ Up
-                    </button>
-                    <button
-                      onClick={() => moveMatch(index, 'down')}
-                      disabled={index === generatedMatches.length - 1}
-                      style={{ padding: '5px 10px', margin: '0 2px', backgroundColor: index === generatedMatches.length - 1 ? '#ccc' : '#2196F3', color: '#fff', border: 'none', borderRadius: '3px', cursor: index === generatedMatches.length - 1 ? 'not-allowed' : 'pointer', fontSize: '12px' }}
-                    >
-                      ↓ Down
-                    </button>
-                    <button
-                      onClick={() => moveMatch(index, 'bottom')}
-                      disabled={index === generatedMatches.length - 1}
-                      style={{ padding: '5px 10px', margin: '0 2px', backgroundColor: index === generatedMatches.length - 1 ? '#ccc' : '#2196F3', color: '#fff', border: 'none', borderRadius: '3px', cursor: index === generatedMatches.length - 1 ? 'not-allowed' : 'pointer', fontSize: '12px' }}
-                    >
-                      ⬇️ Bottom
-                    </button>
-                  </div>
-                </div>
-              ))}
+              {scheduleRows.map((row, index) => {
+                const rowIcons = {
+                  match: '⚔️',
+                  catchup: '📅',
+                  free: '🏖️',
+                  special: '🏆',
+                  bye: '🔄'
+                };
 
-              {/* Show excluded dates if any */}
-              {excludedDates.length > 0 && (
-                <div style={{ marginTop: '30px', padding: '15px', backgroundColor: '#f9f9f9', borderRadius: '4px', border: '1px solid #ddd' }}>
-                  <h3 style={{ marginTop: 0 }}>Excluded Dates</h3>
-                  <p style={{ fontSize: '14px', color: '#666', marginBottom: '10px' }}>
-                    These dates are not included in the schedule:
-                  </p>
-                  {excludedDates.map((excluded, index) => {
-                    const icons = {
-                      catchup: '📅',
-                      free: '🏖️',
-                      special: '🏆'
-                    };
-                    return (
-                      <div
-                        key={index}
-                        style={{
-                          padding: '8px 12px',
-                          backgroundColor: '#fff',
-                          marginBottom: '5px',
-                          borderRadius: '4px',
-                          borderLeft: '4px solid #FF9800'
-                        }}
-                      >
-                        <strong>{icons[excluded.type]} {new Date(excluded.date + 'T00:00:00').toLocaleDateString()}</strong>
-                        {' - '}
-                        <span>{excluded.notes}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+                const rowColors = {
+                  match: '#fff',
+                  catchup: '#e3f2fd',
+                  free: '#e8f5e9',
+                  special: '#fff3e0',
+                  bye: '#f5f5f5'
+                };
+
+                const canMove = row.rowType === 'match' || row.rowType === 'free';
+                const canMoveUp = index > 0 && canMove;
+                const canMoveDown = index < scheduleRows.length - 1 && canMove;
+
+                return (
+                  <div key={index} style={{ display: 'grid', gridTemplateColumns: '150px 250px 1fr 200px', gap: '10px', alignItems: 'center', padding: '10px', backgroundColor: rowColors[row.rowType as keyof typeof rowColors], marginBottom: '5px', borderRadius: '4px', border: '1px solid #ddd' }}>
+                    <span style={{ fontWeight: 'bold' }}>{new Date(row.date).toLocaleDateString()}</span>
+                    <span>{rowIcons[row.rowType as keyof typeof rowIcons]} {row.rowType === 'match' ? 'Match' : row.rowType === 'catchup' ? 'Catch-up Week' : row.rowType === 'free' ? 'Free Week' : row.rowType === 'special' ? 'Special Event' : 'Bye Week'}</span>
+                    <span>
+                      {row.rowType === 'match' && (
+                        <>{row.homeTeam} vs {row.awayTeam || 'BYE'}</>
+                      )}
+                      {(row.rowType === 'catchup' || row.rowType === 'free' || row.rowType === 'special') && (
+                        <span style={{ fontStyle: 'italic', color: '#666' }}>{row.notes || ''}</span>
+                      )}
+                    </span>
+                    <div>
+                      {canMove ? (
+                        <>
+                          <button
+                            onClick={() => moveRow(index, 'top')}
+                            disabled={!canMoveUp}
+                            style={{ padding: '5px 10px', margin: '0 2px', backgroundColor: canMoveUp ? '#2196F3' : '#ccc', color: '#fff', border: 'none', borderRadius: '3px', cursor: canMoveUp ? 'pointer' : 'not-allowed', fontSize: '12px' }}
+                          >
+                            ⬆️ Top
+                          </button>
+                          <button
+                            onClick={() => moveRow(index, 'up')}
+                            disabled={!canMoveUp}
+                            style={{ padding: '5px 10px', margin: '0 2px', backgroundColor: canMoveUp ? '#2196F3' : '#ccc', color: '#fff', border: 'none', borderRadius: '3px', cursor: canMoveUp ? 'pointer' : 'not-allowed', fontSize: '12px' }}
+                          >
+                            ↑ Up
+                          </button>
+                          <button
+                            onClick={() => moveRow(index, 'down')}
+                            disabled={!canMoveDown}
+                            style={{ padding: '5px 10px', margin: '0 2px', backgroundColor: canMoveDown ? '#2196F3' : '#ccc', color: '#fff', border: 'none', borderRadius: '3px', cursor: canMoveDown ? 'pointer' : 'not-allowed', fontSize: '12px' }}
+                          >
+                            ↓ Down
+                          </button>
+                          <button
+                            onClick={() => moveRow(index, 'bottom')}
+                            disabled={!canMoveDown}
+                            style={{ padding: '5px 10px', margin: '0 2px', backgroundColor: canMoveDown ? '#2196F3' : '#ccc', color: '#fff', border: 'none', borderRadius: '3px', cursor: canMoveDown ? 'pointer' : 'not-allowed', fontSize: '12px' }}
+                          >
+                            ⬇️ Bottom
+                          </button>
+                        </>
+                      ) : (
+                        <span style={{ fontSize: '12px', color: '#999' }}>Fixed Date</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
 
               <button onClick={saveSchedule} style={{ marginTop: '20px', padding: '12px 24px', backgroundColor: '#4CAF50', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '16px', fontWeight: 'bold' }}>
                 Save Schedule
