@@ -127,18 +127,6 @@ const App: React.FC = () => {
     }
   };
 
-  const loadHolidays = async () => {
-    if (!seasonStart || !seasonEnd) return;
-
-    try {
-      const res = await fetch(`${API_BASE}/api/holidays?start=${seasonStart}&end=${seasonEnd}`);
-      const data = await res.json();
-      setHolidays(data || []);
-    } catch (err) {
-      console.error('Failed to load holidays:', err);
-    }
-  };
-
   const generateSchedule = async () => {
     if (teams.length < 2) {
       alert('Need at least 2 teams');
