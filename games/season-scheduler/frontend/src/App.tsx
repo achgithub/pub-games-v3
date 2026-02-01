@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 // Types
 interface Team {
@@ -54,29 +54,17 @@ const App: React.FC = () => {
   const [dayOfWeek, setDayOfWeek] = useState('wednesday');
   const [seasonStart, setSeasonStart] = useState('');
   const [seasonEnd, setSeasonEnd] = useState('');
-  const [excludeDates, setExcludeDates] = useState<string[]>([]);
+  const [excludeDates] = useState<string[]>([]); // Future feature: exclude specific dates
   const [generatedMatches, setGeneratedMatches] = useState<Match[]>([]);
-  const [scheduleStatus, setScheduleStatus] = useState<string>('');
   const [scheduleMessage, setScheduleMessage] = useState<string>('');
   const [savedSchedules, setSavedSchedules] = useState<Schedule[]>([]);
   const [scheduleName, setScheduleName] = useState('');
   const [scheduleVersion, setScheduleVersion] = useState(1);
-  const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [loading, setLoading] = useState(false);
 
   const API_BASE = window.location.origin;
 
-  // Load teams when sport changes
-  useEffect(() => {
-    loadTeams();
-  }, [sport]);
-
-  // Load saved schedules
-  useEffect(() => {
-    loadSavedSchedules();
-  }, []);
-
-  const loadTeams = async () => {
+  const loadTeams = useCallback(async () => {
     try {
       const res = await fetch(`${API_BASE}/api/teams?userId=${userId}&sport=${sport}`);
       const data = await res.json();
@@ -84,7 +72,27 @@ const App: React.FC = () => {
     } catch (err) {
       console.error('Failed to load teams:', err);
     }
-  };
+  }, [API_BASE, userId, sport]);
+
+  const loadSavedSchedules = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/schedules?userId=${userId}`);
+      const data = await res.json();
+      setSavedSchedules(data || []);
+    } catch (err) {
+      console.error('Failed to load saved schedules:', err);
+    }
+  }, [API_BASE, userId]);
+
+  // Load teams when sport changes
+  useEffect(() => {
+    loadTeams();
+  }, [loadTeams]);
+
+  // Load saved schedules on mount
+  useEffect(() => {
+    loadSavedSchedules();
+  }, [loadSavedSchedules]);
 
   const addTeam = async () => {
     if (!newTeamName.trim()) return;
@@ -161,7 +169,6 @@ const App: React.FC = () => {
 
       const data = await res.json();
       setGeneratedMatches(data.matches || []);
-      setScheduleStatus(data.status);
       setScheduleMessage(data.message);
 
       if (data.status === 'ok') {
@@ -238,16 +245,6 @@ const App: React.FC = () => {
     } catch (err) {
       console.error('Failed to save schedule:', err);
       alert('Failed to save schedule');
-    }
-  };
-
-  const loadSavedSchedules = async () => {
-    try {
-      const res = await fetch(`${API_BASE}/api/schedules?userId=${userId}`);
-      const data = await res.json();
-      setSavedSchedules(data || []);
-    } catch (err) {
-      console.error('Failed to load saved schedules:', err);
     }
   };
 
