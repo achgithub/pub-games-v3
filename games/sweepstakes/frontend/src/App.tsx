@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import axios from 'axios';
 import './App.css';
 
@@ -82,7 +82,7 @@ function App() {
     }
   };
 
-  const loadUserDraws = async () => {
+  const loadUserDraws = useCallback(async () => {
     if (!userId) return;
     try {
       const response = await axios.get(`${API_BASE}/api/draws?user_id=${userId}`);
@@ -90,7 +90,7 @@ function App() {
     } catch (err) {
       console.error('Error loading draws:', err);
     }
-  };
+  }, [userId]);
 
   const loadEntries = async (compId: number) => {
     try {
@@ -101,7 +101,7 @@ function App() {
     }
   };
 
-  const loadBlindBoxes = async (compId: number) => {
+  const loadBlindBoxes = useCallback(async (compId: number) => {
     if (!userId) return;
     try {
       const response = await axios.get(`${API_BASE}/api/competitions/${compId}/blind-boxes?user_id=${userId}`);
@@ -110,7 +110,7 @@ function App() {
       console.error('Error loading blind boxes:', err);
       setBlindBoxes([]);
     }
-  };
+  }, [userId]);
 
   const loadAvailableCount = async (compId: number) => {
     try {
@@ -126,14 +126,14 @@ function App() {
       loadCompetitions();
       loadUserDraws();
     }
-  }, [userId]);
+  }, [userId, loadUserDraws]);
 
   useEffect(() => {
     if (selectedComp && view === 'pick-box') {
       loadBlindBoxes(selectedComp.id);
       loadAvailableCount(selectedComp.id);
     }
-  }, [selectedComp, view]);
+  }, [selectedComp, view, loadBlindBoxes]);
 
   // Must have userId to play
   if (!userId) {
