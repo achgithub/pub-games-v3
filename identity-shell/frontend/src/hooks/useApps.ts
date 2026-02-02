@@ -48,6 +48,12 @@ export function buildAppUrl(
   app: AppDefinition,
   params: { userId?: string; userName?: string; isAdmin?: boolean; gameId?: string }
 ): string {
+  console.log('🔍 buildAppUrl called:', {
+    appId: app.id,
+    appUrl: app.url,
+    params: params,
+  });
+
   if (!app.url) return '';
 
   // Replace {host} placeholder with current hostname
@@ -64,6 +70,8 @@ export function buildAppUrl(
   if (queryString) {
     url += (url.includes('?') ? '&' : '?') + queryString;
   }
+
+  console.log('🔍 buildAppUrl result:', url);
 
   return url;
 }

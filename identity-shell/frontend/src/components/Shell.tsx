@@ -17,6 +17,9 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout }) => {
   const navigate = useNavigate();
   const [toastChallenge, setToastChallenge] = useState<any | null>(null);
 
+  // Debug: Log user info
+  console.log('🔍 Shell received user:', user);
+
   // Fetch apps from registry
   const { apps, loading: appsLoading } = useApps();
 
@@ -31,6 +34,7 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout }) => {
       const gameUrl = buildAppUrl(app, {
         userId: user.email,
         userName: user.name,
+        isAdmin: user.is_admin,
         gameId,
       });
       console.log('🎮 Redirecting to game:', gameUrl);
@@ -61,6 +65,7 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout }) => {
       const appUrl = buildAppUrl(app, {
         userId: user.email,
         userName: user.name,
+        isAdmin: user.is_admin,
       });
       console.log('🎮 Redirecting to app:', appUrl);
       window.location.href = appUrl;

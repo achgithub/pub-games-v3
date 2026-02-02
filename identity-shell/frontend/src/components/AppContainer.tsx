@@ -39,6 +39,15 @@ const AppContainer: React.FC<AppContainerProps> = ({ apps, user }) => {
       })
     : null;
 
+  // Debug: Log user info and URL
+  console.log('🔍 AppContainer Debug:', {
+    userEmail: user.email,
+    userName: user.name,
+    isAdmin: user.is_admin,
+    appId: app.id,
+    iframeUrl,
+  });
+
   return (
     <div className="app-container">
       <div className="app-header">
