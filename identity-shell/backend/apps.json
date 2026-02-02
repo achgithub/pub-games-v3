@@ -45,10 +45,10 @@
       "name": "Sweepstakes",
       "icon": "🎁",
       "type": "iframe",
-      "description": "Draw competitions",
+      "description": "Draw competitions and blind box selections",
       "category": "game",
-      "url": "http://{host}:5020",
-      "backendPort": 5020,
+      "url": "http://{host}:4031",
+      "backendPort": 4031,
       "realtime": "none"
     },
     {
