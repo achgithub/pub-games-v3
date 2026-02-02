@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -259,9 +260,13 @@ func handleSaveSchedule(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		log.Printf("ERROR: Failed to decode save request: %v", err)
+		http.Error(w, fmt.Sprintf("Invalid request body: %v", err), http.StatusBadRequest)
 		return
 	}
+
+	log.Printf("INFO: Saving schedule: %s (version %d) with %d matches and %d dates",
+		req.Schedule.Name, req.Schedule.Version, len(req.Matches), len(req.Dates))
 
 	if err := SaveSchedule(&req.Schedule, req.Matches, req.Dates); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

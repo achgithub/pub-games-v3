@@ -566,14 +566,18 @@ const App: React.FC = () => {
 
       const scheduleDates = Array.from(scheduleDatesMap.values());
 
+      const payload = {
+        schedule,
+        matches,
+        dates: scheduleDates,
+      };
+
+      console.log('Save payload:', JSON.stringify(payload, null, 2));
+
       const res = await fetch(`${API_BASE}/api/schedule/0`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          schedule,
-          matches,
-          dates: scheduleDates,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (res.ok) {
