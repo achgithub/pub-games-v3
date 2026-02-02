@@ -323,28 +323,90 @@ const App: React.FC = () => {
       return;
     }
 
-    // Swap the row contents (keep dates fixed)
     const newRows = [...scheduleRows];
+    const fromRow = newRows[fromIndex];
+    const toRow = newRows[toIndex];
 
-    // Swap content while keeping dates and warnings the same
-    const fromDate = newRows[fromIndex].date;
-    const toDate = newRows[toIndex].date;
-    const fromWarning = newRows[fromIndex].holidayWarning;
-    const toWarning = newRows[toIndex].holidayWarning;
+    const fromIsExclusion = fromRow.rowType === 'catchup' || fromRow.rowType === 'free' || fromRow.rowType === 'special';
+    const toIsExclusion = toRow.rowType === 'catchup' || toRow.rowType === 'free' || toRow.rowType === 'special';
 
-    const tempRow = { ...newRows[fromIndex] };
-    newRows[fromIndex] = {
-      ...newRows[toIndex],
-      date: fromDate,
-      rowOrder: fromIndex,
-      holidayWarning: fromWarning // Keep warning tied to date
-    };
-    newRows[toIndex] = {
-      ...tempRow,
-      date: toDate,
-      rowOrder: toIndex,
-      holidayWarning: toWarning // Keep warning tied to date
-    };
+    // Special case: Moving an exclusion into a date with matches
+    // The exclusion should take over the entire date, displacing all matches
+    if (fromIsExclusion && !toIsExclusion) {
+      const targetDate = newRows[toIndex].date;
+
+      // Find all rows with the target date
+      const targetDateIndices: number[] = [];
+      newRows.forEach((row, idx) => {
+        if (row.date === targetDate) {
+          targetDateIndices.push(idx);
+        }
+      });
+
+      // Move exclusion to target date (replace first match on that date)
+      const fromDate = newRows[fromIndex].date;
+      const fromWarning = newRows[fromIndex].holidayWarning;
+      const toDate = targetDate;
+      const toWarning = newRows[targetDateIndices[0]].holidayWarning;
+
+      // Get the exclusion content
+      const exclusionContent = { ...newRows[fromIndex] };
+
+      // Get all matches from target date
+      const displacedMatches = targetDateIndices.map(idx => ({ ...newRows[idx] }));
+
+      // Place exclusion at first row of target date
+      newRows[targetDateIndices[0]] = {
+        ...exclusionContent,
+        date: toDate,
+        rowOrder: targetDateIndices[0],
+        holidayWarning: toWarning
+      };
+
+      // Delete other rows from target date (work backwards to maintain indices)
+      for (let i = targetDateIndices.length - 1; i > 0; i--) {
+        newRows.splice(targetDateIndices[i], 1);
+      }
+
+      // Place displaced matches at the original exclusion date
+      const oldExclusionIndex = fromIndex < targetDateIndices[0] ? fromIndex : fromIndex - (targetDateIndices.length - 1);
+
+      // Insert displaced matches at old exclusion position
+      for (let i = 0; i < displacedMatches.length; i++) {
+        newRows.splice(oldExclusionIndex + i, i === 0 ? 1 : 0, {
+          ...displacedMatches[i],
+          date: fromDate,
+          rowOrder: oldExclusionIndex + i,
+          holidayWarning: fromWarning
+        });
+      }
+
+      // Renumber all rows
+      newRows.forEach((row, idx) => {
+        row.rowOrder = idx;
+      });
+
+    } else {
+      // Normal swap (both are same type or both are exclusions or both are matches)
+      const fromDate = newRows[fromIndex].date;
+      const toDate = newRows[toIndex].date;
+      const fromWarning = newRows[fromIndex].holidayWarning;
+      const toWarning = newRows[toIndex].holidayWarning;
+
+      const tempRow = { ...newRows[fromIndex] };
+      newRows[fromIndex] = {
+        ...newRows[toIndex],
+        date: fromDate,
+        rowOrder: fromIndex,
+        holidayWarning: fromWarning
+      };
+      newRows[toIndex] = {
+        ...tempRow,
+        date: toDate,
+        rowOrder: toIndex,
+        holidayWarning: toWarning
+      };
+    }
 
     // Detect conflicts after move
     const rowsWithConflicts = detectConflicts(newRows);
