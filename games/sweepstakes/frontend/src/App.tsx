@@ -271,7 +271,7 @@ function App() {
     <div style={styles.app}>
       <header style={styles.header}>
         <h1>🎁 Sweepstakes</h1>
-        <p>Welcome, {userName}!</p>
+        <p>Welcome, {userName}! {isAdmin && <span style={{ color: '#4CAF50', fontWeight: 'bold' }}>(Admin)</span>}</p>
       </header>
 
       <nav style={styles.nav}>
