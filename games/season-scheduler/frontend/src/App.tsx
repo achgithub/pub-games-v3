@@ -572,11 +572,13 @@ const App: React.FC = () => {
         loadSavedSchedules();
         setActiveTab('output');
       } else {
-        alert('Failed to save schedule');
+        const errorText = await res.text();
+        console.error('Save failed:', res.status, errorText);
+        alert(`Failed to save schedule: ${errorText}`);
       }
     } catch (err) {
       console.error('Failed to save schedule:', err);
-      alert('Failed to save schedule');
+      alert(`Failed to save schedule: ${err}`);
     }
   };
 
