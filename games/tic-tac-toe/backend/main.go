@@ -12,6 +12,7 @@ import (
 )
 
 var db *sql.DB
+var identityDB *sql.DB
 
 const (
 	APP_NAME     = "Tic-Tac-Toe"
@@ -27,30 +28,38 @@ func main() {
 	}
 	log.Println("✅ Connected to Redis")
 
-	// Initialize PostgreSQL
+	// Initialize local PostgreSQL
 	var err error
 	db, err = InitDatabase()
 	if err != nil {
-		log.Fatal("Failed to connect to PostgreSQL:", err)
+		log.Fatal("Failed to connect to local PostgreSQL:", err)
 	}
 	defer db.Close()
-	log.Println("✅ Connected to PostgreSQL")
+	log.Println("✅ Connected to local PostgreSQL")
+
+	// Initialize identity database (for authentication)
+	identityDB, err = InitIdentityDatabase()
+	if err != nil {
+		log.Fatal("Failed to connect to identity database:", err)
+	}
+	defer identityDB.Close()
+	log.Println("✅ Connected to identity database")
 
 	// Setup router
 	r := mux.NewRouter()
 
-	// SSE endpoint for real-time updates
-	r.HandleFunc("/api/game/{gameId}/stream", handleGameStream).Methods("GET")
-
-	// HTTP endpoints
+	// Public endpoints (no authentication required)
 	r.HandleFunc("/api/health", handleHealth).Methods("GET")
 	r.HandleFunc("/api/config", handleGetConfig).Methods("GET")
-	r.HandleFunc("/api/game/{gameId}", handleGetGame).Methods("GET")
-	r.HandleFunc("/api/game", handleCreateGame).Methods("POST")
-	r.HandleFunc("/api/move", handleMakeMove).Methods("POST")
-	r.HandleFunc("/api/game/{gameId}/forfeit", handleForfeitHTTP).Methods("POST")
-	r.HandleFunc("/api/game/{gameId}/claim-win", handleClaimWinHTTP).Methods("POST")
-	r.HandleFunc("/api/stats/{userId}", handleGetStats).Methods("GET")
+
+	// Authenticated endpoints
+	r.HandleFunc("/api/game/{gameId}/stream", AuthMiddleware(handleGameStream)).Methods("GET")
+	r.HandleFunc("/api/game/{gameId}", AuthMiddleware(handleGetGame)).Methods("GET")
+	r.HandleFunc("/api/game", AuthMiddleware(handleCreateGame)).Methods("POST")
+	r.HandleFunc("/api/move", AuthMiddleware(handleMakeMove)).Methods("POST")
+	r.HandleFunc("/api/game/{gameId}/forfeit", AuthMiddleware(handleForfeitHTTP)).Methods("POST")
+	r.HandleFunc("/api/game/{gameId}/claim-win", AuthMiddleware(handleClaimWinHTTP)).Methods("POST")
+	r.HandleFunc("/api/stats/{userId}", AuthMiddleware(handleGetStats)).Methods("GET")
 
 	// Serve static frontend files (React build output)
 	staticDir := getEnv("STATIC_DIR", "./static")
