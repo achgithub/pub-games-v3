@@ -273,7 +273,7 @@ func validateScheduleBalance(teams []string, matches []Match) []string {
 
 // generateRoundRobin creates a balanced round-robin schedule
 // Uses standard round-robin algorithm with home/away alternation
-// Each team alternates home/away week-to-week where possible
+// Each team plays every other team exactly twice: once home, once away
 // All matches in a round happen on the same date
 func generateRoundRobin(teams []string, dates []time.Time, hasBye bool) []Match {
 	fmt.Printf("DEBUG generateRoundRobin: teams=%d, dates=%d, hasBye=%v\n", len(teams), len(dates), hasBye)
@@ -292,10 +292,11 @@ func generateRoundRobin(teams []string, dates []time.Time, hasBye bool) []Match 
 	// Track each team's last home/away status (true = was home last)
 	lastWasHome := make(map[int]bool)
 
-	// Structure: rounds[roundNum] = [][2]int (array of pairings)
-	var rounds [][][2]int
+	// Structure: rounds[roundNum] = [][2]int (array of pairings [home, away])
+	var firstRoundRobin [][][2]int
 
 	// Generate first round-robin (numTeams-1 rounds)
+	// This creates all unique pairings with home/away assignments
 	for round := 0; round < numTeams-1; round++ {
 		var roundPairings [][2]int
 
@@ -349,7 +350,7 @@ func generateRoundRobin(teams []string, dates []time.Time, hasBye bool) []Match 
 			lastWasHome[away] = false
 		}
 
-		rounds = append(rounds, roundPairings)
+		firstRoundRobin = append(firstRoundRobin, roundPairings)
 
 		// Rotate teams (except team 0 which stays fixed)
 		if round < numTeams-2 {
@@ -361,72 +362,22 @@ func generateRoundRobin(teams []string, dates []time.Time, hasBye bool) []Match 
 		}
 	}
 
-	// Generate second round-robin (reverse home/away from first round-robin)
-	// Reset rotation
-	for i := range teamRotation {
-		teamRotation[i] = i
+	// Generate second round-robin by reversing home/away from first round-robin
+	// This ensures every pairing appears exactly once as home and once as away
+	var secondRoundRobin [][][2]int
+	for _, roundPairings := range firstRoundRobin {
+		var reversedPairings [][2]int
+		for _, pair := range roundPairings {
+			// Swap home and away
+			reversedPairings = append(reversedPairings, [2]int{pair[1], pair[0]})
+		}
+		secondRoundRobin = append(secondRoundRobin, reversedPairings)
 	}
 
-	for round := 0; round < numTeams-1; round++ {
-		var roundPairings [][2]int
-
-		// Each round has numTeams/2 matches
-		for i := 0; i < numTeams/2; i++ {
-			team1 := teamRotation[i]
-			team2 := teamRotation[numTeams-1-i]
-
-			// Decide home/away with alternation preference
-			home, away := team1, team2
-
-			// Check alternation for this second round
-			team1WasHome, team1Played := lastWasHome[team1]
-			team2WasHome, team2Played := lastWasHome[team2]
-
-			if team1Played && team2Played {
-				// Prefer to alternate from last game
-				if team1WasHome && !team2WasHome {
-					home, away = team2, team1
-				} else if !team1WasHome && team2WasHome {
-					home, away = team1, team2
-				} else {
-					if round%2 == 1 {
-						home, away = team2, team1
-					}
-				}
-			} else if team1Played {
-				if team1WasHome {
-					home, away = team2, team1
-				} else {
-					home, away = team1, team2
-				}
-			} else if team2Played {
-				if team2WasHome {
-					home, away = team1, team2
-				} else {
-					home, away = team2, team1
-				}
-			} else {
-				if round%2 == 1 {
-					home, away = team2, team1
-				}
-			}
-
-			roundPairings = append(roundPairings, [2]int{home, away})
-			lastWasHome[home] = true
-			lastWasHome[away] = false
-		}
-
-		rounds = append(rounds, roundPairings)
-
-		// Rotate teams (except team 0 which stays fixed)
-		if round < numTeams-2 {
-			lastTeam := teamRotation[numTeams-1]
-			for i := numTeams - 1; i > 1; i-- {
-				teamRotation[i] = teamRotation[i-1]
-			}
-			teamRotation[1] = lastTeam
-		}
-	}
+	// Combine both round-robins
+	var rounds [][][2]int
+	rounds = append(rounds, firstRoundRobin...)
+	rounds = append(rounds, secondRoundRobin...)
 
 	// Convert rounds to matches with dates
 	// All matches in a round share the same date
