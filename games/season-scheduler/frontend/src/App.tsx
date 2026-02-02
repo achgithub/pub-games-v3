@@ -519,7 +519,13 @@ const App: React.FC = () => {
 
     try {
       // Helper to convert YYYY-MM-DD to RFC3339 format for Go's time.Time
-      const toRFC3339 = (dateStr: string) => `${dateStr}T00:00:00Z`;
+      // Skip conversion if already in RFC3339 format
+      const toRFC3339 = (dateStr: string) => {
+        if (dateStr.includes('T')) {
+          return dateStr; // Already in RFC3339 format
+        }
+        return `${dateStr}T00:00:00Z`;
+      };
 
       const schedule: Schedule = {
         userId: userId || '',
