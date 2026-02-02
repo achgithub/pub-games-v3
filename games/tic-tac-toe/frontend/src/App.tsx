@@ -9,20 +9,21 @@ function useQueryParams() {
       gameId: params.get('gameId'),
       userId: params.get('userId'),
       userName: params.get('userName') || params.get('userId') || 'Player',
+      token: params.get('token'),
     };
   }, []);
 }
 
 function App() {
-  const { gameId, userId, userName } = useQueryParams();
+  const { gameId, userId, userName, token } = useQueryParams();
 
-  // Must have userId to play
-  if (!userId) {
+  // Must have userId and token to play
+  if (!userId || !token) {
     return (
       <div style={{ padding: 40, textAlign: 'center' }}>
         <h2>Tic-Tac-Toe</h2>
         <p style={{ color: '#666', marginTop: 20 }}>
-          Missing user information. Please access this game through the lobby.
+          Missing authentication. Please access this game through the lobby.
         </p>
         <button
           onClick={() => {
@@ -53,7 +54,7 @@ function App() {
     name: userName,
   };
 
-  return <TicTacToeGame gameId={gameId} user={user} />;
+  return <TicTacToeGame gameId={gameId} user={user} token={token} />;
 }
 
 export default App;

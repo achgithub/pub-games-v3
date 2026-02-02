@@ -53,7 +53,7 @@ func main() {
 	r.HandleFunc("/api/config", handleGetConfig).Methods("GET")
 
 	// Authenticated endpoints
-	r.HandleFunc("/api/game/{gameId}/stream", AuthMiddleware(handleGameStream)).Methods("GET")
+	r.HandleFunc("/api/game/{gameId}/stream", SSEAuthMiddleware(handleGameStream)).Methods("GET")
 	r.HandleFunc("/api/game/{gameId}", AuthMiddleware(handleGetGame)).Methods("GET")
 	r.HandleFunc("/api/game", AuthMiddleware(handleCreateGame)).Methods("POST")
 	r.HandleFunc("/api/move", AuthMiddleware(handleMakeMove)).Methods("POST")

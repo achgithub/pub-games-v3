@@ -53,7 +53,7 @@ interface UseGameSocketResult {
   retry: () => void;
 }
 
-export function useGameSocket(gameId: string | null, userId: string): UseGameSocketResult {
+export function useGameSocket(gameId: string | null, userId: string, token: string): UseGameSocketResult {
   const [game, setGame] = useState<Game | null>(null);
   const [connected, setConnected] = useState(false);
   const [ready, setReady] = useState(false);
@@ -101,14 +101,17 @@ export function useGameSocket(gameId: string | null, userId: string): UseGameSoc
       eventSourceRef.current = null;
     }
 
-    // Build SSE URL
+    // Build SSE URL with token
     const apiBase = getApiBase();
-    const sseUrl = `${apiBase}/api/game/${gameId}/stream?userId=${encodeURIComponent(userId)}`;
+    const sseUrl = `${apiBase}/api/game/${gameId}/stream`;
 
     console.log('[SSE] Connecting to:', sseUrl, `(attempt ${retryCountRef.current + 1})`);
     setConnectionStatus(retryCountRef.current > 0 ? 'reconnecting' : 'connecting');
 
-    const eventSource = new EventSource(sseUrl);
+    // EventSource doesn't support custom headers, so we include token in URL temporarily
+    // Note: This is less secure but EventSource API limitation
+    const sseUrlWithAuth = `${sseUrl}?token=${encodeURIComponent(token)}`;
+    const eventSource = new EventSource(sseUrlWithAuth);
     eventSourceRef.current = eventSource;
 
     eventSource.onopen = () => {
@@ -287,7 +290,10 @@ export function useGameSocket(gameId: string | null, userId: string): UseGameSoc
     try {
       const response = await fetch(`${apiBase}/api/move`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({
           gameId,
           playerId: userId,
@@ -296,6 +302,13 @@ export function useGameSocket(gameId: string | null, userId: string): UseGameSoc
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          setError('Session expired. Please login again.');
+          setTimeout(() => {
+            window.location.href = `http://${window.location.hostname}:3001`;
+          }, 2000);
+          return;
+        }
         const data = await response.json();
         console.error('[SSE] Move failed:', data.error);
         setError(data.error || 'Move failed');
@@ -305,7 +318,7 @@ export function useGameSocket(gameId: string | null, userId: string): UseGameSoc
       console.error('[SSE] Move request failed:', err);
       setError('Failed to make move');
     }
-  }, [gameId, userId, ready, getApiBase]);
+  }, [gameId, userId, ready, getApiBase, token]);
 
   // Forfeit the game via HTTP POST
   const forfeit = useCallback(async () => {
@@ -320,11 +333,20 @@ export function useGameSocket(gameId: string | null, userId: string): UseGameSoc
     try {
       const response = await fetch(`${apiBase}/api/game/${gameId}/forfeit`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId }),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          setError('Session expired. Please login again.');
+          setTimeout(() => {
+            window.location.href = `http://${window.location.hostname}:3001`;
+          }, 2000);
+          return;
+        }
         const data = await response.json();
         console.error('[SSE] Forfeit failed:', data.error);
         setError(data.error || 'Forfeit failed');
@@ -334,7 +356,7 @@ export function useGameSocket(gameId: string | null, userId: string): UseGameSoc
       console.error('[SSE] Forfeit request failed:', err);
       setError('Failed to forfeit');
     }
-  }, [gameId, userId, getApiBase]);
+  }, [gameId, getApiBase, token]);
 
   // Claim win after opponent disconnect via HTTP POST
   const claimWin = useCallback(async () => {
@@ -349,11 +371,20 @@ export function useGameSocket(gameId: string | null, userId: string): UseGameSoc
     try {
       const response = await fetch(`${apiBase}/api/game/${gameId}/claim-win`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId }),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          setError('Session expired. Please login again.');
+          setTimeout(() => {
+            window.location.href = `http://${window.location.hostname}:3001`;
+          }, 2000);
+          return;
+        }
         const data = await response.json();
         console.error('[SSE] Claim win failed:', data.error);
         setError(data.error || 'Claim win failed');
@@ -363,7 +394,7 @@ export function useGameSocket(gameId: string | null, userId: string): UseGameSoc
       console.error('[SSE] Claim win request failed:', err);
       setError('Failed to claim win');
     }
-  }, [gameId, userId, claimWinAvailable, getApiBase]);
+  }, [gameId, claimWinAvailable, getApiBase, token]);
 
   return {
     game,

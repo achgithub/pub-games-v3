@@ -13,9 +13,10 @@ interface User {
 interface TicTacToeGameProps {
   gameId: string | null;
   user: User;
+  token: string;
 }
 
-const TicTacToeGame: React.FC<TicTacToeGameProps> = ({ gameId, user }) => {
+const TicTacToeGame: React.FC<TicTacToeGameProps> = ({ gameId, user, token }) => {
   const userId = user.email;
   const [showForfeitConfirm, setShowForfeitConfirm] = useState(false);
 
@@ -33,7 +34,7 @@ const TicTacToeGame: React.FC<TicTacToeGameProps> = ({ gameId, user }) => {
     forfeit,
     claimWin,
     retry,
-  } = useGameSocket(gameId, userId);
+  } = useGameSocket(gameId, userId, token);
 
   // No gameId provided - show instructions
   if (!gameId) {
