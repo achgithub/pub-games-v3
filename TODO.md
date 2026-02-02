@@ -2,6 +2,110 @@
 
 **Last Updated**: February 2, 2026
 
+---
+
+## 🔴 CRITICAL: Security & Authentication (MUST FIX BEFORE INTERNET EXPOSURE)
+
+**Status:** 🔴 **INSECURE - Not production ready**
+
+See [docs/SECURITY-CRITICAL.md](./docs/SECURITY-CRITICAL.md) for complete vulnerability analysis.
+
+### Current State
+
+**Authentication is broken:**
+- JWT tokens generated but NOT validated by backends
+- Apps trust URL parameters (`?userId=X&isAdmin=true`) without verification
+- Anyone can impersonate any user by editing URLs
+- Admin access granted by adding `&isAdmin=true` to URL
+- All API endpoints accept requests without authentication
+
+**Risk level:**
+- 🟡 **MEDIUM** for local pub network (trusted users)
+- 🔴 **CRITICAL** if exposed to internet (DO NOT EXPOSE)
+
+### Required Fixes (Est. 4-6 hours total)
+
+#### Phase 1: Backend Token Validation (2-3 hours) ⚠️ CRITICAL
+
+- [ ] **Create authentication middleware for all backends**
+  - Extract JWT token from `Authorization: Bearer {token}` header
+  - Validate token format (`demo-token-{email}`)
+  - Query user from database by email
+  - Store authenticated user in request context
+  - Return 401 if token invalid or missing
+
+- [ ] **Apply middleware to ALL API endpoints in:**
+  - [ ] Tic-Tac-Toe backend
+  - [ ] Dots backend
+  - [ ] Sweepstakes backend ⚠️ (has admin features)
+  - [ ] Season Scheduler backend ⚠️ (has admin features)
+  - [ ] Leaderboard backend
+  - [ ] Smoke Test backend (for consistency)
+
+- [ ] **Add admin-only middleware**
+  - Check `is_admin` flag from authenticated user
+  - Return 403 Forbidden if not admin
+  - Apply to admin-only endpoints (create competitions, delete entries, etc.)
+
+- [ ] **Use authenticated user in operations**
+  - Replace `user_id` from request body with authenticated user
+  - Prevents impersonation (e.g., creating draws as another user)
+  - Trust the token, not the request data
+
+#### Phase 2: Frontend Token Transmission (1-2 hours) ⚠️ CRITICAL
+
+- [ ] **Update identity shell to pass token to apps**
+  - Store token in localStorage after login
+  - Pass token to apps via URL parameter or postMessage
+  - Clear token on logout
+
+- [ ] **Update all app frontends to send token**
+  - [ ] Tic-Tac-Toe frontend
+  - [ ] Dots frontend
+  - [ ] Sweepstakes frontend
+  - [ ] Season Scheduler frontend
+  - [ ] Leaderboard frontend
+  - [ ] Smoke Test frontend
+
+- [ ] **Add Authorization header to all axios requests**
+  ```typescript
+  axios.get('/api/endpoint', {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  ```
+
+- [ ] **Handle 401 responses**
+  - Redirect to login if token expired/invalid
+  - Show friendly error message
+
+#### Phase 3: Permission Layer (Optional, 2-3 hours)
+
+- [ ] Define role-based permissions model
+- [ ] Store permissions in database (roles table)
+- [ ] Check permissions on sensitive operations
+- [ ] Audit log for admin actions
+- [ ] User management UI for admins
+
+### Implementation Notes
+
+**Quick start:** See code examples in `docs/SECURITY-CRITICAL.md`
+
+**Testing checklist:**
+- [ ] Login generates valid token
+- [ ] Token sent with every API request
+- [ ] Invalid token returns 401
+- [ ] Missing token returns 401
+- [ ] Non-admin user cannot access admin endpoints (403)
+- [ ] User cannot create resources as another user
+- [ ] Manually editing URL parameters has no effect
+
+**Deployment priority:**
+- **If keeping local-only:** Can defer indefinitely (trust users)
+- **If exposing to internet:** MUST complete Phase 1 & 2 FIRST
+- **If handling money/sensitive data:** MUST complete all phases
+
+---
+
 ## ✅ Leaderboard & Game Reporting (Complete)
 - [x] Centralized Leaderboard app (port 5030)
 - [x] Games report results directly to Leaderboard service
@@ -21,12 +125,14 @@
 
 ### Game Migration & Development
 
-- [ ] **Migrate Sweepstakes**
+- [x] **Migrate Sweepstakes** ✅ (Feb 2)
   - Port sweepstakes app from V2
   - Integrate with identity shell (iframe-embedded)
-  - Update to use new auth system
-  - PostgreSQL only (static app, no real-time needed)
-  - Optional: Simple polling or SSE for "results ready" notification
+  - PostgreSQL + Redis (for selection locks)
+  - Blind box selection, admin dashboard, CSV upload
+  - Admin features working (create competitions, manage entries)
+  - ⚠️ **Known issue:** Admin authentication via URL parameter only (insecure)
+  - ⚠️ **TODO:** Implement backend token validation (see SECURITY section above)
 
 - [ ] **Migrate Last Man Standing**
   - Port last man standing from V2

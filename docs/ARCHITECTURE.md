@@ -108,9 +108,51 @@ See [ARCHITECTURE-DECISIONS.md](./ARCHITECTURE-DECISIONS.md#app-registry) for de
 
 ## Shell ↔ App Communication
 
+### ⚠️ SECURITY WARNING
+
+**Current authentication is INSECURE for untrusted networks.**
+
+- URL parameters pass user identity but are **NOT validated by backends**
+- JWT tokens are generated but **NOT enforced**
+- Anyone can manually edit URLs to impersonate users or gain admin access
+- API endpoints accept requests without authentication
+
+**Safe for:** Private network with trusted users (current deployment)
+**NOT safe for:** Internet-facing deployments or untrusted users
+
+See [SECURITY-CRITICAL.md](./SECURITY-CRITICAL.md) for full vulnerability details and remediation plan.
+
+### Current Implementation (Insecure)
+
 **Shell → App:** URL query parameters
 ```
-http://pi:4001?userId=alice@test.com&userName=Alice&gameId=ABC123
+http://pi:4001?userId=alice@test.com&userName=Alice&isAdmin=false&gameId=ABC123
+```
+
+**Problems:**
+- URL parameters can be manually edited by users
+- Apps trust these parameters without validation
+- No backend verification of user identity or permissions
+
+### Intended Implementation (Secure - TODO)
+
+**Shell → App:** URL parameters + JWT token
+```
+http://pi:4001?gameId=ABC123
+```
+
+**App → Backend:** Authorization header with JWT token
+```javascript
+axios.get('/api/game/ABC123', {
+  headers: { 'Authorization': `Bearer ${token}` }
+});
+```
+
+**Backend:** Validates token on every request
+```go
+// Extract user from validated JWT token
+user := validateToken(r.Header.Get("Authorization"))
+// Use authenticated user for operations
 ```
 
 **App → Shell:** postMessage API (future)
@@ -118,7 +160,7 @@ http://pi:4001?userId=alice@test.com&userName=Alice&gameId=ABC123
 window.parent.postMessage({ type: 'GAME_COMPLETE', winner: 'alice' }, '*');
 ```
 
-See [FRONTEND.md](./FRONTEND.md#url-parameters) for parameter specifications.
+See [FRONTEND.md](./FRONTEND.md#url-parameters) for current parameter specifications.
 
 ## Challengeable Games
 
