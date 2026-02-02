@@ -518,14 +518,17 @@ const App: React.FC = () => {
     }
 
     try {
+      // Helper to convert YYYY-MM-DD to RFC3339 format for Go's time.Time
+      const toRFC3339 = (dateStr: string) => `${dateStr}T00:00:00Z`;
+
       const schedule: Schedule = {
         userId: userId || '',
         sport,
         name: scheduleName,
         version: scheduleVersion,
         dayOfWeek,
-        seasonStart,
-        seasonEnd,
+        seasonStart: toRFC3339(seasonStart),
+        seasonEnd: toRFC3339(seasonEnd),
       };
 
       // Convert rows to matches and schedule_dates
@@ -538,7 +541,7 @@ const App: React.FC = () => {
 
         if (row.rowType === 'match') {
           matches.push({
-            matchDate: row.date,
+            matchDate: toRFC3339(row.date),
             homeTeam: row.homeTeam!,
             awayTeam: row.awayTeam || null,
             matchOrder: matchOrder++,
@@ -546,7 +549,7 @@ const App: React.FC = () => {
           // Only add to schedule_dates if this date isn't already recorded
           if (!scheduleDatesMap.has(dateKey)) {
             scheduleDatesMap.set(dateKey, {
-              matchDate: row.date,
+              matchDate: toRFC3339(row.date),
               dateType: 'normal',
               notes: null
             });
@@ -554,7 +557,7 @@ const App: React.FC = () => {
         } else {
           // Non-match rows go to schedule_dates (these are exclusions, only 1 per date)
           scheduleDatesMap.set(dateKey, {
-            matchDate: row.date,
+            matchDate: toRFC3339(row.date),
             dateType: row.rowType,
             notes: row.notes || null
           });
