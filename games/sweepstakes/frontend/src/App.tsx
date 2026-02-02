@@ -186,7 +186,7 @@ function App() {
     return <div style={styles.container}>Loading...</div>;
   }
 
-  const handleCreateCompetition = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleCreateCompetition = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = e.currentTarget;
     const formData = new FormData(form);
@@ -204,9 +204,9 @@ function App() {
     } catch (err: any) {
       alert('Failed to create competition: ' + (err.response?.data || err.message));
     }
-  }, [api, loadCompetitions]);
+  };
 
-  const handleUpdateCompetition = useCallback(async (compId: number, updates: Partial<Competition>) => {
+  const handleUpdateCompetition = async (compId: number, updates: Partial<Competition>) => {
     try {
       await api.put(`/api/competitions/${compId}`, updates);
       loadCompetitions();
@@ -216,9 +216,9 @@ function App() {
     } catch (err: any) {
       alert(err.response?.data || 'Failed to update competition');
     }
-  }, [api, loadCompetitions, selectedComp]);
+  };
 
-  const handleChooseBlindBox = useCallback(async (boxNumber: number) => {
+  const handleChooseBlindBox = async (boxNumber: number) => {
     if (!selectedComp || !window.confirm(`Select Box #${boxNumber}?`)) return;
 
     try {
@@ -232,9 +232,9 @@ function App() {
     } catch (err: any) {
       alert(err.response?.data || 'Failed to select box.');
     }
-  }, [api, selectedComp, loadUserDraws]);
+  };
 
-  const handleRandomPick = useCallback(async () => {
+  const handleRandomPick = async () => {
     if (!selectedComp || !window.confirm('Let the computer pick a random box for you?')) return;
 
     try {
@@ -246,9 +246,9 @@ function App() {
     } catch (err: any) {
       alert(err.response?.data || 'Failed to pick.');
     }
-  }, [api, selectedComp, loadUserDraws]);
+  };
 
-  const handleUploadEntries = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleUploadEntries = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
 
@@ -262,9 +262,9 @@ function App() {
     } catch (err: any) {
       alert('Failed to upload entries: ' + (err.response?.data || err.message));
     }
-  }, [api, selectedComp, loadEntries]);
+  };
 
-  const handleDeleteEntry = useCallback(async (entryId: number) => {
+  const handleDeleteEntry = async (entryId: number) => {
     if (!window.confirm('Delete this entry?') || !selectedComp) return;
     try {
       await api.delete(`/api/entries/${entryId}`);
@@ -272,9 +272,9 @@ function App() {
     } catch (err) {
       alert('Failed to delete entry');
     }
-  }, [api, selectedComp, loadEntries]);
+  };
 
-  const handleUpdatePosition = useCallback(async (entryId: number, position: number | null) => {
+  const handleUpdatePosition = async (entryId: number, position: number | null) => {
     if (!selectedComp) return;
     try {
       await api.post(`/api/competitions/${selectedComp.id}/update-position`, {
@@ -285,7 +285,7 @@ function App() {
     } catch (err: any) {
       alert('Failed to update position: ' + (err.response?.data || err.message));
     }
-  }, [api, selectedComp, loadEntries]);
+  };
 
   const activeCompetitions = competitions.filter(c =>
     c.status === 'open' || c.status === 'locked' || c.status === 'completed'
