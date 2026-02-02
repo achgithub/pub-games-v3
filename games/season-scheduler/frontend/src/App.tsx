@@ -530,10 +530,12 @@ const App: React.FC = () => {
 
       // Convert rows to matches and schedule_dates
       const matches: Match[] = [];
-      const scheduleDates: any[] = [];
+      const scheduleDatesMap = new Map<string, any>(); // Use Map to deduplicate by date
       let matchOrder = 0;
 
       scheduleRows.forEach((row) => {
+        const dateKey = row.date.toISOString().split('T')[0];
+
         if (row.rowType === 'match') {
           matches.push({
             matchDate: row.date,
@@ -541,21 +543,25 @@ const App: React.FC = () => {
             awayTeam: row.awayTeam || null,
             matchOrder: matchOrder++,
           });
-          // Also add to schedule_dates as "normal"
-          scheduleDates.push({
-            matchDate: row.date,
-            dateType: 'normal',
-            notes: null
-          });
+          // Only add to schedule_dates if this date isn't already recorded
+          if (!scheduleDatesMap.has(dateKey)) {
+            scheduleDatesMap.set(dateKey, {
+              matchDate: row.date,
+              dateType: 'normal',
+              notes: null
+            });
+          }
         } else {
-          // Non-match rows go to schedule_dates
-          scheduleDates.push({
+          // Non-match rows go to schedule_dates (these are exclusions, only 1 per date)
+          scheduleDatesMap.set(dateKey, {
             matchDate: row.date,
             dateType: row.rowType,
             notes: row.notes || null
           });
         }
       });
+
+      const scheduleDates = Array.from(scheduleDatesMap.values());
 
       const res = await fetch(`${API_BASE}/api/schedule/0`, {
         method: 'POST',
