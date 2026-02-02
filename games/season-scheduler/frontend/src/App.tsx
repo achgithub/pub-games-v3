@@ -534,7 +534,7 @@ const App: React.FC = () => {
       let matchOrder = 0;
 
       scheduleRows.forEach((row) => {
-        const dateKey = row.date.toISOString().split('T')[0];
+        const dateKey = row.date; // row.date is already a string in YYYY-MM-DD format
 
         if (row.rowType === 'match') {
           matches.push({
