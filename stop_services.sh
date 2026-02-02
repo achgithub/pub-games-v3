@@ -80,7 +80,7 @@ kill_port 3001 "Identity Shell"
 kill_port 4001 "Tic-Tac-Toe"
 kill_port 4011 "Dots"
 kill_port 5010 "Smoke Test"
-kill_port 5020 "Sweepstakes"
+kill_port 4031 "Sweepstakes"
 kill_port 5030 "Leaderboard"
 kill_port 5040 "Season Scheduler"
 

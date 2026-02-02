@@ -217,11 +217,11 @@ if [ -d "$BASE_DIR/static-apps/leaderboard/backend" ]; then
 fi
 
 # Start Sweepstakes (optional)
-if [ -d "$BASE_DIR/static-apps/sweepstakes/backend" ]; then
+if [ -d "$BASE_DIR/games/sweepstakes/backend" ]; then
     start_service "Sweepstakes" \
-        "$BASE_DIR/static-apps/sweepstakes/backend" \
-        "$BASE_DIR/static-apps/sweepstakes/frontend" \
-        5020
+        "$BASE_DIR/games/sweepstakes/backend" \
+        "$BASE_DIR/games/sweepstakes/frontend" \
+        4031
     echo ""
 fi
 
@@ -251,8 +251,8 @@ fi
 if lsof -Pi :5030 -sTCP:LISTEN -t >/dev/null 2>&1; then
     echo -e "  ${BLUE}Leaderboard:${NC}     http://localhost:5030"
 fi
-if lsof -Pi :5020 -sTCP:LISTEN -t >/dev/null 2>&1; then
-    echo -e "  ${BLUE}Sweepstakes:${NC}     http://localhost:5020"
+if lsof -Pi :4031 -sTCP:LISTEN -t >/dev/null 2>&1; then
+    echo -e "  ${BLUE}Sweepstakes:${NC}     http://localhost:4031"
 fi
 if lsof -Pi :5040 -sTCP:LISTEN -t >/dev/null 2>&1; then
     echo -e "  ${BLUE}Season Scheduler:${NC} http://localhost:5040"

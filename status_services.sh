@@ -45,7 +45,7 @@ check_service "Identity Shell" 3001 && running=$((running + 1))
 check_service "Tic-Tac-Toe" 4001 && running=$((running + 1))
 check_service "Dots" 4011 && running=$((running + 1))
 check_service "Smoke Test" 5010 && running=$((running + 1))
-check_service "Sweepstakes" 5020 && running=$((running + 1))
+check_service "Sweepstakes" 4031 && running=$((running + 1))
 check_service "Leaderboard" 5030 && running=$((running + 1))
 check_service "Season Scheduler" 5040 && running=$((running + 1))
 
@@ -69,8 +69,8 @@ if [ $running -gt 0 ]; then
     if lsof -Pi :5010 -sTCP:LISTEN -t >/dev/null 2>&1; then
         echo -e "  ${BLUE}Smoke Test:${NC}        http://localhost:5010"
     fi
-    if lsof -Pi :5020 -sTCP:LISTEN -t >/dev/null 2>&1; then
-        echo -e "  ${BLUE}Sweepstakes:${NC}       http://localhost:5020"
+    if lsof -Pi :4031 -sTCP:LISTEN -t >/dev/null 2>&1; then
+        echo -e "  ${BLUE}Sweepstakes:${NC}       http://localhost:4031"
     fi
     if lsof -Pi :5030 -sTCP:LISTEN -t >/dev/null 2>&1; then
         echo -e "  ${BLUE}Leaderboard:${NC}       http://localhost:5030"
