@@ -951,14 +951,21 @@ const App: React.FC = () => {
                   onChange={(e) => setScheduleName(e.target.value)}
                   style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', marginBottom: '10px' }}
                 />
-                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Version:</label>
-                <input
-                  type="number"
-                  value={scheduleVersion}
-                  onChange={(e) => setScheduleVersion(parseInt(e.target.value))}
-                  style={{ width: '100px', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
-                  min="1"
-                />
+                <div style={{ display: 'flex', gap: '15px', alignItems: 'flex-end' }}>
+                  <div style={{ flex: '0 0 auto' }}>
+                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Version:</label>
+                    <input
+                      type="number"
+                      value={scheduleVersion}
+                      onChange={(e) => setScheduleVersion(parseInt(e.target.value))}
+                      style={{ width: '100px', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                      min="1"
+                    />
+                  </div>
+                  <button onClick={saveSchedule} style={{ padding: '8px 24px', backgroundColor: '#4CAF50', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', fontWeight: 'bold' }}>
+                    💾 Save Schedule
+                  </button>
+                </div>
               </div>
 
               {/* Multi-select controls */}
