@@ -177,3 +177,26 @@ func GetPlayerStats(playerID string) (map[string]interface{}, error) {
 		"gamesPlayed": gamesPlayed,
 	}, nil
 }
+
+// InitIdentityDatabase connects to the identity database for authentication
+func InitIdentityDatabase() (*sql.DB, error) {
+	host := getEnvDB("DB_HOST", "127.0.0.1")
+	port := getEnvDB("DB_PORT", "5555")
+	user := getEnvDB("DB_USER", "pubgames")
+	password := getEnvDB("DB_PASS", "pubgames")
+	dbname := "pubgames" // Identity database
+
+	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		host, port, user, password, dbname)
+
+	db, err := sql.Open("postgres", connStr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open identity database: %w", err)
+	}
+
+	if err := db.Ping(); err != nil {
+		return nil, fmt.Errorf("failed to connect to identity database: %w", err)
+	}
+
+	return db, nil
+}

@@ -96,6 +96,13 @@ func handleGetGame(w http.ResponseWriter, r *http.Request) {
 
 // handleCreateGame creates a new game (called by identity shell)
 func handleCreateGame(w http.ResponseWriter, r *http.Request) {
+	// Get authenticated user from context
+	user := getUserFromContext(r)
+	if user == nil {
+		sendError(w, "Unauthorized", 401)
+		return
+	}
+
 	// Use interface{} for GridSize to handle both string "WxH" and int formats
 	var req struct {
 		ChallengeID string      `json:"challengeId"`
@@ -115,6 +122,12 @@ func handleCreateGame(w http.ResponseWriter, r *http.Request) {
 
 	if req.Player1ID == "" || req.Player2ID == "" {
 		sendError(w, "Missing player IDs", 400)
+		return
+	}
+
+	// Validate authenticated user is one of the players
+	if user.Email != req.Player1ID && user.Email != req.Player2ID {
+		sendError(w, "Cannot create game for other players", 403)
 		return
 	}
 
@@ -189,10 +202,23 @@ func handleCreateGame(w http.ResponseWriter, r *http.Request) {
 
 // handleMakeMove processes a move
 func handleMakeMove(w http.ResponseWriter, r *http.Request) {
+	// Get authenticated user from context
+	user := getUserFromContext(r)
+	if user == nil {
+		sendError(w, "Unauthorized", 401)
+		return
+	}
+
 	var req MoveRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		sendError(w, "Invalid request body", 400)
+		return
+	}
+
+	// Validate authenticated user matches the player making the move
+	if user.Email != req.PlayerID {
+		sendError(w, "Cannot make moves for other players", 403)
 		return
 	}
 
@@ -302,14 +328,15 @@ func handleGetStats(w http.ResponseWriter, r *http.Request) {
 
 // handleGameStream handles SSE connections for real-time updates
 func handleGameStream(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	gameID := vars["gameId"]
-	userID := r.URL.Query().Get("userId")
-
-	if userID == "" {
-		http.Error(w, "userId required", http.StatusBadRequest)
+	// Get authenticated user from context
+	user := getUserFromContext(r)
+	if user == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
+
+	vars := mux.Vars(r)
+	gameID := vars["gameId"]
 
 	// Set SSE headers
 	w.Header().Set("Content-Type", "text/event-stream")
@@ -331,37 +358,37 @@ func handleGameStream(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify user is a player
-	if userID != game.Player1ID && userID != game.Player2ID {
+	if user.Email != game.Player1ID && user.Email != game.Player2ID {
 		sendSSE(w, flusher, "error", map[string]string{"message": "Not a player in this game"})
 		return
 	}
 
 	// Track connection
-	TrackConnection(gameID, userID)
-	log.Printf("🔵 Player %s connected to dots game %s via SSE", userID, gameID)
+	TrackConnection(gameID, user.Email)
+	log.Printf("🔵 Player %s connected to dots game %s via SSE", user.Email, gameID)
 
 	// Send initial state
 	sendSSE(w, flusher, "connected", map[string]interface{}{
 		"gameId": gameID,
-		"userId": userID,
+		"userId": user.Email,
 	})
 	sendSSE(w, flusher, "game_state", game)
 
 	// Notify opponent
 	opponentID := game.Player1ID
-	if userID == game.Player1ID {
+	if user.Email == game.Player1ID {
 		opponentID = game.Player2ID
 	}
 
 	var opponentName string
-	if userID == game.Player1ID {
+	if user.Email == game.Player1ID {
 		opponentName = game.Player1Name
 	} else {
 		opponentName = game.Player2Name
 	}
 
 	PublishGameEvent(gameID, "opponent_connected", map[string]interface{}{
-		"userId": userID,
+		"userId": user.Email,
 		"name":   opponentName,
 	})
 
@@ -399,7 +426,7 @@ func handleGameStream(w http.ResponseWriter, r *http.Request) {
 				fmt.Fprintf(w, ": heartbeat\n\n")
 				flusher.Flush()
 			case <-refreshTicker.C:
-				RefreshConnection(gameID, userID)
+				RefreshConnection(gameID, user.Email)
 			}
 		}
 	}()
@@ -409,12 +436,12 @@ func handleGameStream(w http.ResponseWriter, r *http.Request) {
 	close(done)
 
 	// Cleanup
-	RemoveConnection(gameID, userID)
-	log.Printf("🔴 Player %s disconnected from dots game %s", userID, gameID)
+	RemoveConnection(gameID, user.Email)
+	log.Printf("🔴 Player %s disconnected from dots game %s", user.Email, gameID)
 
 	// Notify opponent of disconnect
 	PublishGameEvent(gameID, "opponent_disconnected", map[string]interface{}{
-		"userId": userID,
+		"userId": user.Email,
 	})
 
 	// Check if opponent is still connected
@@ -425,22 +452,15 @@ func handleGameStream(w http.ResponseWriter, r *http.Request) {
 
 // handleForfeitHTTP handles forfeit requests
 func handleForfeitHTTP(w http.ResponseWriter, r *http.Request) {
+	// Get authenticated user from context
+	user := getUserFromContext(r)
+	if user == nil {
+		sendError(w, "Unauthorized", 401)
+		return
+	}
+
 	vars := mux.Vars(r)
 	gameID := vars["gameId"]
-
-	var req struct {
-		UserID string `json:"userId"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		sendError(w, "Invalid request body", 400)
-		return
-	}
-
-	if req.UserID == "" {
-		sendError(w, "Missing userId", 400)
-		return
-	}
 
 	game, err := GetGame(gameID)
 	if err != nil {
@@ -448,7 +468,7 @@ func handleForfeitHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.UserID != game.Player1ID && req.UserID != game.Player2ID {
+	if user.Email != game.Player1ID && user.Email != game.Player2ID {
 		sendError(w, "Not a player in this game", 403)
 		return
 	}
@@ -460,13 +480,13 @@ func handleForfeitHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Determine winner
 	var winnerID string
-	if req.UserID == game.Player1ID {
+	if user.Email == game.Player1ID {
 		winnerID = game.Player2ID
 	} else {
 		winnerID = game.Player1ID
 	}
 
-	log.Printf("🏳️ Player %s forfeited dots game %s, winner: %s", req.UserID, gameID, winnerID)
+	log.Printf("🏳️ Player %s forfeited dots game %s, winner: %s", user.Email, gameID, winnerID)
 
 	game.Status = GameStatusCompleted
 	game.WinnerID = &winnerID
@@ -504,22 +524,15 @@ func handleForfeitHTTP(w http.ResponseWriter, r *http.Request) {
 
 // handleClaimWinHTTP handles claim-win requests when opponent disconnects
 func handleClaimWinHTTP(w http.ResponseWriter, r *http.Request) {
+	// Get authenticated user from context
+	user := getUserFromContext(r)
+	if user == nil {
+		sendError(w, "Unauthorized", 401)
+		return
+	}
+
 	vars := mux.Vars(r)
 	gameID := vars["gameId"]
-
-	var req struct {
-		UserID string `json:"userId"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		sendError(w, "Invalid request body", 400)
-		return
-	}
-
-	if req.UserID == "" {
-		sendError(w, "Missing userId", 400)
-		return
-	}
 
 	game, err := GetGame(gameID)
 	if err != nil {
@@ -527,7 +540,7 @@ func handleClaimWinHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.UserID != game.Player1ID && req.UserID != game.Player2ID {
+	if user.Email != game.Player1ID && user.Email != game.Player2ID {
 		sendError(w, "Not a player in this game", 403)
 		return
 	}
@@ -539,7 +552,7 @@ func handleClaimWinHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Check if opponent is disconnected
 	opponentID := game.Player1ID
-	if req.UserID == game.Player1ID {
+	if user.Email == game.Player1ID {
 		opponentID = game.Player2ID
 	}
 
@@ -548,10 +561,11 @@ func handleClaimWinHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("🏆 Player %s claiming win after %s disconnected in dots game %s", req.UserID, opponentID, gameID)
+	log.Printf("🏆 Player %s claiming win after %s disconnected in dots game %s", user.Email, opponentID, gameID)
 
 	game.Status = GameStatusCompleted
-	game.WinnerID = &req.UserID
+	winnerEmail := user.Email
+	game.WinnerID = &winnerEmail
 	now := time.Now().Unix()
 	game.CompletedAt = &now
 
@@ -564,8 +578,8 @@ func handleClaimWinHTTP(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Warning: Failed to save claimed game to PostgreSQL: %v", err)
 	}
 
-	player1Won := req.UserID == game.Player1ID
-	player2Won := req.UserID == game.Player2ID
+	player1Won := user.Email == game.Player1ID
+	player2Won := user.Email == game.Player2ID
 
 	UpdatePlayerStats(game.Player1ID, game.Player1Name, player1Won, player2Won, false, game.Player1Score)
 	UpdatePlayerStats(game.Player2ID, game.Player2Name, player2Won, player1Won, false, game.Player2Score)
