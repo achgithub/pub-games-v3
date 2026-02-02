@@ -46,7 +46,7 @@ export function useApps() {
 // Helper to build the app URL with query params
 export function buildAppUrl(
   app: AppDefinition,
-  params: { userId?: string; userName?: string; gameId?: string }
+  params: { userId?: string; userName?: string; isAdmin?: boolean; gameId?: string }
 ): string {
   if (!app.url) return '';
 
@@ -57,6 +57,7 @@ export function buildAppUrl(
   const searchParams = new URLSearchParams();
   if (params.userId) searchParams.set('userId', params.userId);
   if (params.userName) searchParams.set('userName', params.userName);
+  if (params.isAdmin !== undefined) searchParams.set('isAdmin', params.isAdmin.toString());
   if (params.gameId) searchParams.set('gameId', params.gameId);
 
   const queryString = searchParams.toString();

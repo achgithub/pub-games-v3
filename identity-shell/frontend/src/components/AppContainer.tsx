@@ -34,6 +34,7 @@ const AppContainer: React.FC<AppContainerProps> = ({ apps, user }) => {
     ? buildAppUrl(app, {
         userId: user.email,
         userName: user.name,
+        isAdmin: user.is_admin,
         gameId,
       })
     : null;

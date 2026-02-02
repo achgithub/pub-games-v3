@@ -128,10 +128,11 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 		Email    string
 		Name     string
 		CodeHash string
+		IsAdmin  bool
 	}
 
-	err := db.QueryRow("SELECT email, name, code_hash FROM users WHERE email = $1", req.Email).
-		Scan(&user.Email, &user.Name, &user.CodeHash)
+	err := db.QueryRow("SELECT email, name, code_hash, is_admin FROM users WHERE email = $1", req.Email).
+		Scan(&user.Email, &user.Name, &user.CodeHash, &user.IsAdmin)
 
 	if err == sql.ErrNoRows {
 		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
@@ -154,9 +155,10 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"success": true,
 		"token":   token,
-		"user": map[string]string{
-			"email": user.Email,
-			"name":  user.Name,
+		"user": map[string]interface{}{
+			"email":    user.Email,
+			"name":     user.Name,
+			"is_admin": user.IsAdmin,
 		},
 	})
 }
@@ -174,11 +176,30 @@ func handleValidate(w http.ResponseWriter, r *http.Request) {
 	// For prototype, validate any demo token
 	if len(req.Token) > 11 && req.Token[:11] == "demo-token-" {
 		email := req.Token[11:]
+
+		// Query user info from database
+		var user struct {
+			Email   string
+			Name    string
+			IsAdmin bool
+		}
+
+		err := db.QueryRow("SELECT email, name, is_admin FROM users WHERE email = $1", email).
+			Scan(&user.Email, &user.Name, &user.IsAdmin)
+
+		if err != nil {
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"valid": false,
+			})
+			return
+		}
+
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"valid": true,
-			"user": map[string]string{
-				"email": email,
-				"name":  email,
+			"user": map[string]interface{}{
+				"email":    user.Email,
+				"name":     user.Name,
+				"is_admin": user.IsAdmin,
 			},
 		})
 		return

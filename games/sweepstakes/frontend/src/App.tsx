@@ -48,6 +48,7 @@ function useQueryParams() {
     return {
       userId: params.get('userId'),
       userName: params.get('userName') || params.get('userId') || 'Player',
+      isAdmin: params.get('isAdmin') === 'true',
       gameId: params.get('gameId'),
     };
   }, []);
@@ -56,9 +57,8 @@ function useQueryParams() {
 const API_BASE = window.location.origin;
 
 function App() {
-  const { userId, userName } = useQueryParams();
+  const { userId, userName, isAdmin } = useQueryParams();
   const [view, setView] = useState<string>('dashboard');
-  const [isAdmin] = useState(userName?.toLowerCase().includes('admin') || false);
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [selectedComp, setSelectedComp] = useState<Competition | null>(null);
   const [entries, setEntries] = useState<Entry[]>([]);
