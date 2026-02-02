@@ -26,15 +26,19 @@ const userContextKey = contextKey("user")
 // Validates against identity database (pubgames.users table)
 func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("🔍 Auth request: %s %s", r.Method, r.URL.Path)
+
 		// Extract token from Authorization header
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
+			log.Printf("❌ Missing Authorization header")
 			http.Error(w, "Missing authorization token", http.StatusUnauthorized)
 			return
 		}
 
 		// Validate Bearer format
 		if !strings.HasPrefix(authHeader, "Bearer ") {
+			log.Printf("❌ Invalid auth format: %s", authHeader)
 			http.Error(w, "Invalid authorization format", http.StatusUnauthorized)
 			return
 		}
@@ -42,12 +46,14 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		// Extract token (format: "Bearer demo-token-{email}")
 		token := strings.TrimPrefix(authHeader, "Bearer ")
 		if !strings.HasPrefix(token, "demo-token-") {
+			log.Printf("❌ Invalid token format: %s", token)
 			http.Error(w, "Invalid token format", http.StatusUnauthorized)
 			return
 		}
 
 		// Extract email from token
 		email := strings.TrimPrefix(token, "demo-token-")
+		log.Printf("🔍 Validating token for user: %s", email)
 
 		// Query user from identity database
 		var user AuthUser
@@ -58,13 +64,16 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		`, email).Scan(&user.Email, &user.Name, &user.IsAdmin)
 
 		if err == sql.ErrNoRows {
+			log.Printf("❌ User not found in identity database: %s", email)
 			http.Error(w, "User not found", http.StatusUnauthorized)
 			return
 		} else if err != nil {
-			log.Printf("Database error during auth: %v", err)
+			log.Printf("❌ Database error during auth: %v", err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
+
+		log.Printf("✅ Authenticated user: %s (admin=%v)", user.Email, user.IsAdmin)
 
 		// Sync user to local database (create if doesn't exist)
 		if err := GetOrCreateUser(user.Email, user.Name, user.IsAdmin); err != nil {

@@ -59,12 +59,17 @@ export function buildAppUrl(
   // Replace {host} placeholder with current hostname
   let url = app.url.replace('{host}', window.location.hostname);
 
+  // Get token from localStorage (stored as 'token' by App.tsx handleLogin)
+  const token = localStorage.getItem('token');
+  console.log('🔍 Token from localStorage:', token ? `${token.substring(0, 20)}...` : 'MISSING');
+
   // Add query params
   const searchParams = new URLSearchParams();
   if (params.userId) searchParams.set('userId', params.userId);
   if (params.userName) searchParams.set('userName', params.userName);
   if (params.isAdmin !== undefined) searchParams.set('isAdmin', params.isAdmin.toString());
   if (params.gameId) searchParams.set('gameId', params.gameId);
+  if (token) searchParams.set('token', token);
 
   const queryString = searchParams.toString();
   if (queryString) {

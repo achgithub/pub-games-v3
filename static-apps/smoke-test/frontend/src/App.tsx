@@ -39,6 +39,8 @@ function useQueryParams() {
 function App() {
   const { userId, userName, isAdmin, token } = useQueryParams();
 
+  console.log('🔍 Smoke Test App loaded with:', { userId, userName, isAdmin, token });
+
   const [user, setUser] = useState<User | null>(null);
   const [view, setView] = useState<ViewType>('loading');
   const [items, setItems] = useState<Item[]>([]);
@@ -51,8 +53,12 @@ function App() {
 
   // Create authenticated axios instance
   const api = useMemo(() => {
-    if (!token) return axios.create({ baseURL: API_BASE });
+    if (!token) {
+      console.warn('⚠️ No token provided - requests will fail');
+      return axios.create({ baseURL: API_BASE });
+    }
 
+    console.log('✅ Creating axios instance with token:', token);
     return axios.create({
       baseURL: API_BASE,
       headers: {
