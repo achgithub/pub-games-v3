@@ -162,7 +162,8 @@ function App() {
 
   const handleCreateCompetition = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
+    const form = e.currentTarget;
+    const formData = new FormData(form);
 
     try {
       await axios.post(`${API_BASE}/api/competitions`, {
@@ -171,7 +172,7 @@ function App() {
         status: 'draft',
         description: formData.get('description') || '',
       });
-      e.currentTarget.reset();
+      form.reset();
       loadCompetitions();
       alert('Competition created successfully!');
     } catch (err: any) {
