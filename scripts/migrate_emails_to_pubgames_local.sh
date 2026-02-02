@@ -35,6 +35,15 @@ UPDATE users
 SET email = REPLACE(email, '@test.com', '@pubgames.local')
 WHERE email LIKE '%@test.com';
 
+-- Add 5 additional test users with random names
+INSERT INTO users (email, name, is_admin) VALUES
+('charlie@pubgames.local', 'Charlie', false),
+('diana@pubgames.local', 'Diana', false),
+('ethan@pubgames.local', 'Ethan', false),
+('fiona@pubgames.local', 'Fiona', false),
+('george@pubgames.local', 'George', false)
+ON CONFLICT (email) DO NOTHING;
+
 COMMIT;
 
 -- Show final result
@@ -44,8 +53,13 @@ SQL
 echo ""
 echo "✅ Migration complete!"
 echo ""
-echo "Updated tokens:"
-echo "  Regular user: demo-token-test@pubgames.local"
-echo "  Admin user:   demo-token-admin@pubgames.local"
-echo "  Alice:        demo-token-alice@pubgames.local"
-echo "  Bob:          demo-token-bob@pubgames.local"
+echo "Available test users:"
+echo "  Admin:   demo-token-admin@pubgames.local"
+echo "  Regular: demo-token-test@pubgames.local"
+echo "  Alice:   demo-token-alice@pubgames.local"
+echo "  Bob:     demo-token-bob@pubgames.local"
+echo "  Charlie: demo-token-charlie@pubgames.local"
+echo "  Diana:   demo-token-diana@pubgames.local"
+echo "  Ethan:   demo-token-ethan@pubgames.local"
+echo "  Fiona:   demo-token-fiona@pubgames.local"
+echo "  George:  demo-token-george@pubgames.local"
