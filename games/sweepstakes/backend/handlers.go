@@ -328,16 +328,22 @@ func handleGetAvailableCount(w http.ResponseWriter, r *http.Request) {
 
 // handleGetBlindBoxes returns blind boxes for selection
 func handleGetBlindBoxes(w http.ResponseWriter, r *http.Request) {
+	// Get authenticated user from context
+	user := getUserFromContext(r)
+	if user == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	vars := mux.Vars(r)
 	compID := vars["id"]
-	userID := r.URL.Query().Get("user_id")
 
 	// Check if user already has a selection
 	var existingCount int
 	err := db.QueryRow(`
 		SELECT COUNT(*) FROM draws
 		WHERE user_id = $1 AND competition_id = $2
-	`, userID, compID).Scan(&existingCount)
+	`, user.Email, compID).Scan(&existingCount)
 
 	if err != nil {
 		http.Error(w, "Database error", http.StatusInternalServerError)
@@ -374,12 +380,18 @@ func handleGetBlindBoxes(w http.ResponseWriter, r *http.Request) {
 
 // handleChooseBlindBox handles blind box selection
 func handleChooseBlindBox(w http.ResponseWriter, r *http.Request) {
+	// Get authenticated user from context
+	user := getUserFromContext(r)
+	if user == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	vars := mux.Vars(r)
 	compID := vars["id"]
 
 	var req struct {
-		UserID    string `json:"user_id"`
-		BoxNumber int    `json:"box_number"`
+		BoxNumber int `json:"box_number"`
 	}
 	json.NewDecoder(r.Body).Decode(&req)
 
@@ -392,7 +404,7 @@ func handleChooseBlindBox(w http.ResponseWriter, r *http.Request) {
 
 	// Check if user already has an entry
 	var existingCount int
-	tx.QueryRow("SELECT COUNT(*) FROM draws WHERE user_id = $1 AND competition_id = $2", req.UserID, compID).Scan(&existingCount)
+	tx.QueryRow("SELECT COUNT(*) FROM draws WHERE user_id = $1 AND competition_id = $2", user.Email, compID).Scan(&existingCount)
 	if existingCount > 0 {
 		http.Error(w, "You already have an entry", http.StatusBadRequest)
 		return
@@ -424,11 +436,11 @@ func handleChooseBlindBox(w http.ResponseWriter, r *http.Request) {
 
 	selectedEntryID := availableIDs[req.BoxNumber-1]
 
-	// Create draw
+	// Create draw using authenticated user's email
 	_, err = tx.Exec(`
 		INSERT INTO draws (user_id, competition_id, entry_id)
 		VALUES ($1, $2, $3)
-	`, req.UserID, compID, selectedEntryID)
+	`, user.Email, compID, selectedEntryID)
 	if err != nil {
 		http.Error(w, "Failed to assign entry", http.StatusInternalServerError)
 		return
@@ -467,13 +479,15 @@ func handleChooseBlindBox(w http.ResponseWriter, r *http.Request) {
 
 // handleRandomPick handles random entry selection
 func handleRandomPick(w http.ResponseWriter, r *http.Request) {
+	// Get authenticated user from context
+	user := getUserFromContext(r)
+	if user == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	vars := mux.Vars(r)
 	compID := vars["id"]
-
-	var req struct {
-		UserID string `json:"user_id"`
-	}
-	json.NewDecoder(r.Body).Decode(&req)
 
 	tx, err := db.Begin()
 	if err != nil {
@@ -484,7 +498,7 @@ func handleRandomPick(w http.ResponseWriter, r *http.Request) {
 
 	// Check if user already has an entry
 	var existingCount int
-	tx.QueryRow("SELECT COUNT(*) FROM draws WHERE user_id = $1 AND competition_id = $2", req.UserID, compID).Scan(&existingCount)
+	tx.QueryRow("SELECT COUNT(*) FROM draws WHERE user_id = $1 AND competition_id = $2", user.Email, compID).Scan(&existingCount)
 	if existingCount > 0 {
 		http.Error(w, "You already have an entry", http.StatusBadRequest)
 		return
@@ -504,11 +518,11 @@ func handleRandomPick(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create draw
+	// Create draw using authenticated user's email
 	_, err = tx.Exec(`
 		INSERT INTO draws (user_id, competition_id, entry_id)
 		VALUES ($1, $2, $3)
-	`, req.UserID, compID, selectedEntryID)
+	`, user.Email, compID, selectedEntryID)
 	if err != nil {
 		http.Error(w, "Failed to assign entry", http.StatusInternalServerError)
 		return
@@ -616,7 +630,13 @@ func handleGetCompetitionDraws(w http.ResponseWriter, r *http.Request) {
 
 // handleGetUserDraws returns draws for a specific user
 func handleGetUserDraws(w http.ResponseWriter, r *http.Request) {
-	userID := r.URL.Query().Get("user_id")
+	// Get authenticated user from context
+	user := getUserFromContext(r)
+	if user == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	compID := r.URL.Query().Get("competition_id")
 
 	query := `
@@ -627,7 +647,7 @@ func handleGetUserDraws(w http.ResponseWriter, r *http.Request) {
 		JOIN competitions c ON d.competition_id = c.id
 		WHERE d.user_id = $1
 	`
-	args := []interface{}{userID}
+	args := []interface{}{user.Email}
 
 	if compID != "" {
 		query += ` AND d.competition_id = $2`
@@ -685,16 +705,17 @@ func handleGetUserDraws(w http.ResponseWriter, r *http.Request) {
 
 // handleAcquireSelectionLock acquires a selection lock
 func handleAcquireSelectionLock(w http.ResponseWriter, r *http.Request) {
+	// Get authenticated user from context
+	user := getUserFromContext(r)
+	if user == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	vars := mux.Vars(r)
 	compID, _ := strconv.Atoi(vars["id"])
 
-	var req struct {
-		UserID   string `json:"user_id"`
-		UserName string `json:"user_name"`
-	}
-	json.NewDecoder(r.Body).Decode(&req)
-
-	acquired, err := AcquireSelectionLock(compID, req.UserID, req.UserName)
+	acquired, err := AcquireSelectionLock(compID, user.Email, user.Name)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -718,25 +739,33 @@ func handleAcquireSelectionLock(w http.ResponseWriter, r *http.Request) {
 
 // handleReleaseSelectionLock releases a selection lock
 func handleReleaseSelectionLock(w http.ResponseWriter, r *http.Request) {
+	// Get authenticated user from context
+	user := getUserFromContext(r)
+	if user == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	vars := mux.Vars(r)
 	compID, _ := strconv.Atoi(vars["id"])
 
-	var req struct {
-		UserID string `json:"user_id"`
-	}
-	json.NewDecoder(r.Body).Decode(&req)
-
-	ReleaseSelectionLock(compID, req.UserID)
+	ReleaseSelectionLock(compID, user.Email)
 	w.WriteHeader(http.StatusOK)
 }
 
 // handleCheckSelectionLock checks the status of a selection lock
 func handleCheckSelectionLock(w http.ResponseWriter, r *http.Request) {
+	// Get authenticated user from context
+	user := getUserFromContext(r)
+	if user == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	vars := mux.Vars(r)
 	compID, _ := strconv.Atoi(vars["id"])
-	userID := r.URL.Query().Get("user_id")
 
-	lock, err := CheckSelectionLock(compID, userID)
+	lock, err := CheckSelectionLock(compID, user.Email)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -747,7 +776,7 @@ func handleCheckSelectionLock(w http.ResponseWriter, r *http.Request) {
 			"locked":    true,
 			"locked_by": lock.UserName,
 			"locked_at": lock.LockedAt,
-			"is_me":     lock.UserID == userID,
+			"is_me":     lock.UserID == user.Email,
 		})
 	} else {
 		respondJSON(w, http.StatusOK, map[string]bool{"locked": false})

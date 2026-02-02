@@ -50,6 +50,7 @@ function useQueryParams() {
       userName: params.get('userName') || params.get('userId') || 'Player',
       isAdmin: params.get('isAdmin') === 'true',
       gameId: params.get('gameId'),
+      token: params.get('token'),
     };
   }, []);
 }
@@ -57,7 +58,32 @@ function useQueryParams() {
 const API_BASE = window.location.origin;
 
 function App() {
-  const { userId, userName, isAdmin } = useQueryParams();
+  const { userId, userName, isAdmin, token } = useQueryParams();
+
+  // Create authenticated axios instance
+  const api = useMemo(() => {
+    if (!token) return axios.create({ baseURL: API_BASE });
+
+    return axios.create({
+      baseURL: API_BASE,
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+  }, [token]);
+
+  // Add 401 interceptor for session expiry
+  useEffect(() => {
+    const interceptor = api.interceptors.response.use(
+      response => response,
+      error => {
+        if (error.response?.status === 401) {
+          alert('Session expired. Please login again.');
+          window.location.href = `http://${window.location.hostname}:3001`;
+        }
+        return Promise.reject(error);
+      }
+    );
+    return () => api.interceptors.response.eject(interceptor);
+  }, [api]);
   const [view, setView] = useState<string>('dashboard');
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [selectedComp, setSelectedComp] = useState<Competition | null>(null);
@@ -68,10 +94,10 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadCompetitions = async () => {
+  const loadCompetitions = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_BASE}/api/competitions`);
+      const response = await api.get('/api/competitions');
       setCompetitions(response.data || []);
       setError(null);
     } catch (err) {
@@ -80,68 +106,68 @@ function App() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [api]);
 
   const loadUserDraws = useCallback(async () => {
     if (!userId) return;
     try {
-      const response = await axios.get(`${API_BASE}/api/draws?user_id=${userId}`);
+      const response = await api.get('/api/draws');
       setUserDraws(response.data || []);
     } catch (err) {
       console.error('Error loading draws:', err);
     }
-  }, [userId]);
+  }, [userId, api]);
 
-  const loadEntries = async (compId: number) => {
+  const loadEntries = useCallback(async (compId: number) => {
     try {
-      const response = await axios.get(`${API_BASE}/api/competitions/${compId}/entries`);
+      const response = await api.get(`/api/competitions/${compId}/entries`);
       setEntries(response.data || []);
     } catch (err) {
       console.error('Error loading entries:', err);
     }
-  };
+  }, [api]);
 
   const loadBlindBoxes = useCallback(async (compId: number) => {
     if (!userId) return;
     try {
-      const response = await axios.get(`${API_BASE}/api/competitions/${compId}/blind-boxes?user_id=${userId}`);
+      const response = await api.get(`/api/competitions/${compId}/blind-boxes`);
       setBlindBoxes(response.data || []);
     } catch (err) {
       console.error('Error loading blind boxes:', err);
       setBlindBoxes([]);
     }
-  }, [userId]);
+  }, [userId, api]);
 
-  const loadAvailableCount = async (compId: number) => {
+  const loadAvailableCount = useCallback(async (compId: number) => {
     try {
-      const response = await axios.get(`${API_BASE}/api/competitions/${compId}/available-count`);
+      const response = await api.get(`/api/competitions/${compId}/available-count`);
       setAvailableCount(response.data?.count || 0);
     } catch (err) {
       console.error(err);
     }
-  };
+  }, [api]);
 
   useEffect(() => {
     if (userId) {
       loadCompetitions();
       loadUserDraws();
     }
-  }, [userId, loadUserDraws]);
+  }, [userId, loadCompetitions, loadUserDraws]);
 
   useEffect(() => {
     if (selectedComp && view === 'pick-box') {
       loadBlindBoxes(selectedComp.id);
       loadAvailableCount(selectedComp.id);
     }
-  }, [selectedComp, view, loadBlindBoxes]);
+  }, [selectedComp, view, loadBlindBoxes, loadAvailableCount]);
 
-  // Must have userId to play
-  if (!userId) {
+  // Must have userId and token to play
+  if (!userId || !token) {
     return (
       <div style={styles.container}>
         <h2>Sweepstakes</h2>
         <p style={{ color: '#666', marginTop: 20 }}>
-          Missing user information. Please access this app through the Identity Shell.
+          Missing authentication. Please access this app through the Identity Shell.
         </p>
         <button
           onClick={() => {
@@ -160,13 +186,13 @@ function App() {
     return <div style={styles.container}>Loading...</div>;
   }
 
-  const handleCreateCompetition = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleCreateCompetition = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = e.currentTarget;
     const formData = new FormData(form);
 
     try {
-      await axios.post(`${API_BASE}/api/competitions`, {
+      await api.post('/api/competitions', {
         name: formData.get('name'),
         type: formData.get('type'),
         status: 'draft',
@@ -178,11 +204,11 @@ function App() {
     } catch (err: any) {
       alert('Failed to create competition: ' + (err.response?.data || err.message));
     }
-  };
+  }, [api, loadCompetitions]);
 
-  const handleUpdateCompetition = async (compId: number, updates: Partial<Competition>) => {
+  const handleUpdateCompetition = useCallback(async (compId: number, updates: Partial<Competition>) => {
     try {
-      await axios.put(`${API_BASE}/api/competitions/${compId}`, updates);
+      await api.put(`/api/competitions/${compId}`, updates);
       loadCompetitions();
       if (selectedComp?.id === compId) {
         setSelectedComp({ ...selectedComp, ...updates });
@@ -190,14 +216,13 @@ function App() {
     } catch (err: any) {
       alert(err.response?.data || 'Failed to update competition');
     }
-  };
+  }, [api, loadCompetitions, selectedComp]);
 
-  const handleChooseBlindBox = async (boxNumber: number) => {
+  const handleChooseBlindBox = useCallback(async (boxNumber: number) => {
     if (!selectedComp || !window.confirm(`Select Box #${boxNumber}?`)) return;
 
     try {
-      const res = await axios.post(`${API_BASE}/api/competitions/${selectedComp.id}/choose-blind-box`, {
-        user_id: userId,
+      const res = await api.post(`/api/competitions/${selectedComp.id}/choose-blind-box`, {
         box_number: boxNumber
       });
 
@@ -207,15 +232,13 @@ function App() {
     } catch (err: any) {
       alert(err.response?.data || 'Failed to select box.');
     }
-  };
+  }, [api, selectedComp, loadUserDraws]);
 
-  const handleRandomPick = async () => {
+  const handleRandomPick = useCallback(async () => {
     if (!selectedComp || !window.confirm('Let the computer pick a random box for you?')) return;
 
     try {
-      const res = await axios.post(`${API_BASE}/api/competitions/${selectedComp.id}/random-pick`, {
-        user_id: userId
-      });
+      const res = await api.post(`/api/competitions/${selectedComp.id}/random-pick`);
 
       alert(`You got: ${res.data.entry_name}!`);
       loadUserDraws();
@@ -223,14 +246,14 @@ function App() {
     } catch (err: any) {
       alert(err.response?.data || 'Failed to pick.');
     }
-  };
+  }, [api, selectedComp, loadUserDraws]);
 
-  const handleUploadEntries = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleUploadEntries = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
 
     try {
-      const res = await axios.post(`${API_BASE}/api/entries/upload`, formData, {
+      const res = await api.post('/api/entries/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       alert(res.data);
@@ -239,22 +262,22 @@ function App() {
     } catch (err: any) {
       alert('Failed to upload entries: ' + (err.response?.data || err.message));
     }
-  };
+  }, [api, selectedComp, loadEntries]);
 
-  const handleDeleteEntry = async (entryId: number) => {
+  const handleDeleteEntry = useCallback(async (entryId: number) => {
     if (!window.confirm('Delete this entry?') || !selectedComp) return;
     try {
-      await axios.delete(`${API_BASE}/api/entries/${entryId}`);
+      await api.delete(`/api/entries/${entryId}`);
       loadEntries(selectedComp.id);
     } catch (err) {
       alert('Failed to delete entry');
     }
-  };
+  }, [api, selectedComp, loadEntries]);
 
-  const handleUpdatePosition = async (entryId: number, position: number | null) => {
+  const handleUpdatePosition = useCallback(async (entryId: number, position: number | null) => {
     if (!selectedComp) return;
     try {
-      await axios.post(`${API_BASE}/api/competitions/${selectedComp.id}/update-position`, {
+      await api.post(`/api/competitions/${selectedComp.id}/update-position`, {
         entry_id: entryId,
         position: position
       });
@@ -262,7 +285,7 @@ function App() {
     } catch (err: any) {
       alert('Failed to update position: ' + (err.response?.data || err.message));
     }
-  };
+  }, [api, selectedComp, loadEntries]);
 
   const activeCompetitions = competitions.filter(c =>
     c.status === 'open' || c.status === 'locked' || c.status === 'completed'
@@ -371,7 +394,7 @@ function App() {
             onSelectCompetition={async (comp) => {
               setSelectedComp(comp);
               try {
-                const res = await axios.get(`${API_BASE}/api/competitions/${comp.id}/all-draws`);
+                const res = await api.get(`/api/competitions/${comp.id}/all-draws`);
                 setUserDraws(res.data || []);
               } catch (err) {
                 console.error(err);

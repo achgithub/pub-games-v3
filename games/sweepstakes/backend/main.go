@@ -12,6 +12,7 @@ import (
 )
 
 var db *sql.DB
+var identityDB *sql.DB
 
 const (
 	APP_NAME     = "Sweepstakes"
@@ -27,44 +28,50 @@ func main() {
 	}
 	log.Println("✅ Connected to Redis")
 
-	// Initialize PostgreSQL
+	// Initialize local PostgreSQL
 	var err error
 	db, err = InitDatabase()
 	if err != nil {
-		log.Fatal("Failed to connect to PostgreSQL:", err)
+		log.Fatal("Failed to connect to local PostgreSQL:", err)
 	}
 	defer db.Close()
-	log.Println("✅ Connected to PostgreSQL")
+	log.Println("✅ Connected to local PostgreSQL")
+
+	// Initialize identity database (for authentication)
+	identityDB, err = InitIdentityDatabase()
+	if err != nil {
+		log.Fatal("Failed to connect to identity database:", err)
+	}
+	defer identityDB.Close()
+	log.Println("✅ Connected to identity database")
 
 	// Setup router
 	r := mux.NewRouter()
 
-	// Public endpoints
+	// Public endpoints (no authentication required)
 	r.HandleFunc("/api/health", handleHealth).Methods("GET")
 	r.HandleFunc("/api/config", handleGetConfig).Methods("GET")
-
-	// Competition endpoints
 	r.HandleFunc("/api/competitions", handleGetCompetitions).Methods("GET")
 	r.HandleFunc("/api/competitions/{id}/entries", handleGetEntries).Methods("GET")
 	r.HandleFunc("/api/competitions/{id}/available-count", handleGetAvailableCount).Methods("GET")
-	r.HandleFunc("/api/competitions/{id}/blind-boxes", handleGetBlindBoxes).Methods("GET")
-	r.HandleFunc("/api/competitions/{id}/choose-blind-box", handleChooseBlindBox).Methods("POST")
-	r.HandleFunc("/api/competitions/{id}/random-pick", handleRandomPick).Methods("POST")
-	r.HandleFunc("/api/competitions/{id}/lock", handleAcquireSelectionLock).Methods("POST")
-	r.HandleFunc("/api/competitions/{id}/unlock", handleReleaseSelectionLock).Methods("POST")
 	r.HandleFunc("/api/competitions/{id}/lock-status", handleCheckSelectionLock).Methods("GET")
 	r.HandleFunc("/api/competitions/{id}/all-draws", handleGetCompetitionDraws).Methods("GET")
 
-	// Draw endpoints
-	r.HandleFunc("/api/draws", handleGetUserDraws).Methods("GET")
+	// User endpoints (authentication required)
+	r.HandleFunc("/api/competitions/{id}/blind-boxes", AuthMiddleware(handleGetBlindBoxes)).Methods("GET")
+	r.HandleFunc("/api/competitions/{id}/choose-blind-box", AuthMiddleware(handleChooseBlindBox)).Methods("POST")
+	r.HandleFunc("/api/competitions/{id}/random-pick", AuthMiddleware(handleRandomPick)).Methods("POST")
+	r.HandleFunc("/api/competitions/{id}/lock", AuthMiddleware(handleAcquireSelectionLock)).Methods("POST")
+	r.HandleFunc("/api/competitions/{id}/unlock", AuthMiddleware(handleReleaseSelectionLock)).Methods("POST")
+	r.HandleFunc("/api/draws", AuthMiddleware(handleGetUserDraws)).Methods("GET")
 
-	// Admin endpoints
-	r.HandleFunc("/api/competitions", handleCreateCompetition).Methods("POST")
-	r.HandleFunc("/api/competitions/{id}", handleUpdateCompetition).Methods("PUT")
-	r.HandleFunc("/api/entries/upload", handleUploadEntries).Methods("POST")
-	r.HandleFunc("/api/entries/{id}", handleUpdateEntry).Methods("PUT")
-	r.HandleFunc("/api/entries/{id}", handleDeleteEntry).Methods("DELETE")
-	r.HandleFunc("/api/competitions/{id}/update-position", handleUpdateEntryPosition).Methods("POST")
+	// Admin endpoints (authentication + admin privilege required)
+	r.HandleFunc("/api/competitions", AuthMiddleware(AdminMiddleware(handleCreateCompetition))).Methods("POST")
+	r.HandleFunc("/api/competitions/{id}", AuthMiddleware(AdminMiddleware(handleUpdateCompetition))).Methods("PUT")
+	r.HandleFunc("/api/entries/upload", AuthMiddleware(AdminMiddleware(handleUploadEntries))).Methods("POST")
+	r.HandleFunc("/api/entries/{id}", AuthMiddleware(AdminMiddleware(handleUpdateEntry))).Methods("PUT")
+	r.HandleFunc("/api/entries/{id}", AuthMiddleware(AdminMiddleware(handleDeleteEntry))).Methods("DELETE")
+	r.HandleFunc("/api/competitions/{id}/update-position", AuthMiddleware(AdminMiddleware(handleUpdateEntryPosition))).Methods("POST")
 
 	// Serve static frontend files (React build output)
 	staticDir := getEnv("STATIC_DIR", "./static")
