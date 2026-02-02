@@ -1,6 +1,6 @@
 # PubGames V3 - TODO List
 
-**Last Updated**: January 27, 2026
+**Last Updated**: February 2, 2026
 
 ## ✅ Leaderboard & Game Reporting (Complete)
 - [x] Centralized Leaderboard app (port 5030)
@@ -213,6 +213,27 @@
   - SSE to sync input app with display
   - Multi-player support (2-4 players)
 
+### Season Scheduler Enhancements
+- [ ] **Email distribution**
+  - Send schedule to email addresses (bulk or individual)
+  - Formatted plaintext or HTML version
+  - Include download link for CSV
+
+- [ ] **Print-friendly view**
+  - Optimized layout for A4/Letter printing
+  - Remove interactive elements
+  - Better spacing for readability
+
+- [ ] **iCal export**
+  - Generate .ics calendar file
+  - Compatible with Outlook, Google Calendar, Apple Calendar
+  - Include team names, home/away info in event titles
+
+- [ ] **Conflict resolution wizard**
+  - Suggest automatic fixes for detected conflicts
+  - Smart rescheduling based on constraints
+  - Manual approval before applying
+
 ### Additional Game Features
 - [ ] **Spectator mode**
   - Watch ongoing games in real-time
@@ -320,6 +341,14 @@
 - [x] Dots rectangular grid support (6x9 mobile option) (Jan 27)
 - [x] Challenge options forwarded dynamically to game backends (Jan 27)
 - [x] Dots UI improvements: lighter dots, claim-win timing (Jan 27)
+- [x] **Season Scheduler app** (port 5040) (Feb 2)
+  - [x] Round-robin schedule generation with no duplicate home/away matchups
+  - [x] Conflict detection (red highlighting for teams with multiple games same date)
+  - [x] Multi-select bulk reordering of matches
+  - [x] Exclusion week displacement (free/special/catchup weeks displace all games)
+  - [x] UK Bank Holiday detection and warning
+  - [x] Schedule saving to PostgreSQL with 30-day auto-cleanup
+  - [x] CSV export functionality
 
 ## Notes
 
@@ -327,10 +356,11 @@
 1. ~~Challenge integration~~: ✅ Complete with dynamic game selection
 2. ~~Create Dots~~: ✅ Second real-time game validates multi-game support
 3. ~~Leaderboard~~: ✅ Centralized stats service
-4. **Migrate static games**: Sweepstakes, Last Man Standing (simpler, no real-time)
-5. **Quiz app**: Multi-player, real-time, critical for pub engagement
-6. **Display system**: Screen slideshow with leaderboards and social feeds
-7. **Polish**: Mobile optimization, additional features, documentation
+4. ~~Season Scheduler~~: ✅ Complete with round-robin, conflict detection, manual adjustments
+5. **Migrate static games**: Sweepstakes, Last Man Standing (simpler, no real-time)
+6. **Quiz app**: Multi-player, real-time, critical for pub engagement
+7. **Display system**: Screen slideshow with leaderboards and social feeds
+8. **Polish**: Mobile optimization, additional features, documentation
 
 ### Architecture Decisions Made
 - **SSE + HTTP over WebSocket**: Better iOS Safari compatibility, simpler debugging

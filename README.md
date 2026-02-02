@@ -1,9 +1,9 @@
 # PubGames V3 - Shell Architecture
 
-**Status**: 🟢 Tic-Tac-Toe Complete & Working
+**Status**: 🟢 Core Games & Season Scheduler Complete
 **Repository**: https://github.com/achgithub/pub-games-v3
 **Created**: January 21, 2026
-**Last Updated**: January 27, 2026
+**Last Updated**: February 2, 2026
 
 📋 **Documentation**: [CLAUDE.md](./CLAUDE.md) (index) | [QUICKSTART.md](./QUICKSTART.md) | [TODO.md](./TODO.md) | [docs/](./docs/)
 
@@ -77,14 +77,19 @@ PubGames V3 introduces a **shell architecture** where the Identity Service acts 
 ### Mini-Apps (All iframe embedded)
 **Pattern**: Single port serves frontend + API
 
+**Competitive Games**:
 | App | Port | Real-Time | Status |
 |-----|------|-----------|--------|
-| Tic-Tac-Toe | 4001 | SSE + HTTP | Working |
-| Dots & Boxes | 4011 | SSE + HTTP | Working |
-| Smoke Test | 5010 | None | Working |
-| Sweepstakes | 5020 | None | Working |
-| Leaderboard | 5030 | None | Working |
-| Season Scheduler | 5040 | None | Working |
+| Tic-Tac-Toe | 4001 | SSE + HTTP | ✅ Working |
+| Dots & Boxes | 4011 | SSE + HTTP | ✅ Working |
+
+**Utilities & Admin Tools**:
+| App | Port | Real-Time | Status |
+|-----|------|-----------|--------|
+| Leaderboard | 5030 | None | ✅ Working |
+| Season Scheduler | 5040 | None | ✅ Working |
+| Smoke Test | 5010 | None | ✅ Working |
+| Sweepstakes | 5020 | None | ⏳ Legacy |
 
 ---
 
@@ -144,15 +149,16 @@ pub-games-v3/
 Identity Shell:
   3001  - Shell (frontend + API)
 
-Interactive Games (WebSocket):
+Competitive Games (Turn-based, SSE + HTTP):
   4001  - Tic-Tac-Toe
-  4011  - Dots (future)
+  4011  - Dots & Boxes
   4021  - Chess (future)
 
-Static Apps (no real-time):
+Admin Tools & Utilities (No real-time):
   5010  - Smoke Test
-  5020  - Sweepstakes
-  5030  - Last Man Standing
+  5020  - Sweepstakes (legacy)
+  5030  - Leaderboard
+  5040  - Season Scheduler (schedule management)
 ```
 
 ---
@@ -177,14 +183,25 @@ Static Apps (no real-time):
 - [x] Real-time game play working (tested multi-browser, iOS Safari)
 - [x] Forfeit and claim-win functionality
 
-### Phase 4: Challenge Integration ⬅️ **WE ARE HERE**
-- [ ] Challenge → game flow integration
-- [ ] Game result reporting to shell
-- [ ] End-to-end challenge-to-game testing
+### Phase 4: Challenge Integration ✅ COMPLETE
+- [x] Challenge → game flow integration
+- [x] Game result reporting to shell
+- [x] End-to-end challenge-to-game testing
+- [x] Dynamic game selection in challenges
+- [x] Challenge options forwarded to game backends
 
-### Phase 5: Additional Games
+### Phase 5: Season Scheduler ✅ COMPLETE
+- [x] Round-robin schedule generation (no duplicate matchups)
+- [x] Conflict detection (visual highlighting)
+- [x] Manual adjustments (reorder individual/bulk matches)
+- [x] Exclusion weeks (free, special, catchup) with proper displacement
+- [x] Holiday detection (UK Bank Holidays)
+- [x] Save and export functionality
+- [x] PostgreSQL persistence with 30-day auto-cleanup
+
+### Phase 6: Additional Games ⬅️ **WE ARE HERE**
 - [ ] Migrate Sweepstakes from V2
-- [ ] Dots game
+- [ ] Hangman game
 - [ ] Quiz app
 
 ---
