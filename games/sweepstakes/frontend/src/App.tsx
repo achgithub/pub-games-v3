@@ -58,6 +58,28 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const loadCompetitions = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`${API_BASE}/api/competitions`);
+      setCompetitions(response.data || []);
+      setError(null);
+    } catch (err) {
+      setError('Failed to load competitions');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load competitions on mount
+  useEffect(() => {
+    if (userId) {
+      loadCompetitions();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
   // Must have userId to play
   if (!userId) {
     return (
@@ -78,25 +100,6 @@ function App() {
       </div>
     );
   }
-
-  // Load competitions on mount
-  useEffect(() => {
-    loadCompetitions();
-  }, []);
-
-  const loadCompetitions = async () => {
-    try {
-      setLoading(true);
-      const response = await axios.get(`${API_BASE}/api/competitions`);
-      setCompetitions(response.data || []);
-      setError(null);
-    } catch (err) {
-      setError('Failed to load competitions');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const loadCompetitionDetails = async (competition: Competition) => {
     try {
