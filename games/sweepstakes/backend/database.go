@@ -131,7 +131,7 @@ func GetEntriesForCompetition(db *sql.DB, competitionID int) ([]Entry, error) {
 	rows, err := db.Query(`
 		SELECT id, competition_id, name, seed, number, status, position, created_at
 		FROM entries
-		WHERE competition_id = ?
+		WHERE competition_id = $1
 		ORDER BY
 			CASE WHEN status = 'winner' THEN 0
 				 WHEN status = 'active' THEN 1

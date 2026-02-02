@@ -5,7 +5,6 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -68,26 +67,20 @@ func handleCreateCompetition(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("Creating competition: %+v", req)
 
-	result, err := db.Exec(`
+	var lastInsertID int64
+	var createdAt sql.NullTime
+
+	err := db.QueryRow(`
 		INSERT INTO competitions (name, type, status, start_date, end_date, description, selection_mode, blind_box_interval)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id, created_at
-	`, req.Name, req.Type, req.Status, req.StartDate, req.EndDate, req.Description, req.SelectionMode, req.BlindBoxInterval)
+	`, req.Name, req.Type, req.Status, req.StartDate, req.EndDate, req.Description, req.SelectionMode, req.BlindBoxInterval).Scan(&lastInsertID, &createdAt)
 
 	if err != nil {
 		log.Printf("Error inserting competition: %v", err)
 		http.Error(w, "Failed to create competition: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-
-	var lastInsertID int64
-	var createdAt sql.NullTime
-
-	// Get the inserted ID
-	rows := db.QueryRow(`
-		SELECT id, created_at FROM competitions WHERE id = (SELECT MAX(id) FROM competitions)
-	`)
-	rows.Scan(&lastInsertID, &createdAt)
 
 	req.ID = int(lastInsertID)
 	if createdAt.Valid {
@@ -146,9 +139,15 @@ func handleUpdateCompetition(w http.ResponseWriter, r *http.Request) {
 // handleGetEntries returns all entries for a competition
 func handleGetEntries(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	compID := vars["id"]
+	compIDStr := vars["id"]
 
-	entries, err := GetEntriesForCompetition(db, 0)
+	compID, err := strconv.Atoi(compIDStr)
+	if err != nil {
+		http.Error(w, "Invalid competition ID", http.StatusBadRequest)
+		return
+	}
+
+	entries, err := GetEntriesForCompetition(db, compID)
 	if err != nil {
 		log.Printf("Error querying entries: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
