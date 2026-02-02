@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { LobbyState, Challenge, ChallengeOptions, GameConfig } from '../types';
 
 const API_BASE = `http://${window.location.hostname}:3001/api`;
@@ -32,7 +32,7 @@ export function useLobby(userEmail: string, options?: UseLobbyOptions) {
   const [notification, setNotification] = useState<string | null>(null);
 
   // Update user's presence
-  const updatePresence = async (status: 'online' | 'in_game' | 'away', currentApp?: string) => {
+  const updatePresence = useCallback(async (status: 'online' | 'in_game' | 'away', currentApp?: string) => {
     try {
       await fetch(`${API_BASE}/lobby/presence`, {
         method: 'POST',
@@ -47,10 +47,10 @@ export function useLobby(userEmail: string, options?: UseLobbyOptions) {
     } catch (err) {
       console.error('Failed to update presence:', err);
     }
-  };
+  }, [userEmail]);
 
   // Fetch online users
-  const fetchOnlineUsers = async () => {
+  const fetchOnlineUsers = useCallback(async () => {
     try {
       const response = await fetch(`${API_BASE}/lobby/presence`);
       const data = await response.json();
@@ -62,10 +62,10 @@ export function useLobby(userEmail: string, options?: UseLobbyOptions) {
     } catch (err) {
       console.error('Failed to fetch online users:', err);
     }
-  };
+  }, []);
 
   // Fetch received challenges
-  const fetchChallenges = async () => {
+  const fetchChallenges = useCallback(async () => {
     try {
       const response = await fetch(`${API_BASE}/lobby/challenges?email=${encodeURIComponent(userEmail)}`);
       const data = await response.json();
@@ -78,21 +78,21 @@ export function useLobby(userEmail: string, options?: UseLobbyOptions) {
       }));
 
       // Detect new challenges by ID (not count)
-      if (onNewChallenge) {
+      if (onNewChallengeRef.current) {
         challenges.forEach((challenge: Challenge) => {
           if (!notifiedChallenges.current.has(challenge.id)) {
             notifiedChallenges.current.add(challenge.id);
-            onNewChallenge(challenge);
+            onNewChallengeRef.current!(challenge);
           }
         });
       }
     } catch (err) {
       console.error('Failed to fetch challenges:', err);
     }
-  };
+  }, [userEmail]);
 
   // Fetch sent challenges
-  const fetchSentChallenges = async () => {
+  const fetchSentChallenges = useCallback(async () => {
     try {
       const response = await fetch(`${API_BASE}/lobby/challenges/sent?email=${encodeURIComponent(userEmail)}`);
       const data = await response.json();
@@ -104,7 +104,7 @@ export function useLobby(userEmail: string, options?: UseLobbyOptions) {
     } catch (err) {
       console.error('Failed to fetch sent challenges:', err);
     }
-  };
+  }, [userEmail]);
 
   // Fetch game config from mini-app
   // appId reserved for future use (e.g., caching by app)
@@ -246,7 +246,7 @@ export function useLobby(userEmail: string, options?: UseLobbyOptions) {
       eventSource.close();
       updatePresence('away');
     };
-  }, [userEmail]);
+  }, [userEmail, updatePresence, fetchOnlineUsers, fetchChallenges, fetchSentChallenges]);
 
   // Browser lifecycle detection
   useEffect(() => {
@@ -274,7 +274,7 @@ export function useLobby(userEmail: string, options?: UseLobbyOptions) {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [userEmail]);
+  }, [userEmail, updatePresence, fetchOnlineUsers, fetchChallenges]);
 
   return {
     ...lobbyState,
