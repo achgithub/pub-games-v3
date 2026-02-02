@@ -30,13 +30,14 @@ function useQueryParams() {
     return {
       userId: params.get('userId'),
       userName: params.get('userName'),
-      isAdmin: params.get('admin') === 'true',
+      isAdmin: params.get('isAdmin') === 'true',
+      token: params.get('token'),
     };
   }, []);
 }
 
 function App() {
-  const { userId, userName, isAdmin } = useQueryParams();
+  const { userId, userName, isAdmin, token } = useQueryParams();
 
   const [user, setUser] = useState<User | null>(null);
   const [view, setView] = useState<ViewType>('loading');
@@ -47,6 +48,34 @@ function App() {
   });
   const [newItemName, setNewItemName] = useState('');
   const [newItemDescription, setNewItemDescription] = useState('');
+
+  // Create authenticated axios instance
+  const api = useMemo(() => {
+    if (!token) return axios.create({ baseURL: API_BASE });
+
+    return axios.create({
+      baseURL: API_BASE,
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+  }, [token]);
+
+  // Handle 401 responses (expired/invalid token)
+  useEffect(() => {
+    const interceptor = api.interceptors.response.use(
+      response => response,
+      error => {
+        if (error.response?.status === 401) {
+          alert('Session expired. Please login again.');
+          window.location.href = `http://${window.location.hostname}:3001`;
+        }
+        return Promise.reject(error);
+      }
+    );
+
+    return () => api.interceptors.response.eject(interceptor);
+  }, [api]);
 
   // Initialize: Get user from URL params
   useEffect(() => {
@@ -66,12 +95,8 @@ function App() {
         is_admin: isAdmin
       };
 
-      // Sync user with backend
-      try {
-        await axios.post(`${API_BASE}/sync-user`, userData);
-      } catch (error) {
-        console.error('Failed to sync user:', error);
-      }
+      // User sync now happens automatically in backend AuthMiddleware
+      // No need for explicit sync call
 
       if (isMounted) {
         setUser(userData);
@@ -86,11 +111,11 @@ function App() {
     };
   }, [userId, userName, isAdmin]);
 
-  // Load app config
+  // Load app config (no auth required)
   useEffect(() => {
     let isMounted = true;
 
-    axios.get(`${API_BASE}/config`)
+    api.get('/config')
       .then(res => {
         if (isMounted) {
           setConfig(res.data);
@@ -101,7 +126,7 @@ function App() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [api]);
 
   // Load items when user is authenticated
   useEffect(() => {
@@ -120,7 +145,7 @@ function App() {
     if (!user) return;
 
     try {
-      const response = await axios.get(`${API_BASE}/items?user=${encodeURIComponent(user.email)}`);
+      const response = await api.get('/items');
       if (isMounted) {
         setItems(response.data || []);
       }
@@ -137,13 +162,10 @@ function App() {
     if (!newItemName.trim() || !user) return;
 
     try {
-      await axios.post(
-        `${API_BASE}/items?user=${encodeURIComponent(user.email)}`,
-        {
-          name: newItemName,
-          description: newItemDescription
-        }
-      );
+      await api.post('/items', {
+        name: newItemName,
+        description: newItemDescription
+      });
 
       setNewItemName('');
       setNewItemDescription('');

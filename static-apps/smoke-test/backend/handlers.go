@@ -45,6 +45,13 @@ func HandleGetItems(w http.ResponseWriter, r *http.Request) {
 
 // HandleCreateItem creates a new item
 func HandleCreateItem(w http.ResponseWriter, r *http.Request) {
+	// Get authenticated user from context (provided by AuthMiddleware)
+	user := getUserFromContext(r)
+	if user == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	var req struct {
 		Name        string `json:"name"`
 		Description string `json:"description"`
@@ -55,20 +62,13 @@ func HandleCreateItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get user from query param
-	email := r.URL.Query().Get("user")
-	if email == "" {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	// Insert item
+	// Insert item using authenticated user's email
 	var item Item
 	err := db.QueryRow(`
 		INSERT INTO items (name, description, created_by, created_at)
 		VALUES ($1, $2, $3, $4)
 		RETURNING id, name, description, created_by, created_at
-	`, req.Name, req.Description, email, time.Now()).
+	`, req.Name, req.Description, user.Email, time.Now()).
 		Scan(&item.ID, &item.Name, &item.Description, &item.CreatedBy, &item.CreatedAt)
 
 	if err != nil {

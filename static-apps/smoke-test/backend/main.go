@@ -11,6 +11,7 @@ import (
 )
 
 var db *sql.DB
+var identityDB *sql.DB
 
 const (
 	APP_NAME     = "Smoke Test"
@@ -20,14 +21,22 @@ const (
 func main() {
 	log.Printf("🧪 %s Backend Starting", APP_NAME)
 
-	// Initialize database
+	// Initialize local database
 	var err error
 	db, err = InitDatabase()
 	if err != nil {
-		log.Fatal("Failed to connect to PostgreSQL:", err)
+		log.Fatal("Failed to connect to local PostgreSQL:", err)
 	}
 	defer db.Close()
-	log.Println("✅ Connected to PostgreSQL")
+	log.Println("✅ Connected to local PostgreSQL")
+
+	// Initialize identity database connection (for authentication)
+	identityDB, err = InitIdentityDatabase()
+	if err != nil {
+		log.Fatal("Failed to connect to identity database:", err)
+	}
+	defer identityDB.Close()
+	log.Println("✅ Connected to identity database")
 
 	// Setup router
 	r := mux.NewRouter()
@@ -43,8 +52,8 @@ func main() {
 	r.HandleFunc("/api/items", AuthMiddleware(HandleGetItems)).Methods("GET")
 	r.HandleFunc("/api/items", AuthMiddleware(HandleCreateItem)).Methods("POST")
 
-	// Admin endpoints
-	r.HandleFunc("/api/admin/stats", AdminMiddleware(HandleGetStats)).Methods("GET")
+	// Admin endpoints (chain AuthMiddleware and AdminMiddleware)
+	r.HandleFunc("/api/admin/stats", AuthMiddleware(AdminMiddleware(HandleGetStats))).Methods("GET")
 
 	// Serve static frontend files (React build output)
 	staticDir := getEnv("STATIC_DIR", "./static")

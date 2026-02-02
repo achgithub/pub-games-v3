@@ -72,3 +72,27 @@ func createTables(db *sql.DB) error {
 	log.Println("✅ Database schema initialized")
 	return nil
 }
+
+// InitIdentityDatabase connects to the identity database for authentication
+func InitIdentityDatabase() (*sql.DB, error) {
+	dbHost := getEnv("DB_HOST", "127.0.0.1")
+	dbPort := getEnv("DB_PORT", "5555")
+	dbUser := getEnv("DB_USER", "pubgames")
+	dbPass := getEnv("DB_PASS", "pubgames")
+	dbName := "pubgames" // Identity database
+
+	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		dbHost, dbPort, dbUser, dbPass, dbName)
+
+	db, err := sql.Open("postgres", connStr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open identity database: %w", err)
+	}
+
+	if err := db.Ping(); err != nil {
+		return nil, fmt.Errorf("failed to connect to identity database: %w", err)
+	}
+
+	log.Printf("✅ Connected to identity database: %s", dbName)
+	return db, nil
+}
