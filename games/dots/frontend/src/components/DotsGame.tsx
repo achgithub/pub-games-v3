@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import '../App.css';
+import '../styles/dots.css';
 
 const API_BASE = '/api';
 
