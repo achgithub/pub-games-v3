@@ -11,6 +11,7 @@ import (
 )
 
 var db *sql.DB
+var identityDB *sql.DB
 
 const (
 	APP_NAME     = "Leaderboard"
@@ -29,26 +30,35 @@ func main() {
 	defer db.Close()
 	log.Println("✅ Connected to PostgreSQL")
 
+	// Initialize identity database (for authentication)
+	identityDB, err = InitIdentityDatabase()
+	if err != nil {
+		log.Fatal("Failed to connect to identity database:", err)
+	}
+	defer identityDB.Close()
+	log.Println("✅ Connected to identity database")
+
 	// Setup router
 	r := mux.NewRouter()
 
-	// API endpoints
+	// Public API endpoints (no authentication required)
 	r.HandleFunc("/api/health", handleHealth).Methods("GET")
 	r.HandleFunc("/api/config", HandleConfig).Methods("GET")
 
-	// Result reporting (called by games)
-	r.HandleFunc("/api/result", HandleReportResult).Methods("POST")
-
-	// Standings queries
+	// Standings queries (public - it's a public scoreboard)
 	r.HandleFunc("/api/standings", HandleGetAllStandings).Methods("GET")
 	r.HandleFunc("/api/standings/{gameType}", HandleGetStandings).Methods("GET")
 
-	// Recent games
+	// Recent games (public)
 	r.HandleFunc("/api/recent", HandleGetRecentGames).Methods("GET")
 	r.HandleFunc("/api/recent/{gameType}", HandleGetRecentGames).Methods("GET")
 
-	// Player stats
+	// Player stats (public)
 	r.HandleFunc("/api/player/{playerId}", HandleGetPlayerStats).Methods("GET")
+
+	// Result reporting (authentication required - prevents fake results)
+	// Games report results using a player's token to prove legitimacy
+	r.HandleFunc("/api/result", AuthMiddleware(HandleReportResult)).Methods("POST")
 
 	// Serve static frontend files (React build output)
 	staticDir := getEnv("STATIC_DIR", "./static")

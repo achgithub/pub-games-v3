@@ -42,6 +42,29 @@ func InitDatabase() (*sql.DB, error) {
 	return db, nil
 }
 
+// InitIdentityDatabase initializes connection to the identity database (for authentication)
+func InitIdentityDatabase() (*sql.DB, error) {
+	host := getEnvDB("IDENTITY_DB_HOST", "127.0.0.1")
+	port := getEnvDB("IDENTITY_DB_PORT", "5555")
+	user := getEnvDB("IDENTITY_DB_USER", "pubgames")
+	password := getEnvDB("IDENTITY_DB_PASS", "pubgames")
+	dbname := getEnvDB("IDENTITY_DB_NAME", "pubgames")
+
+	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		host, port, user, password, dbname)
+
+	identityDB, err := sql.Open("postgres", connStr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open identity database: %w", err)
+	}
+
+	if err := identityDB.Ping(); err != nil {
+		return nil, fmt.Errorf("failed to ping identity database: %w", err)
+	}
+
+	return identityDB, nil
+}
+
 func createTables(db *sql.DB) error {
 	schema := `
 	-- Game results table - stores every completed game
