@@ -233,7 +233,7 @@ export function useGameSocket(gameId: string | null, userId: string, token: stri
         }
       }
     };
-  }, [gameId, userId, getApiBase, clearClaimWinTimers]);
+  }, [gameId, userId, token, getApiBase, clearClaimWinTimers]);
 
   // Manual retry function
   const retry = useCallback(() => {

@@ -59,37 +59,7 @@ function useQueryParams() {
 function App() {
   const { gameId, userId, userName, token } = useQueryParams();
 
-  // Must have userId and token to play
-  if (!userId || !token) {
-    return (
-      <div style={{ padding: 40, textAlign: 'center' }}>
-        <h2>Dots</h2>
-        <p style={{ color: '#666', marginTop: 20 }}>
-          Missing authentication. Please access this game through the lobby.
-        </p>
-        <button
-          onClick={() => {
-            const shellUrl = `http://${window.location.hostname}:3001`;
-            window.location.href = shellUrl;
-          }}
-          style={{
-            marginTop: 20,
-            background: 'linear-gradient(135deg, #667eea, #764ba2)',
-            color: 'white',
-            border: 'none',
-            padding: '12px 30px',
-            fontSize: 16,
-            fontWeight: 500,
-            borderRadius: 8,
-            cursor: 'pointer',
-          }}
-        >
-          Go to Lobby
-        </button>
-      </div>
-    );
-  }
-
+  // All hooks must be called before any conditional returns
   const [game, setGame] = useState<Game | null>(null);
   const [connected, setConnected] = useState(false);
   const [opponentConnected, setOpponentConnected] = useState(false);
@@ -309,6 +279,37 @@ function App() {
         <h2>Error</h2>
         <p>{error}</p>
         <button className="btn-lobby" onClick={returnToLobby}>Return to Lobby</button>
+      </div>
+    );
+  }
+
+  // Authentication check - must have userId and token
+  if (!userId || !token) {
+    return (
+      <div style={{ padding: 40, textAlign: 'center' }}>
+        <h2>Dots</h2>
+        <p style={{ color: '#666', marginTop: 20 }}>
+          Missing authentication. Please access this game through the lobby.
+        </p>
+        <button
+          onClick={() => {
+            const shellUrl = `http://${window.location.hostname}:3001`;
+            window.location.href = shellUrl;
+          }}
+          style={{
+            marginTop: 20,
+            background: 'linear-gradient(135deg, #667eea, #764ba2)',
+            color: 'white',
+            border: 'none',
+            padding: '12px 30px',
+            fontSize: 16,
+            fontWeight: 500,
+            borderRadius: 8,
+            cursor: 'pointer',
+          }}
+        >
+          Go to Lobby
+        </button>
       </div>
     );
   }

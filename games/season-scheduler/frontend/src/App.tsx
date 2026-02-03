@@ -59,37 +59,7 @@ const App: React.FC = () => {
   const userName = params.get('userName') || 'User';
   const token = params.get('token');
 
-  // Must have userId and token to access
-  if (!userId || !token) {
-    return (
-      <div style={{ padding: 40, textAlign: 'center' }}>
-        <h2>Season Scheduler</h2>
-        <p style={{ color: '#666', marginTop: 20 }}>
-          Missing authentication. Please access this app through the Identity Shell.
-        </p>
-        <button
-          onClick={() => {
-            const shellUrl = `http://${window.location.hostname}:3001`;
-            window.location.href = shellUrl;
-          }}
-          style={{
-            marginTop: 20,
-            background: 'linear-gradient(135deg, #667eea, #764ba2)',
-            color: 'white',
-            border: 'none',
-            padding: '12px 30px',
-            fontSize: 16,
-            fontWeight: 500,
-            borderRadius: 8,
-            cursor: 'pointer',
-          }}
-        >
-          Go to Identity Shell
-        </button>
-      </div>
-    );
-  }
-
+  // All hooks must be called before any conditional returns
   // State
   const [activeTab, setActiveTab] = useState<TabType>('setup');
   const [sport, setSport] = useState<string>('darts');
@@ -693,14 +663,14 @@ const App: React.FC = () => {
     window.open(`${API_BASE}/api/schedules/${scheduleId}/download?userId=${userId}`, '_blank');
   };
 
-  // No user error
-  if (!userId) {
+  // Authentication check - must have userId and token
+  if (!userId || !token) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
         <div style={{ textAlign: 'center', padding: '20px' }}>
           <h1>🗓️ Season Scheduler</h1>
           <p style={{ fontSize: '18px', margin: '30px 0', color: '#666' }}>
-            Please access this app through the Identity Shell.
+            Missing authentication. Please access this app through the Identity Shell.
           </p>
           <button
             onClick={() => {
@@ -717,7 +687,7 @@ const App: React.FC = () => {
               cursor: 'pointer',
             }}
           >
-            Go to Lobby
+            Go to Identity Shell
           </button>
         </div>
       </div>
