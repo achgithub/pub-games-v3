@@ -12,8 +12,22 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// getTokenFromRequest extracts the JWT token from the Authorization header
+func getTokenFromRequest(r *http.Request) string {
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		return ""
+	}
+	// Extract token from "Bearer {token}" format
+	if len(authHeader) > 7 && authHeader[:7] == "Bearer " {
+		return authHeader[7:]
+	}
+	return ""
+}
+
 // reportToLeaderboard sends game result to the leaderboard service
-func reportToLeaderboard(game *Game) {
+// token parameter is the JWT token from the authenticated user making the request
+func reportToLeaderboard(game *Game, token string) {
 	leaderboardURL := os.Getenv("LEADERBOARD_URL")
 	if leaderboardURL == "" {
 		leaderboardURL = "http://127.0.0.1:5030"
@@ -66,7 +80,18 @@ func reportToLeaderboard(game *Game) {
 		return
 	}
 
-	resp, err := http.Post(leaderboardURL+"/api/result", "application/json", bytes.NewBuffer(jsonBody))
+	// Create request with Authorization header
+	req, err := http.NewRequest("POST", leaderboardURL+"/api/result", bytes.NewBuffer(jsonBody))
+	if err != nil {
+		log.Printf("Failed to create leaderboard request: %v", err)
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+
+	// Send request
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
 		log.Printf("Failed to report to leaderboard: %v", err)
 		return
@@ -259,8 +284,9 @@ func handleMakeMove(w http.ResponseWriter, r *http.Request) {
 		UpdatePlayerStats(game.Player1ID, game.Player1Name, player1Won, player2Won, isDraw, game.Player1Score)
 		UpdatePlayerStats(game.Player2ID, game.Player2Name, player2Won, player1Won, isDraw, game.Player2Score)
 
-		// Report to leaderboard
-		go reportToLeaderboard(game)
+		// Report to leaderboard (use token from current request)
+		token := getTokenFromRequest(r)
+		go reportToLeaderboard(game, token)
 
 		// Publish game_ended event
 		PublishGameEvent(req.GameID, "game_ended", map[string]interface{}{
@@ -508,7 +534,9 @@ func handleForfeitHTTP(w http.ResponseWriter, r *http.Request) {
 	UpdatePlayerStats(game.Player1ID, game.Player1Name, player1Won, player2Won, false, game.Player1Score)
 	UpdatePlayerStats(game.Player2ID, game.Player2Name, player2Won, player1Won, false, game.Player2Score)
 
-	go reportToLeaderboard(game)
+	// Report to leaderboard (use token from current request)
+	token := getTokenFromRequest(r)
+	go reportToLeaderboard(game, token)
 
 	PublishGameEvent(gameID, "game_ended", map[string]interface{}{
 		"game":    game,
@@ -584,7 +612,9 @@ func handleClaimWinHTTP(w http.ResponseWriter, r *http.Request) {
 	UpdatePlayerStats(game.Player1ID, game.Player1Name, player1Won, player2Won, false, game.Player1Score)
 	UpdatePlayerStats(game.Player2ID, game.Player2Name, player2Won, player1Won, false, game.Player2Score)
 
-	go reportToLeaderboard(game)
+	// Report to leaderboard (use token from current request)
+	token := getTokenFromRequest(r)
+	go reportToLeaderboard(game, token)
 
 	PublishGameEvent(gameID, "game_ended", map[string]interface{}{
 		"game":    game,
