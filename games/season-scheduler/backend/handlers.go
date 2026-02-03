@@ -34,15 +34,19 @@ func handleGetConfig(w http.ResponseWriter, r *http.Request) {
 
 // handleGetTeams returns all teams for a user and sport
 func handleGetTeams(w http.ResponseWriter, r *http.Request) {
-	userID := r.URL.Query().Get("userId")
-	sport := r.URL.Query().Get("sport")
-
-	if userID == "" || sport == "" {
-		http.Error(w, "userId and sport are required", http.StatusBadRequest)
+	user := getUserFromContext(r)
+	if user == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	teams, err := GetTeams(userID, sport)
+	sport := r.URL.Query().Get("sport")
+	if sport == "" {
+		http.Error(w, "sport is required", http.StatusBadRequest)
+		return
+	}
+
+	teams, err := GetTeams(user.Email, sport)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -54,10 +58,15 @@ func handleGetTeams(w http.ResponseWriter, r *http.Request) {
 
 // handleAddTeam adds a new team
 func handleAddTeam(w http.ResponseWriter, r *http.Request) {
+	user := getUserFromContext(r)
+	if user == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	var req struct {
-		UserID string `json:"userId"`
-		Sport  string `json:"sport"`
-		Name   string `json:"name"`
+		Sport string `json:"sport"`
+		Name  string `json:"name"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -65,12 +74,12 @@ func handleAddTeam(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.UserID == "" || req.Sport == "" || req.Name == "" {
-		http.Error(w, "userId, sport, and name are required", http.StatusBadRequest)
+	if req.Sport == "" || req.Name == "" {
+		http.Error(w, "sport and name are required", http.StatusBadRequest)
 		return
 	}
 
-	team, err := AddTeam(req.UserID, req.Sport, req.Name)
+	team, err := AddTeam(user.Email, req.Sport, req.Name)
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate") {
 			http.Error(w, "Team name already exists", http.StatusConflict)
@@ -86,6 +95,12 @@ func handleAddTeam(w http.ResponseWriter, r *http.Request) {
 
 // handleDeleteTeam deletes a team
 func handleDeleteTeam(w http.ResponseWriter, r *http.Request) {
+	user := getUserFromContext(r)
+	if user == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	vars := mux.Vars(r)
 	teamID, err := strconv.Atoi(vars["id"])
 	if err != nil {
@@ -93,13 +108,7 @@ func handleDeleteTeam(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID := r.URL.Query().Get("userId")
-	if userID == "" {
-		http.Error(w, "userId is required", http.StatusBadRequest)
-		return
-	}
-
-	if err := DeleteTeam(teamID, userID); err != nil {
+	if err := DeleteTeam(teamID, user.Email); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -253,6 +262,12 @@ func handleReorderMatches(w http.ResponseWriter, r *http.Request) {
 
 // handleSaveSchedule saves a confirmed schedule
 func handleSaveSchedule(w http.ResponseWriter, r *http.Request) {
+	user := getUserFromContext(r)
+	if user == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	var req struct {
 		Schedule Schedule       `json:"schedule"`
 		Matches  []Match        `json:"matches"`
@@ -265,8 +280,11 @@ func handleSaveSchedule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("INFO: Saving schedule: %s (version %d) with %d matches and %d dates",
-		req.Schedule.Name, req.Schedule.Version, len(req.Matches), len(req.Dates))
+	// Use authenticated user instead of request data
+	req.Schedule.UserID = user.Email
+
+	log.Printf("INFO: Saving schedule: %s (version %d) with %d matches and %d dates for user %s",
+		req.Schedule.Name, req.Schedule.Version, len(req.Matches), len(req.Dates), user.Email)
 
 	if err := SaveSchedule(&req.Schedule, req.Matches, req.Dates); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -279,13 +297,13 @@ func handleSaveSchedule(w http.ResponseWriter, r *http.Request) {
 
 // handleGetSchedules returns all schedules for a user
 func handleGetSchedules(w http.ResponseWriter, r *http.Request) {
-	userID := r.URL.Query().Get("userId")
-	if userID == "" {
-		http.Error(w, "userId is required", http.StatusBadRequest)
+	user := getUserFromContext(r)
+	if user == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	schedules, err := GetSchedules(userID)
+	schedules, err := GetSchedules(user.Email)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -297,6 +315,12 @@ func handleGetSchedules(w http.ResponseWriter, r *http.Request) {
 
 // handleGetSchedule returns a specific schedule with all matches
 func handleGetSchedule(w http.ResponseWriter, r *http.Request) {
+	user := getUserFromContext(r)
+	if user == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	vars := mux.Vars(r)
 	scheduleID, err := strconv.Atoi(vars["id"])
 	if err != nil {
@@ -304,13 +328,7 @@ func handleGetSchedule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID := r.URL.Query().Get("userId")
-	if userID == "" {
-		http.Error(w, "userId is required", http.StatusBadRequest)
-		return
-	}
-
-	schedule, err := GetSchedule(scheduleID, userID)
+	schedule, err := GetSchedule(scheduleID, user.Email)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -322,6 +340,12 @@ func handleGetSchedule(w http.ResponseWriter, r *http.Request) {
 
 // handleDownloadSchedule generates a CSV download
 func handleDownloadSchedule(w http.ResponseWriter, r *http.Request) {
+	user := getUserFromContext(r)
+	if user == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	vars := mux.Vars(r)
 	scheduleID, err := strconv.Atoi(vars["id"])
 	if err != nil {
@@ -329,13 +353,7 @@ func handleDownloadSchedule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID := r.URL.Query().Get("userId")
-	if userID == "" {
-		http.Error(w, "userId is required", http.StatusBadRequest)
-		return
-	}
-
-	schedule, err := GetSchedule(scheduleID, userID)
+	schedule, err := GetSchedule(scheduleID, user.Email)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

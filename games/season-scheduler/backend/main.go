@@ -12,6 +12,7 @@ import (
 )
 
 var db *sql.DB
+var identityDB *sql.DB
 
 const (
 	APP_NAME     = "Season Scheduler"
@@ -30,35 +31,35 @@ func main() {
 	defer db.Close()
 	log.Println("✅ Connected to PostgreSQL")
 
+	// Initialize identity database (for authentication)
+	identityDB, err = InitIdentityDatabase()
+	if err != nil {
+		log.Fatal("Failed to connect to identity database:", err)
+	}
+	defer identityDB.Close()
+	log.Println("✅ Connected to identity database")
+
 	// Setup router
 	r := mux.NewRouter()
 
-	// Health check
+	// Public endpoints (no authentication required)
 	r.HandleFunc("/api/health", handleHealth).Methods("GET")
-
-	// Config endpoint (required for app registry)
 	r.HandleFunc("/api/config", handleGetConfig).Methods("GET")
-
-	// Team management endpoints
-	r.HandleFunc("/api/teams", handleGetTeams).Methods("GET")
-	r.HandleFunc("/api/teams", handleAddTeam).Methods("POST")
-	r.HandleFunc("/api/teams/{id}", handleDeleteTeam).Methods("DELETE")
-
-	// Calendar/Holiday checking
 	r.HandleFunc("/api/holidays", handleGetHolidays).Methods("GET")
-	r.HandleFunc("/api/dates/validate", handleValidateDates).Methods("POST")
 
-	// Schedule generation
-	r.HandleFunc("/api/schedule/generate", handleGenerateSchedule).Methods("POST")
-	r.HandleFunc("/api/schedule/validate", handleValidateSchedule).Methods("POST")
-	r.HandleFunc("/api/schedule/{id}/reorder", handleReorderMatches).Methods("POST")
-	r.HandleFunc("/api/schedule/{id}", handleSaveSchedule).Methods("POST")
-
-	// Saved schedules
-	r.HandleFunc("/api/schedules", handleGetSchedules).Methods("GET")
-	r.HandleFunc("/api/schedules/{id}", handleGetSchedule).Methods("GET")
-	r.HandleFunc("/api/schedules/{id}/download", handleDownloadSchedule).Methods("GET")
-	r.HandleFunc("/api/schedules/{id}/email", handleEmailSchedule).Methods("POST")
+	// User endpoints (authentication required)
+	r.HandleFunc("/api/teams", AuthMiddleware(handleGetTeams)).Methods("GET")
+	r.HandleFunc("/api/teams", AuthMiddleware(handleAddTeam)).Methods("POST")
+	r.HandleFunc("/api/teams/{id}", AuthMiddleware(handleDeleteTeam)).Methods("DELETE")
+	r.HandleFunc("/api/dates/validate", AuthMiddleware(handleValidateDates)).Methods("POST")
+	r.HandleFunc("/api/schedule/generate", AuthMiddleware(handleGenerateSchedule)).Methods("POST")
+	r.HandleFunc("/api/schedule/validate", AuthMiddleware(handleValidateSchedule)).Methods("POST")
+	r.HandleFunc("/api/schedule/{id}/reorder", AuthMiddleware(handleReorderMatches)).Methods("POST")
+	r.HandleFunc("/api/schedule/{id}", AuthMiddleware(handleSaveSchedule)).Methods("POST")
+	r.HandleFunc("/api/schedules", AuthMiddleware(handleGetSchedules)).Methods("GET")
+	r.HandleFunc("/api/schedules/{id}", AuthMiddleware(handleGetSchedule)).Methods("GET")
+	r.HandleFunc("/api/schedules/{id}/download", AuthMiddleware(handleDownloadSchedule)).Methods("GET")
+	r.HandleFunc("/api/schedules/{id}/email", AuthMiddleware(handleEmailSchedule)).Methods("POST")
 
 	// Serve static frontend files (React build output)
 	staticDir := getEnv("STATIC_DIR", "./static")

@@ -29,6 +29,29 @@ func InitDatabase() (*sql.DB, error) {
 	return db, nil
 }
 
+// InitIdentityDatabase initializes connection to the identity database (for authentication)
+func InitIdentityDatabase() (*sql.DB, error) {
+	dbHost := getEnv("IDENTITY_DB_HOST", "127.0.0.1")
+	dbPort := getEnv("IDENTITY_DB_PORT", "5555")
+	dbUser := getEnv("IDENTITY_DB_USER", "pubgames")
+	dbPass := getEnv("IDENTITY_DB_PASS", "pubgames")
+	dbName := getEnv("IDENTITY_DB_NAME", "pubgames")
+
+	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		dbHost, dbPort, dbUser, dbPass, dbName)
+
+	identityDB, err := sql.Open("postgres", connStr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open identity database: %w", err)
+	}
+
+	if err := identityDB.Ping(); err != nil {
+		return nil, fmt.Errorf("failed to ping identity database: %w", err)
+	}
+
+	return identityDB, nil
+}
+
 // Team represents a pub team
 type Team struct {
 	ID        int       `json:"id"`
