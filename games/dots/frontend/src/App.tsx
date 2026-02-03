@@ -51,12 +51,44 @@ function useQueryParams() {
       gameId: params.get('gameId'),
       userId: params.get('userId'),
       userName: params.get('userName') || params.get('userId') || 'Player',
+      token: params.get('token'),
     };
   }, []);
 }
 
 function App() {
-  const { gameId, userId, userName } = useQueryParams();
+  const { gameId, userId, userName, token } = useQueryParams();
+
+  // Must have userId and token to play
+  if (!userId || !token) {
+    return (
+      <div style={{ padding: 40, textAlign: 'center' }}>
+        <h2>Dots</h2>
+        <p style={{ color: '#666', marginTop: 20 }}>
+          Missing authentication. Please access this game through the lobby.
+        </p>
+        <button
+          onClick={() => {
+            const shellUrl = `http://${window.location.hostname}:3001`;
+            window.location.href = shellUrl;
+          }}
+          style={{
+            marginTop: 20,
+            background: 'linear-gradient(135deg, #667eea, #764ba2)',
+            color: 'white',
+            border: 'none',
+            padding: '12px 30px',
+            fontSize: 16,
+            fontWeight: 500,
+            borderRadius: 8,
+            cursor: 'pointer',
+          }}
+        >
+          Go to Lobby
+        </button>
+      </div>
+    );
+  }
 
   const [game, setGame] = useState<Game | null>(null);
   const [connected, setConnected] = useState(false);
@@ -90,7 +122,7 @@ function App() {
       eventSourceRef.current.close();
     }
 
-    const url = `${API_BASE}/game/${gameId}/stream?userId=${encodeURIComponent(userId)}`;
+    const url = `${API_BASE}/game/${gameId}/stream?token=${encodeURIComponent(token)}`;
     const es = new EventSource(url);
     eventSourceRef.current = es;
 
@@ -152,7 +184,7 @@ function App() {
         connectSSE();
       }, 2000);
     };
-  }, [gameId, userId]);
+  }, [gameId, userId, token]);
 
   // Initial connection
   useEffect(() => {
@@ -168,7 +200,7 @@ function App() {
         clearTimeout(reconnectTimeoutRef.current);
       }
     };
-  }, [gameId, userId, connectSSE]);
+  }, [gameId, userId, token, connectSSE]);
 
   // Make a move
   const makeMove = async (row: number, col: number, horizontal: boolean) => {
@@ -177,7 +209,10 @@ function App() {
     try {
       const response = await fetch(`${API_BASE}/move`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({
           gameId,
           playerId: userId,
@@ -206,8 +241,10 @@ function App() {
     try {
       await fetch(`${API_BASE}/game/${gameId}/forfeit`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId }),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
       });
     } catch (err) {
       console.error('Forfeit error:', err);
@@ -219,8 +256,10 @@ function App() {
     try {
       const response = await fetch(`${API_BASE}/game/${gameId}/claim-win`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId }),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
       });
 
       const data = await response.json();
