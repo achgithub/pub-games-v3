@@ -57,6 +57,38 @@ const App: React.FC = () => {
   const params = new URLSearchParams(window.location.search);
   const userId = params.get('userId');
   const userName = params.get('userName') || 'User';
+  const token = params.get('token');
+
+  // Must have userId and token to access
+  if (!userId || !token) {
+    return (
+      <div style={{ padding: 40, textAlign: 'center' }}>
+        <h2>Season Scheduler</h2>
+        <p style={{ color: '#666', marginTop: 20 }}>
+          Missing authentication. Please access this app through the Identity Shell.
+        </p>
+        <button
+          onClick={() => {
+            const shellUrl = `http://${window.location.hostname}:3001`;
+            window.location.href = shellUrl;
+          }}
+          style={{
+            marginTop: 20,
+            background: 'linear-gradient(135deg, #667eea, #764ba2)',
+            color: 'white',
+            border: 'none',
+            padding: '12px 30px',
+            fontSize: 16,
+            fontWeight: 500,
+            borderRadius: 8,
+            cursor: 'pointer',
+          }}
+        >
+          Go to Identity Shell
+        </button>
+      </div>
+    );
+  }
 
   // State
   const [activeTab, setActiveTab] = useState<TabType>('setup');
@@ -83,26 +115,48 @@ const App: React.FC = () => {
 
   const loadTeams = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/teams?userId=${userId}&sport=${sport}`);
-      if (!res.ok) throw new Error('Failed to load teams');
+      const res = await fetch(`${API_BASE}/api/teams?sport=${sport}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      if (!res.ok) {
+        if (res.status === 401) {
+          alert('Session expired. Please login again.');
+          window.location.href = `http://${window.location.hostname}:3001`;
+          return;
+        }
+        throw new Error('Failed to load teams');
+      }
       const data = await res.json();
       setTeams(data || []);
     } catch (err) {
       console.error('Failed to load teams:', err);
       setError('Failed to load teams');
     }
-  }, [API_BASE, userId, sport]);
+  }, [API_BASE, token, sport]);
 
   const loadSavedSchedules = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/schedules?userId=${userId}`);
-      if (!res.ok) throw new Error('Failed to load schedules');
+      const res = await fetch(`${API_BASE}/api/schedules`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      if (!res.ok) {
+        if (res.status === 401) {
+          alert('Session expired. Please login again.');
+          window.location.href = `http://${window.location.hostname}:3001`;
+          return;
+        }
+        throw new Error('Failed to load schedules');
+      }
       const data = await res.json();
       setSavedSchedules(data || []);
     } catch (err) {
       console.error('Failed to load saved schedules:', err);
     }
-  }, [API_BASE, userId]);
+  }, [API_BASE, token]);
 
   // Load teams when sport changes
   useEffect(() => {
@@ -124,9 +178,18 @@ const App: React.FC = () => {
     try {
       const res = await fetch(`${API_BASE}/api/teams`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, sport, name: newTeamName }),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ sport, name: newTeamName }),
       });
+
+      if (res.status === 401) {
+        alert('Session expired. Please login again.');
+        window.location.href = `http://${window.location.hostname}:3001`;
+        return;
+      }
 
       if (res.ok) {
         setNewTeamName('');
@@ -143,9 +206,17 @@ const App: React.FC = () => {
 
   const deleteTeam = async (teamId: number) => {
     try {
-      await fetch(`${API_BASE}/api/teams/${teamId}?userId=${userId}`, {
+      const res = await fetch(`${API_BASE}/api/teams/${teamId}`, {
         method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
       });
+      if (res.status === 401) {
+        alert('Session expired. Please login again.');
+        window.location.href = `http://${window.location.hostname}:3001`;
+        return;
+      }
       loadTeams();
     } catch (err) {
       console.error('Failed to delete team:', err);
@@ -213,9 +284,11 @@ const App: React.FC = () => {
 
       const res = await fetch(`${API_BASE}/api/schedule/generate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({
-          userId,
           sport,
           teams: teamNames,
           dayOfWeek,
@@ -224,6 +297,12 @@ const App: React.FC = () => {
           excludeDates: excludedDates,
         }),
       });
+
+      if (res.status === 401) {
+        alert('Session expired. Please login again.');
+        window.location.href = `http://${window.location.hostname}:3001`;
+        return;
+      }
 
       if (!res.ok) {
         const errorText = await res.text();
@@ -528,7 +607,7 @@ const App: React.FC = () => {
       };
 
       const schedule: Schedule = {
-        userId: userId || '',
+        userId: '', // Will be set by backend from authenticated user
         sport,
         name: scheduleName,
         version: scheduleVersion,
@@ -582,9 +661,18 @@ const App: React.FC = () => {
 
       const res = await fetch(`${API_BASE}/api/schedule/0`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify(payload),
       });
+
+      if (res.status === 401) {
+        alert('Session expired. Please login again.');
+        window.location.href = `http://${window.location.hostname}:3001`;
+        return;
+      }
 
       if (res.ok) {
         alert('Schedule saved successfully!');
