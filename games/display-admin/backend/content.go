@@ -108,6 +108,7 @@ func handleCreateContent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var content ContentItem
+	var filePath, url, textContent, bgColor, textColor, createdBy sql.NullString
 	err := db.QueryRow(`
 		INSERT INTO content_items (title, content_type, duration_seconds, file_path, url,
 		                           text_content, bg_color, text_color, created_by, is_active)
@@ -119,8 +120,8 @@ func handleCreateContent(w http.ResponseWriter, r *http.Request) {
 		nullString(req.URL), nullString(req.TextContent), nullString(req.BgColor),
 		nullString(req.TextColor), user.Email).Scan(
 		&content.ID, &content.Title, &content.ContentType, &content.DurationSeconds,
-		&content.FilePath, &content.URL, &content.TextContent, &content.BgColor,
-		&content.TextColor, &content.IsActive, &content.CreatedBy,
+		&filePath, &url, &textContent, &bgColor,
+		&textColor, &content.IsActive, &createdBy,
 		&content.CreatedAt, &content.UpdatedAt,
 	)
 
@@ -129,6 +130,13 @@ func handleCreateContent(w http.ResponseWriter, r *http.Request) {
 		respondError(w, "Failed to create content", http.StatusInternalServerError)
 		return
 	}
+
+	content.FilePath = filePath.String
+	content.URL = url.String
+	content.TextContent = textContent.String
+	content.BgColor = bgColor.String
+	content.TextColor = textColor.String
+	content.CreatedBy = createdBy.String
 
 	log.Printf("✅ Created content: %s (type: %s) by %s", content.Title, content.ContentType, user.Email)
 	respondJSON(w, APIResponse{Success: true, Data: content})
