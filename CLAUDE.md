@@ -2,11 +2,12 @@
 
 - Platform: Pi at [192.168.1.45], Mac for editing
 - Workflow: Edit on Mac → git push → pull & build on Pi
-- Ports: identity-shell: 3001, tic-tac-toe: 4001, dots: 4011, sweepstakes: 4031, leaderboard: 5030, season-scheduler: 5040, smoke-test: 5010
-- Active work: JWT authentication complete for all apps - ready for testing
-- Known issues: None currently - all apps secured with JWT
-- Next: Test authentication on Pi, then continue with feature development
+- Ports: identity-shell: 3001, tic-tac-toe: 4001, dots: 4011, sweepstakes: 4031, leaderboard: 5030, season-scheduler: 5040, smoke-test: 5010, display-admin: 5050
+- Active work: Display Admin backend complete (Phase 2) - all 10 tests passing
+- Known issues: None - backend fully functional, frontend pending
+- Next: Phase 3 - Display Admin frontend implementation
 - Build: `cd games/{app}/frontend && npm run build && cp -r build/* ../backend/static/`
+- PostgreSQL: Port 5555, password "pubgames", user "pubgames"
 
 # Pub Games v3 - Documentation Index
 
@@ -191,3 +192,51 @@ pub-games-v3/
 │       └── apps.json              # App registry
 └── scripts/
     └── setup_databases.sh         # Database setup
+
+## Lessons Learned (Abridged)
+
+### Database Architecture
+- **Two-layer system**: Shared `pubgames` DB (auth) + separate app DBs (data)
+- All apps connect to TWO databases: `pubgames` for users, `{app}_db` for app data
+- PostgreSQL location: Centralized server storage (NOT in project folders)
+- SQLite vs PostgreSQL: Switched from file-based SQLite to PostgreSQL server
+
+### Environment Configuration
+- **PostgreSQL port**: 5555 (not default 5432)
+- **PostgreSQL credentials**: user=`pubgames`, password=`pubgames` (not `pubgames123`)
+- **Database creation**: `psql -U pubgames -h localhost -p 5555 -d postgres -c "CREATE DATABASE {app}_db;"`
+- Must specify `-p 5555` in all psql commands
+
+### Go Development
+- **Modules required**: Must have `go.mod` file (Go 1.25+)
+- No manual `go get` - use `go mod download` or run directly
+- **NULL handling**: Use `sql.NullString` for nullable DB columns, convert to string after scan
+- **Import cleanup**: Remove unused imports (Go compiler enforces this)
+
+### Testing Pattern
+- Create test scripts with 10 core tests (not 35+ - too many)
+- Test authentication with real admin users from database
+- Use `jq` for JSON formatting in curl tests
+- Save test artifacts (e.g., QR codes) for manual verification
+
+### Common Pitfalls
+- ❌ Forgetting to specify PostgreSQL port (5555)
+- ❌ Using wrong password (pubgames123 vs pubgames)
+- ❌ Scanning NULL database values directly into Go strings
+- ❌ Missing `go.mod` file for Go modules
+- ❌ Testing with non-existent users (check `pubgames.users` table first)
+
+### Display Admin Specifics
+- **Port**: 5050
+- **Database**: `display_admin_db`
+- **Token system**: UUID tokens for TV identification
+- **QR codes**: Use `github.com/skip2/go-qrcode` library
+- **File uploads**: Store in `./uploads/`, serve via `/uploads/` route
+- **Admin-only**: All endpoints require admin authentication except token lookup
+
+### Development Workflow Reminder
+1. Write code on Mac (Claude Code)
+2. Commit to Git on Mac
+3. Push when ready (user manually pushes)
+4. Pull on Pi: `cd ~/pub-games-v3 && git pull`
+5. Build/test on Pi (Go, npm, PostgreSQL run here)
