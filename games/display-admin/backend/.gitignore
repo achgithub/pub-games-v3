@@ -2,4 +2,5 @@
 uploads/
 
 # Static files (React build output - do not commit)
-static/
+static/*
+!static/.gitkeep
