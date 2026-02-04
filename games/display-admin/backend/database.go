@@ -16,7 +16,7 @@ func InitDatabases() error {
 	var err error
 
 	// Connect to identity database (pubgames)
-	identityDB, err = sql.Open("postgres", "host=localhost port=5432 user=pubgames password=pubgames123 dbname=pubgames sslmode=disable")
+	identityDB, err = sql.Open("postgres", "host=localhost port=5555 user=pubgames password=pubgames123 dbname=pubgames sslmode=disable")
 	if err != nil {
 		return fmt.Errorf("failed to connect to identity database: %w", err)
 	}
@@ -28,7 +28,7 @@ func InitDatabases() error {
 	log.Println("✅ Connected to identity database (pubgames)")
 
 	// Connect to display admin database
-	db, err = sql.Open("postgres", "host=localhost port=5432 user=pubgames password=pubgames123 dbname=display_admin_db sslmode=disable")
+	db, err = sql.Open("postgres", "host=localhost port=5555 user=pubgames password=pubgames123 dbname=display_admin_db sslmode=disable")
 	if err != nil {
 		return fmt.Errorf("failed to connect to display_admin_db: %w", err)
 	}
