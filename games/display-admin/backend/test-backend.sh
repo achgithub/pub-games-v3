@@ -3,7 +3,7 @@
 # Run after: go run *.go
 
 HOST="http://localhost:5050"
-TOKEN="demo-token-andy@example.com"  # Replace with actual admin user
+TOKEN="demo-token-admin@pubgames.local"  # Admin user from pubgames.users
 
 echo "=== Test 1: Health Check ==="
 curl -s "$HOST/api/health" | jq
