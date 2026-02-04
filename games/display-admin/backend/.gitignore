@@ -1,0 +1,5 @@
+# Uploaded images (do not commit to git)
+uploads/
+
+# Static files (React build output - do not commit)
+static/
