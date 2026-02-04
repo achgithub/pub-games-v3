@@ -17,7 +17,7 @@ Display Admin is part of a two-app system:
 
 ✅ **Phase 1: Backend Foundation** - Complete
 ✅ **Phase 2: Backend Handlers** - Complete (all 10 tests passing)
-🔄 **Phase 3: Frontend** - Pending
+✅ **Phase 3: Frontend** - Complete (TypeScript React admin UI)
 ⏳ **Phase 4: Display Runtime** - Not started
 
 ## Features
@@ -79,9 +79,30 @@ backend/
 ├── preview.go           # Active playlist determination
 ├── go.mod               # Go module dependencies
 ├── test-backend.sh      # Test script (10 tests)
-├── static/              # React build (pending)
+├── static/              # React build output
 └── uploads/             # Uploaded images (gitignored)
 ```
+
+### Frontend Structure
+
+```
+frontend/
+├── package.json         # TypeScript React dependencies
+├── tsconfig.json        # TypeScript configuration
+├── public/
+│   └── index.html       # HTML shell
+└── src/
+    ├── index.tsx        # Entry point
+    ├── index.css        # Global styles
+    ├── App.tsx          # Main admin UI (4 tabs)
+    └── react-app-env.d.ts
+```
+
+**Frontend Features:**
+- **Displays Tab**: Create displays, generate QR codes, manage TV tokens
+- **Content Tab**: Create announcements/URLs, upload images, configure durations
+- **Playlists Tab**: Build playlists, add/remove content items, reorder
+- **Assignments Tab**: Schedule playlists to displays with date/time/day filtering
 
 ### API Endpoints (35 total)
 
@@ -99,6 +120,7 @@ All require admin authentication except `/api/display/by-token/:token`.
 ### Prerequisites
 - PostgreSQL 5.5 running on port 5555
 - Go 1.25+
+- Node.js/npm
 - Admin user in `pubgames.users` table with `is_admin=true`
 
 ### Database Creation
@@ -107,17 +129,33 @@ psql -U pubgames -h localhost -p 5555 -d postgres -c "CREATE DATABASE display_ad
 ```
 
 ### Installation
+
+**1. Build Frontend**
+```bash
+cd ~/pub-games-v3/games/display-admin/frontend
+
+# Install dependencies
+npm install
+
+# Build React app
+npm run build
+
+# Copy to backend static directory
+cp -r build/* ../backend/static/
+```
+
+**2. Run Backend**
 ```bash
 cd ~/pub-games-v3/games/display-admin/backend
 
 # Download dependencies
 go mod download
 
-# Run server
+# Start server
 go run *.go
 ```
 
-Server starts on port 5050.
+Server starts on port 5050. Access at `http://192.168.1.45:5050`
 
 ### Testing
 ```bash
@@ -176,18 +214,14 @@ Environment variables (with defaults):
 
 ## Next Steps
 
-1. **Phase 3**: Implement frontend (React TypeScript)
-   - Multi-tab admin interface
-   - Display, content, playlist, assignment tabs
-   - Image upload component
-   - Drag-drop playlist builder
-   - QR code display
-
-2. **Phase 4**: Implement Display Runtime (separate app, port 5051)
-   - Token-based authentication
-   - Auto-rotating slideshow
-   - Scheduling-aware playlist loading
-   - Fullscreen mode for TVs
+**Phase 4**: Implement Display Runtime (separate app, port 5051)
+- Token-based authentication (no admin login required)
+- Auto-rotating slideshow that cycles through playlist content
+- Scheduling-aware playlist loading based on current time
+- Fullscreen mode for TV displays
+- Content rendering for all 6 types (image, URL, social feed, leaderboard, schedule, announcement)
+- Auto-refresh when playlist assignments change
+- Setup page for QR code scanning and token entry
 
 ## Reference Files
 
