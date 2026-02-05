@@ -233,7 +233,7 @@ const SlideshowPage: React.FC<SlideshowPageProps> = ({ token, onResetToken }) =>
       )}
 
       {/* Control bar (shows on mouse move) */}
-      {showControls && (
+      {showControls && playlist && (
         <div style={{
           position: 'fixed',
           top: 0,
@@ -253,7 +253,7 @@ const SlideshowPage: React.FC<SlideshowPageProps> = ({ token, onResetToken }) =>
               {display?.name} - {display?.location}
             </div>
             <div style={{ fontSize: '14px', color: '#ccc' }}>
-              {playlist.playlist.name} ({currentIndex + 1}/{playlist.items.length})
+              {playlist?.playlist?.name || 'Loading...'} ({currentIndex + 1}/{playlist?.items?.length || 0})
             </div>
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>
