@@ -11,14 +11,14 @@ Admin-only application for managing content displayed on pub TV screens.
 
 Display Admin is part of a two-app system:
 1. **Display Admin (5050)** - Admin interface for managing content (this app)
-2. **Display Runtime (5051)** - Standalone TV slideshow app (future implementation)
+2. **Display Runtime (5051)** - Standalone TV slideshow app (see `games/display-runtime/`)
 
 ## Status
 
 ✅ **Phase 1: Backend Foundation** - Complete
 ✅ **Phase 2: Backend Handlers** - Complete (all 10 tests passing)
 ✅ **Phase 3: Frontend** - Complete (TypeScript React admin UI)
-⏳ **Phase 4: Display Runtime** - Not started
+✅ **Phase 4: Display Runtime** - Complete (TV slideshow app operational)
 
 ## Features
 

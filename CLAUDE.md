@@ -2,10 +2,10 @@
 
 - Platform: Pi at [192.168.1.45], Mac for editing
 - Workflow: Edit on Mac → git push → pull & build on Pi
-- Ports: identity-shell: 3001, tic-tac-toe: 4001, dots: 4011, sweepstakes: 4031, leaderboard: 5030, season-scheduler: 5040, smoke-test: 5010, display-admin: 5050
-- Active work: Display Admin complete (Phases 1-3) - backend + frontend fully functional
-- Known issues: None - full admin UI operational
-- Next: Phase 4 - Display Runtime app (port 5051) for TV slideshow
+- Ports: identity-shell: 3001, tic-tac-toe: 4001, dots: 4011, sweepstakes: 4031, leaderboard: 5030, season-scheduler: 5040, smoke-test: 5010, display-admin: 5050, display-runtime: 5051
+- Active work: Display system complete (Phases 1-4) - Admin UI + TV Runtime fully functional
+- Known issues: None - both admin and runtime apps operational
+- Next: TBD - all major display system features complete
 - Build: `cd games/{app}/frontend && npm run build && cp -r build/* ../backend/static/`
 - PostgreSQL: Port 5555, password "pubgames", user "pubgames"
 
