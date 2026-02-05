@@ -204,6 +204,66 @@ func CreateChallenge(fromUser, toUser, appID string, options map[string]interfac
 	return challengeID, nil
 }
 
+// CreateMultiChallenge creates a new multi-player challenge in Redis with 120s TTL
+func CreateMultiChallenge(initiatorID string, playerIDs []string, appID string, minPlayers, maxPlayers int, options map[string]interface{}) (string, error) {
+	challengeID := fmt.Sprintf("%d-%s", time.Now().UnixNano(), initiatorID)
+	key := fmt.Sprintf("challenge:%s", challengeID)
+
+	challenge := map[string]interface{}{
+		"id":          challengeID,
+		"initiatorId": initiatorID,
+		"playerIds":   playerIDs,
+		"accepted":    []string{},       // Empty array initially
+		"appId":       appID,
+		"minPlayers":  minPlayers,
+		"maxPlayers":  maxPlayers,
+		"status":      "pending",
+		"createdAt":   time.Now().Unix(),
+		"expiresAt":   time.Now().Add(120 * time.Second).Unix(), // Longer TTL for multi-player
+		"options":     options,
+	}
+
+	data, err := json.Marshal(challenge)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal challenge: %w", err)
+	}
+
+	// Store challenge with 120s TTL
+	if err := redisClient.Set(ctx, key, data, 120*time.Second).Err(); err != nil {
+		return "", fmt.Errorf("failed to store challenge: %w", err)
+	}
+
+	// Add to each player's challenge queue (except initiator)
+	for _, playerID := range playerIDs {
+		if playerID == initiatorID {
+			continue // Don't send to self
+		}
+
+		recipientQueueKey := fmt.Sprintf("user:challenges:received:%s", playerID)
+		if err := redisClient.LPush(ctx, recipientQueueKey, challengeID).Err(); err != nil {
+			return "", fmt.Errorf("failed to add to recipient queue: %w", err)
+		}
+		redisClient.Expire(ctx, recipientQueueKey, 5*time.Minute)
+
+		// Publish notification to each player
+		channel := fmt.Sprintf("user:%s", playerID)
+		if err := redisClient.Publish(ctx, channel, "challenge_received").Err(); err != nil {
+			log.Printf("Failed to notify player %s: %v", playerID, err)
+		}
+	}
+
+	// Add to initiator's sent challenges queue
+	senderQueueKey := fmt.Sprintf("user:challenges:sent:%s", initiatorID)
+	if err := redisClient.LPush(ctx, senderQueueKey, challengeID).Err(); err != nil {
+		return "", fmt.Errorf("failed to add to sender queue: %w", err)
+	}
+	redisClient.Expire(ctx, senderQueueKey, 5*time.Minute)
+
+	log.Printf("✅ Multi-player challenge %s created for %d players", challengeID, len(playerIDs))
+
+	return challengeID, nil
+}
+
 // GetUserChallenges retrieves all active challenges received by a user
 func GetUserChallenges(email string) ([]Challenge, error) {
 	queueKey := fmt.Sprintf("user:challenges:received:%s", email)
@@ -352,5 +412,76 @@ func GetUserPresence(email string) (*UserPresence, error) {
 func PublishGameStarted(email, appID, gameID string) error {
 	channel := fmt.Sprintf("user:%s", email)
 	payload := fmt.Sprintf("game_started:%s:%s", appID, gameID)
+	return redisClient.Publish(ctx, channel, payload).Err()
+}
+
+// AcceptMultiPlayerChallenge adds a player to the accepted list
+// Returns: (readyToStart, error)
+func AcceptMultiPlayerChallenge(challengeID, acceptingUser string) (bool, error) {
+	key := fmt.Sprintf("challenge:%s", challengeID)
+
+	// Get current challenge
+	data, err := redisClient.Get(ctx, key).Result()
+	if err != nil {
+		return false, fmt.Errorf("challenge not found or expired")
+	}
+
+	var challengeData map[string]interface{}
+	if err := json.Unmarshal([]byte(data), &challengeData); err != nil {
+		return false, fmt.Errorf("failed to parse challenge: %w", err)
+	}
+
+	// Convert accepted array
+	acceptedRaw, _ := challengeData["accepted"].([]interface{})
+	accepted := []string{}
+	for _, a := range acceptedRaw {
+		if aStr, ok := a.(string); ok {
+			accepted = append(accepted, aStr)
+		}
+	}
+
+	// Check if user already accepted
+	for _, a := range accepted {
+		if a == acceptingUser {
+			return false, fmt.Errorf("user has already accepted this challenge")
+		}
+	}
+
+	// Add to accepted list
+	accepted = append(accepted, acceptingUser)
+	challengeData["accepted"] = accepted
+
+	minPlayers := int(challengeData["minPlayers"].(float64))
+
+	// Check if we have enough players to start
+	readyToStart := len(accepted) >= minPlayers
+
+	if readyToStart {
+		challengeData["status"] = "ready"
+	}
+
+	// Update challenge in Redis
+	newData, err := json.Marshal(challengeData)
+	if err != nil {
+		return false, fmt.Errorf("failed to marshal updated challenge: %w", err)
+	}
+
+	// Keep longer TTL if still waiting, shorter if ready
+	ttl := 120 * time.Second
+	if readyToStart {
+		ttl = 30 * time.Second // Give time for game creation
+	}
+
+	if err := redisClient.Set(ctx, key, newData, ttl).Err(); err != nil {
+		return false, fmt.Errorf("failed to update challenge: %w", err)
+	}
+
+	return readyToStart, nil
+}
+
+// PublishChallengeUpdate notifies the initiator about challenge acceptance progress
+func PublishChallengeUpdate(challenge *Challenge) error {
+	channel := fmt.Sprintf("user:%s", challenge.InitiatorID)
+	payload := fmt.Sprintf("challenge_update:%s", challenge.ID)
 	return redisClient.Publish(ctx, channel, payload).Err()
 }

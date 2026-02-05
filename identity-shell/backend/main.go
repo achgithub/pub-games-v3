@@ -77,6 +77,7 @@ func main() {
 	lobby.HandleFunc("/challenges", HandleGetChallenges).Methods("GET")
 	lobby.HandleFunc("/challenges/sent", HandleGetSentChallenges).Methods("GET")
 	lobby.HandleFunc("/challenge", HandleSendChallenge).Methods("POST")
+	lobby.HandleFunc("/challenge/multi", HandleSendMultiChallenge).Methods("POST") // Multi-player challenges
 	lobby.HandleFunc("/challenge/accept", HandleAcceptChallenge).Methods("POST")
 	lobby.HandleFunc("/challenge/reject", HandleRejectChallenge).Methods("POST")
 	lobby.HandleFunc("/stream", HandleLobbyStream).Methods("GET")

@@ -41,6 +41,8 @@ export interface AppDefinition {
   category: 'game' | 'utility' | 'admin';
   backendPort?: number;
   realtime?: RealtimeType;
+  minPlayers?: number; // Minimum players for multi-player games (e.g., 3)
+  maxPlayers?: number; // Maximum players for multi-player games (e.g., 6)
 }
 
 export interface AppsRegistry {
@@ -50,10 +52,20 @@ export interface AppsRegistry {
 // Challenge types
 export interface Challenge {
   id: string;
-  fromUser: string;
-  toUser: string;
+
+  // Legacy 2-player fields
+  fromUser?: string;
+  toUser?: string;
+
+  // Multi-player fields (NEW)
+  initiatorId?: string;
+  playerIds?: string[];
+  accepted?: string[];
+  minPlayers?: number;
+  maxPlayers?: number;
+
   appId: string;
-  status: 'pending' | 'accepted' | 'rejected' | 'expired';
+  status: 'pending' | 'accepted' | 'rejected' | 'expired' | 'ready' | 'active';
   createdAt: number; // Unix timestamp
   expiresAt: number; // Unix timestamp
 }

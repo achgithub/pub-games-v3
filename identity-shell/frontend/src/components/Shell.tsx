@@ -49,6 +49,7 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout }) => {
     sentChallenges,
     notification,
     sendChallenge,
+    sendMultiChallenge,
     acceptChallenge,
     rejectChallenge,
     fetchGameConfig,
@@ -142,11 +143,13 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout }) => {
                   apps={apps}
                   onAppClick={handleAppClick}
                   userEmail={user.email}
+                  userName={user.name}
                   onlineUsers={onlineUsers}
                   receivedChallenges={receivedChallenges}
                   sentChallenges={sentChallenges}
                   notification={notification}
                   onSendChallenge={sendChallenge}
+                  onSendMultiChallenge={sendMultiChallenge}
                   onAcceptChallenge={acceptChallenge}
                   onRejectChallenge={rejectChallenge}
                   fetchGameConfig={fetchGameConfig}

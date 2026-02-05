@@ -1,0 +1,154 @@
+.challenge-progress {
+  background: #2a2a3e;
+  border: 1px solid #444;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.challenge-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.challenge-progress-header h4 {
+  margin: 0;
+  color: #fff;
+  font-size: 1rem;
+}
+
+.challenge-status {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.challenge-status.waiting {
+  background: #4a4a2e;
+  color: #ffd700;
+}
+
+.challenge-status.ready {
+  background: #2e4a2e;
+  color: #90ee90;
+}
+
+.challenge-progress-bar {
+  height: 8px;
+  background: #1a1a2e;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.challenge-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  transition: width 0.3s ease;
+}
+
+.challenge-progress-fill.ready {
+  background: linear-gradient(90deg, #56ab2f, #a8e063);
+}
+
+.challenge-progress-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+}
+
+.stat-label {
+  color: #888;
+}
+
+.stat-value {
+  color: #ffd700;
+  font-weight: 600;
+}
+
+.stat-value.ready {
+  color: #90ee90;
+}
+
+.stat-secondary {
+  color: #666;
+  font-size: 0.85rem;
+}
+
+.challenge-player-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.challenge-player-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: #1e1e2e;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.challenge-player-item.accepted {
+  background: #2e3e2e;
+}
+
+.challenge-player-item.pending {
+  background: #2e2e3e;
+  opacity: 0.7;
+}
+
+.player-status-icon {
+  font-size: 1rem;
+  width: 20px;
+  text-align: center;
+}
+
+.challenge-player-item.accepted .player-status-icon {
+  color: #90ee90;
+}
+
+.challenge-player-item.pending .player-status-icon {
+  color: #666;
+}
+
+.player-name-text {
+  color: #fff;
+  font-size: 0.9rem;
+}
+
+.player-name-text em {
+  color: #888;
+  font-style: italic;
+  font-size: 0.85rem;
+  margin-left: 4px;
+}
+
+.challenge-ready-message {
+  margin-top: 12px;
+  padding: 10px;
+  background: #2e4a2e;
+  border: 1px solid #56ab2f;
+  border-radius: 6px;
+  color: #90ee90;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 500;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}

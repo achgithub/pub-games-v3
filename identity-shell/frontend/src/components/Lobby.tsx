@@ -2,17 +2,21 @@ import React, { useState, useEffect } from 'react';
 import './Lobby.css';
 import { AppDefinition, UserPresence, Challenge, ChallengeOptions, GameConfig } from '../types';
 import ChallengeModal from './ChallengeModal';
+import MultiPlayerChallengeModal from './MultiPlayerChallengeModal';
+import ChallengeProgress from './ChallengeProgress';
 
 interface LobbyProps {
   apps: AppDefinition[];
   onAppClick: (appId: string) => void;
   userEmail: string;
+  userName: string; // Add display name for multi-player modal
   onlineUsers: UserPresence[];
   receivedChallenges: Challenge[];
   sentChallenges: Challenge[];
   notification: string | null;
   onSendChallenge: (toUser: string, appId: string, options?: ChallengeOptions) => Promise<boolean>;
-  onAcceptChallenge: (challengeId: string) => Promise<boolean>;
+  onSendMultiChallenge: (playerIds: string[], appId: string, minPlayers: number, maxPlayers: number, options?: ChallengeOptions) => Promise<boolean>;
+  onAcceptChallenge: (challengeId: string, userId?: string) => Promise<boolean>;
   onRejectChallenge: (challengeId: string) => Promise<boolean>;
   fetchGameConfig: (appId: string, backendPort: number) => Promise<GameConfig | null>;
 }
@@ -21,11 +25,13 @@ const Lobby: React.FC<LobbyProps> = ({
   apps,
   onAppClick,
   userEmail,
+  userName,
   onlineUsers,
   receivedChallenges,
   sentChallenges,
   notification,
   onSendChallenge,
+  onSendMultiChallenge,
   onAcceptChallenge,
   onRejectChallenge,
   fetchGameConfig,
@@ -38,12 +44,24 @@ const Lobby: React.FC<LobbyProps> = ({
     targetUser: string;
   } | null>(null);
 
+  // Multi-player challenge modal state
+  const [multiPlayerModalOpen, setMultiPlayerModalOpen] = useState(false);
+
   // Get challengeable games (category: game, has realtime support, has backend port)
   const challengeableApps = apps.filter(app =>
     app.category === 'game' &&
     app.realtime &&
     app.realtime !== 'none' &&
     app.backendPort
+  );
+
+  // Split into 2-player and multi-player apps
+  const twoPlayerApps = challengeableApps.filter(app =>
+    !app.minPlayers || app.minPlayers <= 2
+  );
+
+  const multiPlayerApps = challengeableApps.filter(app =>
+    app.minPlayers && app.minPlayers > 2
   );
 
   useEffect(() => {
@@ -79,9 +97,28 @@ const Lobby: React.FC<LobbyProps> = ({
     }
   };
 
+  // Send multi-player challenge from modal
+  const handleConfirmMultiChallenge = async (appId: string, playerIds: string[], options: ChallengeOptions) => {
+    const app = apps.find(a => a.id === appId);
+    const minPlayers = app?.minPlayers || playerIds.length;
+    const maxPlayers = app?.maxPlayers || playerIds.length;
+
+    await onSendMultiChallenge(playerIds, appId, minPlayers, maxPlayers, options);
+    setMultiPlayerModalOpen(false);
+  };
+
   const handleAcceptChallenge = async (challengeId: string) => {
-    await onAcceptChallenge(challengeId);
-    // TODO: Navigate to game with challenge details
+    // Check if it's a multi-player challenge
+    const challenge = receivedChallenges.find(c => c.id === challengeId);
+    const isMultiPlayer = challenge?.playerIds && challenge.playerIds.length > 0;
+
+    if (isMultiPlayer) {
+      // Pass userId for multi-player challenges
+      await onAcceptChallenge(challengeId, userEmail);
+    } else {
+      // Legacy 2-player challenge
+      await onAcceptChallenge(challengeId);
+    }
   };
 
   const handleRejectChallenge = async (challengeId: string) => {
@@ -105,7 +142,17 @@ const Lobby: React.FC<LobbyProps> = ({
       <div className="lobby-sections">
         {/* Online Users Section */}
         <section className="lobby-section">
-          <h2>👥 Online Now ({onlineUsers.length})</h2>
+          <div className="section-header-with-action">
+            <h2>👥 Online Now ({onlineUsers.length})</h2>
+            {multiPlayerApps.length > 0 && onlineUsers.length >= 2 && (
+              <button
+                className="multi-challenge-btn"
+                onClick={() => setMultiPlayerModalOpen(true)}
+              >
+                🎮 Challenge Multiple
+              </button>
+            )}
+          </div>
           <div className="online-users">
             {onlineUsers.length === 0 ? (
               <p className="placeholder-text">No other users online</p>
@@ -163,30 +210,70 @@ const Lobby: React.FC<LobbyProps> = ({
               {activeReceivedChallenges.length === 0 ? (
                 <p className="placeholder-text">No incoming challenges</p>
               ) : (
-                activeReceivedChallenges.map((challenge) => (
-                  <div key={challenge.id} className="challenge-item">
-                    <div className="challenge-info">
-                      <strong>{challenge.fromUser}</strong> → <strong>{challenge.appId}</strong>
+                activeReceivedChallenges.map((challenge) => {
+                  const isMultiPlayer = challenge.playerIds && challenge.playerIds.length > 0;
+                  const appName = apps.find(a => a.id === challenge.appId)?.name || challenge.appId;
+
+                  // Multi-player challenge with progress display
+                  if (isMultiPlayer) {
+                    const allUsers = [
+                      { email: userEmail, displayName: userName, status: 'online' as const },
+                      ...onlineUsers
+                    ];
+
+                    return (
+                      <div key={challenge.id}>
+                        <ChallengeProgress
+                          challenge={challenge}
+                          users={allUsers}
+                          appName={appName}
+                        />
+                        {!challenge.accepted?.includes(userEmail) && (
+                          <div className="challenge-actions">
+                            <button
+                              className="accept-btn"
+                              onClick={() => handleAcceptChallenge(challenge.id)}
+                            >
+                              Accept
+                            </button>
+                            <button
+                              className="reject-btn"
+                              onClick={() => handleRejectChallenge(challenge.id)}
+                            >
+                              Decline
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  // Legacy 2-player challenge
+                  return (
+                    <div key={challenge.id} className="challenge-item">
+                      <div className="challenge-info">
+                        <strong>{challenge.fromUser}</strong> → <strong>{appName}</strong>
+                      </div>
+                      <div className="challenge-actions">
+                        <button
+                          className="accept-btn"
+                          onClick={() => handleAcceptChallenge(challenge.id)}
+                        >
+                          Accept
+                        </button>
+                        <button
+                          className="reject-btn"
+                          onClick={() => handleRejectChallenge(challenge.id)}
+                        >
+                          Decline
+                        </button>
+                      </div>
+                      <div className="challenge-timer">
+                        Expires in {Math.max(0, Math.floor((challenge.expiresAt * 1000 - Date.now()) / 1000))}s
+                      </div>
                     </div>
-                    <div className="challenge-actions">
-                      <button
-                        className="accept-btn"
-                        onClick={() => handleAcceptChallenge(challenge.id)}
-                      >
-                        Accept
-                      </button>
-                      <button
-                        className="reject-btn"
-                        onClick={() => handleRejectChallenge(challenge.id)}
-                      >
-                        Decline
-                      </button>
-                    </div>
-                    <div className="challenge-timer">
-                      Expires in {Math.max(0, Math.floor((challenge.expiresAt * 1000 - Date.now()) / 1000))}s
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
@@ -198,32 +285,67 @@ const Lobby: React.FC<LobbyProps> = ({
               {activeSentChallenges.length === 0 ? (
                 <p className="placeholder-text">No outgoing challenges</p>
               ) : (
-                activeSentChallenges.map((challenge) => (
-                  <div key={challenge.id} className="challenge-item sent">
-                    <div className="challenge-info">
-                      <strong>{challenge.toUser}</strong> → <strong>{challenge.appId}</strong>
+                activeSentChallenges.map((challenge) => {
+                  const isMultiPlayer = challenge.playerIds && challenge.playerIds.length > 0;
+                  const appName = apps.find(a => a.id === challenge.appId)?.name || challenge.appId;
+
+                  // Multi-player challenge with progress display
+                  if (isMultiPlayer) {
+                    const allUsers = [
+                      { email: userEmail, displayName: userName, status: 'online' as const },
+                      ...onlineUsers
+                    ];
+
+                    return (
+                      <ChallengeProgress
+                        key={challenge.id}
+                        challenge={challenge}
+                        users={allUsers}
+                        appName={appName}
+                      />
+                    );
+                  }
+
+                  // Legacy 2-player challenge
+                  return (
+                    <div key={challenge.id} className="challenge-item sent">
+                      <div className="challenge-info">
+                        <strong>{challenge.toUser}</strong> → <strong>{appName}</strong>
+                      </div>
+                      <div className="challenge-status">
+                        Waiting for response...
+                      </div>
+                      <div className="challenge-timer">
+                        Expires in {Math.max(0, Math.floor((challenge.expiresAt * 1000 - Date.now()) / 1000))}s
+                      </div>
                     </div>
-                    <div className="challenge-status">
-                      Waiting for response...
-                    </div>
-                    <div className="challenge-timer">
-                      Expires in {Math.max(0, Math.floor((challenge.expiresAt * 1000 - Date.now()) / 1000))}s
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
         </section>
       </div>
 
-      {/* Challenge Modal */}
+      {/* Challenge Modal (2-player) */}
       {challengeModal && (
         <ChallengeModal
           targetUser={challengeModal.targetUser}
-          challengeableApps={challengeableApps}
+          challengeableApps={twoPlayerApps}
           onConfirm={handleConfirmChallenge}
           onCancel={() => setChallengeModal(null)}
+          fetchGameConfig={fetchGameConfig}
+        />
+      )}
+
+      {/* Multi-Player Challenge Modal */}
+      {multiPlayerModalOpen && (
+        <MultiPlayerChallengeModal
+          currentUser={{ email: userEmail, displayName: userName, status: 'online' }}
+          onlineUsers={onlineUsers}
+          multiPlayerApps={multiPlayerApps}
+          onConfirm={handleConfirmMultiChallenge}
+          onCancel={() => setMultiPlayerModalOpen(false)}
           fetchGameConfig={fetchGameConfig}
         />
       )}

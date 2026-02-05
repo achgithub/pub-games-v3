@@ -163,15 +163,69 @@ export function useLobby(userEmail: string, options?: UseLobbyOptions) {
     }
   };
 
-  // Accept a challenge
-  const acceptChallenge = async (challengeId: string) => {
+  // Send a multi-player challenge
+  const sendMultiChallenge = async (
+    playerIds: string[],
+    appId: string,
+    minPlayers: number,
+    maxPlayers: number,
+    options?: ChallengeOptions
+  ) => {
     try {
-      await fetch(`${API_BASE}/lobby/challenge/accept?id=${challengeId}`, {
+      const response = await fetch(`${API_BASE}/lobby/challenge/multi`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          initiatorId: userEmail,
+          playerIds,
+          appId,
+          minPlayers,
+          maxPlayers,
+          options: options || {},
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        fetchOnlineUsers();
+        setNotification('Failed to send multi-player challenge');
+        setTimeout(() => setNotification(null), 3000);
+        throw new Error(error);
+      }
+
+      // Refresh sent challenges list
+      fetchSentChallenges();
+
+      // Show success notification
+      setNotification(`Challenge sent to ${playerIds.length} players!`);
+      setTimeout(() => setNotification(null), 2000);
+
+      return true;
+    } catch (err) {
+      console.error('Failed to send multi-player challenge:', err);
+      fetchOnlineUsers();
+      if (!notification) {
+        setNotification('Failed to send challenge');
+        setTimeout(() => setNotification(null), 3000);
+      }
+      return false;
+    }
+  };
+
+  // Accept a challenge (with optional userId for multi-player)
+  const acceptChallenge = async (challengeId: string, userId?: string) => {
+    try {
+      const url = userId
+        ? `${API_BASE}/lobby/challenge/accept?id=${challengeId}&userId=${encodeURIComponent(userId)}`
+        : `${API_BASE}/lobby/challenge/accept?id=${challengeId}`;
+
+      await fetch(url, {
         method: 'POST',
       });
 
       // Refresh challenges
       fetchChallenges();
+      fetchSentChallenges();
       return true;
     } catch (err) {
       console.error('Failed to accept challenge:', err);
@@ -208,6 +262,10 @@ export function useLobby(userEmail: string, options?: UseLobbyOptions) {
         fetchChallenges();
       } else if (data.type === 'accepted' || data.type === 'rejected') {
         // Refresh when challenge is responded to
+        fetchChallenges();
+        fetchSentChallenges();
+      } else if (data.type === 'challenge_update') {
+        // Multi-player challenge acceptance progress
         fetchChallenges();
         fetchSentChallenges();
       } else if (data.type === 'presence_update') {
@@ -281,6 +339,7 @@ export function useLobby(userEmail: string, options?: UseLobbyOptions) {
     notification,
     updatePresence,
     sendChallenge,
+    sendMultiChallenge,
     acceptChallenge,
     rejectChallenge,
     fetchGameConfig,
