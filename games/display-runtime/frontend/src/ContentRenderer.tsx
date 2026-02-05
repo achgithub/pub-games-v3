@@ -52,6 +52,7 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ item }) => {
               border: 'none'
             }}
             sandbox="allow-scripts allow-same-origin allow-forms"
+            onError={(e) => console.error('URL iframe failed to load', e)}
           />
         );
 
@@ -66,6 +67,7 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ item }) => {
               border: 'none'
             }}
             sandbox="allow-scripts allow-same-origin"
+            onError={(e) => console.error('Social feed iframe failed to load', e)}
           />
         );
 
@@ -80,6 +82,7 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ item }) => {
               border: 'none'
             }}
             sandbox="allow-scripts allow-same-origin"
+            onError={(e) => console.error('Leaderboard iframe failed to load', e)}
           />
         );
 
@@ -94,6 +97,7 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ item }) => {
               border: 'none'
             }}
             sandbox="allow-scripts allow-same-origin"
+            onError={(e) => console.error('Schedule iframe failed to load', e)}
           />
         );
 

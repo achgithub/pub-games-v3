@@ -119,7 +119,10 @@ const SlideshowPage: React.FC<SlideshowPageProps> = ({ token, onResetToken }) =>
     const currentItem = playlist.items[currentIndex];
     const duration = (currentItem.duration_seconds || 10) * 1000;
 
+    console.log(`Showing item ${currentIndex + 1}/${playlist.items.length}: ${currentItem.title} (${currentItem.content_type}) for ${duration}ms`);
+
     const timer = setTimeout(() => {
+      console.log(`Advancing from item ${currentIndex + 1} to ${((currentIndex + 1) % playlist.items.length) + 1}`);
       setCurrentIndex((prev) => (prev + 1) % playlist.items.length);
     }, duration);
 
@@ -213,7 +216,21 @@ const SlideshowPage: React.FC<SlideshowPageProps> = ({ token, onResetToken }) =>
 
   return (
     <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden' }}>
-      <ContentRenderer item={currentItem} />
+      {currentItem ? (
+        <ContentRenderer item={currentItem} />
+      ) : (
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          width: '100%',
+          height: '100%',
+          backgroundColor: '#1a1a1a',
+          color: '#fff'
+        }}>
+          Loading content...
+        </div>
+      )}
 
       {/* Control bar (shows on mouse move) */}
       {showControls && (
