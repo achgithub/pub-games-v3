@@ -1,9 +1,9 @@
 # PubGames V3 - Shell Architecture
 
-**Status**: 🟢 Core Games & Season Scheduler Complete
+**Status**: 🟢 Core Games, Season Scheduler & Display System Complete
 **Repository**: https://github.com/achgithub/pub-games-v3
 **Created**: January 21, 2026
-**Last Updated**: February 2, 2026
+**Last Updated**: February 5, 2026
 
 📋 **Documentation**: [CLAUDE.md](./CLAUDE.md) (index) | [QUICKSTART.md](./QUICKSTART.md) | [TODO.md](./TODO.md) | [docs/](./docs/)
 
@@ -88,6 +88,8 @@ PubGames V3 introduces a **shell architecture** where the Identity Service acts 
 |-----|------|-----------|--------|
 | Leaderboard | 5030 | None | ✅ Working |
 | Season Scheduler | 5040 | None | ✅ Working |
+| Display Admin | 5050 | None | ✅ Working |
+| Display Runtime | 5051 | Auto-refresh | ✅ Working |
 | Smoke Test | 5010 | None | ✅ Working |
 | Sweepstakes | 5020 | None | ⏳ Legacy |
 
@@ -159,6 +161,8 @@ Admin Tools & Utilities (No real-time):
   5020  - Sweepstakes (legacy)
   5030  - Leaderboard
   5040  - Season Scheduler (schedule management)
+  5050  - Display Admin (TV content management)
+  5051  - Display Runtime (TV slideshow app)
 ```
 
 ---
@@ -199,7 +203,21 @@ Admin Tools & Utilities (No real-time):
 - [x] Save and export functionality
 - [x] PostgreSQL persistence with 30-day auto-cleanup
 
-### Phase 6: Additional Games ⬅️ **WE ARE HERE**
+### Phase 6: Display System ✅ COMPLETE
+- [x] Display Admin backend (Go, PostgreSQL, QR codes)
+- [x] Display Admin frontend (TypeScript React)
+- [x] Content management (images, URLs, announcements, leaderboard, schedule)
+- [x] Playlist management (ordered sequences with durations)
+- [x] Display management (token generation, QR codes)
+- [x] Scheduling system (date/time/day filters, priority)
+- [x] Display Runtime backend (static file server)
+- [x] Display Runtime frontend (token auth, auto-rotation, fullscreen)
+- [x] All 6 content types supported
+- [x] Safari compatibility fixes
+- [x] Service script integration
+- [x] Seed script for testing (2 TVs with realistic content)
+
+### Phase 7: Additional Games ⬅️ **WE ARE HERE**
 - [ ] Migrate Sweepstakes from V2
 - [ ] Hangman game
 - [ ] Quiz app
@@ -214,17 +232,40 @@ Admin Tools & Utilities (No real-time):
 - PostgreSQL 13+ (port 5555)
 - Redis 6+ (port 6379)
 
-### Running the Shell
+### Quick Start (Recommended)
+
+Use the automated service scripts:
+
+```bash
+# Start all services (auto-builds frontends if needed)
+./start_services.sh
+
+# Check status
+./status_services.sh
+
+# Stop all services
+./stop_services.sh
+
+# View logs
+tail -f logs/<service>.log
+```
+
+The start script will:
+- Check if frontends need rebuilding
+- Build frontends automatically if source changed
+- Start all backends on correct ports
+- Show access URLs when complete
+
+### Manual Start (Individual Apps)
+
+**Identity Shell**:
 ```bash
 cd identity-shell/backend
 go run *.go &
-
-cd ../frontend
-npm install && npm run build
 # Access at http://localhost:3001
 ```
 
-### Running Tic-Tac-Toe
+**Tic-Tac-Toe**:
 ```bash
 cd games/tic-tac-toe/frontend
 npm install && npm run build
@@ -233,6 +274,18 @@ cp -r build/* ../backend/static/
 cd ../backend
 go run *.go
 # Serves on http://localhost:4001
+```
+
+**Display System**:
+```bash
+# Display Admin (management UI)
+cd games/display-admin/backend
+./seed-displays.sh  # Optional: create 2 test TVs with content
+go run *.go         # Port 5050
+
+# Display Runtime (TV app)
+cd games/display-runtime/backend
+go run *.go         # Port 5051
 ```
 
 ---

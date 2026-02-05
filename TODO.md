@@ -1,6 +1,6 @@
 # PubGames V3 - TODO List
 
-**Last Updated**: February 3, 2026
+**Last Updated**: February 5, 2026
 
 ---
 
@@ -173,18 +173,26 @@ Test these on Pi after deployment:
   - Team support (players can join teams)
   - Display integration (show questions on pub screens via SSE)
 
-### Display & Presentation System
-- [ ] **Screen Display / Slideshow Application**
-  - Dedicated display app for pub screens/TVs
-  - URL embedding capabilities (show external content)
-  - Leaderboard display (pull from game databases)
-  - Upcoming games schedule
-  - Active games in progress
-  - App-driven content (games can push updates to display)
-  - Auto-rotation between slides
-  - Remote control/configuration
+### Display & Presentation System ✅ COMPLETE (Feb 5, 2026)
 
-- [ ] **Social Media Feed Aggregator**
+- [x] **Screen Display / Slideshow Application** ✅
+  - Dedicated display app for pub screens/TVs (Display Runtime - port 5051)
+  - URL embedding capabilities (iframe support)
+  - Leaderboard display (embedded internal app)
+  - Upcoming games schedule (embedded scheduler app)
+  - Active games in progress (via URL content type)
+  - Auto-rotation between slides (configurable durations)
+  - Remote control/configuration (Display Admin - port 5050)
+  - Token-based authentication for TVs
+  - QR code generation for easy TV setup
+  - 6 content types: images, URLs, social feeds, leaderboard, schedule, announcements
+  - Playlist management with ordering and priorities
+  - Scheduling system (date/time/day filters)
+  - Safari compatibility tested
+  - Service script integration
+
+- [ ] **Social Media Feed Aggregator** (Future enhancement)
+  - Can be implemented using URL/social_feed content types
   - Retrieve pub-related social media posts
   - Support for X/Twitter, Instagram, Facebook, TikTok
   - Tag/hashtag filtering (pub-specific tags)
