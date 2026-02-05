@@ -106,14 +106,14 @@ frontend/
 
 ### API Endpoints (35 total)
 
-All require admin authentication except `/api/display/by-token/:token`.
+All require admin authentication except public TV endpoints.
 
 **Displays**: GET, POST, PUT, DELETE `/api/displays`, `/api/displays/:id/qr`, `/api/displays/:id/url`
 **Content**: GET, POST, PUT, DELETE `/api/content`, `/api/content/upload-image`
 **Playlists**: GET, POST, PUT, DELETE `/api/playlists`, `/api/playlists/:id/items`, `/api/playlists/:id/reorder`
 **Assignments**: GET, POST, PUT, DELETE `/api/assignments`, `/api/assignments/display/:displayId`
-**Preview**: GET `/api/preview/playlist/:id`, `/api/preview/display/:id`
-**Runtime**: GET `/api/display/by-token/:token` (no auth)
+**Preview**: GET `/api/preview/playlist/:id` (admin), GET `/api/preview/display/:id` (public)
+**Runtime**: GET `/api/display/by-token/:token` (public)
 
 ## Setup on Pi
 

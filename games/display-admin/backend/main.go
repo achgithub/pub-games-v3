@@ -70,9 +70,9 @@ func main() {
 	r.HandleFunc("/api/assignments/{id}", AuthMiddleware(AdminMiddleware(handleUpdateAssignment))).Methods("PUT")
 	r.HandleFunc("/api/assignments/{id}", AuthMiddleware(AdminMiddleware(handleDeleteAssignment))).Methods("DELETE")
 
-	// Preview
+	// Preview (playlist preview requires auth, display preview is public for TVs)
 	r.HandleFunc("/api/preview/playlist/{id}", AuthMiddleware(AdminMiddleware(handlePreviewPlaylist))).Methods("GET")
-	r.HandleFunc("/api/preview/display/{id}", AuthMiddleware(AdminMiddleware(handlePreviewDisplay))).Methods("GET")
+	r.HandleFunc("/api/preview/display/{id}", handlePreviewDisplay).Methods("GET")
 
 	// Display Runtime API (consumed by TVs - no authentication)
 	r.HandleFunc("/api/display/by-token/{token}", handleGetDisplayByToken).Methods("GET")
