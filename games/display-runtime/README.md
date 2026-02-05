@@ -157,6 +157,20 @@ Server starts on port 5051. Access at `http://192.168.1.45:5051`
 
 ## Usage
 
+### Quick Test with Sample Data
+
+For testing, seed Display Admin with demo data:
+```bash
+cd ~/pub-games-v3/games/display-admin/backend
+./seed-displays.sh
+```
+
+This creates 2 complete displays with tokens:
+- **Main Bar TV**: 6 items, 79s rotation
+- **Lounge TV**: 5 items, 85s rotation
+
+Tokens are printed at the end. Use them in Display Runtime to test immediately.
+
 ### First Time Setup
 1. Admin creates display in Display Admin
 2. Admin generates QR code for display

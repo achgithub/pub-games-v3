@@ -158,6 +158,8 @@ go run *.go
 Server starts on port 5050. Access at `http://192.168.1.45:5050`
 
 ### Testing
+
+**Option 1: Basic API Tests**
 ```bash
 # Edit test-backend.sh if needed (update admin token)
 ./test-backend.sh
@@ -174,6 +176,24 @@ All 10 tests should pass:
 8. Get playlist with content
 9. Assign playlist to display
 10. Preview display (scheduling logic)
+
+**Option 2: Seed Demo Data (Recommended for testing Display Runtime)**
+```bash
+# Creates 2 displays with content and playlists
+./seed-displays.sh
+```
+
+This creates:
+- **2 Displays**: Main Bar TV + Lounge TV
+- **8 Content Items**: Announcements, leaderboard, schedule, URL
+- **2 Playlists**: Different rotations for each display
+- **QR Codes**: Saved as main-bar-tv-qr.png and lounge-tv-qr.png
+- **Assignments**: Playlists assigned to displays
+
+After seeding:
+- Main Bar TV: 6 items, 79 second rotation
+- Lounge TV: 5 items, 85 second rotation
+- Tokens printed to test Display Runtime (port 5051)
 
 ## Dependencies
 
