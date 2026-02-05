@@ -83,6 +83,8 @@ kill_port 5010 "Smoke Test"
 kill_port 4031 "Sweepstakes"
 kill_port 5030 "Leaderboard"
 kill_port 5040 "Season Scheduler"
+kill_port 5050 "Display Admin"
+kill_port 5051 "Display Runtime"
 
 # Kill remaining Go processes from this project
 pkill -f "go run.*pub-games-v3" 2>/dev/null

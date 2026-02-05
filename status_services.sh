@@ -48,6 +48,8 @@ check_service "Smoke Test" 5010 && running=$((running + 1))
 check_service "Sweepstakes" 4031 && running=$((running + 1))
 check_service "Leaderboard" 5030 && running=$((running + 1))
 check_service "Season Scheduler" 5040 && running=$((running + 1))
+check_service "Display Admin" 5050 && running=$((running + 1))
+check_service "Display Runtime" 5051 && running=$((running + 1))
 
 echo ""
 echo "========================================"
@@ -77,6 +79,12 @@ if [ $running -gt 0 ]; then
     fi
     if lsof -Pi :5040 -sTCP:LISTEN -t >/dev/null 2>&1; then
         echo -e "  ${BLUE}Season Scheduler:${NC}  http://localhost:5040"
+    fi
+    if lsof -Pi :5050 -sTCP:LISTEN -t >/dev/null 2>&1; then
+        echo -e "  ${BLUE}Display Admin:${NC}     http://localhost:5050"
+    fi
+    if lsof -Pi :5051 -sTCP:LISTEN -t >/dev/null 2>&1; then
+        echo -e "  ${BLUE}Display Runtime:${NC}   http://localhost:5051"
     fi
     echo ""
 fi

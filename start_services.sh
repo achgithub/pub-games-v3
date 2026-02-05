@@ -234,6 +234,24 @@ if [ -d "$BASE_DIR/games/season-scheduler/backend" ]; then
     echo ""
 fi
 
+# Start Display Admin (optional)
+if [ -d "$BASE_DIR/games/display-admin/backend" ]; then
+    start_service "Display Admin" \
+        "$BASE_DIR/games/display-admin/backend" \
+        "$BASE_DIR/games/display-admin/frontend" \
+        5050
+    echo ""
+fi
+
+# Start Display Runtime (optional)
+if [ -d "$BASE_DIR/games/display-runtime/backend" ]; then
+    start_service "Display Runtime" \
+        "$BASE_DIR/games/display-runtime/backend" \
+        "$BASE_DIR/games/display-runtime/frontend" \
+        5051
+    echo ""
+fi
+
 echo "========================================"
 echo -e "${GREEN}✓ Services started${NC}"
 echo ""
@@ -256,6 +274,12 @@ if lsof -Pi :4031 -sTCP:LISTEN -t >/dev/null 2>&1; then
 fi
 if lsof -Pi :5040 -sTCP:LISTEN -t >/dev/null 2>&1; then
     echo -e "  ${BLUE}Season Scheduler:${NC} http://localhost:5040"
+fi
+if lsof -Pi :5050 -sTCP:LISTEN -t >/dev/null 2>&1; then
+    echo -e "  ${BLUE}Display Admin:${NC}    http://localhost:5050"
+fi
+if lsof -Pi :5051 -sTCP:LISTEN -t >/dev/null 2>&1; then
+    echo -e "  ${BLUE}Display Runtime:${NC}  http://localhost:5051"
 fi
 echo ""
 echo "Commands:"
