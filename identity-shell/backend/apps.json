@@ -31,6 +31,19 @@
       "realtime": "sse"
     },
     {
+      "id": "spoof",
+      "name": "Spoof",
+      "icon": "🪙",
+      "type": "iframe",
+      "description": "Guess the total coins - 3-6 player coin game",
+      "category": "game",
+      "url": "http://{host}:4051",
+      "backendPort": 4051,
+      "realtime": "sse",
+      "minPlayers": 3,
+      "maxPlayers": 6
+    },
+    {
       "id": "smoke-test",
       "name": "Smoke Test",
       "icon": "🧪",
