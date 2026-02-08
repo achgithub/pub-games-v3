@@ -2,8 +2,8 @@
 
 **Last Updated**: 2026-02-08
 **Session ID**: giggly-inventing-pixel (implementation session)
-**Current Phase**: REVISED PLAN - Identity-Shell Foundation First
-**Status**: Phase 2 Complete, Planning Identity Improvements
+**Current Phase**: Phase 0 - Database Rename (NEXT SESSION)
+**Status**: Phase 2 Complete, Ready for Database Rename
 
 ## Completed
 - ✅ Phase 1: Planning complete (plan saved in .claude/plans/)
@@ -49,7 +49,49 @@ Only AFTER foundation complete, migrate one of each app category:
 **Don't lock down identity until all 5 app types migrated** - each reveals needed improvements.
 
 ## Current Task
-NEXT: Start Phase A (User Management & Roles)
+NEXT: Phase 0 - Database Rename (do this BEFORE Phase A)
+
+### Phase 0: Database Rename (Hybrid Approach - Database Now, Directory Later)
+
+**Decided**: Rename database NOW before building foundation. Directory/repo rename later (cosmetic).
+
+**Database Changes**:
+- `pubgames` DB → `activity_hub`
+- `pubgames` user → `activityhub` (same password)
+- App databases: Keep as-is (`tictactoe_db`, `dots_db`, etc.)
+- New admin databases: `activity_hub_setup_admin`, `activity_hub_game_admin`
+
+**Steps (On Pi)**:
+1. Dump current database: `pg_dump -U pubgames -p 5555 pubgames > pubgames_backup.sql`
+2. Create new database: `psql -U pubgames -p 5555 -d postgres -c "CREATE DATABASE activity_hub;"`
+3. Create new user: `psql -U pubgames -p 5555 -d postgres -c "CREATE USER activityhub WITH PASSWORD 'pubgames';"`
+4. Grant permissions: `psql -U pubgames -p 5555 -d postgres -c "GRANT ALL PRIVILEGES ON DATABASE activity_hub TO activityhub;"`
+5. Restore data: `psql -U activityhub -p 5555 activity_hub < pubgames_backup.sql`
+6. Test with identity-shell
+7. Update all apps if identity-shell works
+8. Drop old pubgames DB when confirmed
+
+**Code Changes (On Mac)**:
+1. Update connection strings in:
+   - identity-shell/backend
+   - games/tic-tac-toe/backend
+   - games/dots/backend
+   - games/spoof/backend
+   - games/sweepstakes/backend
+   - games/season-scheduler/backend
+   - games/display-admin/backend
+   - games/display-runtime/backend (if uses identity DB)
+2. Update lib/activity-hub-common/database/postgres.go (InitIdentityDatabase)
+3. Update documentation (CLAUDE.md, docs/)
+4. Commit and push
+
+**After Phase 0 Complete**:
+- Proceed to Phase A (User Management & Roles)
+- New admin apps will use correct DB names from the start
+
+**Directory/Repo Rename (LATER)**:
+- `pub-games-v3` → `activity-hub` (do after foundation stable)
+- Less urgent, cosmetic change
 
 ## Notes
 - Shared library (lib/activity-hub-common/) ready but won't be used until apps migrate
