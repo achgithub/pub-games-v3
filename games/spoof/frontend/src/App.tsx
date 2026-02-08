@@ -191,6 +191,7 @@ function App() {
     );
   }
 
+  const isActive = !currentPlayer.isEliminated;
   const activePlayers = gameState.players.filter(p => !p.isEliminated);
   const maxPossibleGuess = activePlayers.reduce((sum, p) => sum + p.coinsRemaining, 0);
 
@@ -203,7 +204,7 @@ function App() {
 
       <div className="game-container">
         {/* Game Status */}
-        <div className="status-banner status-{gameState.status}">
+        <div className={`status-banner status-${gameState.status}`}>
           {gameState.status === 'coin_selection' && 'Select your coins (0-3)'}
           {gameState.status === 'guessing' && 'Make your guesses!'}
           {gameState.status === 'reveal' && 'Round Complete!'}
@@ -222,20 +223,20 @@ function App() {
         <div className="players-container">
           {gameState.players.map((player) => {
             const isCurrentUser = player.id === userId;
-            const isActive = !player.isEliminated;
+            const playerActive = !player.isEliminated;
 
             return (
               <div
                 key={player.id}
                 className={`player-card ${isCurrentUser ? 'current-user' : ''} ${
-                  !isActive ? 'eliminated' : ''
+                  !playerActive ? 'eliminated' : ''
                 }`}
               >
                 <div className="player-header">
                   <span className="player-name">
                     {player.name} {isCurrentUser && '(You)'}
                   </span>
-                  {!isActive && <span className="eliminated-badge">Eliminated</span>}
+                  {!playerActive && <span className="eliminated-badge">Eliminated</span>}
                 </div>
 
                 <div className="player-stats">
