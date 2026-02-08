@@ -246,11 +246,11 @@ const MultiPlayerChallengeModal: React.FC<MultiPlayerChallengeModalProps> = ({
               </div>
 
               <div className="player-count-status">
-                Selected: {selectedPlayers.length} / {selectedApp.maxPlayers}
+                Selected: {selectedPlayers.length} / {selectedApp.maxPlayers || 10}
                 {!isValidPlayerCount() && (
                   <span className="player-count-error">
-                    {selectedPlayers.length < selectedApp.minPlayers
-                      ? ` (need ${selectedApp.minPlayers - selectedPlayers.length} more)`
+                    {selectedPlayers.length < (selectedApp.minPlayers || 2)
+                      ? ` (need ${(selectedApp.minPlayers || 2) - selectedPlayers.length} more)`
                       : ' (too many players)'}
                   </span>
                 )}
