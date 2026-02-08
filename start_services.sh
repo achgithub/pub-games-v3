@@ -252,6 +252,15 @@ if [ -d "$BASE_DIR/games/display-runtime/backend" ]; then
     echo ""
 fi
 
+# Start Spoof (optional)
+if [ -d "$BASE_DIR/games/spoof/backend" ]; then
+    start_service "Spoof" \
+        "$BASE_DIR/games/spoof/backend" \
+        "$BASE_DIR/games/spoof/frontend" \
+        4051
+    echo ""
+fi
+
 echo "========================================"
 echo -e "${GREEN}✓ Services started${NC}"
 echo ""
@@ -280,6 +289,9 @@ if lsof -Pi :5050 -sTCP:LISTEN -t >/dev/null 2>&1; then
 fi
 if lsof -Pi :5051 -sTCP:LISTEN -t >/dev/null 2>&1; then
     echo -e "  ${BLUE}Display Runtime:${NC}  http://localhost:5051"
+fi
+if lsof -Pi :4051 -sTCP:LISTEN -t >/dev/null 2>&1; then
+    echo -e "  ${BLUE}Spoof:${NC}            http://localhost:4051"
 fi
 echo ""
 echo "Commands:"

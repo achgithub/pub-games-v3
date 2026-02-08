@@ -50,6 +50,7 @@ check_service "Leaderboard" 5030 && running=$((running + 1))
 check_service "Season Scheduler" 5040 && running=$((running + 1))
 check_service "Display Admin" 5050 && running=$((running + 1))
 check_service "Display Runtime" 5051 && running=$((running + 1))
+check_service "Spoof" 4051 && running=$((running + 1))
 
 echo ""
 echo "========================================"
@@ -85,6 +86,9 @@ if [ $running -gt 0 ]; then
     fi
     if lsof -Pi :5051 -sTCP:LISTEN -t >/dev/null 2>&1; then
         echo -e "  ${BLUE}Display Runtime:${NC}   http://localhost:5051"
+    fi
+    if lsof -Pi :4051 -sTCP:LISTEN -t >/dev/null 2>&1; then
+        echo -e "  ${BLUE}Spoof:${NC}             http://localhost:4051"
     fi
     echo ""
 fi
