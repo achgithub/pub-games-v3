@@ -2,34 +2,59 @@
 
 **Last Updated**: 2026-02-08
 **Session ID**: giggly-inventing-pixel (implementation session)
-**Current Phase**: Phase 2 - Shared Package Scaffolding
-**Status**: COMPLETE ✅
+**Current Phase**: REVISED PLAN - Identity-Shell Foundation First
+**Status**: Phase 2 Complete, Planning Identity Improvements
 
 ## Completed
 - ✅ Phase 1: Planning complete (plan saved in .claude/plans/)
 - ✅ Phase 2: Shared package scaffolding COMPLETE
-  - ✅ Created session state tracking files (.claude/SESSION-STATE.md, APP-MIGRATION-STATUS.json)
-  - ✅ Created Go module structure (go.mod)
-  - ✅ Created package directories (auth, database, redis, sse, http, logging, config)
-  - ✅ Written comprehensive README with import examples
-  - ✅ Created auth package (middleware.go, types.go, auth_test.go)
-  - ✅ Created database package (postgres.go, database_test.go)
-  - ✅ Created redis package (client.go, redis_test.go)
-  - ✅ Created sse package (handler.go, events.go, sse_test.go)
-  - ✅ Created http package (responses.go, middleware.go, http_test.go)
-  - ✅ Created logging package (logger.go, logging_test.go)
-  - ✅ Created config package (env.go, config_test.go)
-  - ✅ Created CHANGELOG.md for version tracking
+  - ✅ Created lib/activity-hub-common/ with 7 packages (1,559 lines)
+  - ✅ All packages build and pass tests on Pi
+  - ✅ Fixed module path to use achgithub username
+  - ✅ go.sum generated and committed
 
-## In Progress
-- Nothing currently
+## REVISED STRATEGY (Agreed 2026-02-08)
+**Key Insight**: Can't migrate apps without solid identity-shell foundation.
+**New Order**: Fix identity-shell FIRST, THEN migrate apps
 
-## Next Steps
-1. ✅ READY: Commit Phase 2 to Git
-2. NEXT: Test that packages build on Pi (`cd lib/activity-hub-common && go test ./...`)
-3. NEXT: Move to Phase 3 (implement packages by extracting from tic-tac-toe)
-4. FUTURE: Phase 4 (pilot migration - tic-tac-toe)
-5. FUTURE: Phase 5 (database-driven app registry)
+### Foundation Work (Do First)
+1. **Phase A: User Management & Roles**
+   - Add two admin roles: `setup_admin` (system config) and `game_admin` (activity management)
+   - Update identity-shell to check roles
+   - Show/hide apps based on user roles
+   - User home screen customization (favorites, ordering)
+
+2. **Phase C: Create Admin Mini-Apps**
+   - Setup Admin App (system configuration, only `setup_admin` can see)
+   - Game Admin App (activity management, only `game_admin` can see)
+   - Both are mini-apps shown on home screen based on roles
+
+3. **Phase B: Database-Driven App Registry**
+   - Migrate apps.json → PostgreSQL
+   - Add role requirements per app
+   - Admin endpoints for app management
+   - User preferences (favorites, ordering)
+
+### Migration Strategy (One of Each Type)
+Only AFTER foundation complete, migrate one of each app category:
+
+| App Type | Example | What It Tests |
+|----------|---------|---------------|
+| Static | TBD | Basic shared library integration |
+| Simple Admin | Move admin features → Game Admin App | Role-based access |
+| 2-Player Game | Tic-Tac-Toe | SSE, Redis, turn-based logic |
+| Multi-Player Game | Spoof | Multi-user coordination |
+| Utility/Scheduler | Season Scheduler (needs rename) | Different pattern |
+
+**Don't lock down identity until all 5 app types migrated** - each reveals needed improvements.
+
+## Current Task
+NEXT: Start Phase A (User Management & Roles)
+
+## Notes
+- Shared library (lib/activity-hub-common/) ready but won't be used until apps migrate
+- SSL/TLS deferred (easy to add later)
+- Season Scheduler needs better name (background jobs/scheduling utility)
 
 ## Notes
 - Working on Mac (code editing, Git operations)
