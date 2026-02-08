@@ -26,10 +26,10 @@ module your-app
 
 go 1.25
 
-require github.com/yourusername/activity-hub-common v0.1.0
+require github.com/achgithub/activity-hub-common v0.1.0
 
 // Use local version during development
-replace github.com/yourusername/activity-hub-common => ../../../lib/activity-hub-common
+replace github.com/achgithub/activity-hub-common => ../../../lib/activity-hub-common
 ```
 
 ### After Publishing (GitHub)
@@ -38,7 +38,7 @@ Once the library is published and tagged:
 
 ```bash
 cd your-app/backend
-go get github.com/yourusername/activity-hub-common@v1.0.0
+go get github.com/achgithub/activity-hub-common@v1.0.0
 ```
 
 ## Usage Examples
@@ -47,8 +47,8 @@ go get github.com/yourusername/activity-hub-common@v1.0.0
 
 ```go
 import (
-    "github.com/yourusername/activity-hub-common/auth"
-    "github.com/yourusername/activity-hub-common/database"
+    "github.com/achgithub/activity-hub-common/auth"
+    "github.com/achgithub/activity-hub-common/database"
 )
 
 func main() {
@@ -84,7 +84,7 @@ func handleCreateGame(w http.ResponseWriter, r *http.Request) {
 ### Database
 
 ```go
-import "github.com/yourusername/activity-hub-common/database"
+import "github.com/achgithub/activity-hub-common/database"
 
 func main() {
     // Initialize app-specific database
@@ -112,7 +112,7 @@ func main() {
 
 ```go
 import (
-    "github.com/yourusername/activity-hub-common/redis"
+    "github.com/achgithub/activity-hub-common/redis"
     "time"
 )
 
@@ -141,8 +141,8 @@ func main() {
 
 ```go
 import (
-    "github.com/yourusername/activity-hub-common/sse"
-    "github.com/yourusername/activity-hub-common/redis"
+    "github.com/achgithub/activity-hub-common/sse"
+    "github.com/achgithub/activity-hub-common/redis"
 )
 
 func handleGameStream(w http.ResponseWriter, r *http.Request) {
@@ -175,7 +175,7 @@ func handleGameStream(w http.ResponseWriter, r *http.Request) {
 ### HTTP Utilities
 
 ```go
-import "github.com/yourusername/activity-hub-common/http"
+import "github.com/achgithub/activity-hub-common/http"
 
 func handleCreateGame(w http.ResponseWriter, r *http.Request) {
     var req CreateGameRequest
@@ -208,13 +208,13 @@ Apps can upgrade independently:
 
 ```bash
 # Upgrade to latest v1.x (safe, backward compatible)
-go get github.com/yourusername/activity-hub-common@v1
+go get github.com/achgithub/activity-hub-common@v1
 
 # Upgrade to specific version
-go get github.com/yourusername/activity-hub-common@v1.2.0
+go get github.com/achgithub/activity-hub-common@v1.2.0
 
 # Upgrade to v2 (may require code changes)
-go get github.com/yourusername/activity-hub-common@v2
+go get github.com/achgithub/activity-hub-common@v2
 ```
 
 ## Development Workflow
@@ -263,15 +263,15 @@ go test -tags=integration ./...
 Generate and view documentation:
 
 ```bash
-go doc -all github.com/yourusername/activity-hub-common/auth
-go doc -all github.com/yourusername/activity-hub-common/database
+go doc -all github.com/achgithub/activity-hub-common/auth
+go doc -all github.com/achgithub/activity-hub-common/database
 ```
 
 Or browse with godoc server:
 
 ```bash
 godoc -http=:6060
-# Visit http://localhost:6060/pkg/github.com/yourusername/activity-hub-common/
+# Visit http://localhost:6060/pkg/github.com/achgithub/activity-hub-common/
 ```
 
 ## Migration Status
@@ -328,6 +328,6 @@ Internal use only (Activity Hub platform).
 
 For questions or issues:
 1. Check this README first
-2. Review package godoc: `go doc github.com/yourusername/activity-hub-common/<package>`
+2. Review package godoc: `go doc github.com/achgithub/activity-hub-common/<package>`
 3. Look at existing app implementations (tic-tac-toe is the reference)
 4. Check `.claude/SESSION-STATE.md` for current development status

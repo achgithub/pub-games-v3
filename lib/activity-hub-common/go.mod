@@ -1,4 +1,4 @@
-module github.com/yourusername/activity-hub-common
+module github.com/achgithub/activity-hub-common
 
 go 1.25
 
