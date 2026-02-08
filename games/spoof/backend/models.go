@@ -105,12 +105,20 @@ func (g *SpoofGame) GetPlayer(playerID string) *PlayerInfo {
 	return nil
 }
 
-// GetActivePlayers returns players who are not eliminated
+// GetActivePlayers returns players who are not eliminated, sorted by Order
 func (g *SpoofGame) GetActivePlayers() []PlayerInfo {
 	active := []PlayerInfo{}
 	for _, p := range g.Players {
 		if !p.IsEliminated {
 			active = append(active, p)
+		}
+	}
+	// Sort by Order field to maintain turn order
+	for i := 0; i < len(active)-1; i++ {
+		for j := i + 1; j < len(active); j++ {
+			if active[i].Order > active[j].Order {
+				active[i], active[j] = active[j], active[i]
+			}
 		}
 	}
 	return active

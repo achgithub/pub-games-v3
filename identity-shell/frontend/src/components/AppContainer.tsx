@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import './AppContainer.css';
 import { AppDefinition, User } from '../types';
@@ -18,6 +18,20 @@ const AppContainer: React.FC<AppContainerProps> = ({ apps, user }) => {
   const gameId = searchParams.get('gameId') || undefined;
 
   const app = apps.find((a) => a.id === appId);
+
+  // Listen for messages from iframe apps (e.g., "close app" requests)
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      // Security: verify origin if needed (for now, accept all)
+      if (event.data && event.data.type === 'CLOSE_APP') {
+        console.log('Received CLOSE_APP message from iframe, returning to lobby');
+        navigate('/lobby');
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [navigate]);
 
   if (!app) {
     return (

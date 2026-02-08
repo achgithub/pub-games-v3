@@ -242,10 +242,15 @@ func handleMakeGuess(w http.ResponseWriter, r *http.Request) {
 	// For round robin mode, enforce turn order
 	if game.GuessingMode == "roundrobin" {
 		currentPlayer := game.GetCurrentGuessingPlayer()
-		if currentPlayer == nil || currentPlayer.ID != req.PlayerID {
-			respondError(w, "Not your turn to guess", http.StatusBadRequest)
+		log.Printf("Round robin mode: current turn player=%v, requesting player=%s", currentPlayer, req.PlayerID)
+		if currentPlayer == nil {
+			log.Printf("ERROR: Could not determine current player in round robin mode")
+		} else if currentPlayer.ID != req.PlayerID {
+			respondError(w, fmt.Sprintf("Not your turn to guess. It's %s's turn.", currentPlayer.Name), http.StatusBadRequest)
 			return
 		}
+	} else {
+		log.Printf("Fastest finger mode: %s can guess", req.PlayerID)
 	}
 
 	// Validate guess range (0 to numActivePlayers * 3)
