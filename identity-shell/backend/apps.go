@@ -18,6 +18,8 @@ type AppDefinition struct {
 	URL         string `json:"url,omitempty"`
 	BackendPort int    `json:"backendPort,omitempty"`
 	Realtime    string `json:"realtime,omitempty"`
+	MinPlayers  int    `json:"minPlayers,omitempty"`
+	MaxPlayers  int    `json:"maxPlayers,omitempty"`
 }
 
 // AppRegistry holds the loaded apps configuration
