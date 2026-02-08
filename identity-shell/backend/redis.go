@@ -214,7 +214,7 @@ func CreateMultiChallenge(initiatorID string, playerIDs []string, appID string, 
 		"id":          challengeID,
 		"initiatorId": initiatorID,
 		"playerIds":   playerIDs,
-		"accepted":    []string{},       // Empty array initially
+		"accepted":    []string{initiatorID}, // Initiator auto-accepts
 		"appId":       appID,
 		"minPlayers":  minPlayers,
 		"maxPlayers":  maxPlayers,
