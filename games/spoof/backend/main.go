@@ -73,14 +73,9 @@ func main() {
 	api.HandleFunc("/game/{gameId}/guess", handleMakeGuess).Methods("POST")
 	api.HandleFunc("/game/{gameId}/stream", handleGameStream).Methods("GET")
 
-	// Serve static frontend
-	staticDir := "./static"
-	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(staticDir))))
-
-	// SPA fallback
-	r.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, staticDir+"/index.html")
-	})
+	// Serve static frontend files (React build output)
+	staticDir := getEnv("STATIC_DIR", "./static")
+	r.PathPrefix("/").Handler(spaHandler{staticPath: staticDir, indexPath: "index.html"})
 
 	// CORS
 	corsHandler := handlers.CORS(
@@ -138,4 +133,32 @@ func respondError(w http.ResponseWriter, message string, statusCode int) {
 		Error:   message,
 	}
 	json.NewEncoder(w).Encode(response)
+}
+
+// spaHandler implements http.Handler for serving SPA with fallback
+type spaHandler struct {
+	staticPath string
+	indexPath  string
+}
+
+func (h spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Get the absolute path to prevent directory traversal
+	path := r.URL.Path
+
+	// Prepend the static directory
+	fullPath := h.staticPath + path
+
+	// Check if file exists
+	_, err := os.Stat(fullPath)
+	if os.IsNotExist(err) {
+		// File doesn't exist, serve index.html for SPA routing
+		http.ServeFile(w, r, h.staticPath+"/"+h.indexPath)
+		return
+	} else if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// File exists, serve it
+	http.FileServer(http.Dir(h.staticPath)).ServeHTTP(w, r)
 }

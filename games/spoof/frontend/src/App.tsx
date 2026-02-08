@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './App.css';
 
 interface PlayerInfo {
@@ -47,7 +47,6 @@ function App() {
   const urlParams = new URLSearchParams(window.location.search);
   const gameId = urlParams.get('gameId');
   const userId = urlParams.get('userId');
-  const userName = urlParams.get('userName');
 
   const host = window.location.hostname;
   const API_BASE = `http://${host}:4051/api`;
@@ -55,7 +54,7 @@ function App() {
   const eventSourceRef = useRef<EventSource | null>(null);
 
   // Fetch game state
-  const fetchGame = async () => {
+  const fetchGame = useCallback(async () => {
     if (!gameId || !userId) {
       setError('Missing gameId or userId');
       setLoading(false);
@@ -78,7 +77,7 @@ function App() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [gameId, userId, API_BASE]);
 
   // Select coins (0-3)
   const handleSelectCoins = async () => {
@@ -161,7 +160,7 @@ function App() {
     return () => {
       eventSource.close();
     };
-  }, [gameId]);
+  }, [gameId, API_BASE, fetchGame]);
 
   if (loading) {
     return (
