@@ -38,6 +38,7 @@ type SpoofGame struct {
 	RoundData     *RoundData    `json:"roundData,omitempty"`
 	EliminatedIDs []string      `json:"eliminatedIds"`
 	WinnerID      string        `json:"winnerId,omitempty"`
+	GuessingMode  string        `json:"guessingMode"` // "fastest" or "roundrobin"
 	StartedAt     int64         `json:"startedAt"`
 	UpdatedAt     int64         `json:"updatedAt"`
 }
@@ -78,6 +79,7 @@ func (g *SpoofGame) PlayerView(playerID string) map[string]interface{} {
 		"status":        g.Status,
 		"currentRound":  g.CurrentRound,
 		"eliminatedIds": g.EliminatedIDs,
+		"guessingMode":  g.GuessingMode,
 		"startedAt":     g.StartedAt,
 		"updatedAt":     g.UpdatedAt,
 	}
@@ -185,6 +187,7 @@ type CreateGameRequest struct {
 	ChallengeID string                   `json:"challengeId"`
 	Players     []map[string]interface{} `json:"players"`
 	InitiatorID string                   `json:"initiatorId"`
+	Options     map[string]interface{}   `json:"options"`
 }
 
 // SelectCoinsRequest represents a player selecting their coins
@@ -211,8 +214,13 @@ type GameResponse struct {
 }
 
 // Helper function to create a new game
-func NewSpoofGame(challengeID string, players []PlayerInfo) *SpoofGame {
+func NewSpoofGame(challengeID string, players []PlayerInfo, guessingMode string) *SpoofGame {
 	now := time.Now().Unix()
+
+	// Default to fastest if not specified
+	if guessingMode == "" {
+		guessingMode = "fastest"
+	}
 
 	game := &SpoofGame{
 		ID:           generateGameID(),
@@ -220,6 +228,7 @@ func NewSpoofGame(challengeID string, players []PlayerInfo) *SpoofGame {
 		Players:      players,
 		Status:       "coin_selection",
 		CurrentRound: 1,
+		GuessingMode: guessingMode,
 		StartedAt:    now,
 		UpdatedAt:    now,
 		RoundData: &RoundData{

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 	"time"
 
@@ -24,6 +25,14 @@ func handleCreateGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Extract guessing mode from options
+	guessingMode := "fastest" // default
+	if req.Options != nil {
+		if mode, ok := req.Options["guessingMode"].(string); ok {
+			guessingMode = mode
+		}
+	}
+
 	// Convert players from map to PlayerInfo
 	players := make([]PlayerInfo, len(req.Players))
 	for i, p := range req.Players {
@@ -38,8 +47,28 @@ func handleCreateGame(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Randomize player order using Fisher-Yates shuffle
+	rand.Seed(time.Now().UnixNano())
+	for i := len(players) - 1; i > 0; i-- {
+		j := rand.Intn(i + 1)
+		players[i], players[j] = players[j], players[i]
+	}
+
+	// Reassign order numbers after shuffle
+	for i := range players {
+		players[i].Order = i
+	}
+
+	log.Printf("Player order: %v", func() []string {
+		names := make([]string, len(players))
+		for i, p := range players {
+			names[i] = p.Name
+		}
+		return names
+	}())
+
 	// Create new game
-	game := NewSpoofGame(req.ChallengeID, players)
+	game := NewSpoofGame(req.ChallengeID, players, guessingMode)
 
 	// Store in Redis with 2-hour TTL
 	if err := SaveGame(game); err != nil {
@@ -210,6 +239,15 @@ func handleMakeGuess(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// For round robin mode, enforce turn order
+	if game.GuessingMode == "roundrobin" {
+		currentPlayer := game.GetCurrentGuessingPlayer()
+		if currentPlayer == nil || currentPlayer.ID != req.PlayerID {
+			respondError(w, "Not your turn to guess", http.StatusBadRequest)
+			return
+		}
+	}
+
 	// Validate guess range (0 to numActivePlayers * 3)
 	activePlayers := game.GetActivePlayers()
 	maxGuess := len(activePlayers) * 3
@@ -238,6 +276,11 @@ func handleMakeGuess(w http.ResponseWriter, r *http.Request) {
 	game.RoundData.GuessesThisRound[req.PlayerID] = req.Guess
 	game.RoundData.UsedGuesses = append(game.RoundData.UsedGuesses, req.Guess)
 	game.UpdatedAt = time.Now().Unix()
+
+	// For round robin, advance to next player
+	if game.GuessingMode == "roundrobin" {
+		game.RoundData.GuessingPlayerIndex++
+	}
 
 	// Check if all players have guessed
 	if game.AllPlayersGuessed() {

@@ -102,7 +102,18 @@ func handleConfig(w http.ResponseWriter, r *http.Request) {
 		"name":        "Spoof",
 		"icon":        "🪙",
 		"description": "Guess the total number of coins hidden in all players' hands",
-		"gameOptions": []interface{}{}, // No configurable options for now
+		"gameOptions": []map[string]interface{}{
+			{
+				"id":      "guessingMode",
+				"type":    "select",
+				"label":   "Guessing Mode",
+				"default": "fastest",
+				"options": []map[string]interface{}{
+					{"value": "fastest", "label": "Fastest Finger (first to guess gets it)"},
+					{"value": "roundrobin", "label": "Round Robin (take turns in order)"},
+				},
+			},
+		},
 	}
 	respondJSON(w, config)
 }

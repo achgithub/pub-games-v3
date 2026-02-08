@@ -32,6 +32,7 @@ interface GameState {
   roundData?: RoundData;
   eliminatedIds: string[];
   winnerId?: string;
+  guessingMode: string;
   startedAt: number;
   updatedAt: number;
 }
@@ -159,6 +160,14 @@ function App() {
     }
   };
 
+  // Exit game (return to lobby)
+  const handleExitGame = () => {
+    // Close the iframe by notifying parent
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({ type: 'CLOSE_APP' }, '*');
+    }
+  };
+
   // Setup SSE for real-time updates
   useEffect(() => {
     if (!gameId) return;
@@ -215,6 +224,24 @@ function App() {
   const isActive = !currentPlayer.isEliminated;
   const activePlayers = gameState.players.filter(p => !p.isEliminated);
   const maxPossibleGuess = activePlayers.reduce((sum, p) => sum + p.coinsRemaining, 0);
+
+  // Determine if it's the current player's turn in round robin mode
+  const isMyTurn = () => {
+    if (gameState.guessingMode !== 'roundrobin' || !gameState.roundData) {
+      return true; // In fastest mode, it's always your turn
+    }
+    const currentIndex = gameState.roundData.guessingPlayerIndex % activePlayers.length;
+    const currentTurnPlayer = activePlayers[currentIndex];
+    return currentTurnPlayer && currentTurnPlayer.id === userId;
+  };
+
+  const getCurrentTurnPlayer = () => {
+    if (gameState.guessingMode !== 'roundrobin' || !gameState.roundData) {
+      return null;
+    }
+    const currentIndex = gameState.roundData.guessingPlayerIndex % activePlayers.length;
+    return activePlayers[currentIndex];
+  };
 
   return (
     <div className="app">
@@ -347,6 +374,19 @@ function App() {
         {gameState.status === 'guessing' && isActive && !currentPlayer.hasGuessed && (
           <div className="action-panel">
             <h3>Make Your Guess</h3>
+            {gameState.guessingMode === 'roundrobin' && (
+              <div className="turn-indicator">
+                {isMyTurn() ? (
+                  <p className="hint" style={{ color: '#4ade80', fontWeight: 'bold' }}>
+                    🎯 Your turn to guess!
+                  </p>
+                ) : (
+                  <p className="hint" style={{ color: '#fbbf24' }}>
+                    ⏳ Waiting for {getCurrentTurnPlayer()?.name}'s turn
+                  </p>
+                )}
+              </div>
+            )}
             <p className="hint">
               Guess the total number of coins in all hands (0-{maxPossibleGuess})
             </p>
@@ -366,11 +406,17 @@ function App() {
                 onChange={(e) => setGuessInput(e.target.value)}
                 placeholder="Enter your guess"
                 className="guess-input"
+                disabled={gameState.guessingMode === 'roundrobin' && !isMyTurn()}
               />
               <button
                 className="action-btn primary"
                 onClick={handleMakeGuess}
-                disabled={!guessInput || parseInt(guessInput) < 0 || parseInt(guessInput) > maxPossibleGuess}
+                disabled={
+                  !guessInput ||
+                  parseInt(guessInput) < 0 ||
+                  parseInt(guessInput) > maxPossibleGuess ||
+                  (gameState.guessingMode === 'roundrobin' && !isMyTurn())
+                }
               >
                 Submit Guess
               </button>
@@ -378,8 +424,19 @@ function App() {
           </div>
         )}
 
+        {/* Eliminated Player - Exit Option */}
+        {!isActive && gameState.status !== 'finished' && (
+          <div className="waiting-panel">
+            <h3>You've been eliminated</h3>
+            <p>You can continue watching or exit the game.</p>
+            <button className="action-btn secondary" onClick={handleExitGame} style={{ marginTop: '1rem' }}>
+              Exit to Lobby
+            </button>
+          </div>
+        )}
+
         {/* Waiting State */}
-        {((gameState.status === 'coin_selection' && currentPlayer.hasSelected) ||
+        {isActive && ((gameState.status === 'coin_selection' && currentPlayer.hasSelected) ||
           (gameState.status === 'guessing' && currentPlayer.hasGuessed)) && (
           <div className="waiting-panel">
             <div className="spinner">⏳</div>
@@ -438,7 +495,7 @@ function App() {
             <div className="winner-announcement">
               <strong>{gameState.players.find(p => p.id === gameState.winnerId)?.name}</strong> wins!
             </div>
-            <button className="action-btn secondary" onClick={() => (window.location.href = '/')}>
+            <button className="action-btn secondary" onClick={handleExitGame}>
               Return to Lobby
             </button>
           </div>
