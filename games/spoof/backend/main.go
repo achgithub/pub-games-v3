@@ -71,6 +71,7 @@ func main() {
 	api.HandleFunc("/game/{gameId}", handleGetGame).Methods("GET")
 	api.HandleFunc("/game/{gameId}/select", handleSelectCoins).Methods("POST")
 	api.HandleFunc("/game/{gameId}/guess", handleMakeGuess).Methods("POST")
+	api.HandleFunc("/game/{gameId}/next-round", handleNextRound).Methods("POST")
 	api.HandleFunc("/game/{gameId}/stream", handleGameStream).Methods("GET")
 
 	// Serve static frontend files (React build output)

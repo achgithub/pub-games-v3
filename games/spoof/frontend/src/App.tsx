@@ -137,6 +137,28 @@ function App() {
     }
   };
 
+  // Start next round
+  const handleNextRound = async () => {
+    if (!gameId) return;
+
+    try {
+      const response = await fetch(`${API_BASE}/game/${gameId}/next-round`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        // Game will update via SSE
+      } else {
+        setError(data.error || 'Failed to start next round');
+      }
+    } catch (err) {
+      console.error('Failed to start next round:', err);
+      setError('Connection error');
+    }
+  };
+
   // Setup SSE for real-time updates
   useEffect(() => {
     if (!gameId) return;
@@ -401,7 +423,7 @@ function App() {
 
             <button
               className="action-btn primary"
-              onClick={() => fetchGame()}
+              onClick={handleNextRound}
               style={{ marginTop: '1rem' }}
             >
               Next Round

@@ -306,6 +306,51 @@ func FindPlayerToEliminate(game *SpoofGame) *PlayerInfo {
 	return nil
 }
 
+// handleNextRound starts the next round after reveal phase
+func handleNextRound(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	gameID := vars["gameId"]
+
+	game, err := GetGame(gameID)
+	if err != nil {
+		respondError(w, "Game not found", http.StatusNotFound)
+		return
+	}
+
+	// Validate game state
+	if game.Status != "reveal" {
+		respondError(w, "Can only advance from reveal phase", http.StatusBadRequest)
+		return
+	}
+
+	// Check if game is over (only 1 player left)
+	activePlayers := game.GetActivePlayers()
+	if len(activePlayers) <= 1 {
+		respondError(w, "Game is finished", http.StatusBadRequest)
+		return
+	}
+
+	// Start next round
+	StartNextRound(game)
+
+	// Save game
+	if err := SaveGame(game); err != nil {
+		respondError(w, "Failed to save game", http.StatusInternalServerError)
+		return
+	}
+
+	// Broadcast update
+	PublishGameUpdate(gameID)
+
+	log.Printf("Started round %d for game %s", game.CurrentRound, gameID)
+
+	respondJSON(w, GameResponse{
+		Success: true,
+		GameID:  game.ID,
+		Message: "Next round started",
+	})
+}
+
 // handleGameStream provides SSE updates for real-time game state
 func handleGameStream(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
