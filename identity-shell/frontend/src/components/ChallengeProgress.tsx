@@ -1,16 +1,6 @@
 import React from 'react';
 import './ChallengeProgress.css';
-
-interface Challenge {
-  id: string;
-  initiatorId: string;
-  playerIds: string[];
-  accepted: string[];
-  minPlayers: number;
-  maxPlayers: number;
-  appId: string;
-  status: string;
-}
+import { Challenge } from '../types';
 
 interface User {
   email: string;
