@@ -8,46 +8,51 @@ export function useApps() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function fetchApps() {
-      try {
-        // Get token from localStorage to fetch role-based apps
-        const token = localStorage.getItem('token');
-        const headers: HeadersInit = {};
-        if (token) {
-          headers['Authorization'] = `Bearer ${token}`;
-        }
-
-        const response = await fetch(`${API_BASE}/api/apps`, { headers });
-        if (!response.ok) {
-          throw new Error('Failed to fetch apps');
-        }
-        const data: AppsRegistry = await response.json();
-        setApps(data.apps || []);
-        setError(null);
-      } catch (err) {
-        console.error('Failed to load apps:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load apps');
-        // Fallback to minimal internal apps
-        setApps([
-          {
-            id: 'lobby',
-            name: 'Lobby',
-            icon: '🏠',
-            type: 'internal',
-            description: 'View online users and challenges',
-            category: 'utility',
-          },
-        ]);
-      } finally {
-        setLoading(false);
+  const fetchApps = async () => {
+    try {
+      // Get token from localStorage to fetch role-based apps
+      const token = localStorage.getItem('token');
+      const headers: HeadersInit = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
       }
-    }
 
+      const response = await fetch(`${API_BASE}/api/apps`, { headers });
+      if (!response.ok) {
+        throw new Error('Failed to fetch apps');
+      }
+      const data: AppsRegistry = await response.json();
+      setApps(data.apps || []);
+      setError(null);
+    } catch (err) {
+      console.error('Failed to load apps:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load apps');
+      // Fallback to minimal internal apps
+      setApps([
+        {
+          id: 'lobby',
+          name: 'Lobby',
+          icon: '🏠',
+          type: 'internal',
+          description: 'View online users and challenges',
+          category: 'utility',
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchApps();
   }, []);
 
-  return { apps, loading, error };
+  const refreshApps = () => {
+    setLoading(true);
+    fetchApps();
+  };
+
+  return { apps, loading, error, refreshApps };
 }
 
 // Helper to build the app URL with query params

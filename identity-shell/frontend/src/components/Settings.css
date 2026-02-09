@@ -1,0 +1,226 @@
+.settings-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.settings-modal {
+  background: #1e293b;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem;
+  border-bottom: 1px solid #334155;
+}
+
+.settings-header h2 {
+  margin: 0;
+  color: #f1f5f9;
+  font-size: 1.5rem;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.close-button:hover {
+  background: #334155;
+  color: #f1f5f9;
+}
+
+.settings-loading {
+  padding: 3rem;
+  text-align: center;
+  color: #94a3b8;
+}
+
+.settings-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem;
+}
+
+.settings-hint {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
+}
+
+.app-preferences-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.app-preference-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #0f172a;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #334155;
+  transition: all 0.2s;
+}
+
+.app-preference-item:hover {
+  border-color: #475569;
+}
+
+.visibility-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  flex: 1;
+}
+
+.visibility-toggle input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.app-name {
+  color: #f1f5f9;
+  font-size: 1rem;
+}
+
+.app-name.hidden {
+  color: #64748b;
+  text-decoration: line-through;
+}
+
+.app-controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.move-button {
+  background: #334155;
+  border: none;
+  color: #cbd5e1;
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.move-button:hover:not(:disabled) {
+  background: #475569;
+  color: #f1f5f9;
+}
+
+.move-button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.settings-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-top: 1px solid #334155;
+}
+
+.cancel-button, .save-button {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancel-button {
+  background: #334155;
+  color: #f1f5f9;
+}
+
+.cancel-button:hover {
+  background: #475569;
+}
+
+.save-button {
+  background: #3b82f6;
+  color: white;
+}
+
+.save-button:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.save-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Scrollbar styling */
+.settings-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.settings-content::-webkit-scrollbar-track {
+  background: #0f172a;
+  border-radius: 4px;
+}
+
+.settings-content::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+
+.settings-content::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .settings-modal {
+    width: 95%;
+    max-height: 90vh;
+  }
+
+  .settings-header h2 {
+    font-size: 1.25rem;
+  }
+
+  .app-preference-item {
+    padding: 0.75rem;
+  }
+
+  .app-name {
+    font-size: 0.9rem;
+  }
+}

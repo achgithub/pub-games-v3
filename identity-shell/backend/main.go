@@ -69,6 +69,10 @@ func main() {
 	api.HandleFunc("/validate", handleValidate).Methods("POST")
 	api.HandleFunc("/apps", handleGetApps).Methods("GET")
 
+	// User preferences endpoints (require authentication)
+	api.HandleFunc("/user/preferences", handleGetUserPreferences).Methods("GET")
+	api.HandleFunc("/user/preferences", handleUpdateUserPreferences).Methods("PUT")
+
 	// Lobby endpoints
 	lobby := r.PathPrefix("/api/lobby").Subrouter()
 	lobby.HandleFunc("/presence", HandleGetPresence).Methods("GET")
@@ -286,13 +290,14 @@ func getEnv(key, defaultValue string) string {
 }
 
 // handleGetApps returns the list of registered apps
-// If Authorization header is present, filters apps based on user roles
+// If Authorization header is present, filters apps based on user roles and applies user preferences
 func handleGetApps(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	// Try to get user roles from Authorization header
 	authHeader := r.Header.Get("Authorization")
 	var userRoles []string
+	var userEmail string
 
 	if authHeader != "" {
 		// Extract token (format: "Bearer demo-token-email@example.com" or "Bearer impersonate-uuid")
@@ -300,8 +305,6 @@ func handleGetApps(w http.ResponseWriter, r *http.Request) {
 		if len(token) > 7 && token[:7] == "Bearer " {
 			token = token[7:]
 		}
-
-		var email string
 
 		// Check for impersonation token
 		if len(token) > 12 && token[:12] == "impersonate-" {
@@ -313,27 +316,92 @@ func handleGetApps(w http.ResponseWriter, r *http.Request) {
 			`, token).Scan(&impersonatedEmail)
 
 			if err == nil {
-				email = impersonatedEmail
+				userEmail = impersonatedEmail
 			}
 		} else if len(token) > 11 && token[:11] == "demo-token-" {
 			// Extract email from demo token
-			email = token[11:]
+			userEmail = token[11:]
 		}
 
 		// Query user roles if we have an email
-		if email != "" {
+		if userEmail != "" {
 			var roles pq.StringArray
-			err := db.QueryRow("SELECT COALESCE(roles, '{}') FROM users WHERE email = $1", email).Scan(&roles)
+			err := db.QueryRow("SELECT COALESCE(roles, '{}') FROM users WHERE email = $1", userEmail).Scan(&roles)
 			if err == nil {
 				userRoles = roles
 			}
 		}
 	}
 
-	// Return apps filtered by user roles (or all public apps if no auth)
+	// Get apps filtered by user roles (or all public apps if no auth)
 	apps := GetAppsForUser(userRoles)
+
+	// Apply user preferences if authenticated
+	if userEmail != "" {
+		apps = applyUserPreferences(apps, userEmail)
+	}
 
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"apps": apps,
 	})
+}
+
+// applyUserPreferences filters hidden apps and applies custom ordering
+func applyUserPreferences(apps []AppDefinition, userEmail string) []AppDefinition {
+	// Load user preferences
+	prefsMap := make(map[string]UserAppPreference)
+	rows, err := db.Query(`
+		SELECT app_id, is_hidden, custom_order
+		FROM user_app_preferences
+		WHERE user_email = $1
+	`, userEmail)
+	if err != nil {
+		log.Printf("Warning: Failed to load preferences for %s: %v", userEmail, err)
+		return apps
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var pref UserAppPreference
+		var customOrder sql.NullInt64
+
+		err := rows.Scan(&pref.AppID, &pref.IsHidden, &customOrder)
+		if err != nil {
+			continue
+		}
+
+		if customOrder.Valid {
+			order := int(customOrder.Int64)
+			pref.CustomOrder = &order
+		}
+
+		prefsMap[pref.AppID] = pref
+	}
+
+	// Filter out hidden apps and apply custom order
+	var filteredApps []AppDefinition
+	for _, app := range apps {
+		if pref, exists := prefsMap[app.ID]; exists {
+			if pref.IsHidden {
+				continue // Skip hidden apps
+			}
+			// Apply custom order if set
+			if pref.CustomOrder != nil {
+				app.DisplayOrder = *pref.CustomOrder
+			}
+		}
+		filteredApps = append(filteredApps, app)
+	}
+
+	// Re-sort by display_order
+	// Simple bubble sort (good enough for small lists)
+	for i := 0; i < len(filteredApps)-1; i++ {
+		for j := 0; j < len(filteredApps)-i-1; j++ {
+			if filteredApps[j].DisplayOrder > filteredApps[j+1].DisplayOrder {
+				filteredApps[j], filteredApps[j+1] = filteredApps[j+1], filteredApps[j]
+			}
+		}
+	}
+
+	return filteredApps
 }

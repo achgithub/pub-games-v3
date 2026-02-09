@@ -7,6 +7,7 @@ import { useApps, buildAppUrl } from '../hooks/useApps';
 import Lobby from './Lobby';
 import AppContainer from './AppContainer';
 import ChallengeToast from './ChallengeToast';
+import Settings from './Settings';
 
 interface ShellProps {
   user: User;
@@ -17,12 +18,13 @@ interface ShellProps {
 const Shell: React.FC<ShellProps> = ({ user, onLogout, onEndImpersonation }) => {
   const navigate = useNavigate();
   const [toastChallenge, setToastChallenge] = useState<any | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
 
   // Debug: Log user info
   console.log('🔍 Shell received user:', user);
 
   // Fetch apps from registry
-  const { apps, loading: appsLoading } = useApps();
+  const { apps, loading: appsLoading, refreshApps } = useApps();
 
   const handleNewChallenge = (challenge: any) => {
     setToastChallenge(challenge);
@@ -106,6 +108,9 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout, onEndImpersonation }) => 
         </nav>
 
         <div className="shell-header-right">
+          <button className="settings-icon-button" onClick={() => setShowSettings(true)} title="Settings">
+            ⚙️
+          </button>
           <button className="notification-button" title="Notifications">
             🔔
             {notificationCount > 0 && (
@@ -185,6 +190,17 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout, onEndImpersonation }) => 
           </Routes>
         )}
       </main>
+
+      {/* Settings Modal */}
+      {showSettings && (
+        <Settings
+          apps={apps}
+          onClose={() => setShowSettings(false)}
+          onSave={() => {
+            refreshApps();
+          }}
+        />
+      )}
     </div>
   );
 };
