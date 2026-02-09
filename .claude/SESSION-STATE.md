@@ -1,9 +1,9 @@
 # Activity Hub Migration - Session State
 
 **Last Updated**: 2026-02-09
-**Session ID**: Phase 0, A, B & C (Part 1) Complete
-**Current Phase**: Phase C (Part 2) - Game Admin App
-**Status**: Identity-shell foundation complete, Setup Admin operational
+**Session ID**: Phase 0, A, B, C (Part 1) & Identity Shell Improvements Complete
+**Current Phase**: Ready for new features
+**Status**: Identity-shell foundation complete with Impersonation, Personalization, and Guest Mode
 
 ## Completed
 
@@ -75,6 +75,46 @@
 - See required roles and display order
 - All actions logged to audit_log
 
+### Identity Shell Improvements ✅ (2026-02-09)
+
+**Phase 1: User Impersonation**
+- ✅ Database: `impersonation_sessions` table for audit tracking
+- ✅ Backend: `identity-shell/backend/impersonation.go` with start/end endpoints
+- ✅ New role: `super_user` with read-only Setup Admin access + impersonation
+- ✅ Frontend: Impersonation banner and Exit button
+- ✅ Setup Admin: Impersonate button for each user, read-only mode for super_user
+- ✅ Security: Full audit trail, read-only enforcement via X-Permission-Level header
+- ✅ Migration: `scripts/migrate_add_impersonation.sh`
+- ✅ Tested and operational
+- ⚠️ Known issue: SSE presence requires manual F5 refresh after impersonation (acceptable for debugging tool)
+
+**Phase 2: App Personalization**
+- ✅ Database: `user_app_preferences` table for per-user app settings
+- ✅ Backend: `identity-shell/backend/preferences.go` with GET/PUT endpoints
+- ✅ Frontend: Settings modal with show/hide toggles and reorder controls
+- ✅ Features: Hide apps, reorder with up/down arrows, changes persist per-user
+- ✅ Applied after role-based filtering (can't unhide admin apps)
+- ✅ Migration: `scripts/migrate_add_user_preferences.sh`
+- ✅ Tested and operational
+
+**Phase 3: Guest Mode**
+- ✅ Database: `guest_accessible` column on applications table
+- ✅ Backend: Guest login endpoint with guest-token-{uuid}
+- ✅ Frontend: "Continue as Guest" button, simplified guest UI
+- ✅ Features: Public access without authentication, no lobby/challenges/SSE
+- ✅ Security: Only apps marked guest_accessible visible to guests
+- ✅ Migration: `scripts/migrate_add_guest_mode.sh` (marks leaderboard as guest_accessible)
+- ✅ Tested and operational
+
+**Test Users:**
+- `alice@pubgames.local` - super_user (can impersonate, read-only Setup Admin)
+- `bob@pubgames.local` - regular user (for personalization testing)
+- Guest - no authentication (only sees guest_accessible apps)
+
+**App Registry Updates:**
+- Setup Admin visible to both `setup_admin` and `super_user` roles
+- Leaderboard marked as `guest_accessible = true`
+
 ### Earlier Work
 - ✅ Phase 1: Planning complete (plan saved in .claude/plans/)
 - ✅ Phase 2: Shared package scaffolding COMPLETE
@@ -99,19 +139,18 @@
 
 ## Current Work
 
-### Phase C (Part 2): Game Admin App - IN PROGRESS
+**Status:** Ready for new features/improvements
 
-Build second admin mini-app for activity management:
+**Available Options:**
+1. **Phase C (Part 2)**: Game Admin App - Build second admin mini-app for activity management
+2. **App Migration**: Start migrating existing apps to use shared library
+3. **New Features**: Additional identity-shell enhancements
+4. **Bug Fixes**: Address any issues that arise
 
-**Game Admin App** (requires `game_admin` role)
-- Schedule games/activities
-- Manage tournaments
-- View game statistics
-- Activity calendar
-- Port: 5070
-- Database: `game_admin_db`
-
-Similar structure to Setup Admin, focused on game/activity management rather than system configuration.
+**Deferred (Can be added later):**
+- Game Admin App (similar to Setup Admin, for activity management)
+- SSL/TLS (easy to add when needed)
+- SSE reconnection on user change (would fix impersonation presence delay)
 
 ## Architecture Summary
 
@@ -120,11 +159,16 @@ Identity-Shell (Port 3001)
 ├── Database: activity_hub
 │   ├── users (with roles)
 │   ├── challenges (lobby system)
-│   └── applications (app registry)
+│   ├── applications (app registry with guest_accessible)
+│   ├── impersonation_sessions (audit trail)
+│   └── user_app_preferences (personalization)
 ├── Public API
 │   ├── /api/login (returns user + roles)
-│   ├── /api/validate (returns user + roles)
-│   └── /api/apps (filtered by user roles)
+│   ├── /api/login/guest (guest access)
+│   ├── /api/validate (returns user + roles + impersonation state)
+│   ├── /api/apps (filtered by user roles + preferences)
+│   ├── /api/user/preferences (GET/PUT)
+│   └── /api/admin/impersonate (super_user only)
 ├── Admin API (requires setup_admin)
 │   ├── GET /api/admin/apps
 │   ├── PUT /api/admin/apps/:id
@@ -149,9 +193,11 @@ Setup Admin App (Port 5020)
 - Password: `pubgames`
 - Port: 5555
 - Tables:
-  - `users` (with `roles` column)
+  - `users` (with `roles` column - supports setup_admin, game_admin, super_user)
   - `challenges` (lobby system)
-  - `applications` (app registry with 9 apps including setup-admin)
+  - `applications` (app registry with 9 apps, includes guest_accessible flag)
+  - `impersonation_sessions` (audit trail for super_user impersonation)
+  - `user_app_preferences` (per-user app hide/reorder settings)
 
 **Admin Databases:**
 - `setup_admin_db` (audit_log table) ✅
@@ -187,11 +233,20 @@ curl -H "Authorization: Bearer demo-token-admin@pubgames.local" \
 
 ## Next Steps
 
-1. **Complete Phase C**: Build Game Admin App (similar structure to Setup Admin)
-2. **Document Phase C**: Add ADMIN-APPS.md guide
-3. **Begin App Migration**: Start migrating existing apps to use shared library
+**Identity-shell foundation is complete and operational with all improvements:**
+- ✅ Role-based access control
+- ✅ Dynamic app registry
+- ✅ User impersonation for debugging
+- ✅ Per-user app personalization
+- ✅ Guest mode for public access
 
-**Recommendation:** Complete Phase C (Game Admin), then start app migration to test shared library integration.
+**Options for next work:**
+1. Build Game Admin App (Phase C Part 2)
+2. Migrate existing apps to shared library
+3. New identity-shell features as requested
+4. Address issues/improvements as they arise
+
+**Recommendation:** Wait for user direction on next priority.
 
 ## Notes
 - Shared library (lib/activity-hub-common/) ready but won't be used until apps migrate
