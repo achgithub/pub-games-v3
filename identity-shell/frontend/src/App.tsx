@@ -14,12 +14,24 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for existing token in localStorage
-    const token = localStorage.getItem('token');
-    if (token) {
-      validateToken(token);
+    // Check for token in URL parameters first (for impersonation redirects)
+    const params = new URLSearchParams(window.location.search);
+    const urlToken = params.get('token');
+
+    if (urlToken) {
+      // Store token from URL and validate
+      localStorage.setItem('token', urlToken);
+      validateToken(urlToken);
+      // Clean up URL to remove token parameter
+      window.history.replaceState({}, document.title, window.location.pathname);
     } else {
-      setLoading(false);
+      // Check for existing token in localStorage
+      const token = localStorage.getItem('token');
+      if (token) {
+        validateToken(token);
+      } else {
+        setLoading(false);
+      }
     }
   }, []);
 
