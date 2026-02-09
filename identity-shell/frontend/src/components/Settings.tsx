@@ -23,6 +23,7 @@ const Settings: React.FC<SettingsProps> = ({ apps, onClose, onSave }) => {
 
   useEffect(() => {
     fetchPreferences();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchPreferences = async () => {
