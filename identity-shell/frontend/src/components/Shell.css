@@ -204,6 +204,81 @@
   background: #b91c1c;
 }
 
+/* Guest Mode Banner */
+.guest-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  background: #dbeafe;
+  border-bottom: 2px solid #3b82f6;
+  color: #1e40af;
+}
+
+.guest-notice {
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+/* Guest Apps View */
+.guest-apps-view {
+  padding: 2rem;
+  color: #f1f5f9;
+}
+
+.guest-apps-view h2 {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  color: #f1f5f9;
+}
+
+.guest-notice-text {
+  color: #94a3b8;
+  margin-bottom: 2rem;
+}
+
+.apps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1.5rem;
+}
+
+.app-card {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.app-card:hover {
+  border-color: #3b82f6;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+.app-icon {
+  font-size: 3rem;
+  display: block;
+  margin-bottom: 0.75rem;
+}
+
+.app-name {
+  display: block;
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: #f1f5f9;
+  margin-bottom: 0.5rem;
+}
+
+.app-description {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  margin: 0;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .shell-header {

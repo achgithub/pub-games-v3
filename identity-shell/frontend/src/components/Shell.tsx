@@ -91,13 +91,15 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout, onEndImpersonation }) => 
         </div>
 
         <nav className="shell-nav">
-          <button
-            className="nav-button"
-            onClick={() => navigate('/lobby')}
-            title="Lobby"
-          >
-            🏠
-          </button>
+          {!user.is_guest && (
+            <button
+              className="nav-button"
+              onClick={() => navigate('/lobby')}
+              title="Lobby"
+            >
+              🏠
+            </button>
+          )}
           <button
             className="nav-button"
             onClick={() => navigate('/profile')}
@@ -108,19 +110,23 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout, onEndImpersonation }) => 
         </nav>
 
         <div className="shell-header-right">
-          <button className="settings-icon-button" onClick={() => setShowSettings(true)} title="Settings">
-            ⚙️
-          </button>
-          <button className="notification-button" title="Notifications">
-            🔔
-            {notificationCount > 0 && (
-              <span className="notification-badge">{notificationCount}</span>
-            )}
-          </button>
+          {!user.is_guest && (
+            <>
+              <button className="settings-icon-button" onClick={() => setShowSettings(true)} title="Settings">
+                ⚙️
+              </button>
+              <button className="notification-button" title="Notifications">
+                🔔
+                {notificationCount > 0 && (
+                  <span className="notification-badge">{notificationCount}</span>
+                )}
+              </button>
+            </>
+          )}
           <div className="user-menu">
-            <span className="user-email">{user.email}</span>
+            <span className="user-email">{user.is_guest ? 'Guest' : user.email}</span>
             <button className="logout-button" onClick={onLogout}>
-              Logout
+              {user.is_guest ? 'Exit' : 'Logout'}
             </button>
           </div>
         </div>
@@ -134,6 +140,13 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout, onEndImpersonation }) => 
           <button className="exit-impersonation-button" onClick={onEndImpersonation}>
             Exit Impersonation
           </button>
+        </div>
+      )}
+
+      {/* Guest Mode Banner */}
+      {user.is_guest && (
+        <div className="guest-banner">
+          <span className="guest-notice">👤 Guest Mode: Limited access to public apps only</span>
         </div>
       )}
 
@@ -152,27 +165,48 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout, onEndImpersonation }) => 
           <div className="loading-apps">Loading apps...</div>
         ) : (
           <Routes>
-            <Route path="/" element={<Navigate to="/lobby" replace />} />
-            <Route
-              path="/lobby"
-              element={
-                <Lobby
-                  apps={apps}
-                  onAppClick={handleAppClick}
-                  userEmail={user.email}
-                  userName={user.name}
-                  onlineUsers={onlineUsers}
-                  receivedChallenges={receivedChallenges}
-                  sentChallenges={sentChallenges}
-                  notification={notification}
-                  onSendChallenge={sendChallenge}
-                  onSendMultiChallenge={sendMultiChallenge}
-                  onAcceptChallenge={acceptChallenge}
-                  onRejectChallenge={rejectChallenge}
-                  fetchGameConfig={fetchGameConfig}
-                />
-              }
-            />
+            <Route path="/" element={<Navigate to={user.is_guest ? "/apps" : "/lobby"} replace />} />
+            {user.is_guest ? (
+              <Route
+                path="/apps"
+                element={
+                  <div className="guest-apps-view">
+                    <h2>Available Apps</h2>
+                    <p className="guest-notice-text">You are in guest mode. Only public apps are accessible.</p>
+                    <div className="apps-grid">
+                      {apps.map(app => (
+                        <div key={app.id} className="app-card" onClick={() => handleAppClick(app.id)}>
+                          <span className="app-icon">{app.icon}</span>
+                          <span className="app-name">{app.name}</span>
+                          <p className="app-description">{app.description}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                }
+              />
+            ) : (
+              <Route
+                path="/lobby"
+                element={
+                  <Lobby
+                    apps={apps}
+                    onAppClick={handleAppClick}
+                    userEmail={user.email}
+                    userName={user.name}
+                    onlineUsers={onlineUsers}
+                    receivedChallenges={receivedChallenges}
+                    sentChallenges={sentChallenges}
+                    notification={notification}
+                    onSendChallenge={sendChallenge}
+                    onSendMultiChallenge={sendMultiChallenge}
+                    onAcceptChallenge={acceptChallenge}
+                    onRejectChallenge={rejectChallenge}
+                    fetchGameConfig={fetchGameConfig}
+                  />
+                }
+              />
+            )}
             <Route
               path="/app/:appId"
               element={<AppContainer apps={apps} user={user} />}

@@ -4,13 +4,15 @@ import './LoginView.css';
 
 interface LoginViewProps {
   onLogin: (email: string, code: string) => Promise<boolean>;
+  onGuestLogin: () => Promise<boolean>;
 }
 
-const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
+const LoginView: React.FC<LoginViewProps> = ({ onLogin, onGuestLogin }) => {
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [guestLoading, setGuestLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,6 +24,18 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
     if (!success) {
       setError('Invalid email or code');
       setLoading(false);
+    }
+  };
+
+  const handleGuestLogin = async () => {
+    setError('');
+    setGuestLoading(true);
+
+    const success = await onGuestLogin();
+
+    if (!success) {
+      setError('Guest login failed');
+      setGuestLoading(false);
     }
   };
 
@@ -63,10 +77,25 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
           {error && <div className="error-message">{error}</div>}
 
-          <button type="submit" disabled={loading} className="login-button">
+          <button type="submit" disabled={loading || guestLoading} className="login-button">
             {loading ? 'Logging in...' : 'Login'}
           </button>
         </form>
+
+        <div className="guest-section">
+          <div className="divider">
+            <span>or</span>
+          </div>
+          <button
+            type="button"
+            onClick={handleGuestLogin}
+            disabled={loading || guestLoading}
+            className="guest-button"
+          >
+            {guestLoading ? 'Loading...' : 'Continue as Guest'}
+          </button>
+          <p className="guest-notice">Limited access to public apps only</p>
+        </div>
 
         <div className="login-footer">
           <p className="demo-hint">Demo: Use code <code>123456</code></p>

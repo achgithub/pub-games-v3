@@ -9,20 +9,21 @@ import (
 
 // AppDefinition represents a registered app
 type AppDefinition struct {
-	ID            string   `json:"id"`
-	Name          string   `json:"name"`
-	Icon          string   `json:"icon"`
-	Type          string   `json:"type"`
-	Description   string   `json:"description,omitempty"`
-	Category      string   `json:"category,omitempty"`
-	URL           string   `json:"url,omitempty"`
-	BackendPort   int      `json:"backendPort,omitempty"`
-	Realtime      string   `json:"realtime,omitempty"`
-	MinPlayers    int      `json:"minPlayers,omitempty"`
-	MaxPlayers    int      `json:"maxPlayers,omitempty"`
-	RequiredRoles []string `json:"requiredRoles,omitempty"`
-	Enabled       bool     `json:"enabled"`
-	DisplayOrder  int      `json:"displayOrder"`
+	ID              string   `json:"id"`
+	Name            string   `json:"name"`
+	Icon            string   `json:"icon"`
+	Type            string   `json:"type"`
+	Description     string   `json:"description,omitempty"`
+	Category        string   `json:"category,omitempty"`
+	URL             string   `json:"url,omitempty"`
+	BackendPort     int      `json:"backendPort,omitempty"`
+	Realtime        string   `json:"realtime,omitempty"`
+	MinPlayers      int      `json:"minPlayers,omitempty"`
+	MaxPlayers      int      `json:"maxPlayers,omitempty"`
+	RequiredRoles   []string `json:"requiredRoles,omitempty"`
+	Enabled         bool     `json:"enabled"`
+	DisplayOrder    int      `json:"displayOrder"`
+	GuestAccessible bool     `json:"guestAccessible,omitempty"`
 }
 
 // AppRegistry holds the loaded apps configuration
@@ -43,7 +44,8 @@ func LoadAppRegistry() error {
 		SELECT id, name, icon, type, description, category,
 		       COALESCE(url, ''), COALESCE(backend_port, 0), COALESCE(realtime, 'none'),
 		       COALESCE(min_players, 0), COALESCE(max_players, 0),
-		       COALESCE(required_roles, '{}'), enabled, display_order
+		       COALESCE(required_roles, '{}'), enabled, display_order,
+		       COALESCE(guest_accessible, FALSE)
 		FROM applications
 		WHERE enabled = TRUE
 		ORDER BY display_order, name
@@ -63,6 +65,7 @@ func LoadAppRegistry() error {
 			&app.URL, &app.BackendPort, &app.Realtime,
 			&app.MinPlayers, &app.MaxPlayers,
 			&requiredRoles, &app.Enabled, &app.DisplayOrder,
+			&app.GuestAccessible,
 		)
 		if err != nil {
 			return err
@@ -107,16 +110,25 @@ func GetAllApps() []AppDefinition {
 	return appRegistry.Apps
 }
 
-// GetAppsForUser returns apps visible to a user based on their roles
-// If user has no roles (regular user), returns apps with no role requirements
-// If user has roles, returns apps they have access to
-func GetAppsForUser(userRoles []string) []AppDefinition {
+// GetAppsForUser returns apps visible to a user based on their roles or guest status
+// If isGuest is true, only returns apps with guest_accessible = true
+// Otherwise, returns apps based on role requirements
+func GetAppsForUser(userRoles []string, isGuest bool) []AppDefinition {
 	appRegistry.mu.RLock()
 	defer appRegistry.mu.RUnlock()
 
 	var visibleApps []AppDefinition
 
 	for _, app := range appRegistry.Apps {
+		// Guest mode: only show guest-accessible apps
+		if isGuest {
+			if app.GuestAccessible {
+				visibleApps = append(visibleApps, app)
+			}
+			continue
+		}
+
+		// Regular users: check role requirements
 		// App has no role requirements - visible to everyone
 		if len(app.RequiredRoles) == 0 {
 			visibleApps = append(visibleApps, app)

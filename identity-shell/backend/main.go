@@ -9,6 +9,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/lib/pq"
@@ -66,6 +67,7 @@ func main() {
 	api := r.PathPrefix("/api").Subrouter()
 	api.HandleFunc("/health", handleHealth).Methods("GET")
 	api.HandleFunc("/login", handleLogin).Methods("POST")
+	api.HandleFunc("/login/guest", handleGuestLogin).Methods("POST")
 	api.HandleFunc("/validate", handleValidate).Methods("POST")
 	api.HandleFunc("/apps", handleGetApps).Methods("GET")
 
@@ -180,6 +182,27 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func handleGuestLogin(w http.ResponseWriter, r *http.Request) {
+	// Generate unique guest ID
+	guestID := uuid.New().String()
+	guestToken := "guest-token-" + guestID
+
+	// Return guest token and user info
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"token":   guestToken,
+		"user": map[string]interface{}{
+			"email":    "guest-" + guestID,
+			"name":     "Guest",
+			"is_admin": false,
+			"roles":    []string{},
+			"is_guest": true,
+		},
+	})
+
+	log.Printf("✅ Guest login: %s", guestID)
+}
+
 func handleValidate(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Token string `json:"token"`
@@ -187,6 +210,23 @@ func handleValidate(w http.ResponseWriter, r *http.Request) {
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	// Check for guest token
+	if len(req.Token) > 12 && req.Token[:12] == "guest-token-" {
+		guestID := req.Token[12:]
+
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"valid": true,
+			"user": map[string]interface{}{
+				"email":    "guest-" + guestID,
+				"name":     "Guest",
+				"is_admin": false,
+				"roles":    []string{},
+				"is_guest": true,
+			},
+		})
 		return
 	}
 
@@ -298,16 +338,21 @@ func handleGetApps(w http.ResponseWriter, r *http.Request) {
 	authHeader := r.Header.Get("Authorization")
 	var userRoles []string
 	var userEmail string
+	var isGuest bool
 
 	if authHeader != "" {
-		// Extract token (format: "Bearer demo-token-email@example.com" or "Bearer impersonate-uuid")
+		// Extract token (format: "Bearer demo-token-email@example.com", "Bearer impersonate-uuid", or "Bearer guest-token-uuid")
 		token := authHeader
 		if len(token) > 7 && token[:7] == "Bearer " {
 			token = token[7:]
 		}
 
-		// Check for impersonation token
-		if len(token) > 12 && token[:12] == "impersonate-" {
+		// Check for guest token
+		if len(token) > 12 && token[:12] == "guest-token-" {
+			isGuest = true
+			userEmail = "" // Guests don't have preferences
+		} else if len(token) > 12 && token[:12] == "impersonate-" {
+			// Check for impersonation token
 			var impersonatedEmail string
 			err := db.QueryRow(`
 				SELECT impersonated_email
@@ -323,7 +368,7 @@ func handleGetApps(w http.ResponseWriter, r *http.Request) {
 			userEmail = token[11:]
 		}
 
-		// Query user roles if we have an email
+		// Query user roles if we have an email (not guest)
 		if userEmail != "" {
 			var roles pq.StringArray
 			err := db.QueryRow("SELECT COALESCE(roles, '{}') FROM users WHERE email = $1", userEmail).Scan(&roles)
@@ -333,11 +378,11 @@ func handleGetApps(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Get apps filtered by user roles (or all public apps if no auth)
-	apps := GetAppsForUser(userRoles)
+	// Get apps filtered by user roles or guest access
+	apps := GetAppsForUser(userRoles, isGuest)
 
-	// Apply user preferences if authenticated
-	if userEmail != "" {
+	// Apply user preferences if authenticated (not guest)
+	if userEmail != "" && !isGuest {
 		apps = applyUserPreferences(apps, userEmail)
 	}
 

@@ -5,6 +5,7 @@ export interface User {
   is_admin?: boolean;
   impersonating?: boolean;
   superUser?: string;  // Original super_user email
+  is_guest?: boolean;  // True for guest users
 }
 
 export interface AuthResponse {
@@ -45,6 +46,7 @@ export interface AppDefinition {
   realtime?: RealtimeType;
   minPlayers?: number; // Minimum players for multi-player games (e.g., 3)
   maxPlayers?: number; // Maximum players for multi-player games (e.g., 6)
+  guestAccessible?: boolean; // True if guests can access this app
 }
 
 export interface AppsRegistry {

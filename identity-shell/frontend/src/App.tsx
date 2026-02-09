@@ -101,6 +101,30 @@ function App() {
     }
   };
 
+  const handleGuestLogin = async (): Promise<boolean> => {
+    try {
+      const response = await fetch(`${API_BASE}/login/guest`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (!response.ok) {
+        return false;
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        localStorage.setItem('token', data.token);
+        setUser(data.user);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Guest login failed:', error);
+      return false;
+    }
+  };
+
   if (loading) {
     return (
       <div className="app-loading">
@@ -119,7 +143,7 @@ function App() {
             user ? (
               <Navigate to="/" replace />
             ) : (
-              <LoginView onLogin={handleLogin} />
+              <LoginView onLogin={handleLogin} onGuestLogin={handleGuestLogin} />
             )
           }
         />

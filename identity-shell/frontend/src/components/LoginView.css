@@ -142,3 +142,70 @@
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
+
+/* Guest Section */
+.guest-section {
+  margin-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.divider {
+  position: relative;
+  text-align: center;
+  margin: 0.5rem 0;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 45%;
+  height: 1px;
+  background: #334155;
+}
+
+.divider::before {
+  left: 0;
+}
+
+.divider::after {
+  right: 0;
+}
+
+.divider span {
+  color: #64748b;
+  font-size: 0.85rem;
+  background: #1e293b;
+  padding: 0 0.5rem;
+}
+
+.guest-button {
+  padding: 0.875rem;
+  background: #475569;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.guest-button:hover:not(:disabled) {
+  background: #64748b;
+}
+
+.guest-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.guest-notice {
+  font-size: 0.85rem;
+  color: #64748b;
+  text-align: center;
+  margin: 0;
+}
