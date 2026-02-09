@@ -82,6 +82,12 @@ func main() {
 	lobby.HandleFunc("/challenge/reject", HandleRejectChallenge).Methods("POST")
 	lobby.HandleFunc("/stream", HandleLobbyStream).Methods("GET")
 
+	// Admin endpoints (require setup_admin role)
+	admin := r.PathPrefix("/api/admin").Subrouter()
+	admin.HandleFunc("/apps", requireSetupAdmin(handleAdminGetApps)).Methods("GET")
+	admin.HandleFunc("/apps/{id}", requireSetupAdmin(handleAdminUpdateApp)).Methods("PUT")
+	admin.HandleFunc("/apps/{id}/{action:enable|disable}", requireSetupAdmin(handleAdminToggleApp)).Methods("POST")
+
 	// Serve frontend React app (includes /static/ for JS/CSS bundles)
 	frontendDir := "../frontend/build"
 
@@ -224,9 +230,38 @@ func getEnv(key, defaultValue string) string {
 }
 
 // handleGetApps returns the list of registered apps
+// If Authorization header is present, filters apps based on user roles
 func handleGetApps(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+
+	// Try to get user roles from Authorization header
+	authHeader := r.Header.Get("Authorization")
+	var userRoles []string
+
+	if authHeader != "" {
+		// Extract token (format: "Bearer demo-token-email@example.com")
+		token := authHeader
+		if len(token) > 7 && token[:7] == "Bearer " {
+			token = token[7:]
+		}
+
+		// Extract email from token
+		if len(token) > 11 && token[:11] == "demo-token-" {
+			email := token[11:]
+
+			// Query user roles
+			var roles pq.StringArray
+			err := db.QueryRow("SELECT COALESCE(roles, '{}') FROM users WHERE email = $1", email).Scan(&roles)
+			if err == nil {
+				userRoles = roles
+			}
+		}
+	}
+
+	// Return apps filtered by user roles (or all public apps if no auth)
+	apps := GetAppsForUser(userRoles)
+
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"apps": GetAllApps(),
+		"apps": apps,
 	})
 }
