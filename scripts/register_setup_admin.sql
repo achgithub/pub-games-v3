@@ -32,6 +32,8 @@ ON CONFLICT (id) DO UPDATE SET
     name = EXCLUDED.name,
     icon = EXCLUDED.icon,
     description = EXCLUDED.description,
+    url = EXCLUDED.url,
+    backend_port = EXCLUDED.backend_port,
     required_roles = EXCLUDED.required_roles,
     enabled = EXCLUDED.enabled;
 
