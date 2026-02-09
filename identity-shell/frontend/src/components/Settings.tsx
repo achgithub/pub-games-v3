@@ -55,7 +55,7 @@ const Settings: React.FC<SettingsProps> = ({ apps, onClose, onSave }) => {
           isHidden: existing?.isHidden || false,
           customOrder: existing?.customOrder !== null && existing?.customOrder !== undefined
             ? existing.customOrder
-            : app.displayOrder
+            : (app.displayOrder ?? null)
         };
       });
 
