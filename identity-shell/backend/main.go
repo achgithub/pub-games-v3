@@ -11,7 +11,7 @@ import (
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -130,10 +130,11 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 		Name     string
 		CodeHash string
 		IsAdmin  bool
+		Roles    []string
 	}
 
-	err := db.QueryRow("SELECT email, name, code_hash, is_admin FROM users WHERE email = $1", req.Email).
-		Scan(&user.Email, &user.Name, &user.CodeHash, &user.IsAdmin)
+	err := db.QueryRow("SELECT email, name, code_hash, is_admin, COALESCE(roles, '{}') FROM users WHERE email = $1", req.Email).
+		Scan(&user.Email, &user.Name, &user.CodeHash, &user.IsAdmin, (*pq.StringArray)(&user.Roles))
 
 	if err == sql.ErrNoRows {
 		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
@@ -160,6 +161,7 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 			"email":    user.Email,
 			"name":     user.Name,
 			"is_admin": user.IsAdmin,
+			"roles":    user.Roles,
 		},
 	})
 }
@@ -183,10 +185,11 @@ func handleValidate(w http.ResponseWriter, r *http.Request) {
 			Email   string
 			Name    string
 			IsAdmin bool
+			Roles   []string
 		}
 
-		err := db.QueryRow("SELECT email, name, is_admin FROM users WHERE email = $1", email).
-			Scan(&user.Email, &user.Name, &user.IsAdmin)
+		err := db.QueryRow("SELECT email, name, is_admin, COALESCE(roles, '{}') FROM users WHERE email = $1", email).
+			Scan(&user.Email, &user.Name, &user.IsAdmin, (*pq.StringArray)(&user.Roles))
 
 		if err != nil {
 			json.NewEncoder(w).Encode(map[string]interface{}{
@@ -201,6 +204,7 @@ func handleValidate(w http.ResponseWriter, r *http.Request) {
 				"email":    user.Email,
 				"name":     user.Name,
 				"is_admin": user.IsAdmin,
+				"roles":    user.Roles,
 			},
 		})
 		return
