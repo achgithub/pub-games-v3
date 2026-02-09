@@ -1,9 +1,9 @@
 # Activity Hub Migration - Session State
 
 **Last Updated**: 2026-02-09
-**Session ID**: Phase 0 & A Complete
-**Current Phase**: Foundation Complete - Ready for Phase B or C
-**Status**: Identity database renamed, roles system operational
+**Session ID**: Phase 0, A & B Complete
+**Current Phase**: Foundation Complete - Ready for Phase C
+**Status**: Identity-shell foundation fully operational
 
 ## Completed
 
@@ -27,36 +27,73 @@
 - `setup_admin` - System configuration (Setup Admin App)
 - `game_admin` - Activity management (Game Admin App)
 
+### Phase B: Database-Driven App Registry ✅ (2026-02-09)
+- ✅ Created `applications` table in PostgreSQL
+- ✅ Seeded with 8 existing apps from apps.json
+- ✅ Identity-shell reads apps from database (not apps.json)
+- ✅ Role-based app visibility (GetAppsForUser)
+- ✅ Admin CRUD endpoints:
+  - GET /api/admin/apps (list all)
+  - PUT /api/admin/apps/:id (update)
+  - POST /api/admin/apps/:id/enable (enable)
+  - POST /api/admin/apps/:id/disable (disable)
+- ✅ requireSetupAdmin middleware for auth
+- ✅ Tested and verified - all endpoints working
+- ✅ Documentation: docs/APP-REGISTRY.md
+
+**Features:**
+- Apps can require specific roles for visibility
+- Enable/disable apps without code changes
+- Custom display ordering
+- Auto-reloading registry after updates
+
 ### Earlier Work
 - ✅ Phase 1: Planning complete (plan saved in .claude/plans/)
 - ✅ Phase 2: Shared package scaffolding COMPLETE
   - ✅ Created lib/activity-hub-common/ with 7 packages (1,559 lines)
   - ✅ All packages build and pass tests on Pi
 
-## Foundation Strategy
+## Foundation Status
 
-**Identity-shell foundation complete:** Database renamed, roles system operational
+**Identity-shell foundation is COMPLETE:**
+- ✅ Database renamed to activity_hub
+- ✅ Role-based access control operational
+- ✅ Dynamic app registry operational
+- ✅ Admin endpoints for app management
 
-### Next Options
+**Ready for:**
+- Phase C: Build Admin Mini-Apps (Setup Admin, Game Admin)
+- Or: Start migrating existing apps to use shared library
 
-**Option 1: Phase B - Database-Driven App Registry**
-- Migrate apps.json → PostgreSQL `applications` table
-- Add role requirements per app
-- Admin endpoints for app management
-- User preferences (favorites, ordering)
-- Dynamic app visibility based on roles
+## Next Steps
 
-**Option 2: Phase C - Create Admin Mini-Apps**
-- Setup Admin App (system configuration, only `setup_admin` can see)
-- Game Admin App (activity management, only `game_admin` can see)
-- Both are mini-apps shown on home screen based on roles
-- Demonstrates role-based app visibility
+### Phase C: Create Admin Mini-Apps
 
-**Recommendation:** Either order works. Phase B provides infrastructure for Phase C apps to register themselves. Phase C provides immediate value and tests role-based visibility.
+Build two admin apps to demonstrate the foundation:
 
-### Migration Strategy (After Foundation)
+**1. Setup Admin App** (requires `setup_admin` role)
+- User management (view, create, edit roles)
+- App registry management (use admin CRUD endpoints)
+- System configuration
+- Port: 5060
+- Database: `setup_admin_db`
 
-Only AFTER foundation complete, migrate one of each app category:
+**2. Game Admin App** (requires `game_admin` role)
+- Schedule games/activities
+- Manage tournaments
+- View game statistics
+- Activity calendar
+- Port: 5070
+- Database: `game_admin_db`
+
+Both apps will:
+- Be registered in `applications` table with role requirements
+- Only visible to users with appropriate roles
+- Demonstrate role-based visibility working end-to-end
+
+### Alternative: Start App Migration
+
+Begin migrating existing apps to use shared library. Order:
 
 | App Type | Example | What It Tests |
 |----------|---------|---------------|
@@ -66,7 +103,7 @@ Only AFTER foundation complete, migrate one of each app category:
 | Multi-Player Game | Spoof | Multi-user coordination |
 | Utility/Scheduler | Season Scheduler (needs rename) | Different pattern |
 
-**Don't lock down identity until all 5 app types migrated** - each reveals needed improvements.
+**Recommendation:** Phase C first - demonstrates the foundation working, then migrate apps.
 
 ## Current Database State
 
@@ -75,7 +112,10 @@ Only AFTER foundation complete, migrate one of each app category:
 - User: `activityhub`
 - Password: `pubgames`
 - Port: 5555
-- Tables: `users` (with `roles` column), `challenges`
+- Tables:
+  - `users` (with `roles` column)
+  - `challenges`
+  - `applications` (new - app registry)
 
 **App Databases:**
 - Still use `pubgames` user (will update during app migration)
@@ -85,9 +125,30 @@ Only AFTER foundation complete, migrate one of each app category:
 - `pubgames` database still exists as backup
 - Can be dropped after stable operation
 
+## Architecture Summary
+
+```
+Identity-Shell (Port 3001)
+├── Database: activity_hub
+│   ├── users (with roles)
+│   ├── challenges (lobby system)
+│   └── applications (app registry)
+├── Public API
+│   ├── /api/login (returns user + roles)
+│   ├── /api/validate (returns user + roles)
+│   └── /api/apps (filtered by user roles)
+├── Admin API (requires setup_admin)
+│   ├── GET /api/admin/apps
+│   ├── PUT /api/admin/apps/:id
+│   ├── POST /api/admin/apps/:id/enable
+│   └── POST /api/admin/apps/:id/disable
+└── Lobby API (existing)
+```
+
 ## Notes
 - Shared library (lib/activity-hub-common/) ready but won't be used until apps migrate
 - SSL/TLS deferred (easy to add later)
 - Season Scheduler needs better name (background jobs/scheduling utility)
 - Working on Mac (code editing, Git operations)
 - Testing on Pi after committing
+- Foundation is solid - ready to build on top
