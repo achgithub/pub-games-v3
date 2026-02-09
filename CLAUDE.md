@@ -7,7 +7,7 @@
 - Known issues: None - both admin and runtime apps operational
 - Next: TBD - all major display system features complete
 - Build: `cd games/{app}/frontend && npm run build && cp -r build/* ../backend/static/`
-- PostgreSQL: Port 5555, password "pubgames", user "pubgames"
+- PostgreSQL: Port 5555, password "pubgames", user "activityhub", database "activity_hub"
 
 # Pub Games v3 - Documentation Index
 
@@ -196,15 +196,15 @@ pub-games-v3/
 ## Lessons Learned (Abridged)
 
 ### Database Architecture
-- **Two-layer system**: Shared `pubgames` DB (auth) + separate app DBs (data)
-- All apps connect to TWO databases: `pubgames` for users, `{app}_db` for app data
+- **Two-layer system**: Shared `activity_hub` DB (auth) + separate app DBs (data)
+- All apps connect to TWO databases: `activity_hub` for users, `{app}_db` for app data
 - PostgreSQL location: Centralized server storage (NOT in project folders)
 - SQLite vs PostgreSQL: Switched from file-based SQLite to PostgreSQL server
 
 ### Environment Configuration
 - **PostgreSQL port**: 5555 (not default 5432)
-- **PostgreSQL credentials**: user=`pubgames`, password=`pubgames` (not `pubgames123`)
-- **Database creation**: `psql -U pubgames -h localhost -p 5555 -d postgres -c "CREATE DATABASE {app}_db;"`
+- **PostgreSQL credentials**: user=`activityhub`, password=`pubgames` (not `pubgames123`)
+- **Database creation**: `psql -U activityhub -h localhost -p 5555 -d postgres -c "CREATE DATABASE {app}_db;"`
 - Must specify `-p 5555` in all psql commands
 
 ### Go Development
@@ -224,7 +224,7 @@ pub-games-v3/
 - ❌ Using wrong password (pubgames123 vs pubgames)
 - ❌ Scanning NULL database values directly into Go strings
 - ❌ Missing `go.mod` file for Go modules
-- ❌ Testing with non-existent users (check `pubgames.users` table first)
+- ❌ Testing with non-existent users (check `activity_hub.users` table first)
 
 ### Display Admin Specifics
 - **Port**: 5050

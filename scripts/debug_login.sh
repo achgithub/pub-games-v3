@@ -8,7 +8,7 @@ echo ""
 
 # Check if PostgreSQL is running
 echo "1. Checking PostgreSQL connection..."
-if PGPASSWORD=pubgames psql -h 127.0.0.1 -p 5555 -U pubgames -d pubgames -c "SELECT 1;" > /dev/null 2>&1; then
+if PGPASSWORD=pubgames psql -h 127.0.0.1 -p 5555 -U activityhub -d activity_hub -c "SELECT 1;" > /dev/null 2>&1; then
     echo "   ✅ PostgreSQL is connected"
 else
     echo "   ❌ PostgreSQL connection failed"
@@ -17,7 +17,7 @@ fi
 
 echo ""
 echo "2. Checking users table..."
-PGPASSWORD=pubgames psql -h 127.0.0.1 -p 5555 -U pubgames -d pubgames -c "
+PGPASSWORD=pubgames psql -h 127.0.0.1 -p 5555 -U activityhub -d activity_hub -c "
 SELECT
     email,
     name,
@@ -29,7 +29,7 @@ ORDER BY created_at DESC;"
 
 echo ""
 echo "3. Checking for admin@test.com specifically..."
-ADMIN_EXISTS=$(PGPASSWORD=pubgames psql -h 127.0.0.1 -p 5555 -U pubgames -d pubgames -tAc "
+ADMIN_EXISTS=$(PGPASSWORD=pubgames psql -h 127.0.0.1 -p 5555 -U activityhub -d activity_hub -tAc "
 SELECT COUNT(*) FROM users WHERE email = 'admin@test.com';
 ")
 
@@ -39,7 +39,7 @@ if [ "$ADMIN_EXISTS" = "0" ]; then
     echo "   Run: ./scripts/create_admin_test.sh"
 else
     echo "   ✅ admin@test.com exists"
-    PGPASSWORD=pubgames psql -h 127.0.0.1 -p 5555 -U pubgames -d pubgames -c "
+    PGPASSWORD=pubgames psql -h 127.0.0.1 -p 5555 -U activityhub -d activity_hub -c "
     SELECT email, name, is_admin FROM users WHERE email = 'admin@test.com';"
 fi
 

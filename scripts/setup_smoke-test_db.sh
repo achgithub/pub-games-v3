@@ -10,20 +10,20 @@ sudo -u postgres psql -p 5555 << 'EOF'
 -- Create database
 CREATE DATABASE smoke_test_db;
 
--- Grant database privileges to pubgames user
-GRANT ALL PRIVILEGES ON DATABASE smoke_test_db TO pubgames;
+-- Grant database privileges to activityhub user
+GRANT ALL PRIVILEGES ON DATABASE smoke_test_db TO activityhub;
 
 -- Connect to the database and set schema permissions
 \c smoke_test_db
 
 -- Grant schema permissions (required for PostgreSQL 15+)
-GRANT ALL ON SCHEMA public TO pubgames;
-GRANT CREATE ON SCHEMA public TO pubgames;
+GRANT ALL ON SCHEMA public TO activityhub;
+GRANT CREATE ON SCHEMA public TO activityhub;
 
 -- Set database owner
-ALTER DATABASE smoke_test_db OWNER TO pubgames;
+ALTER DATABASE smoke_test_db OWNER TO activityhub;
 
 EOF
 
 echo "✅ Database smoke_test_db created successfully"
-echo "   User 'pubgames' has full access"
+echo "   User 'activityhub' has full access"

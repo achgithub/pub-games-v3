@@ -6,25 +6,25 @@ set -e
 echo "🔧 Creating admin@test.com user..."
 
 # Check if user already exists
-EXISTING=$(PGPASSWORD=pubgames psql -h 127.0.0.1 -p 5555 -U pubgames -d pubgames -tAc "SELECT email FROM users WHERE email = 'admin@test.com';")
+EXISTING=$(PGPASSWORD=pubgames psql -h 127.0.0.1 -p 5555 -U activityhub -d activity_hub -tAc "SELECT email FROM users WHERE email = 'admin@test.com';")
 
 if [ -n "$EXISTING" ]; then
     echo "⚠️  User admin@test.com already exists"
     echo "Current details:"
-    PGPASSWORD=pubgames psql -h 127.0.0.1 -p 5555 -U pubgames -d pubgames -c "SELECT email, name, is_admin FROM users WHERE email = 'admin@test.com';"
+    PGPASSWORD=pubgames psql -h 127.0.0.1 -p 5555 -U activityhub -d activity_hub -c "SELECT email, name, is_admin FROM users WHERE email = 'admin@test.com';"
 
     echo ""
     read -p "Update to admin privileges? (y/n) " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        PGPASSWORD=pubgames psql -h 127.0.0.1 -p 5555 -U pubgames -d pubgames -c "UPDATE users SET is_admin = TRUE, name = 'Admin Test' WHERE email = 'admin@test.com';"
+        PGPASSWORD=pubgames psql -h 127.0.0.1 -p 5555 -U activityhub -d activity_hub -c "UPDATE users SET is_admin = TRUE, name = 'Admin Test' WHERE email = 'admin@test.com';"
         echo "✅ User updated to admin"
     else
         echo "No changes made"
     fi
 else
     # Insert new user with bcrypt hash of "123456"
-    PGPASSWORD=pubgames psql -h 127.0.0.1 -p 5555 -U pubgames -d pubgames -c "
+    PGPASSWORD=pubgames psql -h 127.0.0.1 -p 5555 -U activityhub -d activity_hub -c "
     INSERT INTO users (email, name, code_hash, is_admin)
     VALUES (
         'admin@test.com',

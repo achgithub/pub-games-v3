@@ -6,7 +6,7 @@
 set -e
 
 # Configuration
-DB_USER="${DB_USER:-pubgames}"
+DB_USER="${DB_USER:-activityhub}"
 DB_HOST="${DB_HOST:-127.0.0.1}"
 DB_PORT="${DB_PORT:-5555}"
 DB_NAME="tictactoe_db"

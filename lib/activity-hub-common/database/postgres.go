@@ -21,7 +21,7 @@ import (
 func InitDatabase(appName string) (*sql.DB, error) {
 	dbHost := getEnv("DB_HOST", "127.0.0.1")
 	dbPort := getEnv("DB_PORT", "5555")
-	dbUser := getEnv("DB_USER", "pubgames")
+	dbUser := getEnv("DB_USER", "activityhub")
 	dbPass := getEnv("DB_PASS", "pubgames")
 	dbName := fmt.Sprintf("%s_db", appName)
 
@@ -54,9 +54,9 @@ func InitDatabase(appName string) (*sql.DB, error) {
 func InitIdentityDatabase() (*sql.DB, error) {
 	dbHost := getEnv("DB_HOST", "127.0.0.1")
 	dbPort := getEnv("DB_PORT", "5555")
-	dbUser := getEnv("DB_USER", "pubgames")
+	dbUser := getEnv("DB_USER", "activityhub")
 	dbPass := getEnv("DB_PASS", "pubgames")
-	dbName := "pubgames" // Identity database
+	dbName := "activity_hub" // Identity database
 
 	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		dbHost, dbPort, dbUser, dbPass, dbName)

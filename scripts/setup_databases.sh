@@ -25,22 +25,22 @@ echo ""
 echo "📊 Setting up PostgreSQL..."
 
 # Create user if doesn't exist (use 'pubgames' as password - change in production)
-sudo -u postgres psql -p 5555 -tc "SELECT 1 FROM pg_user WHERE usename = 'pubgames'" | grep -q 1 || \
-    sudo -u postgres psql -p 5555 -c "CREATE USER pubgames WITH PASSWORD 'pubgames';"
+sudo -u postgres psql -p 5555 -tc "SELECT 1 FROM pg_user WHERE usename = 'activityhub'" | grep -q 1 || \
+    sudo -u postgres psql -p 5555 -c "CREATE USER activityhub WITH PASSWORD 'pubgames';"
 
 # Grant CREATEDB privilege so user can create databases for new apps
-sudo -u postgres psql -p 5555 -c "ALTER USER pubgames CREATEDB;"
+sudo -u postgres psql -p 5555 -c "ALTER USER activityhub CREATEDB;"
 
-echo "✅ PostgreSQL user 'pubgames' configured with CREATEDB privilege"
+echo "✅ PostgreSQL user 'activityhub' configured with CREATEDB privilege"
 
 # List of all databases needed by apps
-DATABASES="pubgames tictactoe_db dots_db leaderboard_db season_scheduler_db"
+DATABASES="activity_hub tictactoe_db dots_db leaderboard_db season_scheduler_db"
 
 for DB in $DATABASES; do
     if sudo -u postgres psql -p 5555 -tc "SELECT 1 FROM pg_database WHERE datname = '$DB'" | grep -q 1; then
         echo "  ✓ Database '$DB' already exists"
     else
-        sudo -u postgres psql -p 5555 -c "CREATE DATABASE $DB OWNER pubgames;"
+        sudo -u postgres psql -p 5555 -c "CREATE DATABASE $DB OWNER activityhub;"
         echo "  ✓ Database '$DB' created"
     fi
 done
@@ -53,8 +53,8 @@ PG_VERSION=$(psql --version | awk '{print $3}' | cut -d. -f1)
 PG_HBA="/etc/postgresql/${PG_VERSION}/main/pg_hba.conf"
 
 # Check if localhost md5 auth already exists for all databases
-if ! sudo grep -q "^host.*all.*pubgames.*127.0.0.1/32.*md5" "$PG_HBA"; then
-    echo "host    all    pubgames    127.0.0.1/32    md5" | sudo tee -a "$PG_HBA" > /dev/null
+if ! sudo grep -q "^host.*all.*activityhub.*127.0.0.1/32.*md5" "$PG_HBA"; then
+    echo "host    all    activityhub    127.0.0.1/32    md5" | sudo tee -a "$PG_HBA" > /dev/null
     sudo systemctl reload postgresql
     echo "✅ TCP/IP authentication configured for all databases"
 else
@@ -67,12 +67,12 @@ SCHEMA_FILE="$SCRIPT_DIR/schema.sql"
 
 if [ -f "$SCHEMA_FILE" ]; then
     echo "📋 Initializing identity shell schema..."
-    cat "$SCHEMA_FILE" | sudo -u postgres psql -p 5555 -d pubgames
+    cat "$SCHEMA_FILE" | sudo -u postgres psql -p 5555 -d activity_hub
 
-    # Grant all permissions to pubgames user
-    echo "🔑 Granting table permissions to pubgames user..."
-    sudo -u postgres psql -p 5555 -d pubgames -c "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO pubgames;"
-    sudo -u postgres psql -p 5555 -d pubgames -c "GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO pubgames;"
+    # Grant all permissions to activityhub user
+    echo "🔑 Granting table permissions to activityhub user..."
+    sudo -u postgres psql -p 5555 -d activity_hub -c "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO activityhub;"
+    sudo -u postgres psql -p 5555 -d activity_hub -c "GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO activityhub;"
 
     echo "✅ Identity shell schema initialized"
 else
@@ -108,11 +108,11 @@ echo ""
 echo "🎉 Database setup complete!"
 echo ""
 echo "PostgreSQL:"
-echo "  - User: pubgames (with CREATEDB privilege)"
+echo "  - User: activityhub (with CREATEDB privilege)"
 echo "  - Password: pubgames (CHANGE THIS IN PRODUCTION)"
 echo "  - Port: 5555"
 echo "  - Databases:"
-echo "      pubgames              - Identity Shell"
+echo "      activity_hub          - Identity Shell"
 echo "      tictactoe_db          - Tic-Tac-Toe"
 echo "      dots_db               - Dots & Boxes"
 echo "      leaderboard_db        - Leaderboard"

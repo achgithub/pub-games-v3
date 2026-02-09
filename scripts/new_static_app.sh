@@ -312,22 +312,22 @@ sudo -u postgres psql -p 5555 << 'EOF'
 CREATE DATABASE DB_NAME_PLACEHOLDER;
 
 -- Grant database privileges to pubgames user
-GRANT ALL PRIVILEGES ON DATABASE DB_NAME_PLACEHOLDER TO pubgames;
+GRANT ALL PRIVILEGES ON DATABASE DB_NAME_PLACEHOLDER TO activityhub;
 
 -- Connect to the database and set schema permissions
 \c DB_NAME_PLACEHOLDER
 
 -- Grant schema permissions (required for PostgreSQL 15+)
-GRANT ALL ON SCHEMA public TO pubgames;
-GRANT CREATE ON SCHEMA public TO pubgames;
+GRANT ALL ON SCHEMA public TO activityhub;
+GRANT CREATE ON SCHEMA public TO activityhub;
 
 -- Set database owner
-ALTER DATABASE DB_NAME_PLACEHOLDER OWNER TO pubgames;
+ALTER DATABASE DB_NAME_PLACEHOLDER OWNER TO activityhub;
 
 EOF
 
 echo "✅ Database DB_NAME_PLACEHOLDER created successfully"
-echo "   User 'pubgames' has full access"
+echo "   User 'activityhub' has full access"
 SCRIPT_EOF
 
 # Replace placeholders in the setup script

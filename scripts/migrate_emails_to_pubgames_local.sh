@@ -3,8 +3,8 @@
 
 set -e  # Exit on error
 
-DB_USER="${DB_USER:-pubgames}"
-DB_NAME="${DB_NAME:-pubgames}"
+DB_USER="${DB_USER:-activityhub}"
+DB_NAME="${DB_NAME:-activity_hub}"
 DB_PORT="${DB_PORT:-5555}"
 
 echo "🔄 Migrating email addresses to @pubgames.local domain..."
