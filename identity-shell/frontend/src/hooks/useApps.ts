@@ -11,7 +11,14 @@ export function useApps() {
   useEffect(() => {
     async function fetchApps() {
       try {
-        const response = await fetch(`${API_BASE}/api/apps`);
+        // Get token from localStorage to fetch role-based apps
+        const token = localStorage.getItem('token');
+        const headers: HeadersInit = {};
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const response = await fetch(`${API_BASE}/api/apps`, { headers });
         if (!response.ok) {
           throw new Error('Failed to fetch apps');
         }
