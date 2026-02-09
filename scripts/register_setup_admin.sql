@@ -21,8 +21,8 @@ INSERT INTO applications (
     'iframe',
     'System configuration and user management',
     'admin',
-    'http://{host}:5060',
-    5060,
+    'http://{host}:5020',
+    5020,
     'none',
     100,  -- Higher display_order so it appears last
     ARRAY['setup_admin'],

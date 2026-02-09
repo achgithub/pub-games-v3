@@ -49,7 +49,7 @@
 
 ### Phase C (Part 1): Setup Admin App ✅ (2026-02-09)
 - ✅ Built complete admin mini-app for system configuration
-- ✅ Backend (Go) on port 5060
+- ✅ Backend (Go) on port 5020
   - User management endpoints
   - App management endpoints
   - requireSetupAdmin middleware
@@ -132,7 +132,7 @@ Identity-Shell (Port 3001)
 │   └── POST /api/admin/apps/:id/disable
 └── Lobby API (existing)
 
-Setup Admin App (Port 5060)
+Setup Admin App (Port 5020)
 ├── Database: setup_admin_db (audit_log)
 ├── Auth: requires setup_admin role
 ├── Features:

@@ -71,7 +71,7 @@ func main() {
 	)
 
 	// Start server
-	port := getEnv("PORT", "5060")
+	port := getEnv("PORT", "5020")
 	log.Printf("🚀 Setup Admin starting on :%s", port)
 	log.Fatal(http.ListenAndServe(":"+port, corsHandler(r)))
 }

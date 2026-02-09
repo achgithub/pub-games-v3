@@ -2,7 +2,7 @@
 
 - Platform: Pi at [192.168.1.45], Mac for editing
 - Workflow: Edit on Mac → git push → pull & build on Pi
-- Ports: identity-shell: 3001, tic-tac-toe: 4001, dots: 4011, sweepstakes: 4031, leaderboard: 5030, season-scheduler: 5040, smoke-test: 5010, display-admin: 5050, display-runtime: 5051
+- Ports: identity-shell: 3001, tic-tac-toe: 4001, dots: 4011, sweepstakes: 4031, leaderboard: 5030, season-scheduler: 5040, smoke-test: 5010, setup-admin: 5020, display-admin: 5050, display-runtime: 5051
 - Active work: Identity-shell foundation - Phase B (App Registry) ready for testing
 - Known issues: None - need to test database-driven app registry
 - Next: Test Phase B, then Phase C (Admin mini-apps)
