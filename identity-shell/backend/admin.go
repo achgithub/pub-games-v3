@@ -60,6 +60,56 @@ func requireSetupAdmin(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+// requireSuperUser middleware - only allows users with super_user role
+func requireSuperUser(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		// Extract token
+		token := authHeader
+		if len(token) > 7 && token[:7] == "Bearer " {
+			token = token[7:]
+		}
+
+		// Extract email from token
+		if len(token) < 11 || token[:11] != "demo-token-" {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		email := token[11:]
+
+		// Query user roles
+		var roles pq.StringArray
+		err := db.QueryRow("SELECT COALESCE(roles, '{}') FROM users WHERE email = $1", email).Scan(&roles)
+		if err != nil {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		// Check for super_user role
+		hasRole := false
+		for _, role := range roles {
+			if role == "super_user" {
+				hasRole = true
+				break
+			}
+		}
+
+		if !hasRole {
+			http.Error(w, "Forbidden - super_user role required", http.StatusForbidden)
+			return
+		}
+
+		// User is authorized, proceed
+		next(w, r)
+	}
+}
+
 // handleAdminGetApps returns all apps (including disabled) for admin management
 func handleAdminGetApps(w http.ResponseWriter, r *http.Request) {
 	rows, err := db.Query(`

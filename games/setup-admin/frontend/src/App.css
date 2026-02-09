@@ -142,3 +142,40 @@ button.disabled {
 button.enabled:hover, button.disabled:hover {
   opacity: 0.8;
 }
+
+button.enabled:disabled, button.disabled:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+input[type="checkbox"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.read-only-notice {
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  color: #856404;
+  padding: 15px 20px;
+  margin: 15px auto;
+  max-width: 1200px;
+  border-radius: 5px;
+  text-align: center;
+  font-weight: 500;
+}
+
+.impersonate-button {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.impersonate-button:hover {
+  background: #5568d3;
+}

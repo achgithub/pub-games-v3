@@ -11,9 +11,10 @@ import ChallengeToast from './ChallengeToast';
 interface ShellProps {
   user: User;
   onLogout: () => void;
+  onEndImpersonation: () => void;
 }
 
-const Shell: React.FC<ShellProps> = ({ user, onLogout }) => {
+const Shell: React.FC<ShellProps> = ({ user, onLogout, onEndImpersonation }) => {
   const navigate = useNavigate();
   const [toastChallenge, setToastChallenge] = useState<any | null>(null);
 
@@ -119,6 +120,17 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout }) => {
           </div>
         </div>
       </header>
+
+      {/* Impersonation Banner */}
+      {user.impersonating && (
+        <div className="impersonation-banner">
+          <span className="impersonation-warning">⚠️ Impersonating {user.email}</span>
+          <span className="impersonation-info">(Super User: {user.superUser})</span>
+          <button className="exit-impersonation-button" onClick={onEndImpersonation}>
+            Exit Impersonation
+          </button>
+        </div>
+      )}
 
       {/* Challenge Toast Notification */}
       {toastChallenge && (

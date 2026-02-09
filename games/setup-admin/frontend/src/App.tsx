@@ -27,15 +27,39 @@ function App() {
   const [apps, setApps] = useState<App[]>([]);
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState<string>('');
+  const [currentUserRoles, setCurrentUserRoles] = useState<string[]>([]);
+  const [readOnly, setReadOnly] = useState(false);
 
-  // Get token from URL parameters (passed from identity-shell)
+  // Get token and user info from URL parameters (passed from identity-shell)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const urlToken = params.get('token');
     if (urlToken) {
       setToken(urlToken);
+      fetchCurrentUser(urlToken);
     }
   }, []);
+
+  const fetchCurrentUser = async (authToken: string) => {
+    try {
+      // Validate token to get current user roles
+      const response = await fetch(`http://${window.location.hostname}:3001/api/validate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: authToken })
+      });
+      const data = await response.json();
+      if (data.valid && data.user) {
+        setCurrentUserRoles(data.user.roles || []);
+        // Check if user is super_user but NOT setup_admin (read-only mode)
+        const isSuperUser = data.user.roles?.includes('super_user');
+        const isSetupAdmin = data.user.roles?.includes('setup_admin');
+        setReadOnly(isSuperUser && !isSetupAdmin);
+      }
+    } catch (error) {
+      console.error('Failed to fetch current user:', error);
+    }
+  };
 
   // Fetch data when tab changes
   useEffect(() => {
@@ -110,9 +134,39 @@ function App() {
 
       if (response.ok) {
         fetchApps();
+      } else {
+        const data = await response.json();
+        alert(data.message || 'Failed to toggle app');
       }
     } catch (error) {
       console.error('Failed to toggle app:', error);
+    }
+  };
+
+  const handleImpersonate = async (targetEmail: string) => {
+    try {
+      const response = await fetch(`http://${window.location.hostname}:3001/api/admin/impersonate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ targetEmail })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          // Redirect to identity-shell with impersonation token
+          window.location.href = `http://${window.location.hostname}:3001/?token=${data.token}`;
+        }
+      } else {
+        const errorData = await response.json();
+        alert(errorData.message || 'Failed to start impersonation');
+      }
+    } catch (error) {
+      console.error('Failed to impersonate user:', error);
+      alert('Failed to start impersonation');
     }
   };
 
@@ -147,6 +201,12 @@ function App() {
         </div>
       </header>
 
+      {readOnly && (
+        <div className="read-only-notice">
+          ℹ️ Read-Only Mode: You have super_user access but cannot modify settings. Full setup_admin role required for changes.
+        </div>
+      )}
+
       <main>
         {loading ? (
           <div className="loading">Loading...</div>
@@ -160,6 +220,8 @@ function App() {
                   <th>Name</th>
                   <th>Setup Admin</th>
                   <th>Game Admin</th>
+                  <th>Super User</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -172,6 +234,7 @@ function App() {
                         type="checkbox"
                         checked={user.roles.includes('setup_admin')}
                         onChange={() => toggleUserRole(user.email, 'setup_admin', user.roles)}
+                        disabled={readOnly}
                       />
                     </td>
                     <td>
@@ -179,7 +242,26 @@ function App() {
                         type="checkbox"
                         checked={user.roles.includes('game_admin')}
                         onChange={() => toggleUserRole(user.email, 'game_admin', user.roles)}
+                        disabled={readOnly}
                       />
+                    </td>
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={user.roles.includes('super_user')}
+                        onChange={() => toggleUserRole(user.email, 'super_user', user.roles)}
+                        disabled={readOnly}
+                      />
+                    </td>
+                    <td>
+                      {currentUserRoles.includes('super_user') && (
+                        <button
+                          className="impersonate-button"
+                          onClick={() => handleImpersonate(user.email)}
+                        >
+                          👤 Impersonate
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -208,6 +290,7 @@ function App() {
                       <button
                         className={app.enabled ? 'enabled' : 'disabled'}
                         onClick={() => toggleApp(app.id, app.enabled)}
+                        disabled={readOnly}
                       >
                         {app.enabled ? '✓ Enabled' : '✗ Disabled'}
                       </button>

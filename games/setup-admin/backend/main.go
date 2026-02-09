@@ -120,7 +120,7 @@ func initAppDatabase() (*sql.DB, error) {
 	return db, nil
 }
 
-// requireSetupAdmin middleware - verifies user has setup_admin role
+// requireSetupAdmin middleware - verifies user has setup_admin or super_user role
 func requireSetupAdmin(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
@@ -135,13 +135,29 @@ func requireSetupAdmin(next http.Handler) http.Handler {
 			token = token[7:]
 		}
 
-		// Extract email from demo token
-		if len(token) < 11 || token[:11] != "demo-token-" {
+		var email string
+
+		// Check for impersonation token
+		if len(token) > 12 && token[:12] == "impersonate-" {
+			var impersonatedEmail string
+			err := identityDB.QueryRow(`
+				SELECT impersonated_email
+				FROM impersonation_sessions
+				WHERE impersonation_token = $1 AND is_active = TRUE
+			`, token).Scan(&impersonatedEmail)
+
+			if err != nil {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+			email = impersonatedEmail
+		} else if len(token) > 11 && token[:11] == "demo-token-" {
+			// Extract email from demo token
+			email = token[11:]
+		} else {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
-
-		email := token[11:]
 
 		// Query user roles from identity database
 		var roles pq.StringArray
@@ -151,18 +167,28 @@ func requireSetupAdmin(next http.Handler) http.Handler {
 			return
 		}
 
-		// Check for setup_admin role
-		hasRole := false
+		// Check for setup_admin or super_user role
+		hasSetupAdmin := false
+		hasSuperUser := false
 		for _, role := range roles {
 			if role == "setup_admin" {
-				hasRole = true
-				break
+				hasSetupAdmin = true
+			}
+			if role == "super_user" {
+				hasSuperUser = true
 			}
 		}
 
-		if !hasRole {
-			http.Error(w, "Forbidden - setup_admin role required", http.StatusForbidden)
+		if !hasSetupAdmin && !hasSuperUser {
+			http.Error(w, "Forbidden - setup_admin or super_user role required", http.StatusForbidden)
 			return
+		}
+
+		// Set permission level header
+		if hasSetupAdmin {
+			r.Header.Set("X-Permission-Level", "full")
+		} else {
+			r.Header.Set("X-Permission-Level", "read-only")
 		}
 
 		// Store email in context for audit logging

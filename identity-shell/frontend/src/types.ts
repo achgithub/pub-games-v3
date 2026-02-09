@@ -3,6 +3,8 @@ export interface User {
   email: string;
   name: string;
   is_admin?: boolean;
+  impersonating?: boolean;
+  superUser?: string;  // Original super_user email
 }
 
 export interface AuthResponse {

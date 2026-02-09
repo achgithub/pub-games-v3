@@ -9,6 +9,16 @@ import (
 	"github.com/lib/pq"
 )
 
+// requireWritePermission checks if user has write permission (not read-only)
+func requireWritePermission(w http.ResponseWriter, r *http.Request) bool {
+	permissionLevel := r.Header.Get("X-Permission-Level")
+	if permissionLevel == "read-only" {
+		http.Error(w, "Forbidden - Read-only access. Full setup_admin role required for modifications.", http.StatusForbidden)
+		return false
+	}
+	return true
+}
+
 // handleGetUsers returns all users with their roles
 func handleGetUsers(w http.ResponseWriter, r *http.Request) {
 	rows, err := identityDB.Query(`
@@ -53,6 +63,11 @@ func handleGetUsers(w http.ResponseWriter, r *http.Request) {
 
 // handleUpdateUserRoles updates a user's roles
 func handleUpdateUserRoles(w http.ResponseWriter, r *http.Request) {
+	// Check write permission
+	if !requireWritePermission(w, r) {
+		return
+	}
+
 	vars := mux.Vars(r)
 	email := vars["email"]
 
@@ -149,6 +164,11 @@ func handleGetApps(w http.ResponseWriter, r *http.Request) {
 
 // handleUpdateApp updates an app's details
 func handleUpdateApp(w http.ResponseWriter, r *http.Request) {
+	// Check write permission
+	if !requireWritePermission(w, r) {
+		return
+	}
+
 	vars := mux.Vars(r)
 	appID := vars["id"]
 
@@ -196,6 +216,11 @@ func handleUpdateApp(w http.ResponseWriter, r *http.Request) {
 
 // handleToggleApp enables or disables an app
 func handleToggleApp(w http.ResponseWriter, r *http.Request) {
+	// Check write permission
+	if !requireWritePermission(w, r) {
+		return
+	}
+
 	vars := mux.Vars(r)
 	appID := vars["id"]
 	action := vars["action"]

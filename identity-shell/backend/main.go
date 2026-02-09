@@ -88,6 +88,10 @@ func main() {
 	admin.HandleFunc("/apps/{id}", requireSetupAdmin(handleAdminUpdateApp)).Methods("PUT")
 	admin.HandleFunc("/apps/{id}/{action:enable|disable}", requireSetupAdmin(handleAdminToggleApp)).Methods("POST")
 
+	// Impersonation endpoints (require super_user role)
+	admin.HandleFunc("/impersonate", requireSuperUser(handleStartImpersonation)).Methods("POST")
+	admin.HandleFunc("/end-impersonation", handleEndImpersonation).Methods("POST")
+
 	// Serve frontend React app (includes /static/ for JS/CSS bundles)
 	frontendDir := "../frontend/build"
 
@@ -182,6 +186,58 @@ func handleValidate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check for impersonation token
+	if len(req.Token) > 12 && req.Token[:12] == "impersonate-" {
+		var session struct {
+			SuperUserEmail     string
+			ImpersonatedEmail  string
+		}
+
+		err := db.QueryRow(`
+			SELECT super_user_email, impersonated_email
+			FROM impersonation_sessions
+			WHERE impersonation_token = $1 AND is_active = TRUE
+		`, req.Token).Scan(&session.SuperUserEmail, &session.ImpersonatedEmail)
+
+		if err != nil {
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"valid": false,
+			})
+			return
+		}
+
+		// Get impersonated user info
+		var user struct {
+			Email   string
+			Name    string
+			IsAdmin bool
+			Roles   []string
+		}
+
+		err = db.QueryRow("SELECT email, name, is_admin, COALESCE(roles, '{}') FROM users WHERE email = $1", session.ImpersonatedEmail).
+			Scan(&user.Email, &user.Name, &user.IsAdmin, (*pq.StringArray)(&user.Roles))
+
+		if err != nil {
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"valid": false,
+			})
+			return
+		}
+
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"valid": true,
+			"user": map[string]interface{}{
+				"email":         user.Email,
+				"name":          user.Name,
+				"is_admin":      user.IsAdmin,
+				"roles":         user.Roles,
+				"impersonating": true,
+				"superUser":     session.SuperUserEmail,
+			},
+		})
+		return
+	}
+
 	// For prototype, validate any demo token
 	if len(req.Token) > 11 && req.Token[:11] == "demo-token-" {
 		email := req.Token[11:]
@@ -239,17 +295,33 @@ func handleGetApps(w http.ResponseWriter, r *http.Request) {
 	var userRoles []string
 
 	if authHeader != "" {
-		// Extract token (format: "Bearer demo-token-email@example.com")
+		// Extract token (format: "Bearer demo-token-email@example.com" or "Bearer impersonate-uuid")
 		token := authHeader
 		if len(token) > 7 && token[:7] == "Bearer " {
 			token = token[7:]
 		}
 
-		// Extract email from token
-		if len(token) > 11 && token[:11] == "demo-token-" {
-			email := token[11:]
+		var email string
 
-			// Query user roles
+		// Check for impersonation token
+		if len(token) > 12 && token[:12] == "impersonate-" {
+			var impersonatedEmail string
+			err := db.QueryRow(`
+				SELECT impersonated_email
+				FROM impersonation_sessions
+				WHERE impersonation_token = $1 AND is_active = TRUE
+			`, token).Scan(&impersonatedEmail)
+
+			if err == nil {
+				email = impersonatedEmail
+			}
+		} else if len(token) > 11 && token[:11] == "demo-token-" {
+			// Extract email from demo token
+			email = token[11:]
+		}
+
+		// Query user roles if we have an email
+		if email != "" {
 			var roles pq.StringArray
 			err := db.QueryRow("SELECT COALESCE(roles, '{}') FROM users WHERE email = $1", email).Scan(&roles)
 			if err == nil {

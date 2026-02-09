@@ -150,6 +150,44 @@
   color: #cbd5e1;
 }
 
+/* Impersonation Banner */
+.impersonation-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 0.75rem 1.5rem;
+  background: #fef3c7;
+  border-bottom: 2px solid #fbbf24;
+  color: #92400e;
+}
+
+.impersonation-warning {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.impersonation-info {
+  font-size: 0.85rem;
+  color: #78350f;
+}
+
+.exit-impersonation-button {
+  padding: 0.4rem 0.8rem;
+  background: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.exit-impersonation-button:hover {
+  background: #b91c1c;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .shell-header {
@@ -167,5 +205,11 @@
   .shell-nav {
     flex: 1;
     justify-content: center;
+  }
+
+  .impersonation-banner {
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
   }
 }

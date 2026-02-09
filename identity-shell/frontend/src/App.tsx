@@ -75,6 +75,32 @@ function App() {
     setUser(null);
   };
 
+  const handleEndImpersonation = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${API_BASE}/admin/end-impersonation`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          // Update token and user to super_user
+          localStorage.setItem('token', data.token);
+          setUser(data.user);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to end impersonation:', error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="app-loading">
@@ -101,7 +127,7 @@ function App() {
           path="/*"
           element={
             user ? (
-              <Shell user={user} onLogout={handleLogout} />
+              <Shell user={user} onLogout={handleLogout} onEndImpersonation={handleEndImpersonation} />
             ) : (
               <Navigate to="/login" replace />
             )
