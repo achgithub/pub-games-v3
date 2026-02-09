@@ -3,9 +3,9 @@
 - Platform: Pi at [192.168.1.45], Mac for editing
 - Workflow: Edit on Mac → git push → pull & build on Pi
 - Ports: identity-shell: 3001, tic-tac-toe: 4001, dots: 4011, sweepstakes: 4031, leaderboard: 5030, season-scheduler: 5040, smoke-test: 5010, setup-admin: 5020, display-admin: 5050, display-runtime: 5051
-- Active work: Identity-shell foundation - Phase B (App Registry) ready for testing
-- Known issues: None - need to test database-driven app registry
-- Next: Test Phase B, then Phase C (Admin mini-apps)
+- Active work: Identity Shell Improvements complete (Impersonation, Personalization, Guest Mode)
+- Known issues: SSE presence requires manual refresh after impersonation (acceptable for debugging tool)
+- Next: Ready for new features/improvements
 - Build: `cd games/{app}/frontend && npm run build && cp -r build/* ../backend/static/`
 - PostgreSQL: Port 5555, password "pubgames", user "activityhub", database "activity_hub"
 
