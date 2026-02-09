@@ -61,8 +61,8 @@ const Settings: React.FC<SettingsProps> = ({ apps, onClose, onSave }) => {
 
       // Sort by custom order
       allPrefs.sort((a, b) => {
-        const aOrder = a.customOrder !== null ? a.customOrder : 999;
-        const bOrder = b.customOrder !== null ? b.customOrder : 999;
+        const aOrder = (a.customOrder !== null && a.customOrder !== undefined) ? a.customOrder : 999;
+        const bOrder = (b.customOrder !== null && b.customOrder !== undefined) ? b.customOrder : 999;
         return aOrder - bOrder;
       });
 
