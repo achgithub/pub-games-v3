@@ -1,41 +1,61 @@
 # Activity Hub Migration - Session State
 
-**Last Updated**: 2026-02-08
-**Session ID**: giggly-inventing-pixel (implementation session)
-**Current Phase**: Phase 0 - Database Rename (NEXT SESSION)
-**Status**: Phase 2 Complete, Ready for Database Rename
+**Last Updated**: 2026-02-09
+**Session ID**: Phase 0 & A Complete
+**Current Phase**: Foundation Complete - Ready for Phase B or C
+**Status**: Identity database renamed, roles system operational
 
 ## Completed
+
+### Phase 0: Database Rename ✅ (2026-02-09)
+- ✅ Created `activityhub` user with CREATEROLE and CREATEDB privileges
+- ✅ Created `activity_hub` database
+- ✅ Migrated all user data from `pubgames` → `activity_hub`
+- ✅ Updated identity-shell code to use new credentials
+- ✅ Updated all identity database scripts
+- ✅ Tested and verified - identity-shell operational
+
+### Phase A: User Management & Roles ✅ (2026-02-09)
+- ✅ Added `roles` TEXT[] column to `activity_hub.users`
+- ✅ Created GIN index for efficient role queries
+- ✅ Migrated existing admin users to have both roles
+- ✅ Updated identity-shell to return roles in login/validate
+- ✅ Tested with admin and regular users - working perfectly
+- ✅ Documentation: docs/ROLES.md
+
+**Roles:**
+- `setup_admin` - System configuration (Setup Admin App)
+- `game_admin` - Activity management (Game Admin App)
+
+### Earlier Work
 - ✅ Phase 1: Planning complete (plan saved in .claude/plans/)
 - ✅ Phase 2: Shared package scaffolding COMPLETE
   - ✅ Created lib/activity-hub-common/ with 7 packages (1,559 lines)
   - ✅ All packages build and pass tests on Pi
-  - ✅ Fixed module path to use achgithub username
-  - ✅ go.sum generated and committed
 
-## REVISED STRATEGY (Agreed 2026-02-08)
-**Key Insight**: Can't migrate apps without solid identity-shell foundation.
-**New Order**: Fix identity-shell FIRST, THEN migrate apps
+## Foundation Strategy
 
-### Foundation Work (Do First)
-1. **Phase A: User Management & Roles**
-   - Add two admin roles: `setup_admin` (system config) and `game_admin` (activity management)
-   - Update identity-shell to check roles
-   - Show/hide apps based on user roles
-   - User home screen customization (favorites, ordering)
+**Identity-shell foundation complete:** Database renamed, roles system operational
 
-2. **Phase C: Create Admin Mini-Apps**
-   - Setup Admin App (system configuration, only `setup_admin` can see)
-   - Game Admin App (activity management, only `game_admin` can see)
-   - Both are mini-apps shown on home screen based on roles
+### Next Options
 
-3. **Phase B: Database-Driven App Registry**
-   - Migrate apps.json → PostgreSQL
-   - Add role requirements per app
-   - Admin endpoints for app management
-   - User preferences (favorites, ordering)
+**Option 1: Phase B - Database-Driven App Registry**
+- Migrate apps.json → PostgreSQL `applications` table
+- Add role requirements per app
+- Admin endpoints for app management
+- User preferences (favorites, ordering)
+- Dynamic app visibility based on roles
 
-### Migration Strategy (One of Each Type)
+**Option 2: Phase C - Create Admin Mini-Apps**
+- Setup Admin App (system configuration, only `setup_admin` can see)
+- Game Admin App (activity management, only `game_admin` can see)
+- Both are mini-apps shown on home screen based on roles
+- Demonstrates role-based app visibility
+
+**Recommendation:** Either order works. Phase B provides infrastructure for Phase C apps to register themselves. Phase C provides immediate value and tests role-based visibility.
+
+### Migration Strategy (After Foundation)
+
 Only AFTER foundation complete, migrate one of each app category:
 
 | App Type | Example | What It Tests |
@@ -48,58 +68,26 @@ Only AFTER foundation complete, migrate one of each app category:
 
 **Don't lock down identity until all 5 app types migrated** - each reveals needed improvements.
 
-## Current Task
-NEXT: Phase 0 - Database Rename (do this BEFORE Phase A)
+## Current Database State
 
-### Phase 0: Database Rename (Hybrid Approach - Database Now, Directory Later)
+**Identity Database:**
+- Database: `activity_hub`
+- User: `activityhub`
+- Password: `pubgames`
+- Port: 5555
+- Tables: `users` (with `roles` column), `challenges`
 
-**Decided**: Rename database NOW before building foundation. Directory/repo rename later (cosmetic).
+**App Databases:**
+- Still use `pubgames` user (will update during app migration)
+- Names unchanged: `tictactoe_db`, `dots_db`, `spoof_db`, etc.
 
-**Database Changes**:
-- `pubgames` DB → `activity_hub`
-- `pubgames` user → `activityhub` (same password)
-- App databases: Keep as-is (`tictactoe_db`, `dots_db`, etc.)
-- New admin databases: `activity_hub_setup_admin`, `activity_hub_game_admin`
-
-**Steps (On Pi)**:
-1. Dump current database: `pg_dump -U pubgames -p 5555 pubgames > pubgames_backup.sql`
-2. Create new database: `psql -U pubgames -p 5555 -d postgres -c "CREATE DATABASE activity_hub;"`
-3. Create new user: `psql -U pubgames -p 5555 -d postgres -c "CREATE USER activityhub WITH PASSWORD 'pubgames';"`
-4. Grant permissions: `psql -U pubgames -p 5555 -d postgres -c "GRANT ALL PRIVILEGES ON DATABASE activity_hub TO activityhub;"`
-5. Restore data: `psql -U activityhub -p 5555 activity_hub < pubgames_backup.sql`
-6. Test with identity-shell
-7. Update all apps if identity-shell works
-8. Drop old pubgames DB when confirmed
-
-**Code Changes (On Mac)**:
-1. Update connection strings in:
-   - identity-shell/backend
-   - games/tic-tac-toe/backend
-   - games/dots/backend
-   - games/spoof/backend
-   - games/sweepstakes/backend
-   - games/season-scheduler/backend
-   - games/display-admin/backend
-   - games/display-runtime/backend (if uses identity DB)
-2. Update lib/activity-hub-common/database/postgres.go (InitIdentityDatabase)
-3. Update documentation (CLAUDE.md, docs/)
-4. Commit and push
-
-**After Phase 0 Complete**:
-- Proceed to Phase A (User Management & Roles)
-- New admin apps will use correct DB names from the start
-
-**Directory/Repo Rename (LATER)**:
-- `pub-games-v3` → `activity-hub` (do after foundation stable)
-- Less urgent, cosmetic change
+**Old Database:**
+- `pubgames` database still exists as backup
+- Can be dropped after stable operation
 
 ## Notes
 - Shared library (lib/activity-hub-common/) ready but won't be used until apps migrate
 - SSL/TLS deferred (easy to add later)
 - Season Scheduler needs better name (background jobs/scheduling utility)
-
-## Notes
 - Working on Mac (code editing, Git operations)
-- Will test builds on Pi after committing
-- Using local replace directive in go.mod during development
-- Library will eventually be published to GitHub for version management
+- Testing on Pi after committing
