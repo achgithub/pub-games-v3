@@ -48,7 +48,7 @@ const Settings: React.FC<SettingsProps> = ({ apps, onClose, onSave }) => {
       }
 
       // Create preferences for all apps (use existing or defaults)
-      const allPrefs = apps.map((app, index) => {
+      const allPrefs = apps.map((app) => {
         const existing = prefsMap.get(app.id);
         return {
           appId: app.id,
