@@ -2,10 +2,10 @@
 
 - Platform: Pi at [192.168.1.45], Mac for editing
 - Workflow: Edit on Mac → git push → pull & build on Pi
-- Ports: identity-shell: 3001, tic-tac-toe: 4001, dots: 4011, sweepstakes: 4031, leaderboard: 5030, season-scheduler: 5040, smoke-test: 5010, setup-admin: 5020, display-admin: 5050, display-runtime: 5051
-- Active work: Identity Shell Improvements complete (Impersonation, Personalization, Guest Mode)
+- Ports: identity-shell: 3001, tic-tac-toe: 4001, dots: 4011, sweepstakes: 4031, last-man-standing: 4021, leaderboard: 5030, season-scheduler: 5040, smoke-test: 5010, setup-admin: 5020, display-admin: 5050, display-runtime: 5051, game-admin: 5070
+- Active work: LMS migration to pub-games-v3 (last-man-standing player app + game-admin) — awaiting Pi deployment
 - Known issues: SSE presence requires manual refresh after impersonation (acceptable for debugging tool)
-- Next: Ready for new features/improvements
+- Next: Deploy LMS apps on Pi, register in applications table
 - Build: `cd games/{app}/frontend && npm run build && cp -r build/* ../backend/static/`
 - PostgreSQL: Port 5555, password "pubgames", user "activityhub", database "activity_hub"
 
