@@ -1,9 +1,9 @@
 # Activity Hub Migration - Session State
 
-**Last Updated**: 2026-02-09
-**Session ID**: Phase 0, A, B, C (Part 1) & Identity Shell Improvements Complete
-**Current Phase**: Ready for new features
-**Status**: Identity-shell foundation complete with Impersonation, Personalization, and Guest Mode
+**Last Updated**: 2026-02-10
+**Session ID**: Phase 0, A, B, C (Part 1), Identity Shell Improvements & LMS Migration Complete
+**Current Phase**: LMS apps committed — awaiting Pi deployment and testing
+**Status**: Two new apps built and committed: last-man-standing (player) + game-admin (admin)
 
 ## Completed
 
@@ -26,94 +26,102 @@
 **Roles:**
 - `setup_admin` - System configuration (Setup Admin App)
 - `game_admin` - Activity management (Game Admin App)
+- `super_user` - Impersonation capability
 
 ### Phase B: Database-Driven App Registry ✅ (2026-02-09)
 - ✅ Created `applications` table in PostgreSQL
-- ✅ Seeded with 8 existing apps from apps.json
+- ✅ Seeded with 8 existing apps
 - ✅ Identity-shell reads apps from database (not apps.json)
 - ✅ Role-based app visibility (GetAppsForUser)
-- ✅ Admin CRUD endpoints:
-  - GET /api/admin/apps (list all)
-  - PUT /api/admin/apps/:id (update)
-  - POST /api/admin/apps/:id/enable (enable)
-  - POST /api/admin/apps/:id/disable (disable)
-- ✅ requireSetupAdmin middleware for auth
+- ✅ Admin CRUD endpoints for app management
 - ✅ Tested and verified - all endpoints working
 - ✅ Documentation: docs/APP-REGISTRY.md
 
-**Features:**
-- Apps can require specific roles for visibility
-- Enable/disable apps without code changes
-- Custom display ordering
-- Auto-reloading registry after updates
-
 ### Phase C (Part 1): Setup Admin App ✅ (2026-02-09)
-- ✅ Built complete admin mini-app for system configuration
 - ✅ Backend (Go) on port 5020
-  - User management endpoints
-  - App management endpoints
-  - requireSetupAdmin middleware
-  - Audit logging
-- ✅ Frontend (React/TypeScript)
-  - Two-tab interface: Users | Apps
-  - Toggle user roles (setup_admin, game_admin)
-  - Enable/disable apps
-  - Token-based authentication
+- ✅ Frontend (React/TypeScript) — Users | Apps tabs
 - ✅ Database: `setup_admin_db` with audit_log table
 - ✅ Registered in applications table with required_roles=['setup_admin']
-- ✅ Role-based visibility working:
-  - Regular users: Cannot see Setup Admin
-  - Admin users: See Setup Admin in app list
-- ✅ Fixed frontend to send Authorization header for role filtering
 - ✅ Tested and operational
-
-**Setup Admin Features:**
-- View all users and their roles
-- Grant/revoke setup_admin and game_admin roles
-- View all apps in registry
-- Enable/disable apps dynamically
-- See required roles and display order
-- All actions logged to audit_log
 
 ### Identity Shell Improvements ✅ (2026-02-09)
 
 **Phase 1: User Impersonation**
-- ✅ Database: `impersonation_sessions` table for audit tracking
-- ✅ Backend: `identity-shell/backend/impersonation.go` with start/end endpoints
-- ✅ New role: `super_user` with read-only Setup Admin access + impersonation
-- ✅ Frontend: Impersonation banner and Exit button
-- ✅ Setup Admin: Impersonate button for each user, read-only mode for super_user
-- ✅ Security: Full audit trail, read-only enforcement via X-Permission-Level header
+- ✅ `impersonation_sessions` table, impersonation.go, impersonation banner
+- ✅ super_user role: read-only Setup Admin + impersonation
 - ✅ Migration: `scripts/migrate_add_impersonation.sh`
-- ✅ Tested and operational
-- ⚠️ Known issue: SSE presence requires manual F5 refresh after impersonation (acceptable for debugging tool)
+- ⚠️ Known issue: SSE presence requires manual F5 refresh after impersonation (acceptable)
 
 **Phase 2: App Personalization**
-- ✅ Database: `user_app_preferences` table for per-user app settings
-- ✅ Backend: `identity-shell/backend/preferences.go` with GET/PUT endpoints
-- ✅ Frontend: Settings modal with show/hide toggles and reorder controls
-- ✅ Features: Hide apps, reorder with up/down arrows, changes persist per-user
-- ✅ Applied after role-based filtering (can't unhide admin apps)
+- ✅ `user_app_preferences` table, preferences.go, Settings modal
+- ✅ Hide apps, reorder with up/down arrows, persisted per-user
 - ✅ Migration: `scripts/migrate_add_user_preferences.sh`
-- ✅ Tested and operational
 
 **Phase 3: Guest Mode**
-- ✅ Database: `guest_accessible` column on applications table
-- ✅ Backend: Guest login endpoint with guest-token-{uuid}
-- ✅ Frontend: "Continue as Guest" button, simplified guest UI
-- ✅ Features: Public access without authentication, no lobby/challenges/SSE
-- ✅ Security: Only apps marked guest_accessible visible to guests
-- ✅ Migration: `scripts/migrate_add_guest_mode.sh` (marks leaderboard as guest_accessible)
-- ✅ Tested and operational
+- ✅ `guest_accessible` column, guest login endpoint, "Continue as Guest" button
+- ✅ Migration: `scripts/migrate_add_guest_mode.sh`
 
-**Test Users:**
-- `alice@pubgames.local` - super_user (can impersonate, read-only Setup Admin)
-- `bob@pubgames.local` - regular user (for personalization testing)
-- Guest - no authentication (only sees guest_accessible apps)
+### Phase C (Part 2): Game Admin App + LMS Migration ✅ (2026-02-10)
 
-**App Registry Updates:**
-- Setup Admin visible to both `setup_admin` and `super_user` roles
-- Leaderboard marked as `guest_accessible = true`
+Migrated Last Man Standing (LMS) from pub-games-v2 to pub-games-v3, split into two apps:
+
+**Last Man Standing Player App (`games/last-man-standing/`, port 4021)**
+- ✅ Go backend with custom `AuthMiddleware` (handles demo-token + impersonate- tokens)
+- ✅ Player routes: join game, status, open rounds, match picks, prediction history, used teams, standings, round summaries
+- ✅ PostgreSQL (`last_man_standing_db`) - fresh schema, no v2 data migration
+- ✅ TypeScript React frontend: Make Pick | My Picks | Standings tabs
+- ✅ Impersonation banner (yellow warning showing who is being impersonated and by whom)
+- ✅ Prediction validation: round must be open, team valid, team not already used this game
+- ✅ `games/last-man-standing/database/schema.sql` for Pi setup
+
+**Game Admin App (`games/game-admin/`, port 5070)**
+- ✅ Go backend with `requireGameAdmin` middleware (mirrors requireSetupAdmin)
+  - `game_admin` role → full write access
+  - `super_user` role → read-only access (X-Permission-Level: read-only)
+- ✅ LMS admin routes: create/activate/complete games, create/open/close rounds, CSV match upload, set match results, view all predictions
+- ✅ Result processing: automatically marks predictions correct/incorrect, eliminates players
+- ✅ P-P (postponed) handling: 'loss' rule eliminates, 'win' rule voids prediction
+- ✅ Draws eliminate all predictors
+- ✅ Audit logging to `game_admin_db`
+- ✅ TypeScript React frontend: Games | Rounds | Matches | Predictions tabs
+- ✅ Read-only mode UI (disabled buttons, read-only badge) for super_user impersonation
+- ✅ `games/game-admin/database/schema.sql` for Pi setup
+
+**App Registry:**
+- ✅ `scripts/migrate_add_lms_apps.sql` — inserts both apps into `activity_hub.applications`
+  - last-man-standing: port 4021, no required roles (visible to all)
+  - game-admin: port 5070, required_roles=['game_admin']
+
+**Committed:** dfdc9d8
+
+**⚠️ PENDING — Needs Pi deployment:**
+```bash
+cd ~/pub-games-v3 && git pull
+
+# Create databases
+psql -U activityhub -h localhost -p 5555 -d postgres -c "CREATE DATABASE last_man_standing_db;"
+psql -U activityhub -h localhost -p 5555 -d postgres -c "CREATE DATABASE game_admin_db;"
+
+# Apply schemas
+psql -U activityhub -h localhost -p 5555 -d last_man_standing_db -f games/last-man-standing/database/schema.sql
+psql -U activityhub -h localhost -p 5555 -d game_admin_db -f games/game-admin/database/schema.sql
+
+# Build player app
+cd games/last-man-standing/frontend && npm install && npm run build && cp -r build/* ../backend/static/
+cd ../backend && go mod tidy && go run *.go
+
+# Build game admin app
+cd games/game-admin/frontend && npm install && npm run build && cp -r build/* ../backend/static/
+cd ../backend && go mod tidy && go run *.go
+
+# Register apps (replace 192.168.1.45 with actual Pi IP)
+sed 's/{host}/192.168.1.45/g' scripts/migrate_add_lms_apps.sql | psql -U activityhub -h localhost -p 5555 -d activity_hub
+
+# Smoke tests
+curl http://localhost:4021/api/config
+curl http://localhost:4021/api/games/current
+curl -H "Authorization: Bearer demo-token-admin@pubgames.local" http://localhost:5070/api/lms/games
+```
 
 ### Earlier Work
 - ✅ Phase 1: Planning complete (plan saved in .claude/plans/)
@@ -121,137 +129,88 @@
   - ✅ Created lib/activity-hub-common/ with 7 packages (1,559 lines)
   - ✅ All packages build and pass tests on Pi
 
-## Foundation Status
-
-**Identity-shell foundation is COMPLETE and OPERATIONAL:**
-- ✅ Database renamed to activity_hub
-- ✅ Role-based access control operational
-- ✅ Dynamic app registry operational
-- ✅ Admin endpoints for app management
-- ✅ First admin app (Setup Admin) built and working
-- ✅ Role-based app visibility working end-to-end
-
-**Demonstrated capabilities:**
-- Users with setup_admin role can see and access Setup Admin app
-- Regular users cannot see admin apps
-- Setup Admin can manage users and apps through web UI
-- All changes take effect immediately (no code deployment needed)
-
-## Current Work
-
-**Status:** Ready for new features/improvements
-
-**Available Options:**
-1. **Phase C (Part 2)**: Game Admin App - Build second admin mini-app for activity management
-2. **App Migration**: Start migrating existing apps to use shared library
-3. **New Features**: Additional identity-shell enhancements
-4. **Bug Fixes**: Address any issues that arise
-
-**Deferred (Can be added later):**
-- Game Admin App (similar to Setup Admin, for activity management)
-- SSL/TLS (easy to add when needed)
-- SSE reconnection on user change (would fix impersonation presence delay)
-
 ## Architecture Summary
 
 ```
 Identity-Shell (Port 3001)
 ├── Database: activity_hub
-│   ├── users (with roles)
+│   ├── users (with roles: setup_admin, game_admin, super_user)
 │   ├── challenges (lobby system)
 │   ├── applications (app registry with guest_accessible)
 │   ├── impersonation_sessions (audit trail)
 │   └── user_app_preferences (personalization)
 ├── Public API
-│   ├── /api/login (returns user + roles)
-│   ├── /api/login/guest (guest access)
-│   ├── /api/validate (returns user + roles + impersonation state)
+│   ├── /api/login, /api/login/guest, /api/validate
 │   ├── /api/apps (filtered by user roles + preferences)
 │   ├── /api/user/preferences (GET/PUT)
 │   └── /api/admin/impersonate (super_user only)
-├── Admin API (requires setup_admin)
-│   ├── GET /api/admin/apps
-│   ├── PUT /api/admin/apps/:id
-│   ├── POST /api/admin/apps/:id/enable
-│   └── POST /api/admin/apps/:id/disable
-└── Lobby API (existing)
+└── Admin API (requires setup_admin)
 
 Setup Admin App (Port 5020)
 ├── Database: setup_admin_db (audit_log)
-├── Auth: requires setup_admin role
-├── Features:
-│   ├── User management (roles)
-│   └── App registry management
-└── Registered with required_roles=['setup_admin']
+├── Auth: requires setup_admin or super_user role
+└── Features: user role management, app registry management
+
+Last Man Standing - Player (Port 4021)  ← NEW
+├── Database: last_man_standing_db (shared)
+├── Auth: demo-token + impersonate- token support
+└── Features: join game, make picks, history, standings
+
+Game Admin App (Port 5070)  ← NEW
+├── Databases: game_admin_db (audit) + last_man_standing_db (LMS data)
+├── Auth: requires game_admin or super_user role
+└── Features: manage LMS games/rounds/matches/results/predictions
 ```
+
+## Port Reference
+
+| App | Port |
+|-----|------|
+| identity-shell | 3001 |
+| tic-tac-toe | 4001 |
+| dots | 4011 |
+| last-man-standing | 4021 |
+| sweepstakes | 4031 |
+| smoke-test | 5010 |
+| setup-admin | 5020 |
+| leaderboard | 5030 |
+| season-scheduler | 5040 |
+| display-admin | 5050 |
+| display-runtime | 5051 |
+| game-admin | 5070 |
 
 ## Current Database State
 
-**Identity Database:**
-- Database: `activity_hub`
-- User: `activityhub`
-- Password: `pubgames`
-- Port: 5555
-- Tables:
-  - `users` (with `roles` column - supports setup_admin, game_admin, super_user)
-  - `challenges` (lobby system)
-  - `applications` (app registry with 9 apps, includes guest_accessible flag)
-  - `impersonation_sessions` (audit trail for super_user impersonation)
-  - `user_app_preferences` (per-user app hide/reorder settings)
+**Identity Database (`activity_hub`):**
+- `users` (roles: setup_admin, game_admin, super_user)
+- `challenges`, `applications`, `impersonation_sessions`, `user_app_preferences`
+- 9+ registered apps (after LMS migration script runs)
 
 **Admin Databases:**
-- `setup_admin_db` (audit_log table) ✅
-- `game_admin_db` (to be created)
+- `setup_admin_db` (audit_log) ✅ deployed
+- `game_admin_db` (audit_log) ⚠️ pending Pi deployment
 
 **App Databases:**
-- Still use `pubgames` user (will update during app migration)
-- Names unchanged: `tictactoe_db`, `dots_db`, `spoof_db`, etc.
-
-**Old Database:**
-- `pubgames` database still exists as backup
-- Can be dropped after stable operation
-
-## Testing Notes
-
-**Role-based visibility verified:**
-```bash
-# Regular users don't see setup-admin
-curl http://localhost:3001/api/apps | jq '.apps[] | select(.id=="setup-admin")'
-# Returns nothing
-
-# Admin users see setup-admin
-curl -H "Authorization: Bearer demo-token-admin@pubgames.local" \
-     http://localhost:3001/api/apps | jq '.apps[] | select(.id=="setup-admin") | .name'
-# Returns "Setup Admin"
-```
-
-**Setup Admin UI working:**
-- Accessible at http://192.168.1.45:3001 (logged in as admin)
-- Shows in app list for admin users
-- Can manage users and apps
-- All changes persist to database
+- `last_man_standing_db` ⚠️ pending Pi deployment (fresh, no v2 data migration)
+- `tictactoe_db`, `dots_db`, `spoof_db` etc. — unchanged
 
 ## Next Steps
 
-**Identity-shell foundation is complete and operational with all improvements:**
-- ✅ Role-based access control
-- ✅ Dynamic app registry
-- ✅ User impersonation for debugging
-- ✅ Per-user app personalization
-- ✅ Guest mode for public access
+**Immediate:**
+1. Deploy LMS apps on Pi (commands above)
+2. Test player app and game admin app end-to-end
+3. Grant `game_admin` role to appropriate users via Setup Admin
 
-**Options for next work:**
-1. Build Game Admin App (Phase C Part 2)
-2. Migrate existing apps to shared library
-3. New identity-shell features as requested
-4. Address issues/improvements as they arise
-
-**Recommendation:** Wait for user direction on next priority.
+**Future options:**
+1. Migrate other existing apps (dots, sweepstakes, etc.) to v3 patterns
+2. Add more game modules to game-admin as new games are created
+3. SSL/TLS (easy to add when needed)
+4. SSE reconnection on user change (would fix impersonation presence delay)
 
 ## Notes
-- Shared library (lib/activity-hub-common/) ready but won't be used until apps migrate
-- SSL/TLS deferred (easy to add later)
-- Season Scheduler needs better name (background jobs/scheduling utility)
+- LMS uses NO Redis/SSE — deadline-based HTTP polling only
+- v2 LMS data not migrated — fresh start on v3
+- Game admin grows with additional game tabs as more games are migrated
+- Shared library (lib/activity-hub-common/) exists but apps currently implement patterns inline (consistent with setup-admin)
 - Working on Mac (code editing, Git operations)
 - Testing on Pi after committing
-- Foundation is solid and proven - ready to scale
