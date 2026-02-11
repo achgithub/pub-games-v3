@@ -28,13 +28,33 @@ games/{app-name}/
 │   │   ├── App.tsx
 │   │   └── react-app-env.d.ts
 │   ├── public/
+│   │   └── index.html   ← REQUIRED by Create React App
 │   ├── package.json
 │   └── tsconfig.json
 └── database/
     └── schema.sql (if needed)
 ```
 
-### Step 2: Copy TypeScript Configuration
+### Step 2: Create public/index.html
+
+**REQUIRED** — `npm run build` will fail without this file.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Your App Name</title>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+  </body>
+</html>
+```
+
+### Step 3: Copy TypeScript Configuration
 
 ```bash
 # Copy from reference implementation
@@ -42,7 +62,7 @@ cp games/tic-tac-toe/frontend/tsconfig.json games/{app-name}/frontend/
 cp games/tic-tac-toe/frontend/src/react-app-env.d.ts games/{app-name}/frontend/src/
 ```
 
-### Step 3: Create Frontend package.json
+### Step 4: Create Frontend package.json
 
 Copy from tic-tac-toe and modify:
 
@@ -74,7 +94,7 @@ Copy from tic-tac-toe and modify:
 }
 ```
 
-### Step 4: Create Frontend Entry Point
+### Step 5: Create Frontend Entry Point
 
 **src/index.tsx:**
 
@@ -94,7 +114,7 @@ root.render(
 );
 ```
 
-### Step 5: Create Main App Component
+### Step 6: Create Main App Component
 
 **src/App.tsx:**
 
@@ -146,7 +166,7 @@ const styles = {
 export default App;
 ```
 
-### Step 6: Create Backend Entry Point
+### Step 7: Create Backend Entry Point
 
 **backend/main.go:**
 
@@ -183,7 +203,7 @@ func main() {
 }
 ```
 
-### Step 7: Create Handlers
+### Step 8: Create Handlers
 
 **backend/handlers.go:**
 
@@ -241,7 +261,7 @@ func handleGameActions(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-### Step 8: Add Database Schema (if needed)
+### Step 9: Add Database Schema (if needed)
 
 **database/schema.sql:**
 
@@ -260,7 +280,7 @@ CREATE INDEX idx_your_app_games_player1 ON your_app_games(player1);
 CREATE INDEX idx_your_app_games_player2 ON your_app_games(player2);
 ```
 
-### Step 9: Update Database Setup Script
+### Step 10: Update Database Setup Script
 
 Add your database to the DATABASES list in `scripts/setup_databases.sh`:
 
@@ -277,7 +297,7 @@ echo "      your_app_db           - Your App Name"
 
 The database will be created automatically when the script runs.
 
-### Step 10: Register in App Registry
+### Step 11: Register in App Registry
 
 Add to `identity-shell/backend/apps.json`:
 
@@ -304,7 +324,7 @@ Add to `identity-shell/backend/apps.json`:
 - `category`: `"game"` or `"activity"`
 - `realtime`: `"sse"`, `"websocket"`, or `"none"`
 
-### Step 11: Update Start Services Script
+### Step 12: Update Start Services Script
 
 Add your app to `start_services.sh` so it starts automatically:
 
@@ -327,7 +347,7 @@ if lsof -Pi :4XXX -sTCP:LISTEN -t >/dev/null 2>&1; then
 fi
 ```
 
-### Step 12: Build and Test
+### Step 13: Build and Test
 
 **On Mac:**
 ```bash
@@ -358,6 +378,8 @@ go run *.go
 
 ## TypeScript Requirements Checklist
 
+- [ ] `public/index.html` exists (npm run build WILL FAIL without this)
+- [ ] `backend/static/` directory exists with `.gitkeep`
 - [ ] package.json includes `typescript`, `@types/react`, `@types/react-dom`
 - [ ] All files use `.tsx` extension (NOT `.js`)
 - [ ] Entry point is `src/index.tsx`
@@ -386,6 +408,27 @@ go run *.go
 - [ ] SSE endpoint at `/api/game/{id}/stream` (if real-time)
 
 ## Common Mistakes to Avoid
+
+### ❌ Don't forget public/index.html
+
+```bash
+# BAD: Missing public/index.html
+# npm run build will fail with:
+# "Could not find a required file. Name: index.html"
+
+# GOOD: Always create frontend/public/index.html
+# (see Step 2 above for template)
+```
+
+### ❌ Don't forget backend/static/
+
+```bash
+# BAD: Missing backend/static/ directory
+# cp -r build/* ../backend/static/ will fail
+
+# GOOD: Create it with a .gitkeep so git tracks it
+mkdir -p backend/static && touch backend/static/.gitkeep
+```
 
 ### ❌ Don't use .js files
 

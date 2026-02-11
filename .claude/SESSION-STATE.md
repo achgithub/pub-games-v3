@@ -1,9 +1,9 @@
 # Activity Hub Migration - Session State
 
-**Last Updated**: 2026-02-10
+**Last Updated**: 2026-02-11
 **Session ID**: Phase 0, A, B, C (Part 1), Identity Shell Improvements & LMS Migration Complete
-**Current Phase**: LMS apps committed — awaiting Pi deployment and testing
-**Status**: Two new apps built and committed: last-man-standing (player) + game-admin (admin)
+**Current Phase**: LMS apps deployed and running on Pi
+**Status**: All four core services running (identity-shell, setup-admin, game-admin, last-man-standing)
 
 ## Completed
 
@@ -92,9 +92,18 @@ Migrated Last Man Standing (LMS) from pub-games-v2 to pub-games-v3, split into t
   - last-man-standing: port 4021, no required roles (visible to all)
   - game-admin: port 5070, required_roles=['game_admin']
 
-**Committed:** dfdc9d8
+**Committed:** dfdc9d8 (initial LMS build), 84a103e (refactor: use activity-hub-common library)
 
-**⚠️ PENDING — Needs Pi deployment:**
+**activity-hub-common library:** 01f718f (fix middleware signature, add impersonation and role support)
+
+**✅ DEPLOYED — Pi deployment complete (2026-02-11)**
+
+Pi notes:
+- Used local `replace` directive in go.mod (private GitHub repo not accessible from Pi)
+- core scripts (start_core.sh / stop_core.sh / status_core.sh) working via tmux session 'core'
+- Frontends still need building (npm install + build) — see commands below
+
+**Original deployment commands (for reference):**
 ```bash
 cd ~/pub-games-v3 && git pull
 
@@ -188,18 +197,19 @@ Game Admin App (Port 5070)  ← NEW
 
 **Admin Databases:**
 - `setup_admin_db` (audit_log) ✅ deployed
-- `game_admin_db` (audit_log) ⚠️ pending Pi deployment
+- `game_admin_db` (audit_log) ✅ deployed
 
 **App Databases:**
-- `last_man_standing_db` ⚠️ pending Pi deployment (fresh, no v2 data migration)
+- `last_man_standing_db` ✅ deployed (fresh, no v2 data migration)
 - `tictactoe_db`, `dots_db`, `spoof_db` etc. — unchanged
 
 ## Next Steps
 
 **Immediate:**
-1. Deploy LMS apps on Pi (commands above)
-2. Test player app and game admin app end-to-end
-3. Grant `game_admin` role to appropriate users via Setup Admin
+1. Build frontends for game-admin and last-man-standing on Pi (npm install + build)
+2. Register apps in DB: `sed 's/{host}/192.168.1.45/g' scripts/migrate_add_lms_apps.sql | psql -U activityhub -h localhost -p 5555 -d activity_hub`
+3. Test player app and game admin app end-to-end
+4. Grant `game_admin` role to appropriate users via Setup Admin
 
 **Future options:**
 1. Migrate other existing apps (dots, sweepstakes, etc.) to v3 patterns
@@ -211,6 +221,7 @@ Game Admin App (Port 5070)  ← NEW
 - LMS uses NO Redis/SSE — deadline-based HTTP polling only
 - v2 LMS data not migrated — fresh start on v3
 - Game admin grows with additional game tabs as more games are migrated
-- Shared library (lib/activity-hub-common/) exists but apps currently implement patterns inline (consistent with setup-admin)
+- LMS apps now use lib/activity-hub-common/ shared library (refactored from inline patterns)
+- Library middleware (01f718f) supports impersonation tokens and role-based access
 - Working on Mac (code editing, Git operations)
 - Testing on Pi after committing
