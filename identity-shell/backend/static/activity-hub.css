@@ -1,0 +1,211 @@
+/* ACTIVITY HUB - Shared Platform CSS
+   Served by identity-shell at /shared/activity-hub.css
+   All mini-apps load this via index.tsx CSS injection */
+
+/* Global resets */
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background-color: #f8f9fa;
+  color: #333;
+}
+
+h1, h2, h3, h4 { color: #333; }
+
+/* Buttons — base reset only (no width: 100% traps) */
+button { font-family: inherit; cursor: pointer; }
+button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Form base reset (no width: 100% — use .ah-input for that) */
+input, textarea, select { font-family: inherit; }
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: #2196F3;
+  box-shadow: 0 0 0 2px rgba(33,150,243,0.15);
+}
+
+/* ---- Component classes ---- */
+
+/* Layout */
+.ah-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 16px;
+  color: #333;
+}
+.ah-container--wide   { max-width: 1200px; }
+.ah-container--narrow { max-width: 600px; }
+
+/* Card */
+.ah-card {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 10px;
+}
+
+/* Banners */
+.ah-banner {
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+.ah-banner--error   { background: #FFEBEE; border: 1px solid #FFCDD2; color: #C62828; cursor: pointer; }
+.ah-banner--success { background: #E8F5E9; border: 1px solid #C8E6C9; color: #2E7D32; }
+.ah-banner--warning { background: #FFF3E0; border: 1px solid #FFE0B2; color: #E65100; }
+.ah-banner--info    { background: #E3F2FD; border: 1px solid #90CAF9; color: #1565C0; }
+
+/* Typography */
+.ah-section-title { font-size: 15px; font-weight: 600; margin: 0 0 12px; color: #333; }
+.ah-meta  { color: #666; font-size: 13px; margin: 4px 0; }
+.ah-label { font-size: 13px; color: #666; margin-right: 4px; }
+
+/* Tabs */
+.ah-tabs {
+  display: flex;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #e0e0e0;
+}
+.ah-tab {
+  padding: 8px 20px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: #666;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  font-weight: 500;
+}
+.ah-tab:hover { color: #333; }
+.ah-tab.active { color: #2196F3; border-bottom-color: #2196F3; }
+
+/* Buttons */
+.ah-btn-primary {
+  padding: 9px 20px;
+  border: none;
+  border-radius: 7px;
+  background: #2196F3;
+  color: white;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+}
+.ah-btn-primary:hover:not(:disabled) { background: #1976D2; }
+
+.ah-btn-outline {
+  padding: 7px 14px;
+  border: 1px solid #2196F3;
+  border-radius: 7px;
+  background: white;
+  color: #2196F3;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.ah-btn-outline:hover:not(:disabled) { background: #E3F2FD; }
+
+.ah-btn-danger {
+  padding: 7px 14px;
+  border: 1px solid #F44336;
+  border-radius: 7px;
+  background: white;
+  color: #F44336;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+}
+.ah-btn-danger:hover:not(:disabled) { background: #FFEBEE; }
+
+.ah-btn-back {
+  padding: 6px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: white;
+  color: #666;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+/* Form elements */
+.ah-input {
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+}
+.ah-select {
+  padding: 7px 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* App header */
+.ah-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.ah-header-title { font-size: 22px; font-weight: 700; margin: 0; }
+
+/* Lobby link — always top-right */
+.ah-lobby-btn {
+  margin-left: auto;
+  padding: 6px 14px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: white;
+  color: #666;
+  cursor: pointer;
+  font-size: 13px;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+.ah-lobby-btn:hover { background: #f5f5f5; text-decoration: none; color: #333; }
+
+/* Data table (predictions, users etc) */
+.ah-table {
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: white;
+}
+.ah-table-header {
+  display: flex;
+  padding: 10px 16px;
+  background: #f5f5f5;
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  gap: 8px;
+  border-bottom: 1px solid #e0e0e0;
+}
+.ah-table-row {
+  display: flex;
+  padding: 10px 16px;
+  gap: 8px;
+  border-bottom: 1px solid #f0f0f0;
+  align-items: center;
+}
+.ah-table-row:last-child { border-bottom: none; }
+.ah-table-row:nth-child(even) { background: #fafafa; }
+
+/* Responsive */
+@media (max-width: 600px) {
+  .ah-container, .ah-container--wide, .ah-container--narrow { padding: 10px; }
+  .ah-tab { padding: 8px 12px; font-size: 13px; }
+}

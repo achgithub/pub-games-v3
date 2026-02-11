@@ -1,8 +1,8 @@
 # Activity Hub Migration - Session State
 
 **Last Updated**: 2026-02-11
-**Session ID**: Phase 0, A, B, C (Part 1), Identity Shell Improvements & LMS Migration Complete
-**Current Phase**: LMS apps deployed and running on Pi
+**Session ID**: Phase 0, A, B, C (Part 1), Identity Shell Improvements & LMS Migration Complete + Shared CSS
+**Current Phase**: Shared CSS refactor complete
 **Status**: All four core services running (identity-shell, setup-admin, game-admin, last-man-standing)
 
 ## Completed
@@ -60,6 +60,14 @@
 **Phase 3: Guest Mode**
 - ✅ `guest_accessible` column, guest login endpoint, "Continue as Guest" button
 - ✅ Migration: `scripts/migrate_add_guest_mode.sh`
+
+### Shared CSS Refactor ✅ (2026-02-11)
+- ✅ Renamed `pubgames.css` → `activity-hub.css` with full `.ah-*` component library
+- ✅ Primary colour standardised to `#2196F3` across all shared components
+- ✅ CSS injection added to `index.tsx` in last-man-standing, game-admin, setup-admin
+- ✅ Refactored last-man-standing and game-admin App.tsx to use `.ah-*` classes
+- ✅ Added back-to-lobby button (`ah-lobby-btn`) to LMS, game-admin, and setup-admin
+- ✅ Pattern documented in `docs/NEW-APP-GUIDE.md`
 
 ### Phase C (Part 2): Game Admin App + LMS Migration ✅ (2026-02-10)
 

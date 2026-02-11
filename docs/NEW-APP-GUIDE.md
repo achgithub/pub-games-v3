@@ -96,12 +96,18 @@ Copy from tic-tac-toe and modify:
 
 ### Step 5: Create Frontend Entry Point
 
-**src/index.tsx:**
+**src/index.tsx** — include the shared CSS injection:
 
 ```typescript
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+
+// Inject shared Activity Hub styles from identity-shell
+const link = document.createElement('link');
+link.rel = 'stylesheet';
+link.href = `http://${window.location.hostname}:3001/shared/activity-hub.css`;
+document.head.appendChild(link);
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
@@ -113,6 +119,35 @@ root.render(
   </React.StrictMode>
 );
 ```
+
+### Shared CSS Classes
+
+The injected stylesheet provides these ready-to-use classes:
+
+| Class | Usage |
+|-------|-------|
+| `ah-container` | Page wrapper (max 900px) |
+| `ah-container--narrow` | Narrow variant (max 600px) |
+| `ah-container--wide` | Wide variant (max 1200px) |
+| `ah-card` | White card with border |
+| `ah-banner ah-banner--error/success/warning/info` | Status banners |
+| `ah-tabs` | Tab bar container |
+| `ah-tab` + `.active` | Individual tab button |
+| `ah-btn-primary` | Blue primary button |
+| `ah-btn-outline` | Outline button (blue) |
+| `ah-btn-danger` | Outline button (red) |
+| `ah-btn-back` | Grey back button |
+| `ah-lobby-btn` | Back-to-lobby link/button (auto right-aligns in `ah-header`) |
+| `ah-header` | Flex row for app title + lobby button |
+| `ah-header-title` | App title `h2` inside `ah-header` |
+| `ah-section-title` | Section heading |
+| `ah-meta` | Secondary grey text |
+| `ah-label` | Form label |
+| `ah-input` | Styled text input |
+| `ah-select` | Styled select |
+| `ah-table` / `ah-table-header` / `ah-table-row` | Data table |
+
+App-specific styles go in a local `const s` or CSS file. See `games/last-man-standing/frontend/src/App.tsx` for a reference implementation.
 
 ### Step 6: Create Main App Component
 
@@ -386,14 +421,19 @@ go run *.go
 - [ ] Main component is `src/App.tsx`
 - [ ] `tsconfig.json` copied from tic-tac-toe
 - [ ] `react-app-env.d.ts` exists
+- [ ] Shared CSS injected in `src/index.tsx` (see Step 5)
 
 ## Styling Checklist
 
-- [ ] Light theme background: `#f5f5f5`
-- [ ] Card backgrounds: `#ffffff`
-- [ ] Border radius: `8px`
-- [ ] Box shadow: `0 2px 4px rgba(0,0,0,0.1)`
-- [ ] Responsive design (mobile-first)
+- [ ] Shared CSS loaded in `index.tsx` (injects `activity-hub.css` from port 3001)
+- [ ] Back-to-lobby button (`ah-lobby-btn`) in app header
+- [ ] App header uses `ah-header` + `ah-header-title` classes
+- [ ] Cards use `ah-card`
+- [ ] Banners use `ah-banner ah-banner--{error|success|warning|info}`
+- [ ] Tabs use `ah-tabs` / `ah-tab` / `.active`
+- [ ] Buttons use `ah-btn-primary`, `ah-btn-outline`, `ah-btn-danger`
+- [ ] Inputs use `ah-input`, selects use `ah-select`
+- [ ] App-specific styles in local `const s` or CSS file
 
 ## Integration Checklist
 

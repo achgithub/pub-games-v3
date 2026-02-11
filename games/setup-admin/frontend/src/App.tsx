@@ -184,7 +184,15 @@ function App() {
   return (
     <div className="App">
       <header>
-        <h1>⚙️ Setup Admin</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <h1>⚙️ Setup Admin</h1>
+          <button
+            className="ah-lobby-btn"
+            onClick={() => { window.location.href = `http://${window.location.hostname}:3001`; }}
+          >
+            ← Lobby
+          </button>
+        </div>
         <div className="tabs">
           <button
             className={activeTab === 'users' ? 'active' : ''}

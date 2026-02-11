@@ -214,19 +214,18 @@ function App() {
     }
   };
 
+  const goToLobby = () => { window.location.href = `http://${window.location.hostname}:3001`; };
+
   // --- Render ---
 
   if (!userId || !token) {
     return (
-      <div style={s.container}>
+      <div className="ah-container ah-container--narrow">
         <h2>Last Man Standing</h2>
         <p style={{ color: '#666', marginTop: 20 }}>
           Access this game through the lobby.
         </p>
-        <button
-          style={s.primaryBtn}
-          onClick={() => { window.location.href = `http://${window.location.hostname}:3001`; }}
-        >
+        <button className="ah-btn-primary" onClick={goToLobby}>
           Go to Lobby
         </button>
       </div>
@@ -234,41 +233,44 @@ function App() {
   }
 
   if (loading) {
-    return <div style={s.container}><p style={{ color: '#666' }}>Loading...</p></div>;
+    return <div className="ah-container ah-container--narrow"><p style={{ color: '#666' }}>Loading...</p></div>;
   }
 
   return (
-    <div style={s.container}>
+    <div className="ah-container ah-container--narrow">
       {/* Impersonation Banner */}
       {config?.isImpersonating && (
-        <div style={s.impersonationBanner}>
+        <div className="ah-banner ah-banner--warning">
           ⚠️ Viewing as <strong>{config.impersonatedEmail}</strong>
           {' '}(impersonated by {config.impersonatedBy})
         </div>
       )}
 
-      <h2 style={s.title}>🏆 Last Man Standing</h2>
+      <div className="ah-header">
+        <h2 style={s.title}>🏆 Last Man Standing</h2>
+        <button className="ah-lobby-btn" onClick={goToLobby}>← Lobby</button>
+      </div>
 
       {error && (
-        <div style={s.errorBanner} onClick={() => setError(null)}>
+        <div className="ah-banner ah-banner--error" onClick={() => setError(null)}>
           {error} — click to dismiss
         </div>
       )}
-      {successMsg && <div style={s.successBanner}>{successMsg}</div>}
+      {successMsg && <div className="ah-banner ah-banner--success">{successMsg}</div>}
 
       {/* No Game */}
       {game === null && (
-        <div style={s.card}>
+        <div className="ah-card">
           <p>No active game at the moment. Check back soon!</p>
         </div>
       )}
 
       {/* Game exists — not joined */}
       {game && myStatus && !myStatus.inGame && (
-        <div style={s.card}>
+        <div className="ah-card">
           <h3 style={{ marginTop: 0 }}>{game.name}</h3>
           <p style={{ color: '#666' }}>You haven't joined this game yet.</p>
-          <button onClick={handleJoinGame} disabled={submitting} style={s.primaryBtn}>
+          <button onClick={handleJoinGame} disabled={submitting} className="ah-btn-primary">
             {submitting ? 'Joining...' : 'Join Game'}
           </button>
         </div>
@@ -276,11 +278,12 @@ function App() {
 
       {/* Eliminated player */}
       {game && myStatus?.inGame && !myStatus.isActive && (
-        <div style={s.card}>
+        <div className="ah-card">
           <h3 style={{ marginTop: 0 }}>{game.name}</h3>
           <div style={s.eliminatedBadge}>☠️ You have been eliminated</div>
           <button
-            style={{ ...s.outlineBtn, marginTop: 16 }}
+            className="ah-btn-outline"
+            style={{ marginTop: 16 }}
             onClick={() => setCurrentView('standings')}
           >
             View Standings
@@ -297,11 +300,11 @@ function App() {
           </div>
 
           {/* Tabs */}
-          <div style={s.tabs}>
+          <div className="ah-tabs">
             {(['predict', 'history', 'standings'] as const).map(view => (
               <button
                 key={view}
-                style={{ ...s.tab, ...(currentView === view ? s.activeTab : {}) }}
+                className={`ah-tab${currentView === view ? ' active' : ''}`}
                 onClick={() => { setCurrentView(view); setSelectedRound(null); setRoundMatches(null); }}
               >
                 {view === 'predict' ? 'Make Pick' : view === 'history' ? 'My Picks' : 'Standings'}
@@ -315,22 +318,22 @@ function App() {
               {selectedRound === null ? (
                 <>
                   {openRounds.length === 0 ? (
-                    <div style={s.card}><p style={{ color: '#666' }}>No rounds are open for picks right now.</p></div>
+                    <div className="ah-card"><p style={{ color: '#666' }}>No rounds are open for picks right now.</p></div>
                   ) : (
                     <>
-                      <h3 style={s.sectionTitle}>Open Rounds</h3>
+                      <h3 className="ah-section-title">Open Rounds</h3>
                       {openRounds.map(round => (
-                        <div key={round.roundNumber} style={s.card}>
+                        <div key={round.roundNumber} className="ah-card">
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div>
                               <strong>Round {round.roundNumber}</strong>
-                              <p style={s.meta}>Deadline: {round.deadline}</p>
+                              <p className="ah-meta">Deadline: {round.deadline}</p>
                               {round.hasPredicted && (
                                 <span style={s.pickedBadge}>Pick submitted ✓</span>
                               )}
                             </div>
                             <button
-                              style={s.outlineBtn}
+                              className="ah-btn-outline"
                               onClick={() => setSelectedRound(round.roundNumber)}
                             >
                               {round.hasPredicted ? 'Change Pick' : 'Make Pick'}
@@ -343,28 +346,28 @@ function App() {
                 </>
               ) : (
                 <div>
-                  <button style={s.backBtn} onClick={() => { setSelectedRound(null); setRoundMatches(null); }}>
+                  <button className="ah-btn-back" style={{ marginBottom: 16 }} onClick={() => { setSelectedRound(null); setRoundMatches(null); }}>
                     ← Back
                   </button>
-                  <h3 style={s.sectionTitle}>Round {selectedRound} — Pick your team</h3>
+                  <h3 className="ah-section-title">Round {selectedRound} — Pick your team</h3>
                   {usedTeams.length > 0 && (
-                    <p style={s.meta}>Already used: {usedTeams.join(', ')}</p>
+                    <p className="ah-meta">Already used: {usedTeams.join(', ')}</p>
                   )}
                   {roundMatches?.myPrediction && (
-                    <div style={s.currentPickBanner}>
+                    <div className="ah-banner ah-banner--info">
                       Current pick: <strong>{roundMatches.myPrediction.predictedTeam}</strong>
                     </div>
                   )}
                   {!roundMatches ? (
                     <p style={{ color: '#666' }}>Loading matches...</p>
                   ) : roundMatches.matches.length === 0 ? (
-                    <div style={s.card}><p style={{ color: '#666' }}>No matches for this round yet.</p></div>
+                    <div className="ah-card"><p style={{ color: '#666' }}>No matches for this round yet.</p></div>
                   ) : (
                     roundMatches.matches.map(match => {
                       const myPick = roundMatches.myPrediction?.predictedTeam;
                       return (
-                        <div key={match.id} style={s.matchCard}>
-                          <p style={s.meta}>{match.date} · {match.location}</p>
+                        <div key={match.id} className="ah-card">
+                          <p className="ah-meta">{match.date} · {match.location}</p>
                           <div style={s.teamRow}>
                             <TeamBtn
                               team={match.homeTeam}
@@ -394,20 +397,20 @@ function App() {
           {/* History View */}
           {currentView === 'history' && (
             <div>
-              <h3 style={s.sectionTitle}>My Picks</h3>
+              <h3 className="ah-section-title">My Picks</h3>
               {predictions.length === 0 ? (
-                <div style={s.card}><p style={{ color: '#666' }}>No picks made yet.</p></div>
+                <div className="ah-card"><p style={{ color: '#666' }}>No picks made yet.</p></div>
               ) : (
                 predictions.map(pred => (
-                  <div key={pred.roundNumber} style={s.card}>
+                  <div key={pred.roundNumber} className="ah-card">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <strong>Round {pred.roundNumber}</strong>
                       <PredStatus isCorrect={pred.isCorrect} voided={pred.voided} />
                     </div>
-                    <p style={s.meta}>
+                    <p className="ah-meta">
                       Picked: <strong>{pred.predictedTeam}</strong>
                     </p>
-                    <p style={s.meta}>
+                    <p className="ah-meta">
                       {pred.homeTeam} vs {pred.awayTeam}
                       {pred.result ? ` · Result: ${pred.result}` : ' · Pending'}
                     </p>
@@ -420,7 +423,7 @@ function App() {
           {/* Standings View */}
           {currentView === 'standings' && (
             <div>
-              <h3 style={s.sectionTitle}>Standings</h3>
+              <h3 className="ah-section-title">Standings</h3>
               <div style={s.standingsTable}>
                 {standings.map((player, idx) => (
                   <div
@@ -488,52 +491,10 @@ function PredStatus({ isCorrect, voided }: { isCorrect: boolean | null; voided: 
   return <span style={{ color: '#F44336', fontSize: 13 }}>❌ Wrong</span>;
 }
 
-// --- Styles ---
+// --- LMS-specific styles (shared styles use .ah-* classes) ---
 
 const s: Record<string, React.CSSProperties> = {
-  container: {
-    maxWidth: 600,
-    margin: '0 auto',
-    padding: 16,
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    color: '#333',
-  },
-  impersonationBanner: {
-    backgroundColor: '#FFF3E0',
-    border: '2px solid #FF9800',
-    borderRadius: 8,
-    padding: '10px 16px',
-    marginBottom: 16,
-    color: '#E65100',
-    fontSize: 13,
-  },
-  title: { fontSize: 24, fontWeight: 700, marginBottom: 16 },
-  errorBanner: {
-    backgroundColor: '#FFEBEE',
-    border: '1px solid #FFCDD2',
-    borderRadius: 8,
-    padding: '10px 16px',
-    marginBottom: 12,
-    color: '#C62828',
-    cursor: 'pointer',
-    fontSize: 13,
-  },
-  successBanner: {
-    backgroundColor: '#E8F5E9',
-    border: '1px solid #C8E6C9',
-    borderRadius: 8,
-    padding: '10px 16px',
-    marginBottom: 12,
-    color: '#2E7D32',
-    fontSize: 13,
-  },
-  card: {
-    backgroundColor: 'white',
-    border: '1px solid #e0e0e0',
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 12,
-  },
+  title: { fontSize: 24, fontWeight: 700, margin: 0 },
   gameHeader: {
     display: 'flex',
     alignItems: 'center',
@@ -558,26 +519,6 @@ const s: Record<string, React.CSSProperties> = {
     fontWeight: 500,
     display: 'inline-block',
   },
-  tabs: {
-    display: 'flex',
-    gap: 0,
-    marginBottom: 16,
-    borderBottom: '2px solid #e0e0e0',
-  },
-  tab: {
-    padding: '8px 20px',
-    border: 'none',
-    background: 'none',
-    cursor: 'pointer',
-    fontSize: 14,
-    color: '#666',
-    borderBottom: '2px solid transparent',
-    marginBottom: -2,
-    fontWeight: 500,
-  },
-  activeTab: { color: '#2196F3', borderBottom: '2px solid #2196F3' },
-  sectionTitle: { fontSize: 16, fontWeight: 600, margin: '0 0 12px' },
-  meta: { color: '#666', fontSize: 13, margin: '4px 0' },
   pickedBadge: {
     backgroundColor: '#E3F2FD',
     color: '#1565C0',
@@ -586,54 +527,8 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: 12,
     fontWeight: 500,
   },
-  currentPickBanner: {
-    backgroundColor: '#E3F2FD',
-    border: '1px solid #90CAF9',
-    borderRadius: 8,
-    padding: '8px 16px',
-    marginBottom: 12,
-    color: '#1565C0',
-    fontSize: 14,
-  },
-  matchCard: {
-    backgroundColor: 'white',
-    border: '1px solid #e0e0e0',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 10,
-  },
   teamRow: { display: 'flex', gap: 10, alignItems: 'stretch' },
   vs: { color: '#999', fontSize: 13, alignSelf: 'center', flexShrink: 0 },
-  primaryBtn: {
-    padding: '10px 24px',
-    border: 'none',
-    borderRadius: 8,
-    backgroundColor: '#2196F3',
-    color: 'white',
-    cursor: 'pointer',
-    fontSize: 15,
-    fontWeight: 600,
-  },
-  outlineBtn: {
-    padding: '8px 16px',
-    border: '1px solid #2196F3',
-    borderRadius: 8,
-    backgroundColor: 'white',
-    color: '#2196F3',
-    cursor: 'pointer',
-    fontSize: 14,
-    fontWeight: 500,
-  },
-  backBtn: {
-    padding: '6px 12px',
-    border: '1px solid #ddd',
-    borderRadius: 6,
-    backgroundColor: 'white',
-    color: '#666',
-    cursor: 'pointer',
-    fontSize: 13,
-    marginBottom: 16,
-  },
   standingsTable: {
     backgroundColor: 'white',
     border: '1px solid #e0e0e0',

@@ -107,22 +107,24 @@ function App() {
       .finally(() => setLoading(false));
   }, [token, userId, api]);
 
+  const goToLobby = () => { window.location.href = `http://${window.location.hostname}:3001`; };
+
   if (!userId || !token) {
     return (
-      <div style={s.container}>
+      <div className="ah-container">
         <h2>Game Admin</h2>
         <p style={{ color: '#666' }}>Access this app through the lobby.</p>
       </div>
     );
   }
 
-  if (loading) return <div style={s.container}><p style={{ color: '#666' }}>Loading...</p></div>;
+  if (loading) return <div className="ah-container"><p style={{ color: '#666' }}>Loading...</p></div>;
 
   if (authError) {
     return (
-      <div style={s.container}>
+      <div className="ah-container">
         <h2>Game Admin</h2>
-        <div style={s.errorBanner}>{authError}</div>
+        <div className="ah-banner ah-banner--error">{authError}</div>
         <p style={{ color: '#666' }}>You need the game_admin or super_user role to access this app.</p>
       </div>
     );
@@ -131,17 +133,18 @@ function App() {
   const isReadOnly = config?.permissionLevel === 'read-only';
 
   return (
-    <div style={s.container}>
-      <div style={s.header}>
-        <h2 style={s.title}>🎮 Game Admin — LMS</h2>
+    <div className="ah-container">
+      <div className="ah-header">
+        <h2 className="ah-header-title">🎮 Game Admin — LMS</h2>
         {isReadOnly && <span style={s.readOnlyBadge}>Read-only</span>}
+        <button className="ah-lobby-btn" onClick={goToLobby}>← Lobby</button>
       </div>
 
-      <div style={s.tabs}>
+      <div className="ah-tabs">
         {(['games', 'rounds', 'results', 'predictions'] as Tab[]).map(tab => (
           <button
             key={tab}
-            style={{ ...s.tab, ...(activeTab === tab ? s.activeTab : {}) }}
+            className={`ah-tab${activeTab === tab ? ' active' : ''}`}
             onClick={() => setActiveTab(tab)}
           >
             {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -172,7 +175,7 @@ function App() {
         <PredictionsTab gameId={selectedGameId} round={selectedRound} api={api} />
       )}
       {(activeTab === 'rounds' || activeTab === 'results' || activeTab === 'predictions') && !selectedGameId && (
-        <div style={s.card}><p style={{ color: '#666' }}>Select a game above to continue.</p></div>
+        <div className="ah-card"><p style={{ color: '#666' }}>Select a game above to continue.</p></div>
       )}
     </div>
   );
@@ -192,11 +195,11 @@ function GameSelector({ selectedGameId, onSelect, api }: {
 
   return (
     <div style={{ marginBottom: 16 }}>
-      <label style={s.label}>Game: </label>
+      <label className="ah-label">Game: </label>
       <select
         value={selectedGameId}
         onChange={e => onSelect(e.target.value)}
-        style={s.select}
+        className="ah-select"
       >
         <option value="">— select game —</option>
         {games.map(g => (
@@ -274,51 +277,52 @@ function GamesTab({ api, token, isReadOnly, onGameSelect }: {
 
   return (
     <div>
-      {error && <div style={s.errorBanner} onClick={() => setError(null)}>{error}</div>}
-      {success && <div style={s.successBanner}>{success}</div>}
+      {error && <div className="ah-banner ah-banner--error" onClick={() => setError(null)}>{error}</div>}
+      {success && <div className="ah-banner ah-banner--success">{success}</div>}
 
       {!isReadOnly && (
-        <div style={s.card}>
-          <h3 style={s.sectionTitle}>Create New Game</h3>
+        <div className="ah-card">
+          <h3 className="ah-section-title">Create New Game</h3>
           <input
-            style={s.input}
+            className="ah-input"
+            style={{ width: '100%' }}
             placeholder="Game name"
             value={newName}
             onChange={e => setNewName(e.target.value)}
           />
           <div style={{ marginTop: 8 }}>
-            <label style={s.label}>Postponement rule: </label>
-            <select value={postponeRule} onChange={e => setPostponeRule(e.target.value as 'loss' | 'win')} style={s.select}>
+            <label className="ah-label">Postponement rule: </label>
+            <select value={postponeRule} onChange={e => setPostponeRule(e.target.value as 'loss' | 'win')} className="ah-select">
               <option value="loss">Loss (P-P = eliminated)</option>
               <option value="win">Win (P-P = voided, re-pick)</option>
             </select>
           </div>
-          <button style={{ ...s.primaryBtn, marginTop: 12 }} onClick={createGame} disabled={!newName.trim()}>
+          <button className="ah-btn-primary" style={{ marginTop: 12 }} onClick={createGame} disabled={!newName.trim()}>
             Create Game
           </button>
         </div>
       )}
 
-      <h3 style={s.sectionTitle}>All Games</h3>
+      <h3 className="ah-section-title">All Games</h3>
       {games.length === 0 ? (
-        <div style={s.card}><p style={{ color: '#666' }}>No games yet.</p></div>
+        <div className="ah-card"><p style={{ color: '#666' }}>No games yet.</p></div>
       ) : (
         games.map(game => (
-          <div key={game.id} style={{ ...s.card, borderLeft: String(game.id) === currentGameId ? '4px solid #2196F3' : undefined }}>
+          <div key={game.id} className="ah-card" style={{ borderLeft: String(game.id) === currentGameId ? '4px solid #2196F3' : undefined }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div>
                 <strong>{game.name}</strong>
                 {String(game.id) === currentGameId && <span style={s.currentBadge}> CURRENT</span>}
-                <p style={s.meta}>Status: {game.status} · P-P rule: {game.postponementRule}</p>
+                <p className="ah-meta">Status: {game.status} · P-P rule: {game.postponementRule}</p>
               </div>
               {!isReadOnly && (
                 <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
                   {String(game.id) !== currentGameId && (
-                    <button style={s.outlineBtn} onClick={() => setCurrent(game.id)}>Set Current</button>
+                    <button className="ah-btn-outline" onClick={() => setCurrent(game.id)}>Set Current</button>
                   )}
-                  <button style={s.outlineBtn} onClick={() => { onGameSelect(String(game.id)); }}>Manage</button>
+                  <button className="ah-btn-outline" onClick={() => { onGameSelect(String(game.id)); }}>Manage</button>
                   {game.status === 'active' && (
-                    <button style={{ ...s.outlineBtn, color: '#F44336', borderColor: '#F44336' }} onClick={() => completeGame(game.id)}>
+                    <button className="ah-btn-danger" onClick={() => completeGame(game.id)}>
                       Complete
                     </button>
                   )}
@@ -394,29 +398,32 @@ function RoundsTab({ gameId, api, isReadOnly, selectedRound, onRoundSelect }: {
 
   return (
     <div>
-      {error && <div style={s.errorBanner} onClick={() => setError(null)}>{error}</div>}
-      {success && <div style={s.successBanner}>{success}</div>}
+      {error && <div className="ah-banner ah-banner--error" onClick={() => setError(null)}>{error}</div>}
+      {success && <div className="ah-banner ah-banner--success">{success}</div>}
 
       {!isReadOnly && (
-        <div style={s.card}>
-          <h3 style={s.sectionTitle}>Create Round</h3>
+        <div className="ah-card">
+          <h3 className="ah-section-title">Create Round</h3>
           <div style={{ display: 'flex', gap: 8 }}>
             <input
-              style={{ ...s.input, width: 80 }}
+              className="ah-input"
+              style={{ width: 80 }}
               placeholder="Round #"
               type="number"
               value={newRoundNum}
               onChange={e => setNewRoundNum(e.target.value)}
             />
             <input
-              style={s.input}
+              className="ah-input"
+              style={{ flex: 1 }}
               placeholder="Deadline (e.g. Sat 18 Jan 12:00)"
               value={newDeadline}
               onChange={e => setNewDeadline(e.target.value)}
             />
           </div>
           <button
-            style={{ ...s.primaryBtn, marginTop: 10 }}
+            className="ah-btn-primary"
+            style={{ marginTop: 10 }}
             onClick={createRound}
             disabled={!newRoundNum || !newDeadline}
           >
@@ -425,30 +432,29 @@ function RoundsTab({ gameId, api, isReadOnly, selectedRound, onRoundSelect }: {
         </div>
       )}
 
-      <h3 style={s.sectionTitle}>Rounds</h3>
+      <h3 className="ah-section-title">Rounds</h3>
       {rounds.length === 0 ? (
-        <div style={s.card}><p style={{ color: '#666' }}>No rounds yet.</p></div>
+        <div className="ah-card"><p style={{ color: '#666' }}>No rounds yet.</p></div>
       ) : (
         rounds.map(round => (
-          <div key={round.roundNumber} style={{
-            ...s.card,
+          <div key={round.roundNumber} className="ah-card" style={{
             borderLeft: selectedRound === String(round.roundNumber) ? '4px solid #2196F3' : undefined,
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <strong>Round {round.roundNumber}</strong>
                 <span style={{ ...s.statusDot, color: statusColor(round.status) }}> {round.status}</span>
-                <p style={s.meta}>Deadline: {round.deadline} · {round.predCount} picks</p>
+                <p className="ah-meta">Deadline: {round.deadline} · {round.predCount} picks</p>
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
                 {!isReadOnly && round.status !== 'open' && (
-                  <button style={{ ...s.outlineBtn, color: '#4CAF50', borderColor: '#4CAF50' }}
+                  <button className="ah-btn-outline" style={{ color: '#4CAF50', borderColor: '#4CAF50' }}
                     onClick={() => updateStatus(round.roundNumber, 'open')}>
                     Open
                   </button>
                 )}
                 {!isReadOnly && round.status === 'open' && (
-                  <button style={{ ...s.outlineBtn, color: '#F44336', borderColor: '#F44336' }}
+                  <button className="ah-btn-danger"
                     onClick={() => updateStatus(round.roundNumber, 'closed')}>
                     Close
                   </button>
@@ -531,35 +537,35 @@ function ResultsTab({ gameId, api, isReadOnly }: {
 
   return (
     <div>
-      {error && <div style={s.errorBanner} onClick={() => setError(null)}>{error}</div>}
-      {success && <div style={s.successBanner}>{success}</div>}
+      {error && <div className="ah-banner ah-banner--error" onClick={() => setError(null)}>{error}</div>}
+      {success && <div className="ah-banner ah-banner--success">{success}</div>}
 
       {!isReadOnly && (
-        <div style={s.card}>
-          <h3 style={s.sectionTitle}>Upload Matches (CSV)</h3>
-          <p style={s.meta}>Format: match_number, round_number, date, location, home_team, away_team[, result]</p>
-          <p style={s.meta}>Round and result are read from the CSV — no pre-selection needed. Results trigger prediction evaluation.</p>
+        <div className="ah-card">
+          <h3 className="ah-section-title">Upload Matches (CSV)</h3>
+          <p className="ah-meta">Format: match_number, round_number, date, location, home_team, away_team[, result]</p>
+          <p className="ah-meta">Round and result are read from the CSV — no pre-selection needed. Results trigger prediction evaluation.</p>
           <input type="file" accept=".csv" onChange={uploadCSV} style={{ marginTop: 8 }} />
         </div>
       )}
 
       {matches.length === 0 ? (
-        <div style={s.card}><p style={{ color: '#666' }}>No matches yet. Upload a CSV to add matches.</p></div>
+        <div className="ah-card"><p style={{ color: '#666' }}>No matches yet. Upload a CSV to add matches.</p></div>
       ) : (
         roundNumbers.map(roundNum => (
           <div key={roundNum}>
-            <h3 style={{ ...s.sectionTitle, marginTop: 16 }}>Round {roundNum}</h3>
+            <h3 className="ah-section-title" style={{ marginTop: 16 }}>Round {roundNum}</h3>
             {byRound[roundNum].map(match => (
-              <div key={match.id} style={s.card}>
+              <div key={match.id} className="ah-card">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div style={{ flex: 1 }}>
                     <strong>#{match.matchNumber}: {match.homeTeam} vs {match.awayTeam}</strong>
-                    <p style={s.meta}>{match.date} · {match.location}</p>
+                    <p className="ah-meta">{match.date} · {match.location}</p>
                     {match.result && (
-                      <p style={{ ...s.meta, fontWeight: 600, color: '#333' }}>Result: {match.result}</p>
+                      <p className="ah-meta" style={{ fontWeight: 600, color: '#333' }}>Result: {match.result}</p>
                     )}
                     {match.status !== 'pending' && (
-                      <p style={{ ...s.meta, color: statusColor(match.status), fontWeight: 500 }}>
+                      <p className="ah-meta" style={{ color: statusColor(match.status), fontWeight: 500 }}>
                         {match.status}
                       </p>
                     )}
@@ -567,13 +573,14 @@ function ResultsTab({ gameId, api, isReadOnly }: {
                   {!isReadOnly && (
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0, marginLeft: 12 }}>
                       <input
-                        style={{ ...s.input, width: 90 }}
+                        className="ah-input"
+                        style={{ width: 90 }}
                         placeholder="e.g. 2 - 1"
                         value={resultInputs[match.id] || ''}
                         onChange={e => setResultInputs(prev => ({ ...prev, [match.id]: e.target.value }))}
                       />
                       <button
-                        style={s.outlineBtn}
+                        className="ah-btn-outline"
                         onClick={() => setResult(match.id)}
                         disabled={!resultInputs[match.id]}
                       >
@@ -621,24 +628,25 @@ function PredictionsTab({ gameId, round, api }: {
 
   return (
     <div>
-      {error && <div style={s.errorBanner} onClick={() => setError(null)}>{error}</div>}
+      {error && <div className="ah-banner ah-banner--error" onClick={() => setError(null)}>{error}</div>}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-        <label style={s.label}>Round: </label>
+        <label className="ah-label">Round: </label>
         <input
-          style={{ ...s.input, width: 80 }}
+          className="ah-input"
+          style={{ width: 80 }}
           placeholder="All"
           value={filterRound}
           onChange={e => setFilterRound(e.target.value)}
         />
-        <button style={s.outlineBtn} onClick={load}>Refresh</button>
+        <button className="ah-btn-outline" onClick={load}>Refresh</button>
       </div>
 
       {predictions.length === 0 ? (
-        <div style={s.card}><p style={{ color: '#666' }}>No predictions found.</p></div>
+        <div className="ah-card"><p style={{ color: '#666' }}>No predictions found.</p></div>
       ) : (
-        <div style={s.table}>
-          <div style={s.tableHeader}>
+        <div className="ah-table">
+          <div className="ah-table-header">
             <span style={{ flex: 2 }}>Player</span>
             <span style={{ flex: 1 }}>Round</span>
             <span style={{ flex: 2 }}>Pick</span>
@@ -647,7 +655,7 @@ function PredictionsTab({ gameId, round, api }: {
             <span style={{ flex: 1 }}>Status</span>
           </div>
           {predictions.map((p, idx) => (
-            <div key={idx} style={{ ...s.tableRow, backgroundColor: idx % 2 === 0 ? 'white' : '#fafafa' }}>
+            <div key={idx} className="ah-table-row">
               <span style={{ flex: 2, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.userId}</span>
               <span style={{ flex: 1, fontSize: 13 }}>{p.roundNumber}</span>
               <span style={{ flex: 2, fontSize: 13, fontWeight: 500 }}>{p.predictedTeam}</span>
@@ -662,23 +670,9 @@ function PredictionsTab({ gameId, round, api }: {
   );
 }
 
-// --- Styles ---
+// --- Game Admin-specific styles (shared styles use .ah-* classes) ---
 
 const s: Record<string, React.CSSProperties> = {
-  container: {
-    maxWidth: 900,
-    margin: '0 auto',
-    padding: 16,
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    color: '#333',
-  },
-  header: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 8,
-  },
-  title: { fontSize: 22, fontWeight: 700, margin: 0 },
   readOnlyBadge: {
     backgroundColor: '#FFF3E0',
     color: '#E65100',
@@ -687,89 +681,6 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: 12,
     fontWeight: 600,
     border: '1px solid #FFE0B2',
-  },
-  tabs: {
-    display: 'flex',
-    marginBottom: 20,
-    borderBottom: '2px solid #e0e0e0',
-  },
-  tab: {
-    padding: '8px 20px',
-    border: 'none',
-    background: 'none',
-    cursor: 'pointer',
-    fontSize: 14,
-    color: '#666',
-    borderBottom: '2px solid transparent',
-    marginBottom: -2,
-    fontWeight: 500,
-  },
-  activeTab: { color: '#2196F3', borderBottom: '2px solid #2196F3' },
-  card: {
-    backgroundColor: 'white',
-    border: '1px solid #e0e0e0',
-    borderRadius: 10,
-    padding: 16,
-    marginBottom: 10,
-  },
-  sectionTitle: { fontSize: 15, fontWeight: 600, margin: '0 0 12px' },
-  meta: { color: '#666', fontSize: 13, margin: '4px 0' },
-  errorBanner: {
-    backgroundColor: '#FFEBEE',
-    border: '1px solid #FFCDD2',
-    borderRadius: 8,
-    padding: '10px 14px',
-    marginBottom: 12,
-    color: '#C62828',
-    cursor: 'pointer',
-    fontSize: 13,
-  },
-  successBanner: {
-    backgroundColor: '#E8F5E9',
-    border: '1px solid #C8E6C9',
-    borderRadius: 8,
-    padding: '10px 14px',
-    marginBottom: 12,
-    color: '#2E7D32',
-    fontSize: 13,
-  },
-  input: {
-    padding: '8px 10px',
-    border: '1px solid #ddd',
-    borderRadius: 6,
-    fontSize: 14,
-    flex: 1,
-    minWidth: 0,
-  },
-  select: {
-    padding: '7px 10px',
-    border: '1px solid #ddd',
-    borderRadius: 6,
-    fontSize: 14,
-    backgroundColor: 'white',
-    cursor: 'pointer',
-  },
-  label: { fontSize: 13, color: '#666', marginRight: 4 },
-  primaryBtn: {
-    padding: '9px 20px',
-    border: 'none',
-    borderRadius: 7,
-    backgroundColor: '#2196F3',
-    color: 'white',
-    cursor: 'pointer',
-    fontSize: 14,
-    fontWeight: 600,
-  },
-  outlineBtn: {
-    padding: '7px 14px',
-    border: '1px solid #2196F3',
-    borderRadius: 7,
-    backgroundColor: 'white',
-    color: '#2196F3',
-    cursor: 'pointer',
-    fontSize: 13,
-    fontWeight: 500,
-    whiteSpace: 'nowrap',
   },
   currentBadge: {
     backgroundColor: '#E3F2FD',
@@ -781,29 +692,6 @@ const s: Record<string, React.CSSProperties> = {
     marginLeft: 8,
   },
   statusDot: { fontSize: 13, fontWeight: 500 },
-  table: {
-    border: '1px solid #e0e0e0',
-    borderRadius: 10,
-    overflow: 'hidden',
-    backgroundColor: 'white',
-  },
-  tableHeader: {
-    display: 'flex',
-    padding: '10px 16px',
-    backgroundColor: '#f5f5f5',
-    fontSize: 12,
-    fontWeight: 600,
-    color: '#666',
-    gap: 8,
-    borderBottom: '1px solid #e0e0e0',
-  },
-  tableRow: {
-    display: 'flex',
-    padding: '10px 16px',
-    gap: 8,
-    borderBottom: '1px solid #f0f0f0',
-    alignItems: 'center',
-  },
 };
 
 export default App;
