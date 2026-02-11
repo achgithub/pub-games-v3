@@ -58,6 +58,7 @@ func main() {
 	api.HandleFunc("/lms/rounds/{gameId}/{round}/summary", handleGetAdminRoundSummary).Methods("GET")
 
 	// LMS match management
+	api.HandleFunc("/lms/matches/{gameId}", handleGetAllMatchesForGame).Methods("GET")
 	api.HandleFunc("/lms/matches/{gameId}/{round}", handleGetLMSMatches).Methods("GET")
 	api.HandleFunc("/lms/matches/upload", handleUploadMatches).Methods("POST")
 	api.HandleFunc("/lms/matches/{id}/result", handleSetMatchResult).Methods("PUT")

@@ -28,6 +28,7 @@ interface Round {
 interface Match {
   id: number;
   matchNumber: number;
+  roundNumber: number;
   date: string;
   location: string;
   homeTeam: string;
@@ -83,7 +84,7 @@ function useApi(token: string) {
 
 // --- Main App ---
 
-type Tab = 'games' | 'rounds' | 'matches' | 'predictions';
+type Tab = 'games' | 'rounds' | 'results' | 'predictions';
 
 function App() {
   const { userId, token } = useUrlParams();
@@ -137,7 +138,7 @@ function App() {
       </div>
 
       <div style={s.tabs}>
-        {(['games', 'rounds', 'matches', 'predictions'] as Tab[]).map(tab => (
+        {(['games', 'rounds', 'results', 'predictions'] as Tab[]).map(tab => (
           <button
             key={tab}
             style={{ ...s.tab, ...(activeTab === tab ? s.activeTab : {}) }}
@@ -164,17 +165,14 @@ function App() {
         <RoundsTab gameId={selectedGameId} api={api} isReadOnly={isReadOnly}
           selectedRound={selectedRound} onRoundSelect={setSelectedRound} />
       )}
-      {activeTab === 'matches' && selectedGameId && selectedRound && (
-        <MatchesTab gameId={selectedGameId} round={selectedRound} api={api} isReadOnly={isReadOnly} />
+      {activeTab === 'results' && selectedGameId && (
+        <ResultsTab gameId={selectedGameId} api={api} isReadOnly={isReadOnly} />
       )}
       {activeTab === 'predictions' && selectedGameId && (
         <PredictionsTab gameId={selectedGameId} round={selectedRound} api={api} />
       )}
-      {(activeTab === 'rounds' || activeTab === 'matches' || activeTab === 'predictions') && !selectedGameId && (
+      {(activeTab === 'rounds' || activeTab === 'results' || activeTab === 'predictions') && !selectedGameId && (
         <div style={s.card}><p style={{ color: '#666' }}>Select a game above to continue.</p></div>
-      )}
-      {activeTab === 'matches' && selectedGameId && !selectedRound && (
-        <div style={s.card}><p style={{ color: '#666' }}>Select a round above to see matches.</p></div>
       )}
     </div>
   );
@@ -443,9 +441,6 @@ function RoundsTab({ gameId, api, isReadOnly, selectedRound, onRoundSelect }: {
                 <p style={s.meta}>Deadline: {round.deadline} · {round.predCount} picks</p>
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
-                <button style={s.outlineBtn} onClick={() => onRoundSelect(String(round.roundNumber))}>
-                  Matches
-                </button>
                 {!isReadOnly && round.status !== 'open' && (
                   <button style={{ ...s.outlineBtn, color: '#4CAF50', borderColor: '#4CAF50' }}
                     onClick={() => updateStatus(round.roundNumber, 'open')}>
@@ -467,24 +462,23 @@ function RoundsTab({ gameId, api, isReadOnly, selectedRound, onRoundSelect }: {
   );
 }
 
-// --- MatchesTab ---
+// --- ResultsTab ---
 
-function MatchesTab({ gameId, round, api, isReadOnly }: {
+function ResultsTab({ gameId, api, isReadOnly }: {
   gameId: string;
-  round: string;
   api: ReturnType<typeof useApi>;
   isReadOnly: boolean;
 }) {
   const [matches, setMatches] = useState<Match[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [results, setResults] = useState<Record<number, string>>({});
+  const [resultInputs, setResultInputs] = useState<Record<number, string>>({});
 
   const load = useCallback(() => {
-    api(`/api/lms/matches/${gameId}/${round}`)
+    api(`/api/lms/matches/${gameId}`)
       .then(data => setMatches(data.matches || []))
       .catch(err => setError(err.message));
-  }, [api, gameId, round]);
+  }, [api, gameId]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -494,12 +488,11 @@ function MatchesTab({ gameId, round, api, isReadOnly }: {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('gameId', gameId);
-    formData.append('round', round);
     try {
       const data = await api('/api/lms/matches/upload', { method: 'POST', body: formData });
-      setSuccess(`Uploaded ${data.inserted} matches`);
+      setSuccess(`Uploaded: ${data.upserted} matches${data.evaluated ? `, ${data.evaluated} predictions evaluated` : ''}`);
       load();
-      setTimeout(() => setSuccess(null), 3000);
+      setTimeout(() => setSuccess(null), 5000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed');
     }
@@ -507,7 +500,7 @@ function MatchesTab({ gameId, round, api, isReadOnly }: {
   };
 
   const setResult = async (matchId: number) => {
-    const result = results[matchId];
+    const result = resultInputs[matchId];
     if (!result) return;
     try {
       const data = await api(`/api/lms/matches/${matchId}/result`, {
@@ -515,11 +508,25 @@ function MatchesTab({ gameId, round, api, isReadOnly }: {
         body: JSON.stringify({ result }),
       });
       setSuccess(`Result set. ${data.predictionsProcessed} predictions processed.`);
+      setResultInputs(prev => { const next = { ...prev }; delete next[matchId]; return next; });
       load();
       setTimeout(() => setSuccess(null), 5000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed');
     }
+  };
+
+  // Group matches by round number
+  const byRound = matches.reduce<Record<number, Match[]>>((acc, m) => {
+    (acc[m.roundNumber] = acc[m.roundNumber] || []).push(m);
+    return acc;
+  }, {});
+  const roundNumbers = Object.keys(byRound).map(Number).sort((a, b) => a - b);
+
+  const statusColor = (status: string) => {
+    if (status === 'completed') return '#4CAF50';
+    if (status === 'postponed') return '#FF9800';
+    return '#999';
   };
 
   return (
@@ -530,48 +537,53 @@ function MatchesTab({ gameId, round, api, isReadOnly }: {
       {!isReadOnly && (
         <div style={s.card}>
           <h3 style={s.sectionTitle}>Upload Matches (CSV)</h3>
-          <p style={s.meta}>Format: match_number, date, location, home_team, away_team (with header row)</p>
+          <p style={s.meta}>Format: match_number, round_number, date, location, home_team, away_team[, result]</p>
+          <p style={s.meta}>Round and result are read from the CSV — no pre-selection needed. Results trigger prediction evaluation.</p>
           <input type="file" accept=".csv" onChange={uploadCSV} style={{ marginTop: 8 }} />
         </div>
       )}
 
-      <h3 style={s.sectionTitle}>Matches — Round {round}</h3>
       {matches.length === 0 ? (
         <div style={s.card}><p style={{ color: '#666' }}>No matches yet. Upload a CSV to add matches.</p></div>
       ) : (
-        matches.map(match => (
-          <div key={match.id} style={s.card}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div style={{ flex: 1 }}>
-                <strong>#{match.matchNumber}: {match.homeTeam} vs {match.awayTeam}</strong>
-                <p style={s.meta}>{match.date} · {match.location}</p>
-                {match.result && (
-                  <p style={{ ...s.meta, fontWeight: 600, color: '#333' }}>Result: {match.result}</p>
-                )}
-              </div>
-              {!isReadOnly && match.status !== 'completed' && match.status !== 'postponed' && (
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0, marginLeft: 12 }}>
-                  <input
-                    style={{ ...s.input, width: 90 }}
-                    placeholder="e.g. 2 - 1"
-                    value={results[match.id] || ''}
-                    onChange={e => setResults(prev => ({ ...prev, [match.id]: e.target.value }))}
-                  />
-                  <button
-                    style={s.outlineBtn}
-                    onClick={() => setResult(match.id)}
-                    disabled={!results[match.id]}
-                  >
-                    Set Result
-                  </button>
+        roundNumbers.map(roundNum => (
+          <div key={roundNum}>
+            <h3 style={{ ...s.sectionTitle, marginTop: 16 }}>Round {roundNum}</h3>
+            {byRound[roundNum].map(match => (
+              <div key={match.id} style={s.card}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div style={{ flex: 1 }}>
+                    <strong>#{match.matchNumber}: {match.homeTeam} vs {match.awayTeam}</strong>
+                    <p style={s.meta}>{match.date} · {match.location}</p>
+                    {match.result && (
+                      <p style={{ ...s.meta, fontWeight: 600, color: '#333' }}>Result: {match.result}</p>
+                    )}
+                    {match.status !== 'pending' && (
+                      <p style={{ ...s.meta, color: statusColor(match.status), fontWeight: 500 }}>
+                        {match.status}
+                      </p>
+                    )}
+                  </div>
+                  {!isReadOnly && (
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0, marginLeft: 12 }}>
+                      <input
+                        style={{ ...s.input, width: 90 }}
+                        placeholder="e.g. 2 - 1"
+                        value={resultInputs[match.id] || ''}
+                        onChange={e => setResultInputs(prev => ({ ...prev, [match.id]: e.target.value }))}
+                      />
+                      <button
+                        style={s.outlineBtn}
+                        onClick={() => setResult(match.id)}
+                        disabled={!resultInputs[match.id]}
+                      >
+                        {match.status === 'pending' ? 'Set' : 'Edit'}
+                      </button>
+                    </div>
+                  )}
                 </div>
-              )}
-              {(match.status === 'completed' || match.status === 'postponed') && (
-                <span style={{ ...s.meta, flexShrink: 0, marginLeft: 12, fontStyle: 'italic' }}>
-                  {match.status}
-                </span>
-              )}
-            </div>
+              </div>
+            ))}
           </div>
         ))
       )}
