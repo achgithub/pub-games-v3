@@ -5,44 +5,42 @@ import (
 	"log"
 	"net/http"
 
+	authlib "github.com/achgithub/activity-hub-common/auth"
+	"github.com/achgithub/activity-hub-common/config"
+	"github.com/achgithub/activity-hub-common/database"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
 
 var (
-	identityDB  *sql.DB // activity_hub
-	lmsDB       *sql.DB // last_man_standing_db
-	gameAdminDB *sql.DB // game_admin_db
+	lmsDB       *sql.DB // last_man_standing_db — used by handlers
+	gameAdminDB *sql.DB // game_admin_db — used for audit log
 )
 
 func main() {
-	var err error
-
-	identityDB, err = initIdentityDatabase()
+	identityDB, err := database.InitIdentityDatabase()
 	if err != nil {
 		log.Fatal("Failed to connect to identity database:", err)
 	}
 	defer identityDB.Close()
-	log.Println("✅ Connected to identity database")
 
-	lmsDB, err = initLMSDatabase()
+	lmsDB, err = database.InitDatabaseByName("last_man_standing_db")
 	if err != nil {
 		log.Fatal("Failed to connect to LMS database:", err)
 	}
 	defer lmsDB.Close()
-	log.Println("✅ Connected to LMS database")
 
-	gameAdminDB, err = initGameAdminDatabase()
+	gameAdminDB, err = database.InitDatabaseByName("game_admin_db")
 	if err != nil {
 		log.Fatal("Failed to connect to game admin database:", err)
 	}
 	defer gameAdminDB.Close()
-	log.Println("✅ Connected to game admin database")
 
 	r := mux.NewRouter()
 
-	// All API routes require game_admin or super_user role
+	// All API routes: first resolve token, then check game_admin/super_user role
 	api := r.PathPrefix("/api").Subrouter()
+	api.Use(authlib.Middleware(identityDB))
 	api.Use(requireGameAdmin)
 
 	api.HandleFunc("/config", handleConfig).Methods("GET")
@@ -79,7 +77,7 @@ func main() {
 		handlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
 	)
 
-	port := getEnv("PORT", "5070")
+	port := config.GetEnv("PORT", "5070")
 	log.Printf("🚀 Game Admin starting on :%s", port)
 	log.Fatal(http.ListenAndServe(":"+port, corsHandler(r)))
 }

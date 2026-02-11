@@ -42,6 +42,34 @@ func InitDatabase(appName string) (*sql.DB, error) {
 	return db, nil
 }
 
+// InitDatabaseByName connects to a PostgreSQL database by its exact name.
+// Use this when the database name doesn't follow the {appName}_db convention.
+//
+// Usage:
+//
+//	db, err := database.InitDatabaseByName("last_man_standing_db")
+func InitDatabaseByName(dbName string) (*sql.DB, error) {
+	dbHost := getEnv("DB_HOST", "127.0.0.1")
+	dbPort := getEnv("DB_PORT", "5555")
+	dbUser := getEnv("DB_USER", "activityhub")
+	dbPass := getEnv("DB_PASS", "pubgames")
+
+	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		dbHost, dbPort, dbUser, dbPass, dbName)
+
+	db, err := sql.Open("postgres", connStr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open database %s: %w", dbName, err)
+	}
+
+	if err := db.Ping(); err != nil {
+		return nil, fmt.Errorf("failed to ping database %s: %w", dbName, err)
+	}
+
+	log.Printf("✅ Connected to database: %s", dbName)
+	return db, nil
+}
+
 // InitIdentityDatabase connects to the shared identity database for authentication.
 // This database contains the users table and is shared across all apps.
 //

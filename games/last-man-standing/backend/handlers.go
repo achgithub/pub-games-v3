@@ -1,41 +1,41 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"strconv"
 
+	authlib "github.com/achgithub/activity-hub-common/auth"
 	"github.com/gorilla/mux"
 )
 
 // handleConfig returns app config with optional impersonation state.
-func handleConfig(w http.ResponseWriter, r *http.Request) {
-	isImpersonating := false
-	impersonatedBy := ""
-	impersonatedEmail := ""
+// Takes identityDB as a closure parameter — no auth middleware applied to this route.
+func handleConfig(identityDB *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		isImpersonating := false
+		impersonatedBy := ""
+		impersonatedEmail := ""
 
-	authHeader := r.Header.Get("Authorization")
-	if authHeader != "" {
-		token := authHeader
-		if len(token) > 7 && token[:7] == "Bearer " {
-			token = token[7:]
+		if token := extractBearerToken(r); token != "" {
+			if email, by, ok := resolveImpersonation(identityDB, token); ok {
+				isImpersonating = true
+				impersonatedBy = by
+				impersonatedEmail = email
+			}
 		}
-		if user, err := resolveToken(token); err == nil && user.IsImpersonating {
-			isImpersonating = true
-			impersonatedBy = user.ImpersonatedBy
-			impersonatedEmail = user.Email
-		}
+
+		sendJSON(w, map[string]interface{}{
+			"appName":           "Last Man Standing",
+			"version":           "1.0.0",
+			"isImpersonating":   isImpersonating,
+			"impersonatedBy":    impersonatedBy,
+			"impersonatedEmail": impersonatedEmail,
+		})
 	}
-
-	sendJSON(w, map[string]interface{}{
-		"appName":           "Last Man Standing",
-		"version":           "1.0.0",
-		"isImpersonating":   isImpersonating,
-		"impersonatedBy":    impersonatedBy,
-		"impersonatedEmail": impersonatedEmail,
-	})
 }
 
 // handleGetCurrentGame returns the current active game.
@@ -67,8 +67,8 @@ func handleGetCurrentGame(w http.ResponseWriter, r *http.Request) {
 
 // handleJoinGame joins the current game.
 func handleJoinGame(w http.ResponseWriter, r *http.Request) {
-	user := getUserFromContext(r)
-	if user == nil {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
 		sendError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -95,8 +95,8 @@ func handleJoinGame(w http.ResponseWriter, r *http.Request) {
 
 // handleGetGameStatus returns the player's status in the current game.
 func handleGetGameStatus(w http.ResponseWriter, r *http.Request) {
-	user := getUserFromContext(r)
-	if user == nil {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
 		sendError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -126,8 +126,8 @@ func handleGetGameStatus(w http.ResponseWriter, r *http.Request) {
 
 // handleGetOpenRounds returns rounds open for prediction.
 func handleGetOpenRounds(w http.ResponseWriter, r *http.Request) {
-	user := getUserFromContext(r)
-	if user == nil {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
 		sendError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -183,8 +183,8 @@ func handleGetOpenRounds(w http.ResponseWriter, r *http.Request) {
 
 // handleGetMatches returns matches for a specific game round.
 func handleGetMatches(w http.ResponseWriter, r *http.Request) {
-	user := getUserFromContext(r)
-	if user == nil {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
 		sendError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -253,8 +253,8 @@ func handleGetMatches(w http.ResponseWriter, r *http.Request) {
 
 // handleSubmitPrediction submits or updates a player's prediction for a round.
 func handleSubmitPrediction(w http.ResponseWriter, r *http.Request) {
-	user := getUserFromContext(r)
-	if user == nil {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
 		sendError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -345,8 +345,8 @@ func handleSubmitPrediction(w http.ResponseWriter, r *http.Request) {
 
 // handleGetPredictions returns the player's predictions for the current game.
 func handleGetPredictions(w http.ResponseWriter, r *http.Request) {
-	user := getUserFromContext(r)
-	if user == nil {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
 		sendError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -400,8 +400,8 @@ func handleGetPredictions(w http.ResponseWriter, r *http.Request) {
 
 // handleGetUsedTeams returns teams the player has already picked this game.
 func handleGetUsedTeams(w http.ResponseWriter, r *http.Request) {
-	user := getUserFromContext(r)
-	if user == nil {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
 		sendError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -437,11 +437,12 @@ func handleGetUsedTeams(w http.ResponseWriter, r *http.Request) {
 
 // handleGetStandings returns all players in the current game.
 func handleGetStandings(w http.ResponseWriter, r *http.Request) {
-	user := getUserFromContext(r)
-	if user == nil {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
 		sendError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
+	_ = user // standings are visible to all authenticated players
 
 	gameID, err := getCurrentGameID()
 	if err != nil {
@@ -484,11 +485,12 @@ func handleGetStandings(w http.ResponseWriter, r *http.Request) {
 
 // handleGetRoundSummary returns stats for a round (works for open or closed).
 func handleGetRoundSummary(w http.ResponseWriter, r *http.Request) {
-	user := getUserFromContext(r)
-	if user == nil {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
 		sendError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
+	_ = user // visible to all authenticated players
 
 	vars := mux.Vars(r)
 	gameIDStr := vars["gameId"]
