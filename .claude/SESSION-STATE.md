@@ -1,9 +1,9 @@
 # Activity Hub Migration - Session State
 
-**Last Updated**: 2026-02-11
-**Session ID**: Phase 0, A, B, C (Part 1), Identity Shell Improvements & LMS Migration Complete + Shared CSS
-**Current Phase**: Shared CSS refactor complete
-**Status**: All four core services running (identity-shell, setup-admin, game-admin, last-man-standing)
+**Last Updated**: 2026-02-12
+**Session ID**: Phase 0, A, B, C (Part 1), Identity Shell Improvements & LMS Migration Complete + Shared CSS + Fixture File Architecture
+**Current Phase**: LMS fixture file architecture complete — awaiting Pi deployment
+**Status**: Committed, not yet deployed. Pi needs DB recreation (breaking schema change).
 
 ## Completed
 
@@ -60,6 +60,47 @@
 **Phase 3: Guest Mode**
 - ✅ `guest_accessible` column, guest login endpoint, "Continue as Guest" button
 - ✅ Migration: `scripts/migrate_add_guest_mode.sh`
+
+### LMS Fixture File Architecture ✅ (2026-02-12) — awaiting Pi deployment
+
+Redesigned LMS data model and game-admin UI to support multiple games sharing one fixture file.
+
+**Key architectural change:** `matches` now belongs to `fixture_files`, not `games`. Results are facts about the real-world match, shared across all games using that fixture file. Prediction evaluation is still scoped per game.
+
+**Schema changes (`last_man_standing_db`):**
+- New `fixture_files` table (name, timestamps)
+- `matches.fixture_file_id` replaces `matches.game_id`
+- `games.fixture_file_id` foreign key to fixture_files
+
+**game-admin backend:**
+- `GET /api/lms/fixtures` — list fixture files with match counts
+- `POST /api/lms/fixtures/upload` — find-or-create fixture file, upsert matches
+- `GET /api/lms/fixtures/{id}/matches` — matches for a fixture file
+- `POST /api/lms/rounds/{gameId}/{round}/process` — explicit batch evaluation (pre-flight: all matches must have results)
+- `PUT /api/lms/matches/{id}/result` — store result only, NO auto-evaluation
+- Create game now requires `fixtureFileId`
+
+**player backend:** Match queries now join via `games.fixture_file_id`
+
+**game-admin frontend:** Full 5-tab rewrite
+- **Fixtures** — upload CSV, view fixture files and matches by round
+- **Games** — create game with fixture file selection, set current/complete
+- **Rounds** — create/open/close rounds
+- **Results** — round selector, per-match result entry, "Process Round X" button (disabled until all matches have results)
+- **Predictions** — view picks with round filter
+
+**Commit:** 6d3cc30
+
+**⚠️ BREAKING CHANGE — Pi requires DB recreation:**
+```bash
+cd ~/pub-games-v3 && git pull
+psql -U activityhub -h localhost -p 5555 -d last_man_standing_db -f games/last-man-standing/database/schema.sql
+cd ~/pub-games-v3/games/game-admin/frontend && npm run build && cp -r build/* ../backend/static/
+~/pub-games-v3/scripts/stop_core.sh
+~/pub-games-v3/scripts/start_core.sh
+```
+
+---
 
 ### Shared CSS Refactor ✅ (2026-02-11)
 - ✅ Renamed `pubgames.css` → `activity-hub.css` with full `.ah-*` component library
@@ -197,15 +238,24 @@ Game Admin App (Port 5070)  ← NEW
 
 ## Next Steps
 
-**Immediate (shared CSS refactor — commit c643b78):**
-1. Push and pull on Pi, rebuild 3 frontends (commands above)
-2. Verify `activity-hub.css` loads from port 3001 (DevTools Network tab)
-3. Check consistent styling: cards, buttons, tabs across all apps
-4. Test "← Lobby" button on game-admin and setup-admin
+**Immediate (commit 6d3cc30 — fixture file architecture):**
+1. Push and pull on Pi
+2. Recreate `last_man_standing_db` schema (breaking change — commands above)
+3. Rebuild game-admin frontend only (LMS player frontend unchanged)
+4. Restart core services
+5. End-to-end test: upload fixture CSV → create game → create round → set results → process round
 
-**Pending (once LMS is tested end-to-end):**
+**Workflow to verify:**
+1. Upload "Premier League 2025/26" CSV → fixture file created
+2. Create "Andy's Friends" game → pick fixture file → open for registration
+3. Create "Julie's Friends" → same fixture file
+4. Players join, make picks for round 1
+5. Admin enters results match by match
+6. "Process Round 1" per game → verify eliminations are scoped per game
+
+**Pending:**
 1. Grant `game_admin` role to appropriate users via Setup Admin
-2. Create a game and run through the full LMS workflow
+2. Register LMS apps in `applications` table (if not already done)
 
 **Future options:**
 1. Migrate other existing apps (dots, sweepstakes, etc.) to v3 patterns
