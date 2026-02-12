@@ -263,6 +263,48 @@ Game Admin App (Port 5070)  ← NEW
 3. SSL/TLS (easy to add when needed)
 4. SSE reconnection on user change (would fix impersonation presence delay)
 
+---
+
+## ⚠️ Design Decision Pending: LMS Round Model Needs Rethink
+
+**Problem:** The current model uses a `round_number` integer (from the CSV and DB). This is fragile — football matches move, get rescheduled, and a fixed round number doesn't map cleanly to real-world scheduling.
+
+**Proposed approach — Date-Range Rounds:**
+
+- A round is defined by a **date range** (start date / end date), not a round number
+- Admin creates a round by selecting a date range (e.g. 15 Aug → 18 Aug)
+- All matches whose date falls within that range are automatically included in that round
+- The `round_number` column in the CSV upload becomes **irrelevant** — ignore it
+- Admin typically schedules up to an **18-day horizon**; subsequent CSV re-uploads may shift match dates/times
+
+**Match movement rules:**
+- Match shifts slightly within the window → still counted as part of the round, no special handling
+- Match postponed / moved **outside** the window → player gets a **bye** (survives the round) but **the team they picked is still consumed** (cannot be reused later in the game)
+- This is fair: the player made a commitment, the team slot is used, but they're not penalised by elimination for an event outside their control
+
+**Admin workflow (revised):**
+1. Upload fixture CSV (with or without results)
+2. Create round: select game + date range → system previews matching matches
+3. Open round → players pick a team for any match in the window
+4. Admin re-uploads CSV if dates/times change before deadline
+5. After deadline: admin confirms results in Results tab (sets status = completed)
+6. "Process Round" — evaluates predictions against confirmed results, applies bye rule for postponed matches
+
+**What needs to change in the schema:**
+- `rounds` table: replace `round_number INTEGER` + `submission_deadline TEXT` with `start_date TIMESTAMP`, `end_date TIMESTAMP` (keep a display label/number for UI)
+- `predictions` table: replace `round_number INTEGER` with `round_id INTEGER REFERENCES rounds(id)`; `match_id` stays as-is
+- `matches`: `round_number` column becomes a hint only (from CSV), not used for grouping
+
+**What needs to change in the backend:**
+- Round creation: accept `startDate` / `endDate`, auto-resolve which matches are in scope
+- Prediction submission: validate match belongs to the round's date range
+- Process Round: handle bye case for matches where status != 'completed' at processing time
+- All queries joining on `round_number` rewritten to join on `round_id`
+
+**Key principle:** Logic should be based on **match dates relative to the round window** and **player-entered picks**, not on a CSV-assigned integer. This makes the system resilient to real-world schedule changes.
+
+**This is a breaking schema change** — do not implement until the current fixture file architecture is deployed and tested end-to-end first.
+
 ## Notes
 - LMS uses NO Redis/SSE — deadline-based HTTP polling only
 - v2 LMS data not migrated — fresh start on v3
