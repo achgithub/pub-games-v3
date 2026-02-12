@@ -109,35 +109,19 @@ Migrated Last Man Standing (LMS) from pub-games-v2 to pub-games-v3, split into t
 Pi notes:
 - Used local `replace` directive in go.mod (private GitHub repo not accessible from Pi)
 - core scripts (start_core.sh / stop_core.sh / status_core.sh) working via tmux session 'core'
-- Frontends still need building (npm install + build) — see commands below
 
-**Original deployment commands (for reference):**
+**To apply shared CSS refactor (commit c643b78):**
 ```bash
 cd ~/pub-games-v3 && git pull
 
-# Create databases
-psql -U activityhub -h localhost -p 5555 -d postgres -c "CREATE DATABASE last_man_standing_db;"
-psql -U activityhub -h localhost -p 5555 -d postgres -c "CREATE DATABASE game_admin_db;"
+# Rebuild all three frontends (no npm install needed — no new packages)
+cd ~/pub-games-v3/games/last-man-standing/frontend && npm run build && cp -r build/* ../backend/static/
+cd ~/pub-games-v3/games/game-admin/frontend && npm run build && cp -r build/* ../backend/static/
+cd ~/pub-games-v3/games/setup-admin/frontend && npm run build && cp -r build/* ../backend/static/
 
-# Apply schemas
-psql -U activityhub -h localhost -p 5555 -d last_man_standing_db -f games/last-man-standing/database/schema.sql
-psql -U activityhub -h localhost -p 5555 -d game_admin_db -f games/game-admin/database/schema.sql
-
-# Build player app
-cd games/last-man-standing/frontend && npm install && npm run build && cp -r build/* ../backend/static/
-cd ../backend && go mod tidy && go run *.go
-
-# Build game admin app
-cd games/game-admin/frontend && npm install && npm run build && cp -r build/* ../backend/static/
-cd ../backend && go mod tidy && go run *.go
-
-# Register apps (replace 192.168.1.45 with actual Pi IP)
-sed 's/{host}/192.168.1.45/g' scripts/migrate_add_lms_apps.sql | psql -U activityhub -h localhost -p 5555 -d activity_hub
-
-# Smoke tests
-curl http://localhost:4021/api/config
-curl http://localhost:4021/api/games/current
-curl -H "Authorization: Bearer demo-token-admin@pubgames.local" http://localhost:5070/api/lms/games
+# Restart services
+~/pub-games-v3/scripts/stop_core.sh
+~/pub-games-v3/scripts/start_core.sh
 ```
 
 ### Earlier Work
@@ -213,11 +197,15 @@ Game Admin App (Port 5070)  ← NEW
 
 ## Next Steps
 
-**Immediate:**
-1. Build frontends for game-admin and last-man-standing on Pi (npm install + build)
-2. Register apps in DB: `sed 's/{host}/192.168.1.45/g' scripts/migrate_add_lms_apps.sql | psql -U activityhub -h localhost -p 5555 -d activity_hub`
-3. Test player app and game admin app end-to-end
-4. Grant `game_admin` role to appropriate users via Setup Admin
+**Immediate (shared CSS refactor — commit c643b78):**
+1. Push and pull on Pi, rebuild 3 frontends (commands above)
+2. Verify `activity-hub.css` loads from port 3001 (DevTools Network tab)
+3. Check consistent styling: cards, buttons, tabs across all apps
+4. Test "← Lobby" button on game-admin and setup-admin
+
+**Pending (once LMS is tested end-to-end):**
+1. Grant `game_admin` role to appropriate users via Setup Admin
+2. Create a game and run through the full LMS workflow
 
 **Future options:**
 1. Migrate other existing apps (dots, sweepstakes, etc.) to v3 patterns
