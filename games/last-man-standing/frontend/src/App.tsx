@@ -93,7 +93,7 @@ function useApi(token: string) {
 // --- Main App ---
 
 function App() {
-  const { userId, userName, token } = useUrlParams();
+  const { userId, token } = useUrlParams();
   const api = useApi(token);
 
   const [config, setConfig] = useState<Config | null>(null);

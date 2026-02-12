@@ -194,10 +194,11 @@ func handleGetMatches(w http.ResponseWriter, r *http.Request) {
 	roundStr := vars["round"]
 
 	rows, err := appDB.Query(`
-		SELECT id, match_number, date, location, home_team, away_team, result, status
-		FROM matches
-		WHERE game_id = $1 AND round_number = $2
-		ORDER BY match_number
+		SELECT m.id, m.match_number, m.date, m.location, m.home_team, m.away_team, m.result, m.status
+		FROM matches m
+		JOIN games g ON g.fixture_file_id = m.fixture_file_id
+		WHERE g.id = $1 AND m.round_number = $2
+		ORDER BY m.match_number
 	`, gameIDStr, roundStr)
 	if err != nil {
 		log.Printf("Error getting matches: %v", err)
@@ -299,11 +300,12 @@ func handleSubmitPrediction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate the match belongs to this round and get teams
+	// Validate the match belongs to this round via the game's fixture file
 	var homeTeam, awayTeam string
 	err = appDB.QueryRow(`
-		SELECT home_team, away_team FROM matches
-		WHERE id = $1 AND game_id = $2 AND round_number = $3
+		SELECT m.home_team, m.away_team FROM matches m
+		JOIN games g ON g.fixture_file_id = m.fixture_file_id
+		WHERE m.id = $1 AND g.id = $2 AND m.round_number = $3
 	`, req.MatchID, gameID, req.RoundNumber).Scan(&homeTeam, &awayTeam)
 	if err != nil {
 		sendError(w, "Invalid match for this round", http.StatusBadRequest)

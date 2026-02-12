@@ -8,13 +8,20 @@ interface Config {
   currentGameId: string;
 }
 
+interface FixtureFile {
+  id: number;
+  name: string;
+  matchCount: number;
+  updatedAt: string;
+}
+
 interface LMSGame {
   id: number;
   name: string;
   status: string;
-  winnerCount: number;
   postponementRule: string;
-  startDate: string;
+  fixtureFileId: number;
+  fixtureName: string;
 }
 
 interface Round {
@@ -37,26 +44,12 @@ interface Match {
   status: string;
 }
 
-interface Prediction {
-  userId: string;
-  roundNumber: number;
-  predictedTeam: string;
-  isCorrect: boolean | null;
-  voided: boolean;
-  homeTeam: string;
-  awayTeam: string;
-  result: string;
-}
-
 // --- Hooks ---
 
 function useUrlParams() {
   return useMemo(() => {
     const params = new URLSearchParams(window.location.search);
-    return {
-      userId: params.get('userId') || '',
-      token: params.get('token') || '',
-    };
+    return { userId: params.get('userId') || '', token: params.get('token') || '' };
   }, []);
 }
 
@@ -67,7 +60,6 @@ function useApi(token: string) {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...(options.headers as Record<string, string> || {}),
       };
-      // Don't set Content-Type for FormData (browser sets it with boundary)
       if (!(options.body instanceof FormData)) {
         headers['Content-Type'] = 'application/json';
       }
@@ -84,7 +76,7 @@ function useApi(token: string) {
 
 // --- Main App ---
 
-type Tab = 'games' | 'rounds' | 'results' | 'predictions';
+type Tab = 'fixtures' | 'games' | 'rounds' | 'results' | 'predictions';
 
 function App() {
   const { userId, token } = useUrlParams();
@@ -93,11 +85,8 @@ function App() {
   const [config, setConfig] = useState<Config | null>(null);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<Tab>('games');
-
-  // Shared game selection
+  const [activeTab, setActiveTab] = useState<Tab>('fixtures');
   const [selectedGameId, setSelectedGameId] = useState<string>('');
-  const [selectedRound, setSelectedRound] = useState<string>('');
 
   useEffect(() => {
     if (!token || !userId) { setLoading(false); return; }
@@ -141,7 +130,7 @@ function App() {
       </div>
 
       <div className="ah-tabs">
-        {(['games', 'rounds', 'results', 'predictions'] as Tab[]).map(tab => (
+        {(['fixtures', 'games', 'rounds', 'results', 'predictions'] as Tab[]).map(tab => (
           <button
             key={tab}
             className={`ah-tab${activeTab === tab ? ' active' : ''}`}
@@ -152,27 +141,29 @@ function App() {
         ))}
       </div>
 
-      {/* Game selector (shown for rounds/matches/predictions) */}
-      {activeTab !== 'games' && (
+      {/* Game selector for tabs that need it */}
+      {(activeTab === 'rounds' || activeTab === 'results' || activeTab === 'predictions') && (
         <GameSelector
           selectedGameId={selectedGameId}
-          onSelect={(id) => { setSelectedGameId(id); setSelectedRound(''); }}
+          onSelect={setSelectedGameId}
           api={api}
         />
       )}
 
+      {activeTab === 'fixtures' && (
+        <FixturesTab api={api} isReadOnly={isReadOnly} />
+      )}
       {activeTab === 'games' && (
-        <GamesTab api={api} token={token} isReadOnly={isReadOnly} onGameSelect={setSelectedGameId} />
+        <GamesTab api={api} isReadOnly={isReadOnly} onGameSelect={setSelectedGameId} />
       )}
       {activeTab === 'rounds' && selectedGameId && (
-        <RoundsTab gameId={selectedGameId} api={api} isReadOnly={isReadOnly}
-          selectedRound={selectedRound} onRoundSelect={setSelectedRound} />
+        <RoundsTab gameId={selectedGameId} api={api} isReadOnly={isReadOnly} />
       )}
       {activeTab === 'results' && selectedGameId && (
         <ResultsTab gameId={selectedGameId} api={api} isReadOnly={isReadOnly} />
       )}
       {activeTab === 'predictions' && selectedGameId && (
-        <PredictionsTab gameId={selectedGameId} round={selectedRound} api={api} />
+        <PredictionsTab gameId={selectedGameId} api={api} />
       )}
       {(activeTab === 'rounds' || activeTab === 'results' || activeTab === 'predictions') && !selectedGameId && (
         <div className="ah-card"><p style={{ color: '#666' }}>Select a game above to continue.</p></div>
@@ -196,15 +187,11 @@ function GameSelector({ selectedGameId, onSelect, api }: {
   return (
     <div style={{ marginBottom: 16 }}>
       <label className="ah-label">Game: </label>
-      <select
-        value={selectedGameId}
-        onChange={e => onSelect(e.target.value)}
-        className="ah-select"
-      >
+      <select value={selectedGameId} onChange={e => onSelect(e.target.value)} className="ah-select">
         <option value="">— select game —</option>
         {games.map(g => (
           <option key={g.id} value={String(g.id)}>
-            {g.name} ({g.status})
+            {g.name} ({g.status}) · {g.fixtureName || 'no fixture'}
           </option>
         ))}
       </select>
@@ -212,17 +199,136 @@ function GameSelector({ selectedGameId, onSelect, api }: {
   );
 }
 
+// --- FixturesTab ---
+
+function FixturesTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isReadOnly: boolean }) {
+  const [fixtures, setFixtures] = useState<FixtureFile[]>([]);
+  const [selectedFixture, setSelectedFixture] = useState<FixtureFile | null>(null);
+  const [matches, setMatches] = useState<Match[]>([]);
+  const [uploadName, setUploadName] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const loadFixtures = useCallback(() => {
+    api('/api/lms/fixtures').then(data => setFixtures(data.fixtures || [])).catch(err => setError(err.message));
+  }, [api]);
+
+  useEffect(() => { loadFixtures(); }, [loadFixtures]);
+
+  const loadMatches = (fixture: FixtureFile) => {
+    setSelectedFixture(fixture);
+    api(`/api/lms/fixtures/${fixture.id}/matches`)
+      .then(data => setMatches(data.matches || []))
+      .catch(err => setError(err.message));
+  };
+
+  const uploadFixture = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !uploadName.trim()) return;
+    const formData = new FormData();
+    formData.append('name', uploadName.trim());
+    formData.append('file', file);
+    try {
+      const data = await api('/api/lms/fixtures/upload', { method: 'POST', body: formData });
+      setSuccess(`"${data.name}" uploaded — ${data.upserted} matches`);
+      setUploadName('');
+      loadFixtures();
+      setTimeout(() => setSuccess(null), 5000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload failed');
+    }
+    e.target.value = '';
+  };
+
+  // Group selected fixture's matches by round
+  const byRound = matches.reduce<Record<number, Match[]>>((acc, m) => {
+    (acc[m.roundNumber] = acc[m.roundNumber] || []).push(m);
+    return acc;
+  }, {});
+  const roundNumbers = Object.keys(byRound).map(Number).sort((a, b) => a - b);
+
+  return (
+    <div>
+      {error && <div className="ah-banner ah-banner--error" onClick={() => setError(null)}>{error}</div>}
+      {success && <div className="ah-banner ah-banner--success">{success}</div>}
+
+      {!isReadOnly && (
+        <div className="ah-card">
+          <h3 className="ah-section-title">Upload Fixture File (CSV)</h3>
+          <p className="ah-meta">Format: match_number, round_number, date, location, home_team, away_team</p>
+          <p className="ah-meta">Re-uploading with the same name updates existing matches. Results are NOT affected by re-upload.</p>
+          <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+            <input
+              className="ah-input"
+              style={{ flex: 1, minWidth: 180 }}
+              placeholder="Fixture file name (e.g. Premier League 2025/26)"
+              value={uploadName}
+              onChange={e => setUploadName(e.target.value)}
+            />
+            <input
+              type="file"
+              accept=".csv"
+              disabled={!uploadName.trim()}
+              onChange={uploadFixture}
+              style={{ alignSelf: 'center' }}
+            />
+          </div>
+        </div>
+      )}
+
+      <h3 className="ah-section-title">Fixture Files</h3>
+      {fixtures.length === 0 ? (
+        <div className="ah-card"><p style={{ color: '#666' }}>No fixture files yet. Upload a CSV above.</p></div>
+      ) : (
+        fixtures.map(f => (
+          <div key={f.id} className="ah-card" style={{
+            borderLeft: selectedFixture?.id === f.id ? '4px solid #2196F3' : undefined,
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <strong>{f.name}</strong>
+                <p className="ah-meta">{f.matchCount} matches · updated {f.updatedAt}</p>
+              </div>
+              <button className="ah-btn-outline" onClick={() => loadMatches(f)}>
+                {selectedFixture?.id === f.id ? 'Hide' : 'View'}
+              </button>
+            </div>
+
+            {selectedFixture?.id === f.id && matches.length > 0 && (
+              <div style={{ marginTop: 12 }}>
+                {roundNumbers.map(roundNum => (
+                  <div key={roundNum}>
+                    <p className="ah-section-title" style={{ marginTop: 8 }}>Round {roundNum}</p>
+                    {byRound[roundNum].map(m => (
+                      <div key={m.id} style={{ fontSize: 13, padding: '4px 0', borderBottom: '1px solid #f0f0f0' }}>
+                        <strong>#{m.matchNumber}</strong> {m.homeTeam} vs {m.awayTeam}
+                        <span className="ah-label" style={{ marginLeft: 8 }}>{m.date} · {m.location}</span>
+                        {m.result && <span style={{ marginLeft: 8, color: '#4CAF50', fontWeight: 600 }}>{m.result}</span>}
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
 // --- GamesTab ---
 
-function GamesTab({ api, token, isReadOnly, onGameSelect }: {
+function GamesTab({ api, isReadOnly, onGameSelect }: {
   api: ReturnType<typeof useApi>;
-  token: string;
   isReadOnly: boolean;
   onGameSelect: (id: string) => void;
 }) {
   const [games, setGames] = useState<LMSGame[]>([]);
+  const [fixtures, setFixtures] = useState<FixtureFile[]>([]);
   const [currentGameId, setCurrentGameId] = useState<string>('');
   const [newName, setNewName] = useState('');
+  const [newFixtureId, setNewFixtureId] = useState('');
   const [postponeRule, setPostponeRule] = useState<'loss' | 'win'>('loss');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -232,18 +338,24 @@ function GamesTab({ api, token, isReadOnly, onGameSelect }: {
       setGames(data.games || []);
       setCurrentGameId(data.currentGameId || '');
     }).catch(err => setError(err.message));
+    api('/api/lms/fixtures').then(data => setFixtures(data.fixtures || [])).catch(() => {});
   }, [api]);
 
   useEffect(() => { load(); }, [load]);
 
   const createGame = async () => {
-    if (!newName.trim()) return;
+    if (!newName.trim() || !newFixtureId) return;
     try {
       await api('/api/lms/games', {
         method: 'POST',
-        body: JSON.stringify({ name: newName.trim(), postponementRule: postponeRule }),
+        body: JSON.stringify({
+          name: newName.trim(),
+          fixtureFileId: parseInt(newFixtureId),
+          postponementRule: postponeRule,
+        }),
       });
       setNewName('');
+      setNewFixtureId('');
       setSuccess('Game created');
       load();
       setTimeout(() => setSuccess(null), 3000);
@@ -283,23 +395,49 @@ function GamesTab({ api, token, isReadOnly, onGameSelect }: {
       {!isReadOnly && (
         <div className="ah-card">
           <h3 className="ah-section-title">Create New Game</h3>
-          <input
-            className="ah-input"
-            style={{ width: '100%' }}
-            placeholder="Game name"
-            value={newName}
-            onChange={e => setNewName(e.target.value)}
-          />
-          <div style={{ marginTop: 8 }}>
-            <label className="ah-label">Postponement rule: </label>
-            <select value={postponeRule} onChange={e => setPostponeRule(e.target.value as 'loss' | 'win')} className="ah-select">
-              <option value="loss">Loss (P-P = eliminated)</option>
-              <option value="win">Win (P-P = voided, re-pick)</option>
-            </select>
-          </div>
-          <button className="ah-btn-primary" style={{ marginTop: 12 }} onClick={createGame} disabled={!newName.trim()}>
-            Create Game
-          </button>
+          {fixtures.length === 0 ? (
+            <div className="ah-banner ah-banner--warning">Upload a fixture file first (Fixtures tab) before creating a game.</div>
+          ) : (
+            <>
+              <input
+                className="ah-input"
+                style={{ width: '100%' }}
+                placeholder="Game name (e.g. Andy's Friends 2025)"
+                value={newName}
+                onChange={e => setNewName(e.target.value)}
+              />
+              <div style={{ marginTop: 8, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                <div>
+                  <label className="ah-label">Fixture file: </label>
+                  <select
+                    value={newFixtureId}
+                    onChange={e => setNewFixtureId(e.target.value)}
+                    className="ah-select"
+                  >
+                    <option value="">— select —</option>
+                    {fixtures.map(f => (
+                      <option key={f.id} value={String(f.id)}>{f.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="ah-label">P-P rule: </label>
+                  <select value={postponeRule} onChange={e => setPostponeRule(e.target.value as 'loss' | 'win')} className="ah-select">
+                    <option value="loss">Loss (eliminated)</option>
+                    <option value="win">Win (voided, re-pick)</option>
+                  </select>
+                </div>
+              </div>
+              <button
+                className="ah-btn-primary"
+                style={{ marginTop: 12 }}
+                onClick={createGame}
+                disabled={!newName.trim() || !newFixtureId}
+              >
+                Create Game
+              </button>
+            </>
+          )}
         </div>
       )}
 
@@ -308,23 +446,23 @@ function GamesTab({ api, token, isReadOnly, onGameSelect }: {
         <div className="ah-card"><p style={{ color: '#666' }}>No games yet.</p></div>
       ) : (
         games.map(game => (
-          <div key={game.id} className="ah-card" style={{ borderLeft: String(game.id) === currentGameId ? '4px solid #2196F3' : undefined }}>
+          <div key={game.id} className="ah-card" style={{
+            borderLeft: String(game.id) === currentGameId ? '4px solid #2196F3' : undefined,
+          }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div>
                 <strong>{game.name}</strong>
-                {String(game.id) === currentGameId && <span style={s.currentBadge}> CURRENT</span>}
-                <p className="ah-meta">Status: {game.status} · P-P rule: {game.postponementRule}</p>
+                {String(game.id) === currentGameId && <span style={s.currentBadge}>CURRENT</span>}
+                <p className="ah-meta">Status: {game.status} · P-P: {game.postponementRule} · Fixture: {game.fixtureName || '—'}</p>
               </div>
               {!isReadOnly && (
                 <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
                   {String(game.id) !== currentGameId && (
                     <button className="ah-btn-outline" onClick={() => setCurrent(game.id)}>Set Current</button>
                   )}
-                  <button className="ah-btn-outline" onClick={() => { onGameSelect(String(game.id)); }}>Manage</button>
+                  <button className="ah-btn-outline" onClick={() => onGameSelect(String(game.id))}>Rounds</button>
                   {game.status === 'active' && (
-                    <button className="ah-btn-danger" onClick={() => completeGame(game.id)}>
-                      Complete
-                    </button>
+                    <button className="ah-btn-danger" onClick={() => completeGame(game.id)}>Complete</button>
                   )}
                 </div>
               )}
@@ -338,12 +476,10 @@ function GamesTab({ api, token, isReadOnly, onGameSelect }: {
 
 // --- RoundsTab ---
 
-function RoundsTab({ gameId, api, isReadOnly, selectedRound, onRoundSelect }: {
+function RoundsTab({ gameId, api, isReadOnly }: {
   gameId: string;
   api: ReturnType<typeof useApi>;
   isReadOnly: boolean;
-  selectedRound: string;
-  onRoundSelect: (r: string) => void;
 }) {
   const [rounds, setRounds] = useState<Round[]>([]);
   const [newRoundNum, setNewRoundNum] = useState('');
@@ -382,7 +518,7 @@ function RoundsTab({ gameId, api, isReadOnly, selectedRound, onRoundSelect }: {
         method: 'PUT',
         body: JSON.stringify({ status }),
       });
-      setSuccess(`Round ${roundNumber} is now ${status}`);
+      setSuccess(`Round ${roundNumber} → ${status}`);
       load();
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
@@ -437,29 +573,28 @@ function RoundsTab({ gameId, api, isReadOnly, selectedRound, onRoundSelect }: {
         <div className="ah-card"><p style={{ color: '#666' }}>No rounds yet.</p></div>
       ) : (
         rounds.map(round => (
-          <div key={round.roundNumber} className="ah-card" style={{
-            borderLeft: selectedRound === String(round.roundNumber) ? '4px solid #2196F3' : undefined,
-          }}>
+          <div key={round.roundNumber} className="ah-card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <strong>Round {round.roundNumber}</strong>
                 <span style={{ ...s.statusDot, color: statusColor(round.status) }}> {round.status}</span>
                 <p className="ah-meta">Deadline: {round.deadline} · {round.predCount} picks</p>
               </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                {!isReadOnly && round.status !== 'open' && (
-                  <button className="ah-btn-outline" style={{ color: '#4CAF50', borderColor: '#4CAF50' }}
-                    onClick={() => updateStatus(round.roundNumber, 'open')}>
-                    Open
-                  </button>
-                )}
-                {!isReadOnly && round.status === 'open' && (
-                  <button className="ah-btn-danger"
-                    onClick={() => updateStatus(round.roundNumber, 'closed')}>
-                    Close
-                  </button>
-                )}
-              </div>
+              {!isReadOnly && (
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {round.status !== 'open' && (
+                    <button className="ah-btn-outline" style={{ color: '#4CAF50', borderColor: '#4CAF50' }}
+                      onClick={() => updateStatus(round.roundNumber, 'open')}>
+                      Open
+                    </button>
+                  )}
+                  {round.status === 'open' && (
+                    <button className="ah-btn-danger" onClick={() => updateStatus(round.roundNumber, 'closed')}>
+                      Close
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         ))
@@ -475,59 +610,65 @@ function ResultsTab({ gameId, api, isReadOnly }: {
   api: ReturnType<typeof useApi>;
   isReadOnly: boolean;
 }) {
+  const [rounds, setRounds] = useState<Round[]>([]);
+  const [selectedRound, setSelectedRound] = useState<string>('');
   const [matches, setMatches] = useState<Match[]>([]);
+  const [resultInputs, setResultInputs] = useState<Record<number, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [resultInputs, setResultInputs] = useState<Record<number, string>>({});
+  const [processResult, setProcessResult] = useState<{ survived: number; eliminated: number } | null>(null);
 
-  const load = useCallback(() => {
-    api(`/api/lms/matches/${gameId}`)
-      .then(data => setMatches(data.matches || []))
+  // Load rounds for this game
+  useEffect(() => {
+    api(`/api/lms/rounds/${gameId}`)
+      .then(data => {
+        const r = data.rounds || [];
+        setRounds(r);
+        // Default to the highest round number
+        if (r.length > 0) setSelectedRound(String(r[r.length - 1].roundNumber));
+      })
       .catch(err => setError(err.message));
   }, [api, gameId]);
 
-  useEffect(() => { load(); }, [load]);
-
-  const uploadCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('gameId', gameId);
-    try {
-      const data = await api('/api/lms/matches/upload', { method: 'POST', body: formData });
-      setSuccess(`Uploaded: ${data.upserted} matches${data.evaluated ? `, ${data.evaluated} predictions evaluated` : ''}`);
-      load();
-      setTimeout(() => setSuccess(null), 5000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Upload failed');
-    }
-    e.target.value = '';
-  };
+  // Load matches when round changes
+  useEffect(() => {
+    if (!selectedRound) return;
+    api(`/api/lms/matches/${gameId}/${selectedRound}`)
+      .then(data => { setMatches(data.matches || []); setResultInputs({}); setProcessResult(null); })
+      .catch(err => setError(err.message));
+  }, [api, gameId, selectedRound]);
 
   const setResult = async (matchId: number) => {
     const result = resultInputs[matchId];
     if (!result) return;
     try {
-      const data = await api(`/api/lms/matches/${matchId}/result`, {
+      await api(`/api/lms/matches/${matchId}/result`, {
         method: 'PUT',
         body: JSON.stringify({ result }),
       });
-      setSuccess(`Result set. ${data.predictionsProcessed} predictions processed.`);
+      setSuccess('Result saved');
       setResultInputs(prev => { const next = { ...prev }; delete next[matchId]; return next; });
-      load();
-      setTimeout(() => setSuccess(null), 5000);
+      // Reload matches to show updated result
+      const data = await api(`/api/lms/matches/${gameId}/${selectedRound}`);
+      setMatches(data.matches || []);
+      setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed');
     }
   };
 
-  // Group matches by round number
-  const byRound = matches.reduce<Record<number, Match[]>>((acc, m) => {
-    (acc[m.roundNumber] = acc[m.roundNumber] || []).push(m);
-    return acc;
-  }, {});
-  const roundNumbers = Object.keys(byRound).map(Number).sort((a, b) => a - b);
+  const processRound = async () => {
+    try {
+      const data = await api(`/api/lms/rounds/${gameId}/${selectedRound}/process`, { method: 'POST' });
+      setProcessResult({ survived: data.survived, eliminated: data.eliminated });
+      setSuccess(`Round ${selectedRound} processed — ${data.survived} survived, ${data.eliminated} eliminated`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to process round');
+    }
+  };
+
+  const missingResults = matches.filter(m => !m.result || m.result.trim() === '').length;
+  const canProcess = matches.length > 0 && missingResults === 0;
 
   const statusColor = (status: string) => {
     if (status === 'completed') return '#4CAF50';
@@ -540,59 +681,84 @@ function ResultsTab({ gameId, api, isReadOnly }: {
       {error && <div className="ah-banner ah-banner--error" onClick={() => setError(null)}>{error}</div>}
       {success && <div className="ah-banner ah-banner--success">{success}</div>}
 
-      {!isReadOnly && (
-        <div className="ah-card">
-          <h3 className="ah-section-title">Upload Matches (CSV)</h3>
-          <p className="ah-meta">Format: match_number, round_number, date, location, home_team, away_team[, result]</p>
-          <p className="ah-meta">Round and result are read from the CSV — no pre-selection needed. Results trigger prediction evaluation.</p>
-          <input type="file" accept=".csv" onChange={uploadCSV} style={{ marginTop: 8 }} />
-        </div>
+      {/* Round selector */}
+      <div style={{ marginBottom: 16 }}>
+        <label className="ah-label">Round: </label>
+        <select value={selectedRound} onChange={e => setSelectedRound(e.target.value)} className="ah-select">
+          <option value="">— select round —</option>
+          {rounds.map(r => (
+            <option key={r.roundNumber} value={String(r.roundNumber)}>
+              Round {r.roundNumber} ({r.status})
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {selectedRound && matches.length === 0 && (
+        <div className="ah-card"><p style={{ color: '#666' }}>No matches in this round. Check the fixture file is uploaded and contains round {selectedRound}.</p></div>
       )}
 
-      {matches.length === 0 ? (
-        <div className="ah-card"><p style={{ color: '#666' }}>No matches yet. Upload a CSV to add matches.</p></div>
-      ) : (
-        roundNumbers.map(roundNum => (
-          <div key={roundNum}>
-            <h3 className="ah-section-title" style={{ marginTop: 16 }}>Round {roundNum}</h3>
-            {byRound[roundNum].map(match => (
-              <div key={match.id} className="ah-card">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div style={{ flex: 1 }}>
-                    <strong>#{match.matchNumber}: {match.homeTeam} vs {match.awayTeam}</strong>
-                    <p className="ah-meta">{match.date} · {match.location}</p>
-                    {match.result && (
-                      <p className="ah-meta" style={{ fontWeight: 600, color: '#333' }}>Result: {match.result}</p>
-                    )}
-                    {match.status !== 'pending' && (
-                      <p className="ah-meta" style={{ color: statusColor(match.status), fontWeight: 500 }}>
-                        {match.status}
-                      </p>
-                    )}
-                  </div>
-                  {!isReadOnly && (
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0, marginLeft: 12 }}>
-                      <input
-                        className="ah-input"
-                        style={{ width: 90 }}
-                        placeholder="e.g. 2 - 1"
-                        value={resultInputs[match.id] || ''}
-                        onChange={e => setResultInputs(prev => ({ ...prev, [match.id]: e.target.value }))}
-                      />
-                      <button
-                        className="ah-btn-outline"
-                        onClick={() => setResult(match.id)}
-                        disabled={!resultInputs[match.id]}
-                      >
-                        {match.status === 'pending' ? 'Set' : 'Edit'}
-                      </button>
-                    </div>
+      {matches.length > 0 && (
+        <>
+          {matches.map(match => (
+            <div key={match.id} className="ah-card">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div style={{ flex: 1 }}>
+                  <strong>#{match.matchNumber}: {match.homeTeam} vs {match.awayTeam}</strong>
+                  <p className="ah-meta">{match.date} · {match.location}</p>
+                  {match.result && (
+                    <p className="ah-meta" style={{ fontWeight: 600, color: '#333' }}>Result: {match.result}</p>
+                  )}
+                  {match.status !== 'upcoming' && (
+                    <p className="ah-meta" style={{ color: statusColor(match.status), fontWeight: 500 }}>
+                      {match.status}
+                    </p>
                   )}
                 </div>
+                {!isReadOnly && (
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0, marginLeft: 12 }}>
+                    <input
+                      className="ah-input"
+                      style={{ width: 90 }}
+                      placeholder="2 - 1"
+                      value={resultInputs[match.id] || ''}
+                      onChange={e => setResultInputs(prev => ({ ...prev, [match.id]: e.target.value }))}
+                    />
+                    <button
+                      className="ah-btn-outline"
+                      onClick={() => setResult(match.id)}
+                      disabled={!resultInputs[match.id]}
+                    >
+                      {match.result ? 'Update' : 'Set'}
+                    </button>
+                  </div>
+                )}
               </div>
-            ))}
-          </div>
-        ))
+            </div>
+          ))}
+
+          {!isReadOnly && (
+            <div className="ah-card" style={{ marginTop: 8 }}>
+              {missingResults > 0 && (
+                <p className="ah-meta" style={{ color: '#E65100', marginBottom: 8 }}>
+                  {missingResults} match{missingResults > 1 ? 'es' : ''} still need{missingResults === 1 ? 's' : ''} a result before processing.
+                </p>
+              )}
+              <button
+                className="ah-btn-primary"
+                onClick={processRound}
+                disabled={!canProcess}
+              >
+                Process Round {selectedRound}
+              </button>
+              {processResult && (
+                <p className="ah-meta" style={{ marginTop: 8, color: '#333' }}>
+                  ✅ {processResult.survived} survived · ❌ {processResult.eliminated} eliminated
+                </p>
+              )}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -600,13 +766,9 @@ function ResultsTab({ gameId, api, isReadOnly }: {
 
 // --- PredictionsTab ---
 
-function PredictionsTab({ gameId, round, api }: {
-  gameId: string;
-  round: string;
-  api: ReturnType<typeof useApi>;
-}) {
-  const [predictions, setPredictions] = useState<Prediction[]>([]);
-  const [filterRound, setFilterRound] = useState(round);
+function PredictionsTab({ gameId, api }: { gameId: string; api: ReturnType<typeof useApi> }) {
+  const [predictions, setPredictions] = useState<any[]>([]);
+  const [filterRound, setFilterRound] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(() => {
@@ -619,7 +781,7 @@ function PredictionsTab({ gameId, round, api }: {
 
   useEffect(() => { load(); }, [load]);
 
-  const statusIcon = (p: Prediction) => {
+  const statusIcon = (p: any) => {
     if (p.voided) return <span style={{ color: '#FF9800' }}>Voided</span>;
     if (p.isCorrect === null) return <span style={{ color: '#999' }}>Pending</span>;
     if (p.isCorrect) return <span style={{ color: '#4CAF50' }}>✅ Survived</span>;
@@ -670,7 +832,7 @@ function PredictionsTab({ gameId, round, api }: {
   );
 }
 
-// --- Game Admin-specific styles (shared styles use .ah-* classes) ---
+// --- App-specific styles (shared styles use .ah-* classes) ---
 
 const s: Record<string, React.CSSProperties> = {
   readOnlyBadge: {

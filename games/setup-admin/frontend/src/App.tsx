@@ -11,7 +11,7 @@ interface User {
   createdAt: string;
 }
 
-interface App {
+interface AppRecord {
   id: string;
   name: string;
   icon: string;
@@ -24,7 +24,7 @@ interface App {
 function App() {
   const [activeTab, setActiveTab] = useState<'users' | 'apps'>('users');
   const [users, setUsers] = useState<User[]>([]);
-  const [apps, setApps] = useState<App[]>([]);
+  const [apps, setApps] = useState<AppRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState<string>('');
   const [currentUserRoles, setCurrentUserRoles] = useState<string[]>([]);
@@ -62,6 +62,7 @@ function App() {
   };
 
   // Fetch data when tab changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!token) return;
 
