@@ -82,9 +82,10 @@ func handleGetFixtures(w http.ResponseWriter, r *http.Request) {
 
 // handleUploadFixture uploads a fixture CSV to create or update a named fixture file.
 // Form fields: name (string), file (CSV).
-// CSV format: match_number, round_number, date, location, home_team, away_team
+// CSV format: match_number, round_number, date, location, home_team, away_team[, result]
+// The result column is optional. If present it is stored as-is; status is NOT changed.
+// Status is only set to 'completed' via the manual set-result endpoint.
 // Matches are upserted on (fixture_file_id, match_number).
-// Re-uploading updates fixture data but does NOT touch results — results are entered separately.
 func handleUploadFixture(w http.ResponseWriter, r *http.Request) {
 	if !requireWritePermission(w, r) {
 		return
@@ -153,12 +154,17 @@ func handleUploadFixture(w http.ResponseWriter, r *http.Request) {
 		homeTeam := strings.TrimSpace(row[4])
 		awayTeam := strings.TrimSpace(row[5])
 
+		result := ""
+		if len(row) > 6 {
+			result = strings.TrimSpace(row[6])
+		}
+
 		_, err = lmsDB.Exec(`
-			INSERT INTO matches (fixture_file_id, match_number, round_number, date, location, home_team, away_team)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)
+			INSERT INTO matches (fixture_file_id, match_number, round_number, date, location, home_team, away_team, result)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 			ON CONFLICT (fixture_file_id, match_number) DO UPDATE
-			SET round_number=$3, date=$4, location=$5, home_team=$6, away_team=$7
-		`, fixtureFileID, matchNumber, roundNumber, date, location, homeTeam, awayTeam)
+			SET round_number=$3, date=$4, location=$5, home_team=$6, away_team=$7, result=$8
+		`, fixtureFileID, matchNumber, roundNumber, date, location, homeTeam, awayTeam, result)
 		if err != nil {
 			log.Printf("Error upserting match %d: %v", matchNumber, err)
 			continue

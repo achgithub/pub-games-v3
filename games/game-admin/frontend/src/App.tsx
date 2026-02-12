@@ -255,8 +255,8 @@ function FixturesTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isRe
       {!isReadOnly && (
         <div className="ah-card">
           <h3 className="ah-section-title">Upload Fixture File (CSV)</h3>
-          <p className="ah-meta">Format: match_number, round_number, date, location, home_team, away_team</p>
-          <p className="ah-meta">Re-uploading with the same name updates existing matches. Results are NOT affected by re-upload.</p>
+          <p className="ah-meta">Format: match_number, round_number, date, location, home_team, away_team[, result]</p>
+          <p className="ah-meta">Re-uploading with the same name updates existing matches. Results in the CSV are stored but status is only set to Completed when you confirm results in the Results tab.</p>
           <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
             <input
               className="ah-input"
