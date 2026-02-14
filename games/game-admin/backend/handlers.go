@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -83,8 +84,8 @@ func handleGetFixtures(w http.ResponseWriter, r *http.Request) {
 // handleUploadFixture uploads a fixture CSV to create or update a named fixture file.
 // Form fields: name (string), file (CSV).
 // CSV format: match_number, round_number, date, location, home_team, away_team[, result]
-// The result column is optional. If present it is stored as-is; status is NOT changed.
-// Status is only set to 'completed' via the manual set-result endpoint.
+// Date must be YYYY-MM-DD or DD/MM/YYYY. round_number is stored as metadata only.
+// The result column is optional. Status is only set to 'completed' via the set-result endpoint.
 // Matches are upserted on (fixture_file_id, match_number).
 func handleUploadFixture(w http.ResponseWriter, r *http.Request) {
 	if !requireWritePermission(w, r) {
@@ -137,6 +138,7 @@ func handleUploadFixture(w http.ResponseWriter, r *http.Request) {
 	}
 
 	upserted := 0
+	skipped := 0
 	for _, row := range records[1:] {
 		if len(row) < 6 {
 			continue
@@ -149,7 +151,15 @@ func handleUploadFixture(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			continue
 		}
-		date := strings.TrimSpace(row[2])
+
+		// Parse date into DATE — try YYYY-MM-DD then DD/MM/YYYY
+		matchDate, err := parseMatchDate(strings.TrimSpace(row[2]))
+		if err != nil {
+			log.Printf("Skipping match %d: cannot parse date %q: %v", matchNumber, row[2], err)
+			skipped++
+			continue
+		}
+
 		location := strings.TrimSpace(row[3])
 		homeTeam := strings.TrimSpace(row[4])
 		awayTeam := strings.TrimSpace(row[5])
@@ -160,11 +170,11 @@ func handleUploadFixture(w http.ResponseWriter, r *http.Request) {
 		}
 
 		_, err = lmsDB.Exec(`
-			INSERT INTO matches (fixture_file_id, match_number, round_number, date, location, home_team, away_team, result)
+			INSERT INTO matches (fixture_file_id, match_number, round_number, match_date, location, home_team, away_team, result)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 			ON CONFLICT (fixture_file_id, match_number) DO UPDATE
-			SET round_number=$3, date=$4, location=$5, home_team=$6, away_team=$7, result=$8
-		`, fixtureFileID, matchNumber, roundNumber, date, location, homeTeam, awayTeam, result)
+			SET round_number=$3, match_date=$4, location=$5, home_team=$6, away_team=$7, result=$8
+		`, fixtureFileID, matchNumber, roundNumber, matchDate, location, homeTeam, awayTeam, result)
 		if err != nil {
 			log.Printf("Error upserting match %d: %v", matchNumber, err)
 			continue
@@ -173,25 +183,48 @@ func handleUploadFixture(w http.ResponseWriter, r *http.Request) {
 	}
 
 	logAudit(r.Header.Get("X-Admin-Email"), "lms_fixture_upload", strconv.Itoa(fixtureFileID), map[string]interface{}{
-		"name": name, "upserted": upserted,
+		"name": name, "upserted": upserted, "skipped": skipped,
 	})
 	sendJSON(w, map[string]interface{}{
 		"success":  true,
 		"id":       fixtureFileID,
 		"name":     name,
 		"upserted": upserted,
+		"skipped":  skipped,
 	})
 }
 
-// handleGetFixtureMatches returns all matches for a fixture file.
+// parseMatchDate parses a date string trying YYYY-MM-DD, then DD/MM/YYYY.
+// Returns a time.Time truncated to midnight UTC.
+func parseMatchDate(s string) (time.Time, error) {
+	// Strip time component if present (e.g. "2025-08-16 15:00" → "2025-08-16")
+	if idx := strings.Index(s, " "); idx != -1 {
+		s = s[:idx]
+	}
+	// Try ISO format first
+	if t, err := time.Parse("2006-01-02", s); err == nil {
+		return t, nil
+	}
+	// Try UK/European format DD/MM/YYYY
+	if t, err := time.Parse("02/01/2006", s); err == nil {
+		return t, nil
+	}
+	// Try DD-MM-YYYY
+	if t, err := time.Parse("02-01-2006", s); err == nil {
+		return t, nil
+	}
+	return time.Time{}, fmt.Errorf("unsupported date format: %q", s)
+}
+
+// handleGetFixtureMatches returns all matches for a fixture file, ordered by date.
 func handleGetFixtureMatches(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	fixtureID := vars["id"]
 
 	rows, err := lmsDB.Query(`
-		SELECT id, match_number, round_number, date, location, home_team, away_team, result, status
+		SELECT id, match_number, round_number, match_date, location, home_team, away_team, result, status
 		FROM matches WHERE fixture_file_id = $1
-		ORDER BY round_number, match_number
+		ORDER BY match_date, match_number
 	`, fixtureID)
 	if err != nil {
 		sendError(w, "Failed to get matches", http.StatusInternalServerError)
@@ -202,15 +235,16 @@ func handleGetFixtureMatches(w http.ResponseWriter, r *http.Request) {
 	var matches []map[string]interface{}
 	for rows.Next() {
 		var id, matchNumber, roundNumber int
-		var date, location, homeTeam, awayTeam, result, status string
-		if err := rows.Scan(&id, &matchNumber, &roundNumber, &date, &location, &homeTeam, &awayTeam, &result, &status); err != nil {
+		var matchDate time.Time
+		var location, homeTeam, awayTeam, result, status string
+		if err := rows.Scan(&id, &matchNumber, &roundNumber, &matchDate, &location, &homeTeam, &awayTeam, &result, &status); err != nil {
 			continue
 		}
 		matches = append(matches, map[string]interface{}{
 			"id":          id,
 			"matchNumber": matchNumber,
 			"roundNumber": roundNumber,
-			"date":        date,
+			"date":        matchDate.Format("2006-01-02"),
 			"location":    location,
 			"homeTeam":    homeTeam,
 			"awayTeam":    awayTeam,
@@ -229,7 +263,7 @@ func handleGetFixtureMatches(w http.ResponseWriter, r *http.Request) {
 // handleGetLMSGames returns all LMS games with their fixture file names.
 func handleGetLMSGames(w http.ResponseWriter, r *http.Request) {
 	rows, err := lmsDB.Query(`
-		SELECT g.id, g.name, g.status, g.winner_count, g.postponement_rule,
+		SELECT g.id, g.name, g.status, g.winner_count,
 		       g.start_date, COALESCE(g.fixture_file_id, 0), COALESCE(f.name, '')
 		FROM games g
 		LEFT JOIN fixture_files f ON f.id = g.fixture_file_id
@@ -245,20 +279,19 @@ func handleGetLMSGames(w http.ResponseWriter, r *http.Request) {
 	var games []map[string]interface{}
 	for rows.Next() {
 		var id, winnerCount, fixtureFileID int
-		var name, status, postponementRule, fixtureName string
+		var name, status, fixtureName string
 		var startDate interface{}
-		if err := rows.Scan(&id, &name, &status, &winnerCount, &postponementRule, &startDate, &fixtureFileID, &fixtureName); err != nil {
+		if err := rows.Scan(&id, &name, &status, &winnerCount, &startDate, &fixtureFileID, &fixtureName); err != nil {
 			continue
 		}
 		games = append(games, map[string]interface{}{
-			"id":               id,
-			"name":             name,
-			"status":           status,
-			"winnerCount":      winnerCount,
-			"postponementRule": postponementRule,
-			"startDate":        startDate,
-			"fixtureFileId":    fixtureFileID,
-			"fixtureName":      fixtureName,
+			"id":            id,
+			"name":          name,
+			"status":        status,
+			"winnerCount":   winnerCount,
+			"startDate":     startDate,
+			"fixtureFileId": fixtureFileID,
+			"fixtureName":   fixtureName,
 		})
 	}
 	if games == nil {
@@ -281,9 +314,8 @@ func handleCreateLMSGame(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Name             string `json:"name"`
-		FixtureFileID    int    `json:"fixtureFileId"`
-		PostponementRule string `json:"postponementRule"`
+		Name          string `json:"name"`
+		FixtureFileID int    `json:"fixtureFileId"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Name == "" {
 		sendError(w, "name is required", http.StatusBadRequest)
@@ -292,9 +324,6 @@ func handleCreateLMSGame(w http.ResponseWriter, r *http.Request) {
 	if req.FixtureFileID == 0 {
 		sendError(w, "fixtureFileId is required", http.StatusBadRequest)
 		return
-	}
-	if req.PostponementRule == "" {
-		req.PostponementRule = "loss"
 	}
 
 	// Verify fixture file exists
@@ -307,8 +336,8 @@ func handleCreateLMSGame(w http.ResponseWriter, r *http.Request) {
 
 	var id int
 	err := lmsDB.QueryRow(`
-		INSERT INTO games (name, fixture_file_id, postponement_rule) VALUES ($1, $2, $3) RETURNING id
-	`, req.Name, req.FixtureFileID, req.PostponementRule).Scan(&id)
+		INSERT INTO games (name, fixture_file_id) VALUES ($1, $2) RETURNING id
+	`, req.Name, req.FixtureFileID).Scan(&id)
 	if err != nil {
 		log.Printf("Error creating game: %v", err)
 		sendError(w, "Failed to create game", http.StatusInternalServerError)
@@ -377,8 +406,8 @@ func handleGetLMSRounds(w http.ResponseWriter, r *http.Request) {
 	gameID := vars["gameId"]
 
 	rows, err := lmsDB.Query(`
-		SELECT id, round_number, submission_deadline, status
-		FROM rounds WHERE game_id = $1 ORDER BY round_number
+		SELECT id, label, start_date, end_date, status
+		FROM rounds WHERE game_id = $1 ORDER BY label
 	`, gameID)
 	if err != nil {
 		sendError(w, "Failed to get rounds", http.StatusInternalServerError)
@@ -388,23 +417,25 @@ func handleGetLMSRounds(w http.ResponseWriter, r *http.Request) {
 
 	var rounds []map[string]interface{}
 	for rows.Next() {
-		var id, roundNumber int
-		var deadline, status string
-		if err := rows.Scan(&id, &roundNumber, &deadline, &status); err != nil {
+		var id, label int
+		var startDate, endDate time.Time
+		var status string
+		if err := rows.Scan(&id, &label, &startDate, &endDate, &status); err != nil {
 			continue
 		}
 		var predCount int
 		lmsDB.QueryRow(
-			"SELECT COUNT(*) FROM predictions WHERE game_id = $1 AND round_number = $2",
-			gameID, roundNumber,
+			"SELECT COUNT(*) FROM predictions WHERE round_id = $1",
+			id,
 		).Scan(&predCount)
 
 		rounds = append(rounds, map[string]interface{}{
-			"id":          id,
-			"roundNumber": roundNumber,
-			"deadline":    deadline,
-			"status":      status,
-			"predCount":   predCount,
+			"id":        id,
+			"label":     label,
+			"startDate": startDate.Format("2006-01-02"),
+			"endDate":   endDate.Format("2006-01-02"),
+			"status":    status,
+			"predCount": predCount,
 		})
 	}
 	if rounds == nil {
@@ -413,29 +444,46 @@ func handleGetLMSRounds(w http.ResponseWriter, r *http.Request) {
 	sendJSON(w, map[string]interface{}{"rounds": rounds})
 }
 
-// handleCreateRound creates a new round for a game.
+// handleCreateRound creates a new round for a game using a date range.
+// Body: { gameId, label, startDate (YYYY-MM-DD), endDate (YYYY-MM-DD) }
 func handleCreateRound(w http.ResponseWriter, r *http.Request) {
 	if !requireWritePermission(w, r) {
 		return
 	}
 
 	var req struct {
-		GameID      int    `json:"gameId"`
-		RoundNumber int    `json:"roundNumber"`
-		Deadline    string `json:"deadline"`
+		GameID    int    `json:"gameId"`
+		Label     int    `json:"label"`
+		StartDate string `json:"startDate"`
+		EndDate   string `json:"endDate"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GameID == 0 || req.RoundNumber == 0 || req.Deadline == "" {
-		sendError(w, "gameId, roundNumber, and deadline are required", http.StatusBadRequest)
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GameID == 0 || req.Label == 0 || req.StartDate == "" || req.EndDate == "" {
+		sendError(w, "gameId, label, startDate, and endDate are required", http.StatusBadRequest)
+		return
+	}
+
+	startDate, err := time.Parse("2006-01-02", req.StartDate)
+	if err != nil {
+		sendError(w, "startDate must be YYYY-MM-DD", http.StatusBadRequest)
+		return
+	}
+	endDate, err := time.Parse("2006-01-02", req.EndDate)
+	if err != nil {
+		sendError(w, "endDate must be YYYY-MM-DD", http.StatusBadRequest)
+		return
+	}
+	if !endDate.After(startDate) {
+		sendError(w, "endDate must be after startDate", http.StatusBadRequest)
 		return
 	}
 
 	var id int
-	err := lmsDB.QueryRow(`
-		INSERT INTO rounds (game_id, round_number, submission_deadline) VALUES ($1, $2, $3) RETURNING id
-	`, req.GameID, req.RoundNumber, req.Deadline).Scan(&id)
+	err = lmsDB.QueryRow(`
+		INSERT INTO rounds (game_id, label, start_date, end_date) VALUES ($1, $2, $3, $4) RETURNING id
+	`, req.GameID, req.Label, startDate, endDate).Scan(&id)
 	if err != nil {
 		if strings.Contains(err.Error(), "unique") {
-			sendError(w, fmt.Sprintf("Round %d already exists for this game", req.RoundNumber), http.StatusConflict)
+			sendError(w, fmt.Sprintf("Round %d already exists for this game", req.Label), http.StatusConflict)
 			return
 		}
 		log.Printf("Error creating round: %v", err)
@@ -444,12 +492,12 @@ func handleCreateRound(w http.ResponseWriter, r *http.Request) {
 	}
 
 	logAudit(r.Header.Get("X-Admin-Email"), "lms_round_create", strconv.Itoa(id), map[string]interface{}{
-		"gameId": req.GameID, "roundNumber": req.RoundNumber,
+		"gameId": req.GameID, "label": req.Label, "startDate": req.StartDate, "endDate": req.EndDate,
 	})
 	sendJSON(w, map[string]interface{}{"success": true, "id": id})
 }
 
-// handleUpdateRoundStatus opens or closes a round.
+// handleUpdateRoundStatus opens or closes a round (identified by gameId + label).
 func handleUpdateRoundStatus(w http.ResponseWriter, r *http.Request) {
 	if !requireWritePermission(w, r) {
 		return
@@ -457,7 +505,7 @@ func handleUpdateRoundStatus(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 	gameID := vars["gameId"]
-	roundNum := vars["round"]
+	label := vars["label"]
 
 	var req struct {
 		Status string `json:"status"`
@@ -472,8 +520,8 @@ func handleUpdateRoundStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result, err := lmsDB.Exec(`
-		UPDATE rounds SET status = $3 WHERE game_id = $1 AND round_number = $2
-	`, gameID, roundNum, req.Status)
+		UPDATE rounds SET status = $3 WHERE game_id = $1 AND label = $2
+	`, gameID, label, req.Status)
 	if err != nil {
 		sendError(w, "Failed to update round", http.StatusInternalServerError)
 		return
@@ -484,33 +532,35 @@ func handleUpdateRoundStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	logAudit(r.Header.Get("X-Admin-Email"), "lms_round_status", gameID+"/"+roundNum, map[string]interface{}{"status": req.Status})
+	logAudit(r.Header.Get("X-Admin-Email"), "lms_round_status", gameID+"/"+label, map[string]interface{}{"status": req.Status})
 	sendJSON(w, map[string]interface{}{"success": true})
 }
 
-// handleGetAdminRoundSummary returns round stats for admin.
+// handleGetAdminRoundSummary returns round stats for admin (identified by gameId + label).
 func handleGetAdminRoundSummary(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	gameID := vars["gameId"]
-	roundNum := vars["round"]
+	label := vars["label"]
 
-	var deadline, status string
+	var roundID int
+	var startDate, endDate time.Time
+	var status string
 	err := lmsDB.QueryRow(`
-		SELECT submission_deadline, status FROM rounds WHERE game_id = $1 AND round_number = $2
-	`, gameID, roundNum).Scan(&deadline, &status)
+		SELECT id, start_date, end_date, status FROM rounds WHERE game_id = $1 AND label = $2
+	`, gameID, label).Scan(&roundID, &startDate, &endDate, &status)
 	if err != nil {
 		sendError(w, "Round not found", http.StatusNotFound)
 		return
 	}
 
 	rows, err := lmsDB.Query(`
-		SELECT p.user_id, p.predicted_team, p.is_correct, p.voided,
+		SELECT p.user_id, p.predicted_team, p.is_correct, p.voided, p.bye,
 		       m.home_team, m.away_team, m.result
 		FROM predictions p
 		JOIN matches m ON m.id = p.match_id
-		WHERE p.game_id = $1 AND p.round_number = $2
+		WHERE p.round_id = $1
 		ORDER BY p.user_id
-	`, gameID, roundNum)
+	`, roundID)
 	if err != nil {
 		sendError(w, "Failed to get predictions", http.StatusInternalServerError)
 		return
@@ -522,6 +572,7 @@ func handleGetAdminRoundSummary(w http.ResponseWriter, r *http.Request) {
 		PredictedTeam string `json:"predictedTeam"`
 		IsCorrect     *bool  `json:"isCorrect"`
 		Voided        bool   `json:"voided"`
+		Bye           bool   `json:"bye"`
 		HomeTeam      string `json:"homeTeam"`
 		AwayTeam      string `json:"awayTeam"`
 		Result        string `json:"result"`
@@ -530,11 +581,11 @@ func handleGetAdminRoundSummary(w http.ResponseWriter, r *http.Request) {
 	survived, eliminated := 0, 0
 	for rows.Next() {
 		var p PredRow
-		if err := rows.Scan(&p.UserID, &p.PredictedTeam, &p.IsCorrect, &p.Voided, &p.HomeTeam, &p.AwayTeam, &p.Result); err != nil {
+		if err := rows.Scan(&p.UserID, &p.PredictedTeam, &p.IsCorrect, &p.Voided, &p.Bye, &p.HomeTeam, &p.AwayTeam, &p.Result); err != nil {
 			continue
 		}
 		preds = append(preds, p)
-		if p.IsCorrect != nil && *p.IsCorrect {
+		if p.Bye || (p.IsCorrect != nil && *p.IsCorrect) {
 			survived++
 		} else if p.IsCorrect != nil && !*p.IsCorrect && !p.Voided {
 			eliminated++
@@ -545,37 +596,59 @@ func handleGetAdminRoundSummary(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sendJSON(w, map[string]interface{}{
-		"gameId":      gameID,
-		"roundNumber": roundNum,
-		"deadline":    deadline,
-		"status":      status,
+		"gameId":    gameID,
+		"label":     label,
+		"startDate": startDate.Format("2006-01-02"),
+		"endDate":   endDate.Format("2006-01-02"),
+		"status":    status,
 		"predictions": preds,
-		"survived":    survived,
-		"eliminated":  eliminated,
+		"survived":  survived,
+		"eliminated": eliminated,
 	})
 }
 
 // --- LMS Match Management ---
 
-// handleGetLMSMatchesForGame returns all matches for a game (via its fixture file), optionally for one round.
+// handleGetLMSMatchesForGame returns matches for a game, optionally filtered by round label.
+// When label is given, returns matches in that round's date window.
 func handleGetLMSMatchesForGame(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	gameID := vars["gameId"]
-	roundNum := vars["round"] // may be empty if route has no round param
+	label := vars["label"] // may be empty
 
-	query := `
-		SELECT m.id, m.match_number, m.round_number, m.date, m.location,
-		       m.home_team, m.away_team, m.result, m.status
-		FROM matches m
-		JOIN games g ON g.fixture_file_id = m.fixture_file_id
-		WHERE g.id = $1
-	`
-	args := []interface{}{gameID}
-	if roundNum != "" {
-		query += " AND m.round_number = $2"
-		args = append(args, roundNum)
+	var args []interface{}
+	var query string
+
+	if label != "" {
+		// Look up round date range, then filter matches by date
+		var startDate, endDate time.Time
+		err := lmsDB.QueryRow(`
+			SELECT start_date, end_date FROM rounds WHERE game_id = $1 AND label = $2
+		`, gameID, label).Scan(&startDate, &endDate)
+		if err != nil {
+			sendError(w, "Round not found", http.StatusNotFound)
+			return
+		}
+		query = `
+			SELECT m.id, m.match_number, m.round_number, m.match_date, m.location,
+			       m.home_team, m.away_team, m.result, m.status
+			FROM matches m
+			JOIN games g ON g.fixture_file_id = m.fixture_file_id
+			WHERE g.id = $1 AND m.match_date BETWEEN $2 AND $3
+			ORDER BY m.match_date, m.match_number
+		`
+		args = []interface{}{gameID, startDate, endDate}
+	} else {
+		query = `
+			SELECT m.id, m.match_number, m.round_number, m.match_date, m.location,
+			       m.home_team, m.away_team, m.result, m.status
+			FROM matches m
+			JOIN games g ON g.fixture_file_id = m.fixture_file_id
+			WHERE g.id = $1
+			ORDER BY m.match_date, m.match_number
+		`
+		args = []interface{}{gameID}
 	}
-	query += " ORDER BY m.round_number, m.match_number"
 
 	rows, err := lmsDB.Query(query, args...)
 	if err != nil {
@@ -587,15 +660,16 @@ func handleGetLMSMatchesForGame(w http.ResponseWriter, r *http.Request) {
 	var matches []map[string]interface{}
 	for rows.Next() {
 		var id, matchNumber, roundNumber int
-		var date, location, homeTeam, awayTeam, result, status string
-		if err := rows.Scan(&id, &matchNumber, &roundNumber, &date, &location, &homeTeam, &awayTeam, &result, &status); err != nil {
+		var matchDate time.Time
+		var location, homeTeam, awayTeam, result, status string
+		if err := rows.Scan(&id, &matchNumber, &roundNumber, &matchDate, &location, &homeTeam, &awayTeam, &result, &status); err != nil {
 			continue
 		}
 		matches = append(matches, map[string]interface{}{
 			"id":          id,
 			"matchNumber": matchNumber,
 			"roundNumber": roundNumber,
-			"date":        date,
+			"date":        matchDate.Format("2006-01-02"),
 			"location":    location,
 			"homeTeam":    homeTeam,
 			"awayTeam":    awayTeam,
@@ -651,7 +725,12 @@ func handleSetMatchResult(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleProcessRound evaluates all picks for a round in a game.
-// Pre-flight: all matches in the round must have a result. Returns survived/eliminated counts.
+// Rounds are date-range based. For each prediction:
+//   - Match in window and completed: evaluate win/draw/loss normally
+//   - Match postponed OR moved outside window: player gets a bye (survives, team consumed)
+//
+// Pre-flight: all matches currently within the round's date window must have a result
+// (status != 'upcoming'). Matches outside the window are automatically byes.
 func handleProcessRound(w http.ResponseWriter, r *http.Request) {
 	if !requireWritePermission(w, r) {
 		return
@@ -659,110 +738,145 @@ func handleProcessRound(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 	gameIDStr := vars["gameId"]
-	roundStr := vars["round"]
+	labelStr := vars["label"]
 
 	gameID, _ := strconv.Atoi(gameIDStr)
-	roundNumber, _ := strconv.Atoi(roundStr)
 
-	// Get game's fixture file and postponement rule
-	var fixtureFileID int
-	var postponementRule string
+	// Get round by game + label
+	var roundID int
+	var startDate, endDate time.Time
 	err := lmsDB.QueryRow(`
-		SELECT fixture_file_id, postponement_rule FROM games WHERE id = $1
-	`, gameID).Scan(&fixtureFileID, &postponementRule)
+		SELECT id, start_date, end_date FROM rounds WHERE game_id = $1 AND label = $2
+	`, gameID, labelStr).Scan(&roundID, &startDate, &endDate)
 	if err != nil {
-		sendError(w, "Game not found", http.StatusNotFound)
+		sendError(w, "Round not found", http.StatusNotFound)
 		return
 	}
-	if fixtureFileID == 0 {
+
+	// Get game's fixture file
+	var fixtureFileID int
+	err = lmsDB.QueryRow(`SELECT fixture_file_id FROM games WHERE id = $1`, gameID).Scan(&fixtureFileID)
+	if err != nil || fixtureFileID == 0 {
 		sendError(w, "Game has no fixture file linked", http.StatusBadRequest)
 		return
 	}
 
-	// Get all matches in this round from the fixture file
-	rows, err := lmsDB.Query(`
-		SELECT id, home_team, away_team, result
-		FROM matches WHERE fixture_file_id = $1 AND round_number = $2
-	`, fixtureFileID, roundNumber)
-	if err != nil {
-		sendError(w, "Failed to get matches", http.StatusInternalServerError)
+	// Pre-flight: check that all matches within the date window have a result
+	var pendingCount int
+	lmsDB.QueryRow(`
+		SELECT COUNT(*) FROM matches
+		WHERE fixture_file_id = $1 AND match_date BETWEEN $2 AND $3 AND status = 'upcoming'
+	`, fixtureFileID, startDate, endDate).Scan(&pendingCount)
+	if pendingCount > 0 {
+		sendError(w, fmt.Sprintf("%d match(es) in this round window still have no result", pendingCount), http.StatusBadRequest)
 		return
 	}
 
-	type matchInfo struct {
-		ID       int
-		HomeTeam string
-		AwayTeam string
-		Result   string
+	// Get all predictions for this round
+	rows, err := lmsDB.Query(`
+		SELECT p.id, p.user_id, p.predicted_team, p.match_id,
+		       m.home_team, m.away_team, m.result, m.status, m.match_date
+		FROM predictions p
+		JOIN matches m ON m.id = p.match_id
+		WHERE p.round_id = $1
+	`, roundID)
+	if err != nil {
+		sendError(w, "Failed to get predictions", http.StatusInternalServerError)
+		return
 	}
-	var matches []matchInfo
+
+	type predInfo struct {
+		ID            int
+		UserID        string
+		PredictedTeam string
+		MatchID       int
+		HomeTeam      string
+		AwayTeam      string
+		Result        string
+		MatchStatus   string
+		MatchDate     time.Time
+	}
+	var preds []predInfo
 	for rows.Next() {
-		var m matchInfo
-		if err := rows.Scan(&m.ID, &m.HomeTeam, &m.AwayTeam, &m.Result); err == nil {
-			matches = append(matches, m)
+		var p predInfo
+		if err := rows.Scan(&p.ID, &p.UserID, &p.PredictedTeam, &p.MatchID,
+			&p.HomeTeam, &p.AwayTeam, &p.Result, &p.MatchStatus, &p.MatchDate); err == nil {
+			preds = append(preds, p)
 		}
 	}
 	rows.Close()
 
-	if len(matches) == 0 {
-		sendError(w, "No matches found for this round in the fixture file", http.StatusBadRequest)
+	if len(preds) == 0 {
+		sendJSON(w, map[string]interface{}{"success": true, "processed": 0, "survived": 0, "eliminated": 0})
 		return
 	}
 
-	// Check all matches have results
-	missing := 0
-	for _, m := range matches {
-		if strings.TrimSpace(m.Result) == "" {
-			missing++
+	tx, err := lmsDB.Begin()
+	if err != nil {
+		sendError(w, "Failed to start transaction", http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	survived, eliminated, byes := 0, 0, 0
+	for _, p := range preds {
+		// Determine if match is within this round's window
+		inWindow := !p.MatchDate.Before(startDate) && !p.MatchDate.After(endDate)
+
+		if !inWindow || p.MatchStatus == "postponed" {
+			// Bye: player survives, team is consumed (voided stays FALSE)
+			tx.Exec("UPDATE predictions SET bye = TRUE, is_correct = NULL WHERE id = $1", p.ID)
+			byes++
+			survived++
+		} else {
+			// Match is in window and completed — evaluate normally
+			winnerTeam, _ := parseResult(p.Result, p.HomeTeam, p.AwayTeam)
+			var isCorrect bool
+			if winnerTeam == "" {
+				// Draw — all predictors eliminated
+				isCorrect = false
+			} else {
+				isCorrect = p.PredictedTeam == winnerTeam
+			}
+			tx.Exec("UPDATE predictions SET is_correct = $1 WHERE id = $2", isCorrect, p.ID)
+			if isCorrect {
+				survived++
+			} else {
+				tx.Exec("UPDATE game_players SET is_active = FALSE WHERE user_id = $1 AND game_id = $2", p.UserID, gameID)
+				eliminated++
+			}
 		}
 	}
-	if missing > 0 {
-		sendError(w, fmt.Sprintf("%d match(es) in this round have no result yet", missing), http.StatusBadRequest)
+
+	if err := tx.Commit(); err != nil {
+		sendError(w, "Failed to commit results", http.StatusInternalServerError)
 		return
 	}
 
-	// Evaluate predictions for each match, scoped to this game
-	totalProcessed := 0
-	for _, m := range matches {
-		processed, err := evaluatePredictionsForMatch(m.ID, gameID, m.HomeTeam, m.AwayTeam, m.Result, postponementRule)
-		if err != nil {
-			log.Printf("Error evaluating match %d: %v", m.ID, err)
-		}
-		totalProcessed += processed
-	}
-
-	// Count survived/eliminated for this game/round
-	var survived, eliminated int
-	lmsDB.QueryRow(`
-		SELECT
-			COUNT(CASE WHEN is_correct = TRUE THEN 1 END),
-			COUNT(CASE WHEN is_correct = FALSE AND voided = FALSE THEN 1 END)
-		FROM predictions
-		WHERE game_id = $1 AND round_number = $2
-	`, gameID, roundNumber).Scan(&survived, &eliminated)
-
-	logAudit(r.Header.Get("X-Admin-Email"), "lms_round_process", gameIDStr+"/"+roundStr, map[string]interface{}{
-		"processed": totalProcessed, "survived": survived, "eliminated": eliminated,
+	logAudit(r.Header.Get("X-Admin-Email"), "lms_round_process", gameIDStr+"/"+labelStr, map[string]interface{}{
+		"roundId": roundID, "survived": survived, "eliminated": eliminated, "byes": byes,
 	})
 	sendJSON(w, map[string]interface{}{
 		"success":   true,
-		"processed": totalProcessed,
+		"processed": len(preds),
 		"survived":  survived,
 		"eliminated": eliminated,
+		"byes":      byes,
 	})
 }
 
 // --- LMS Predictions ---
 
-// handleGetAllPredictions returns all predictions, optionally filtered by game and round.
+// handleGetAllPredictions returns all predictions, optionally filtered by game and round label.
 func handleGetAllPredictions(w http.ResponseWriter, r *http.Request) {
 	gameID := r.URL.Query().Get("gameId")
-	roundNum := r.URL.Query().Get("round")
+	labelStr := r.URL.Query().Get("round")
 
 	query := `
-		SELECT p.user_id, p.round_number, p.predicted_team, p.is_correct, p.voided,
+		SELECT p.user_id, rnd.label, p.predicted_team, p.is_correct, p.voided, p.bye,
 		       m.home_team, m.away_team, m.result
 		FROM predictions p
+		JOIN rounds rnd ON rnd.id = p.round_id
 		JOIN matches m ON m.id = p.match_id
 		WHERE 1=1
 	`
@@ -774,12 +888,12 @@ func handleGetAllPredictions(w http.ResponseWriter, r *http.Request) {
 		args = append(args, gameID)
 		argIdx++
 	}
-	if roundNum != "" {
-		query += fmt.Sprintf(" AND p.round_number = $%d", argIdx)
-		args = append(args, roundNum)
+	if labelStr != "" {
+		query += fmt.Sprintf(" AND rnd.label = $%d", argIdx)
+		args = append(args, labelStr)
 		argIdx++
 	}
-	query += " ORDER BY p.round_number, p.user_id"
+	query += " ORDER BY rnd.label, p.user_id"
 
 	rows, err := lmsDB.Query(query, args...)
 	if err != nil {
@@ -791,10 +905,11 @@ func handleGetAllPredictions(w http.ResponseWriter, r *http.Request) {
 
 	type PredRow struct {
 		UserID        string `json:"userId"`
-		RoundNumber   int    `json:"roundNumber"`
+		RoundNumber   int    `json:"roundNumber"` // label, kept as roundNumber for UI compat
 		PredictedTeam string `json:"predictedTeam"`
 		IsCorrect     *bool  `json:"isCorrect"`
 		Voided        bool   `json:"voided"`
+		Bye           bool   `json:"bye"`
 		HomeTeam      string `json:"homeTeam"`
 		AwayTeam      string `json:"awayTeam"`
 		Result        string `json:"result"`
@@ -802,7 +917,7 @@ func handleGetAllPredictions(w http.ResponseWriter, r *http.Request) {
 	var preds []PredRow
 	for rows.Next() {
 		var p PredRow
-		if err := rows.Scan(&p.UserID, &p.RoundNumber, &p.PredictedTeam, &p.IsCorrect, &p.Voided, &p.HomeTeam, &p.AwayTeam, &p.Result); err != nil {
+		if err := rows.Scan(&p.UserID, &p.RoundNumber, &p.PredictedTeam, &p.IsCorrect, &p.Voided, &p.Bye, &p.HomeTeam, &p.AwayTeam, &p.Result); err != nil {
 			continue
 		}
 		preds = append(preds, p)
@@ -814,69 +929,6 @@ func handleGetAllPredictions(w http.ResponseWriter, r *http.Request) {
 }
 
 // --- Helpers ---
-
-// evaluatePredictionsForMatch marks predictions correct/incorrect for a specific game.
-// gameID ensures that only picks in this competition are affected (multiple games, same fixture file).
-func evaluatePredictionsForMatch(matchID int, gameID int, homeTeam, awayTeam, result, postponementRule string) (int, error) {
-	winnerTeam, isPostponed := parseResult(result, homeTeam, awayTeam)
-
-	rows, err := lmsDB.Query(`
-		SELECT id, user_id, predicted_team FROM predictions WHERE match_id = $1 AND game_id = $2
-	`, matchID, gameID)
-	if err != nil {
-		return 0, err
-	}
-
-	type pred struct {
-		ID            int
-		UserID        string
-		PredictedTeam string
-	}
-	var preds []pred
-	for rows.Next() {
-		var p pred
-		if err := rows.Scan(&p.ID, &p.UserID, &p.PredictedTeam); err == nil {
-			preds = append(preds, p)
-		}
-	}
-	rows.Close()
-
-	if len(preds) == 0 {
-		return 0, nil
-	}
-
-	tx, err := lmsDB.Begin()
-	if err != nil {
-		return 0, err
-	}
-	defer tx.Rollback()
-
-	for _, p := range preds {
-		if isPostponed {
-			if postponementRule == "loss" {
-				tx.Exec("UPDATE predictions SET is_correct = FALSE WHERE id = $1", p.ID)
-				tx.Exec("UPDATE game_players SET is_active = FALSE WHERE user_id = $1 AND game_id = $2", p.UserID, gameID)
-			} else {
-				tx.Exec("UPDATE predictions SET voided = TRUE WHERE id = $1", p.ID)
-			}
-		} else if winnerTeam == "" {
-			// Draw — all predictors eliminated
-			tx.Exec("UPDATE predictions SET is_correct = FALSE WHERE id = $1", p.ID)
-			tx.Exec("UPDATE game_players SET is_active = FALSE WHERE user_id = $1 AND game_id = $2", p.UserID, gameID)
-		} else {
-			isCorrect := p.PredictedTeam == winnerTeam
-			tx.Exec("UPDATE predictions SET is_correct = $1 WHERE id = $2", isCorrect, p.ID)
-			if !isCorrect {
-				tx.Exec("UPDATE game_players SET is_active = FALSE WHERE user_id = $1 AND game_id = $2", p.UserID, gameID)
-			}
-		}
-	}
-
-	if err := tx.Commit(); err != nil {
-		return 0, err
-	}
-	return len(preds), nil
-}
 
 // parseResult parses a match result string and returns the winning team.
 // Returns ("", false) for a draw, ("", true) for postponed, or (teamName, false) for a win.

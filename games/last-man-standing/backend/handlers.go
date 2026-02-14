@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	authlib "github.com/achgithub/activity-hub-common/auth"
 	"github.com/gorilla/mux"
@@ -47,16 +48,15 @@ func handleGetCurrentGame(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var game struct {
-		ID               int    `json:"id"`
-		Name             string `json:"name"`
-		Status           string `json:"status"`
-		WinnerCount      int    `json:"winnerCount"`
-		PostponementRule string `json:"postponementRule"`
+		ID          int    `json:"id"`
+		Name        string `json:"name"`
+		Status      string `json:"status"`
+		WinnerCount int    `json:"winnerCount"`
 	}
 	err = appDB.QueryRow(`
-		SELECT id, name, status, winner_count, postponement_rule
+		SELECT id, name, status, winner_count
 		FROM games WHERE id = $1
-	`, gameID).Scan(&game.ID, &game.Name, &game.Status, &game.WinnerCount, &game.PostponementRule)
+	`, gameID).Scan(&game.ID, &game.Name, &game.Status, &game.WinnerCount)
 	if err != nil {
 		sendJSON(w, map[string]interface{}{"game": nil})
 		return
@@ -125,6 +125,7 @@ func handleGetGameStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleGetOpenRounds returns rounds open for prediction.
+// Returns id, label, startDate, endDate, status, hasPredicted.
 func handleGetOpenRounds(w http.ResponseWriter, r *http.Request) {
 	user, ok := authlib.GetUserFromContext(r.Context())
 	if !ok {
@@ -139,10 +140,10 @@ func handleGetOpenRounds(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rows, err := appDB.Query(`
-		SELECT id, round_number, submission_deadline, status
+		SELECT id, label, start_date, end_date, status
 		FROM rounds
 		WHERE game_id = $1 AND status = 'open'
-		ORDER BY round_number
+		ORDER BY label
 	`, gameID)
 	if err != nil {
 		log.Printf("Error getting open rounds: %v", err)
@@ -153,23 +154,25 @@ func handleGetOpenRounds(w http.ResponseWriter, r *http.Request) {
 
 	var rounds []map[string]interface{}
 	for rows.Next() {
-		var id, roundNumber int
-		var deadline, status string
-		if err := rows.Scan(&id, &roundNumber, &deadline, &status); err != nil {
+		var id, label int
+		var startDate, endDate time.Time
+		var status string
+		if err := rows.Scan(&id, &label, &startDate, &endDate, &status); err != nil {
 			continue
 		}
 		var hasPrediction bool
 		appDB.QueryRow(`
 			SELECT EXISTS(
 				SELECT 1 FROM predictions
-				WHERE user_id = $1 AND game_id = $2 AND round_number = $3 AND voided = FALSE
+				WHERE user_id = $1 AND game_id = $2 AND round_id = $3 AND voided = FALSE
 			)
-		`, user.Email, gameID, roundNumber).Scan(&hasPrediction)
+		`, user.Email, gameID, id).Scan(&hasPrediction)
 
 		rounds = append(rounds, map[string]interface{}{
 			"id":           id,
-			"roundNumber":  roundNumber,
-			"deadline":     deadline,
+			"label":        label,
+			"startDate":    startDate.Format("2006-01-02"),
+			"endDate":      endDate.Format("2006-01-02"),
 			"status":       status,
 			"hasPredicted": hasPrediction,
 		})
@@ -181,7 +184,7 @@ func handleGetOpenRounds(w http.ResponseWriter, r *http.Request) {
 	sendJSON(w, map[string]interface{}{"rounds": rounds})
 }
 
-// handleGetMatches returns matches for a specific game round.
+// handleGetMatches returns matches for a round (by round ID) within the round's date window.
 func handleGetMatches(w http.ResponseWriter, r *http.Request) {
 	user, ok := authlib.GetUserFromContext(r.Context())
 	if !ok {
@@ -191,15 +194,28 @@ func handleGetMatches(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 	gameIDStr := vars["gameId"]
-	roundStr := vars["round"]
+	roundIDStr := vars["roundId"]
+
+	gameID, _ := strconv.Atoi(gameIDStr)
+	roundID, _ := strconv.Atoi(roundIDStr)
+
+	// Look up round date range
+	var startDate, endDate time.Time
+	err := appDB.QueryRow(`
+		SELECT start_date, end_date FROM rounds WHERE id = $1 AND game_id = $2
+	`, roundID, gameID).Scan(&startDate, &endDate)
+	if err != nil {
+		sendError(w, "Round not found", http.StatusNotFound)
+		return
+	}
 
 	rows, err := appDB.Query(`
-		SELECT m.id, m.match_number, m.date, m.location, m.home_team, m.away_team, m.result, m.status
+		SELECT m.id, m.match_number, m.match_date, m.location, m.home_team, m.away_team, m.result, m.status
 		FROM matches m
 		JOIN games g ON g.fixture_file_id = m.fixture_file_id
-		WHERE g.id = $1 AND m.round_number = $2
-		ORDER BY m.match_number
-	`, gameIDStr, roundStr)
+		WHERE g.id = $1 AND m.match_date BETWEEN $2 AND $3
+		ORDER BY m.match_date, m.match_number
+	`, gameID, startDate, endDate)
 	if err != nil {
 		log.Printf("Error getting matches: %v", err)
 		sendError(w, "Failed to get matches", http.StatusInternalServerError)
@@ -210,14 +226,15 @@ func handleGetMatches(w http.ResponseWriter, r *http.Request) {
 	var matches []map[string]interface{}
 	for rows.Next() {
 		var id, matchNumber int
-		var date, location, homeTeam, awayTeam, result, status string
-		if err := rows.Scan(&id, &matchNumber, &date, &location, &homeTeam, &awayTeam, &result, &status); err != nil {
+		var matchDate time.Time
+		var location, homeTeam, awayTeam, result, status string
+		if err := rows.Scan(&id, &matchNumber, &matchDate, &location, &homeTeam, &awayTeam, &result, &status); err != nil {
 			continue
 		}
 		matches = append(matches, map[string]interface{}{
 			"id":          id,
 			"matchNumber": matchNumber,
-			"date":        date,
+			"date":        matchDate.Format("2006-01-02"),
 			"location":    location,
 			"homeTeam":    homeTeam,
 			"awayTeam":    awayTeam,
@@ -230,15 +247,13 @@ func handleGetMatches(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if this player has already predicted this round
-	gameID, _ := strconv.Atoi(gameIDStr)
-	roundNumber, _ := strconv.Atoi(roundStr)
 	var myPrediction interface{}
 	var predMatchID int
 	var predTeam string
 	err = appDB.QueryRow(`
 		SELECT match_id, predicted_team FROM predictions
-		WHERE user_id = $1 AND game_id = $2 AND round_number = $3 AND voided = FALSE
-	`, user.Email, gameID, roundNumber).Scan(&predMatchID, &predTeam)
+		WHERE user_id = $1 AND game_id = $2 AND round_id = $3 AND voided = FALSE
+	`, user.Email, gameID, roundID).Scan(&predMatchID, &predTeam)
 	if err == nil {
 		myPrediction = map[string]interface{}{
 			"matchId":       predMatchID,
@@ -253,6 +268,7 @@ func handleGetMatches(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleSubmitPrediction submits or updates a player's prediction for a round.
+// Body: { matchId, roundId, team }
 func handleSubmitPrediction(w http.ResponseWriter, r *http.Request) {
 	user, ok := authlib.GetUserFromContext(r.Context())
 	if !ok {
@@ -261,9 +277,9 @@ func handleSubmitPrediction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		MatchID     int    `json:"matchId"`
-		RoundNumber int    `json:"roundNumber"`
-		Team        string `json:"team"`
+		MatchID int    `json:"matchId"`
+		RoundID int    `json:"roundId"`
+		Team    string `json:"team"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		sendError(w, "Invalid request body", http.StatusBadRequest)
@@ -290,23 +306,24 @@ func handleSubmitPrediction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check round is open
+	// Check round is open and belongs to this game
 	var roundStatus string
+	var startDate, endDate time.Time
 	err = appDB.QueryRow(`
-		SELECT status FROM rounds WHERE game_id = $1 AND round_number = $2
-	`, gameID, req.RoundNumber).Scan(&roundStatus)
+		SELECT status, start_date, end_date FROM rounds WHERE id = $1 AND game_id = $2
+	`, req.RoundID, gameID).Scan(&roundStatus, &startDate, &endDate)
 	if err != nil || roundStatus != "open" {
 		sendError(w, "Round is not open for predictions", http.StatusBadRequest)
 		return
 	}
 
-	// Validate the match belongs to this round via the game's fixture file
+	// Validate the match belongs to this round's date window via the game's fixture file
 	var homeTeam, awayTeam string
 	err = appDB.QueryRow(`
 		SELECT m.home_team, m.away_team FROM matches m
 		JOIN games g ON g.fixture_file_id = m.fixture_file_id
-		WHERE m.id = $1 AND g.id = $2 AND m.round_number = $3
-	`, req.MatchID, gameID, req.RoundNumber).Scan(&homeTeam, &awayTeam)
+		WHERE m.id = $1 AND g.id = $2 AND m.match_date BETWEEN $3 AND $4
+	`, req.MatchID, gameID, startDate, endDate).Scan(&homeTeam, &awayTeam)
 	if err != nil {
 		sendError(w, "Invalid match for this round", http.StatusBadRequest)
 		return
@@ -317,13 +334,13 @@ func handleSubmitPrediction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check team hasn't been used in this game (excluding current round and voided)
+	// Check team hasn't been used in this game (excluding current round and voided picks)
 	var usedCount int
 	appDB.QueryRow(`
 		SELECT COUNT(*) FROM predictions
 		WHERE user_id = $1 AND game_id = $2 AND predicted_team = $3
-		  AND voided = FALSE AND round_number != $4
-	`, user.Email, gameID, req.Team, req.RoundNumber).Scan(&usedCount)
+		  AND voided = FALSE AND round_id != $4
+	`, user.Email, gameID, req.Team, req.RoundID).Scan(&usedCount)
 	if usedCount > 0 {
 		sendError(w, fmt.Sprintf("You have already used %s this game", req.Team), http.StatusBadRequest)
 		return
@@ -331,11 +348,11 @@ func handleSubmitPrediction(w http.ResponseWriter, r *http.Request) {
 
 	// Upsert prediction
 	_, err = appDB.Exec(`
-		INSERT INTO predictions (user_id, game_id, match_id, round_number, predicted_team)
+		INSERT INTO predictions (user_id, game_id, round_id, match_id, predicted_team)
 		VALUES ($1, $2, $3, $4, $5)
-		ON CONFLICT (user_id, game_id, round_number) DO UPDATE
-		SET match_id = $3, predicted_team = $5, voided = FALSE, is_correct = NULL, created_at = NOW()
-	`, user.Email, gameID, req.MatchID, req.RoundNumber, req.Team)
+		ON CONFLICT (user_id, game_id, round_id) DO UPDATE
+		SET match_id = $4, predicted_team = $5, voided = FALSE, is_correct = NULL, bye = FALSE, created_at = NOW()
+	`, user.Email, gameID, req.RoundID, req.MatchID, req.Team)
 	if err != nil {
 		log.Printf("Error submitting prediction: %v", err)
 		sendError(w, "Failed to submit prediction", http.StatusInternalServerError)
@@ -360,12 +377,14 @@ func handleGetPredictions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rows, err := appDB.Query(`
-		SELECT p.round_number, p.predicted_team, p.is_correct, p.voided,
-		       m.home_team, m.away_team, m.result, m.date
+		SELECT rnd.label, p.predicted_team, p.is_correct, p.voided, p.bye,
+		       m.home_team, m.away_team, m.result, m.match_date,
+		       rnd.start_date, rnd.end_date
 		FROM predictions p
+		JOIN rounds rnd ON rnd.id = p.round_id
 		JOIN matches m ON m.id = p.match_id
 		WHERE p.user_id = $1 AND p.game_id = $2
-		ORDER BY p.round_number
+		ORDER BY rnd.label
 	`, user.Email, gameID)
 	if err != nil {
 		log.Printf("Error getting predictions: %v", err)
@@ -376,22 +395,27 @@ func handleGetPredictions(w http.ResponseWriter, r *http.Request) {
 
 	var predictions []map[string]interface{}
 	for rows.Next() {
-		var roundNumber int
-		var predictedTeam, homeTeam, awayTeam, result, date string
+		var label int
+		var predictedTeam, homeTeam, awayTeam, result string
+		var matchDate, startDate, endDate time.Time
 		var isCorrect *bool
-		var voided bool
-		if err := rows.Scan(&roundNumber, &predictedTeam, &isCorrect, &voided, &homeTeam, &awayTeam, &result, &date); err != nil {
+		var voided, bye bool
+		if err := rows.Scan(&label, &predictedTeam, &isCorrect, &voided, &bye,
+			&homeTeam, &awayTeam, &result, &matchDate, &startDate, &endDate); err != nil {
 			continue
 		}
 		predictions = append(predictions, map[string]interface{}{
-			"roundNumber":   roundNumber,
+			"roundNumber":   label,
+			"startDate":     startDate.Format("2006-01-02"),
+			"endDate":       endDate.Format("2006-01-02"),
 			"predictedTeam": predictedTeam,
 			"isCorrect":     isCorrect,
 			"voided":        voided,
+			"bye":           bye,
 			"homeTeam":      homeTeam,
 			"awayTeam":      awayTeam,
 			"result":        result,
-			"date":          date,
+			"date":          matchDate.Format("2006-01-02"),
 		})
 	}
 	if predictions == nil {
@@ -485,7 +509,7 @@ func handleGetStandings(w http.ResponseWriter, r *http.Request) {
 	sendJSON(w, map[string]interface{}{"players": players})
 }
 
-// handleGetRoundSummary returns stats for a round (works for open or closed).
+// handleGetRoundSummary returns stats for a round (by round ID).
 func handleGetRoundSummary(w http.ResponseWriter, r *http.Request) {
 	user, ok := authlib.GetUserFromContext(r.Context())
 	if !ok {
@@ -496,24 +520,26 @@ func handleGetRoundSummary(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 	gameIDStr := vars["gameId"]
-	roundStr := vars["round"]
+	roundIDStr := vars["roundId"]
 
-	var deadline, status string
+	var label int
+	var startDate, endDate time.Time
+	var status string
 	err := appDB.QueryRow(`
-		SELECT submission_deadline, status FROM rounds
-		WHERE game_id = $1 AND round_number = $2
-	`, gameIDStr, roundStr).Scan(&deadline, &status)
+		SELECT label, start_date, end_date, status FROM rounds
+		WHERE id = $1 AND game_id = $2
+	`, roundIDStr, gameIDStr).Scan(&label, &startDate, &endDate, &status)
 	if err != nil {
 		sendError(w, "Round not found", http.StatusNotFound)
 		return
 	}
 
 	rows, err := appDB.Query(`
-		SELECT user_id, predicted_team, is_correct, voided
+		SELECT user_id, predicted_team, is_correct, voided, bye
 		FROM predictions
-		WHERE game_id = $1 AND round_number = $2
+		WHERE round_id = $1
 		ORDER BY predicted_team
-	`, gameIDStr, roundStr)
+	`, roundIDStr)
 	if err != nil {
 		sendError(w, "Failed to get predictions", http.StatusInternalServerError)
 		return
@@ -525,16 +551,17 @@ func handleGetRoundSummary(w http.ResponseWriter, r *http.Request) {
 		PredictedTeam string `json:"predictedTeam"`
 		IsCorrect     *bool  `json:"isCorrect"`
 		Voided        bool   `json:"voided"`
+		Bye           bool   `json:"bye"`
 	}
 	var preds []PredSummary
 	survived, eliminated := 0, 0
 	for rows.Next() {
 		var p PredSummary
-		if err := rows.Scan(&p.UserID, &p.PredictedTeam, &p.IsCorrect, &p.Voided); err != nil {
+		if err := rows.Scan(&p.UserID, &p.PredictedTeam, &p.IsCorrect, &p.Voided, &p.Bye); err != nil {
 			continue
 		}
 		preds = append(preds, p)
-		if p.IsCorrect != nil && *p.IsCorrect {
+		if p.Bye || (p.IsCorrect != nil && *p.IsCorrect) {
 			survived++
 		} else if p.IsCorrect != nil && !*p.IsCorrect && !p.Voided {
 			eliminated++
@@ -546,8 +573,9 @@ func handleGetRoundSummary(w http.ResponseWriter, r *http.Request) {
 
 	sendJSON(w, map[string]interface{}{
 		"gameId":      gameIDStr,
-		"roundNumber": roundStr,
-		"deadline":    deadline,
+		"roundNumber": label,
+		"startDate":   startDate.Format("2006-01-02"),
+		"endDate":     endDate.Format("2006-01-02"),
 		"status":      status,
 		"predictions": preds,
 		"survived":    survived,

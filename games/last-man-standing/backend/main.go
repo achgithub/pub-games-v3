@@ -39,12 +39,12 @@ func main() {
 	protected.HandleFunc("/games/join", handleJoinGame).Methods("POST")
 	protected.HandleFunc("/games/status", handleGetGameStatus).Methods("GET")
 	protected.HandleFunc("/rounds/open", handleGetOpenRounds).Methods("GET")
-	protected.HandleFunc("/matches/{gameId}/round/{round}", handleGetMatches).Methods("GET")
+	protected.HandleFunc("/matches/{gameId}/round/{roundId}", handleGetMatches).Methods("GET")
 	protected.HandleFunc("/predictions/used-teams", handleGetUsedTeams).Methods("GET")
 	protected.HandleFunc("/predictions", handleGetPredictions).Methods("GET")
 	protected.HandleFunc("/predictions", handleSubmitPrediction).Methods("POST")
 	protected.HandleFunc("/standings", handleGetStandings).Methods("GET")
-	protected.HandleFunc("/rounds/{gameId}/{round}/summary", handleGetRoundSummary).Methods("GET")
+	protected.HandleFunc("/rounds/{gameId}/{roundId}/summary", handleGetRoundSummary).Methods("GET")
 
 	// Serve React frontend
 	r.PathPrefix("/static/").Handler(http.FileServer(http.Dir("./static")))

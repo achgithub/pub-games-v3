@@ -54,8 +54,8 @@ func main() {
 	// LMS round management
 	api.HandleFunc("/lms/rounds/{gameId}", handleGetLMSRounds).Methods("GET")
 	api.HandleFunc("/lms/rounds", handleCreateRound).Methods("POST")
-	api.HandleFunc("/lms/rounds/{gameId}/{round}/status", handleUpdateRoundStatus).Methods("PUT")
-	api.HandleFunc("/lms/rounds/{gameId}/{round}/summary", handleGetAdminRoundSummary).Methods("GET")
+	api.HandleFunc("/lms/rounds/{gameId}/{label}/status", handleUpdateRoundStatus).Methods("PUT")
+	api.HandleFunc("/lms/rounds/{gameId}/{label}/summary", handleGetAdminRoundSummary).Methods("GET")
 
 	// LMS fixture file management
 	api.HandleFunc("/lms/fixtures", handleGetFixtures).Methods("GET")
@@ -64,11 +64,11 @@ func main() {
 
 	// LMS match management (queries via game → fixture file)
 	api.HandleFunc("/lms/matches/{gameId}", handleGetLMSMatchesForGame).Methods("GET")
-	api.HandleFunc("/lms/matches/{gameId}/{round}", handleGetLMSMatchesForGame).Methods("GET")
+	api.HandleFunc("/lms/matches/{gameId}/{label}", handleGetLMSMatchesForGame).Methods("GET")
 	api.HandleFunc("/lms/matches/{id}/result", handleSetMatchResult).Methods("PUT")
 
 	// LMS round processing (explicit batch evaluation — no auto-process on result entry)
-	api.HandleFunc("/lms/rounds/{gameId}/{round}/process", handleProcessRound).Methods("POST")
+	api.HandleFunc("/lms/rounds/{gameId}/{label}/process", handleProcessRound).Methods("POST")
 
 	// LMS predictions (read)
 	api.HandleFunc("/lms/predictions", handleGetAllPredictions).Methods("GET")

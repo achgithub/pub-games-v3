@@ -14,13 +14,13 @@ interface Game {
   name: string;
   status: string;
   winnerCount: number;
-  postponementRule: string;
 }
 
 interface Round {
   id: number;
-  roundNumber: number;
-  deadline: string;
+  label: number;
+  startDate: string;
+  endDate: string;
   status: string;
   hasPredicted: boolean;
 }
@@ -43,9 +43,12 @@ interface MatchesResponse {
 
 interface Prediction {
   roundNumber: number;
+  startDate: string;
+  endDate: string;
   predictedTeam: string;
   isCorrect: boolean | null;
   voided: boolean;
+  bye: boolean;
   homeTeam: string;
   awayTeam: string;
   result: string;
@@ -104,7 +107,7 @@ function App() {
   const [usedTeams, setUsedTeams] = useState<string[]>([]);
   const [standings, setStandings] = useState<Player[]>([]);
   const [currentView, setCurrentView] = useState<'predict' | 'history' | 'standings'>('predict');
-  const [selectedRound, setSelectedRound] = useState<number | null>(null);
+  const [selectedRound, setSelectedRound] = useState<Round | null>(null);
   const [roundMatches, setRoundMatches] = useState<MatchesResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -171,7 +174,7 @@ function App() {
   // Load matches for selected round
   useEffect(() => {
     if (selectedRound === null || !game) return;
-    api(`/api/matches/${game.id}/round/${selectedRound}`)
+    api(`/api/matches/${game.id}/round/${selectedRound.id}`)
       .then(setRoundMatches)
       .catch(() => {});
   }, [selectedRound, game, api]);
@@ -190,19 +193,19 @@ function App() {
     }
   };
 
-  const handlePredict = async (matchId: number, team: string, roundNumber: number) => {
+  const handlePredict = async (matchId: number, team: string, roundId: number) => {
     setSubmitting(true);
     try {
       await api('/api/predictions', {
         method: 'POST',
-        body: JSON.stringify({ matchId, roundNumber, team }),
+        body: JSON.stringify({ matchId, roundId, team }),
       });
       showSuccess(`Pick submitted: ${team}`);
       // Refresh predict view data
       const [roundsData, teamsData, matchData] = await Promise.all([
         api('/api/rounds/open'),
         api('/api/predictions/used-teams'),
-        game ? api(`/api/matches/${game.id}/round/${roundNumber}`) : Promise.resolve(null),
+        game && selectedRound ? api(`/api/matches/${game.id}/round/${selectedRound.id}`) : Promise.resolve(null),
       ]);
       setOpenRounds(roundsData.rounds || []);
       setUsedTeams(teamsData.teams || []);
@@ -323,18 +326,18 @@ function App() {
                     <>
                       <h3 className="ah-section-title">Open Rounds</h3>
                       {openRounds.map(round => (
-                        <div key={round.roundNumber} className="ah-card">
+                        <div key={round.id} className="ah-card">
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div>
-                              <strong>Round {round.roundNumber}</strong>
-                              <p className="ah-meta">Deadline: {round.deadline}</p>
+                              <strong>Round {round.label}</strong>
+                              <p className="ah-meta">{round.startDate} → {round.endDate}</p>
                               {round.hasPredicted && (
                                 <span style={s.pickedBadge}>Pick submitted ✓</span>
                               )}
                             </div>
                             <button
                               className="ah-btn-outline"
-                              onClick={() => setSelectedRound(round.roundNumber)}
+                              onClick={() => setSelectedRound(round)}
                             >
                               {round.hasPredicted ? 'Change Pick' : 'Make Pick'}
                             </button>
@@ -349,7 +352,8 @@ function App() {
                   <button className="ah-btn-back" style={{ marginBottom: 16 }} onClick={() => { setSelectedRound(null); setRoundMatches(null); }}>
                     ← Back
                   </button>
-                  <h3 className="ah-section-title">Round {selectedRound} — Pick your team</h3>
+                  <h3 className="ah-section-title">Round {selectedRound.label} — Pick your team</h3>
+                  <p className="ah-meta">{selectedRound.startDate} → {selectedRound.endDate}</p>
                   {usedTeams.length > 0 && (
                     <p className="ah-meta">Already used: {usedTeams.join(', ')}</p>
                   )}
@@ -374,7 +378,7 @@ function App() {
                               isUsed={usedTeams.includes(match.homeTeam) && myPick !== match.homeTeam}
                               isSelected={myPick === match.homeTeam}
                               disabled={submitting}
-                              onSelect={() => handlePredict(match.id, match.homeTeam, selectedRound)}
+                              onSelect={() => handlePredict(match.id, match.homeTeam, selectedRound!.id)}
                             />
                             <span style={s.vs}>vs</span>
                             <TeamBtn
@@ -382,7 +386,7 @@ function App() {
                               isUsed={usedTeams.includes(match.awayTeam) && myPick !== match.awayTeam}
                               isSelected={myPick === match.awayTeam}
                               disabled={submitting}
-                              onSelect={() => handlePredict(match.id, match.awayTeam, selectedRound)}
+                              onSelect={() => handlePredict(match.id, match.awayTeam, selectedRound!.id)}
                             />
                           </div>
                         </div>
@@ -404,8 +408,11 @@ function App() {
                 predictions.map(pred => (
                   <div key={pred.roundNumber} className="ah-card">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <strong>Round {pred.roundNumber}</strong>
-                      <PredStatus isCorrect={pred.isCorrect} voided={pred.voided} />
+                      <div>
+                        <strong>Round {pred.roundNumber}</strong>
+                        <p className="ah-meta" style={{ margin: '2px 0 0' }}>{pred.startDate} → {pred.endDate}</p>
+                      </div>
+                      <PredStatus isCorrect={pred.isCorrect} voided={pred.voided} bye={pred.bye} />
                     </div>
                     <p className="ah-meta">
                       Picked: <strong>{pred.predictedTeam}</strong>
@@ -484,7 +491,8 @@ function TeamBtn({ team, isUsed, isSelected, disabled, onSelect }: TeamBtnProps)
   );
 }
 
-function PredStatus({ isCorrect, voided }: { isCorrect: boolean | null; voided: boolean }) {
+function PredStatus({ isCorrect, voided, bye }: { isCorrect: boolean | null; voided: boolean; bye: boolean }) {
+  if (bye) return <span style={{ color: '#1565C0', fontSize: 13 }}>Bye 🔄</span>;
   if (voided) return <span style={{ color: '#FF9800', fontSize: 13 }}>Voided</span>;
   if (isCorrect === null) return <span style={{ color: '#999', fontSize: 13 }}>Pending</span>;
   if (isCorrect) return <span style={{ color: '#4CAF50', fontSize: 13 }}>✅ Correct</span>;

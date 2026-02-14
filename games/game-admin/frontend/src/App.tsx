@@ -19,15 +19,15 @@ interface LMSGame {
   id: number;
   name: string;
   status: string;
-  postponementRule: string;
   fixtureFileId: number;
   fixtureName: string;
 }
 
 interface Round {
   id: number;
-  roundNumber: number;
-  deadline: string;
+  label: number;
+  startDate: string;
+  endDate: string;
   status: string;
   predCount: number;
 }
@@ -329,7 +329,6 @@ function GamesTab({ api, isReadOnly, onGameSelect }: {
   const [currentGameId, setCurrentGameId] = useState<string>('');
   const [newName, setNewName] = useState('');
   const [newFixtureId, setNewFixtureId] = useState('');
-  const [postponeRule, setPostponeRule] = useState<'loss' | 'win'>('loss');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -351,7 +350,6 @@ function GamesTab({ api, isReadOnly, onGameSelect }: {
         body: JSON.stringify({
           name: newName.trim(),
           fixtureFileId: parseInt(newFixtureId),
-          postponementRule: postponeRule,
         }),
       });
       setNewName('');
@@ -406,27 +404,18 @@ function GamesTab({ api, isReadOnly, onGameSelect }: {
                 value={newName}
                 onChange={e => setNewName(e.target.value)}
               />
-              <div style={{ marginTop: 8, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                <div>
-                  <label className="ah-label">Fixture file: </label>
-                  <select
-                    value={newFixtureId}
-                    onChange={e => setNewFixtureId(e.target.value)}
-                    className="ah-select"
-                  >
-                    <option value="">— select —</option>
-                    {fixtures.map(f => (
-                      <option key={f.id} value={String(f.id)}>{f.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="ah-label">P-P rule: </label>
-                  <select value={postponeRule} onChange={e => setPostponeRule(e.target.value as 'loss' | 'win')} className="ah-select">
-                    <option value="loss">Loss (eliminated)</option>
-                    <option value="win">Win (voided, re-pick)</option>
-                  </select>
-                </div>
+              <div style={{ marginTop: 8 }}>
+                <label className="ah-label">Fixture file: </label>
+                <select
+                  value={newFixtureId}
+                  onChange={e => setNewFixtureId(e.target.value)}
+                  className="ah-select"
+                >
+                  <option value="">— select —</option>
+                  {fixtures.map(f => (
+                    <option key={f.id} value={String(f.id)}>{f.name}</option>
+                  ))}
+                </select>
               </div>
               <button
                 className="ah-btn-primary"
@@ -453,7 +442,7 @@ function GamesTab({ api, isReadOnly, onGameSelect }: {
               <div>
                 <strong>{game.name}</strong>
                 {String(game.id) === currentGameId && <span style={s.currentBadge}>CURRENT</span>}
-                <p className="ah-meta">Status: {game.status} · P-P: {game.postponementRule} · Fixture: {game.fixtureName || '—'}</p>
+                <p className="ah-meta">Status: {game.status} · Fixture: {game.fixtureName || '—'}</p>
               </div>
               {!isReadOnly && (
                 <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
@@ -474,6 +463,23 @@ function GamesTab({ api, isReadOnly, onGameSelect }: {
   );
 }
 
+// Returns the next Wednesday on or after today, formatted as YYYY-MM-DD.
+// If today is Wednesday, returns next week's Wednesday.
+function nextWednesday(): string {
+  const d = new Date();
+  const day = d.getDay(); // 0=Sun, 1=Mon, ..., 3=Wed
+  const daysUntilWed = ((3 - day + 7) % 7) || 7; // always at least 1 day away
+  d.setDate(d.getDate() + daysUntilWed);
+  return d.toISOString().slice(0, 10);
+}
+
+// Returns the Tuesday 6 days after a given YYYY-MM-DD Wednesday date.
+function followingTuesday(startDate: string): string {
+  const d = new Date(startDate + 'T00:00:00');
+  d.setDate(d.getDate() + 6);
+  return d.toISOString().slice(0, 10);
+}
+
 // --- RoundsTab ---
 
 function RoundsTab({ gameId, api, isReadOnly }: {
@@ -482,29 +488,48 @@ function RoundsTab({ gameId, api, isReadOnly }: {
   isReadOnly: boolean;
 }) {
   const [rounds, setRounds] = useState<Round[]>([]);
-  const [newRoundNum, setNewRoundNum] = useState('');
-  const [newDeadline, setNewDeadline] = useState('');
+  const [newLabel, setNewLabel] = useState('');
+  const [newStartDate, setNewStartDate] = useState('');
+  const [newEndDate, setNewEndDate] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   const load = useCallback(() => {
     api(`/api/lms/rounds/${gameId}`)
-      .then(data => setRounds(data.rounds || []))
+      .then(data => {
+        const r: Round[] = data.rounds || [];
+        setRounds(r);
+        // Pre-fill defaults for next round
+        const nextLabel = r.length > 0 ? Math.max(...r.map((x: Round) => x.label)) + 1 : 1;
+        const start = nextWednesday();
+        setNewLabel(String(nextLabel));
+        setNewStartDate(start);
+        setNewEndDate(followingTuesday(start));
+      })
       .catch(err => setError(err.message));
   }, [api, gameId]);
 
   useEffect(() => { load(); }, [load]);
 
+  // When start date changes, auto-update end date to +6 days
+  const handleStartDateChange = (val: string) => {
+    setNewStartDate(val);
+    if (val) setNewEndDate(followingTuesday(val));
+  };
+
   const createRound = async () => {
-    if (!newRoundNum || !newDeadline) return;
+    if (!newLabel || !newStartDate || !newEndDate) return;
     try {
       await api('/api/lms/rounds', {
         method: 'POST',
-        body: JSON.stringify({ gameId: parseInt(gameId), roundNumber: parseInt(newRoundNum), deadline: newDeadline }),
+        body: JSON.stringify({
+          gameId: parseInt(gameId),
+          label: parseInt(newLabel),
+          startDate: newStartDate,
+          endDate: newEndDate,
+        }),
       });
-      setNewRoundNum('');
-      setNewDeadline('');
-      setSuccess('Round created');
+      setSuccess(`Round ${newLabel} created`);
       load();
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
@@ -512,13 +537,13 @@ function RoundsTab({ gameId, api, isReadOnly }: {
     }
   };
 
-  const updateStatus = async (roundNumber: number, status: string) => {
+  const updateStatus = async (label: number, status: string) => {
     try {
-      await api(`/api/lms/rounds/${gameId}/${roundNumber}/status`, {
+      await api(`/api/lms/rounds/${gameId}/${label}/status`, {
         method: 'PUT',
         body: JSON.stringify({ status }),
       });
-      setSuccess(`Round ${roundNumber} → ${status}`);
+      setSuccess(`Round ${label} → ${status}`);
       load();
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
@@ -540,28 +565,43 @@ function RoundsTab({ gameId, api, isReadOnly }: {
       {!isReadOnly && (
         <div className="ah-card">
           <h3 className="ah-section-title">Create Round</h3>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <input
-              className="ah-input"
-              style={{ width: 80 }}
-              placeholder="Round #"
-              type="number"
-              value={newRoundNum}
-              onChange={e => setNewRoundNum(e.target.value)}
-            />
-            <input
-              className="ah-input"
-              style={{ flex: 1 }}
-              placeholder="Deadline (e.g. Sat 18 Jan 12:00)"
-              value={newDeadline}
-              onChange={e => setNewDeadline(e.target.value)}
-            />
+          <p className="ah-meta">Matches whose date falls within the window are automatically included.</p>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+            <div>
+              <label className="ah-label">Round #</label>
+              <input
+                className="ah-input"
+                style={{ width: 72 }}
+                type="number"
+                min="1"
+                value={newLabel}
+                onChange={e => setNewLabel(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="ah-label">From (Wed)</label>
+              <input
+                className="ah-input"
+                type="date"
+                value={newStartDate}
+                onChange={e => handleStartDateChange(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="ah-label">To (Tue)</label>
+              <input
+                className="ah-input"
+                type="date"
+                value={newEndDate}
+                onChange={e => setNewEndDate(e.target.value)}
+              />
+            </div>
           </div>
           <button
             className="ah-btn-primary"
             style={{ marginTop: 10 }}
             onClick={createRound}
-            disabled={!newRoundNum || !newDeadline}
+            disabled={!newLabel || !newStartDate || !newEndDate}
           >
             Create Round
           </button>
@@ -573,23 +613,23 @@ function RoundsTab({ gameId, api, isReadOnly }: {
         <div className="ah-card"><p style={{ color: '#666' }}>No rounds yet.</p></div>
       ) : (
         rounds.map(round => (
-          <div key={round.roundNumber} className="ah-card">
+          <div key={round.label} className="ah-card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <strong>Round {round.roundNumber}</strong>
+                <strong>Round {round.label}</strong>
                 <span style={{ ...s.statusDot, color: statusColor(round.status) }}> {round.status}</span>
-                <p className="ah-meta">Deadline: {round.deadline} · {round.predCount} picks</p>
+                <p className="ah-meta">{round.startDate} → {round.endDate} · {round.predCount} picks</p>
               </div>
               {!isReadOnly && (
                 <div style={{ display: 'flex', gap: 8 }}>
                   {round.status !== 'open' && (
                     <button className="ah-btn-outline" style={{ color: '#4CAF50', borderColor: '#4CAF50' }}
-                      onClick={() => updateStatus(round.roundNumber, 'open')}>
+                      onClick={() => updateStatus(round.label, 'open')}>
                       Open
                     </button>
                   )}
                   {round.status === 'open' && (
-                    <button className="ah-btn-danger" onClick={() => updateStatus(round.roundNumber, 'closed')}>
+                    <button className="ah-btn-danger" onClick={() => updateStatus(round.label, 'closed')}>
                       Close
                     </button>
                   )}
@@ -622,15 +662,15 @@ function ResultsTab({ gameId, api, isReadOnly }: {
   useEffect(() => {
     api(`/api/lms/rounds/${gameId}`)
       .then(data => {
-        const r = data.rounds || [];
+        const r: Round[] = data.rounds || [];
         setRounds(r);
-        // Default to the highest round number
-        if (r.length > 0) setSelectedRound(String(r[r.length - 1].roundNumber));
+        // Default to the highest round label
+        if (r.length > 0) setSelectedRound(String(r[r.length - 1].label));
       })
       .catch(err => setError(err.message));
   }, [api, gameId]);
 
-  // Load matches when round changes
+  // Load matches when round changes (by label)
   useEffect(() => {
     if (!selectedRound) return;
     api(`/api/lms/matches/${gameId}/${selectedRound}`)
@@ -687,15 +727,15 @@ function ResultsTab({ gameId, api, isReadOnly }: {
         <select value={selectedRound} onChange={e => setSelectedRound(e.target.value)} className="ah-select">
           <option value="">— select round —</option>
           {rounds.map(r => (
-            <option key={r.roundNumber} value={String(r.roundNumber)}>
-              Round {r.roundNumber} ({r.status})
+            <option key={r.label} value={String(r.label)}>
+              Round {r.label} ({r.startDate} → {r.endDate}) [{r.status}]
             </option>
           ))}
         </select>
       </div>
 
       {selectedRound && matches.length === 0 && (
-        <div className="ah-card"><p style={{ color: '#666' }}>No matches in this round. Check the fixture file is uploaded and contains round {selectedRound}.</p></div>
+        <div className="ah-card"><p style={{ color: '#666' }}>No matches in the Round {selectedRound} date window. Check the fixture file is uploaded with dates in that range.</p></div>
       )}
 
       {matches.length > 0 && (
@@ -782,6 +822,7 @@ function PredictionsTab({ gameId, api }: { gameId: string; api: ReturnType<typeo
   useEffect(() => { load(); }, [load]);
 
   const statusIcon = (p: any) => {
+    if (p.bye) return <span style={{ color: '#2196F3' }}>Bye</span>;
     if (p.voided) return <span style={{ color: '#FF9800' }}>Voided</span>;
     if (p.isCorrect === null) return <span style={{ color: '#999' }}>Pending</span>;
     if (p.isCorrect) return <span style={{ color: '#4CAF50' }}>✅ Survived</span>;
