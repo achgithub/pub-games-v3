@@ -35,12 +35,12 @@ check_port 3001 "Identity Shell"
 check_port 5020 "Setup Admin"
 check_port 5070 "Game Admin"
 check_port 4021 "Last Man Standing"
+check_port 4031 "Sweepstakes"
 
 echo ""
 echo "Database Status:"
 echo "----------------"
 check_port 5555 "PostgreSQL"
-check_port 6379 "Redis"
 
 echo ""
 echo "To view logs: tmux attach -t core"

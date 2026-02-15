@@ -1,5 +1,5 @@
 #!/bin/bash
-# Start core services: identity-shell, setup-admin, game-admin, last-man-standing
+# Start core services: identity-shell, setup-admin, game-admin, last-man-standing, sweepstakes
 
 # Check if tmux session exists
 if tmux has-session -t core 2>/dev/null; then
@@ -27,6 +27,10 @@ tmux send-keys -t core:game-admin "cd ~/pub-games-v3/games/game-admin/backend &&
 # Last Man Standing (port 4021)
 tmux new-window -t core -n last-man-standing
 tmux send-keys -t core:last-man-standing "cd ~/pub-games-v3/games/last-man-standing/backend && go run *.go" C-m
+
+# Sweepstakes (port 4031)
+tmux new-window -t core -n sweepstakes
+tmux send-keys -t core:sweepstakes "cd ~/pub-games-v3/games/sweepstakes/backend && go run *.go" C-m
 
 echo "Core services started in tmux session 'core'"
 echo ""
