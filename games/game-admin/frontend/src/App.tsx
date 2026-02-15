@@ -251,7 +251,7 @@ function FixturesTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isRe
   return (
     <div>
       {error && <div className="ah-banner ah-banner--error" onClick={() => setError(null)}>{error}</div>}
-      {success && <div className="ah-banner ah-banner--success">{success}</div>}
+      <Toast message={success} />
 
       {!isReadOnly && (
         <div className="ah-card">
@@ -401,7 +401,7 @@ function GamesTab({ api, isReadOnly, onGameSelect }: {
   return (
     <div>
       {error && <div className="ah-banner ah-banner--error" onClick={() => setError(null)}>{error}</div>}
-      {success && <div className="ah-banner ah-banner--success">{success}</div>}
+      <Toast message={success} />
 
       {!isReadOnly && (
         <div className="ah-card">
@@ -494,10 +494,13 @@ function followingTuesday(startDate: string): string {
   return d.toISOString().slice(0, 10);
 }
 
-// Returns the default submission deadline: noon on the start date (Wednesday).
+// Returns the default submission deadline: 23:59 on the day before the start date (Tuesday night).
 // Format: YYYY-MM-DDTHH:MM (for datetime-local input).
 function defaultDeadline(startDate: string): string {
-  return startDate ? startDate + 'T12:00' : '';
+  if (!startDate) return '';
+  const d = new Date(startDate + 'T00:00:00');
+  d.setDate(d.getDate() - 1);
+  return d.toISOString().slice(0, 10) + 'T23:59';
 }
 
 // --- RoundsTab ---
@@ -598,7 +601,7 @@ function RoundsTab({ gameId, api, isReadOnly }: {
   return (
     <div>
       {error && <div className="ah-banner ah-banner--error" onClick={() => setError(null)}>{error}</div>}
-      {success && <div className="ah-banner ah-banner--success">{success}</div>}
+      <Toast message={success} />
 
       {!isReadOnly && (
         <div className="ah-card">
@@ -773,7 +776,7 @@ function ResultsTab({ gameId, api, isReadOnly }: {
   return (
     <div>
       {error && <div className="ah-banner ah-banner--error" onClick={() => setError(null)}>{error}</div>}
-      {success && <div className="ah-banner ah-banner--success">{success}</div>}
+      <Toast message={success} />
 
       {/* Round selector */}
       <div style={{ marginBottom: 16 }}>
@@ -924,6 +927,31 @@ function PredictionsTab({ gameId, api }: { gameId: string; api: ReturnType<typeo
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// --- Toast: fixed-position success message, no layout shift ---
+
+function Toast({ message }: { message: string | null }) {
+  if (!message) return null;
+  return (
+    <div style={{
+      position: 'fixed',
+      bottom: 24,
+      right: 24,
+      backgroundColor: '#323232',
+      color: 'white',
+      padding: '12px 20px',
+      borderRadius: 8,
+      fontSize: 13,
+      fontWeight: 500,
+      zIndex: 9999,
+      boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+      pointerEvents: 'none',
+      maxWidth: 320,
+    }}>
+      {message}
     </div>
   );
 }

@@ -260,7 +260,7 @@ function App() {
           {error} — click to dismiss
         </div>
       )}
-      {successMsg && <div className="ah-banner ah-banner--success">{successMsg}</div>}
+      <Toast message={successMsg} />
 
       {/* No Game */}
       {game === null && (
@@ -420,6 +420,31 @@ function App() {
           )}
         </>
       )}
+    </div>
+  );
+}
+
+// --- Toast: fixed-position success message, no layout shift ---
+
+function Toast({ message }: { message: string | null }) {
+  if (!message) return null;
+  return (
+    <div style={{
+      position: 'fixed',
+      bottom: 24,
+      right: 24,
+      backgroundColor: '#323232',
+      color: 'white',
+      padding: '12px 20px',
+      borderRadius: 8,
+      fontSize: 13,
+      fontWeight: 500,
+      zIndex: 9999,
+      boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+      pointerEvents: 'none',
+      maxWidth: 320,
+    }}>
+      {message}
     </div>
   );
 }
