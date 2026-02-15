@@ -21,6 +21,7 @@ interface Round {
   label: number;
   startDate: string;
   endDate: string;
+  submissionDeadline: string | null;
   status: string;
   hasPredicted: boolean;
 }
@@ -331,6 +332,11 @@ function App() {
                             <div>
                               <strong>Round {round.label}</strong>
                               <p className="ah-meta">{round.startDate} → {round.endDate}</p>
+                              {round.submissionDeadline && (
+                                <p className="ah-meta" style={{ color: '#E65100' }}>
+                                  Pick deadline: {new Date(round.submissionDeadline).toLocaleString()}
+                                </p>
+                              )}
                               {round.hasPredicted && (
                                 <span style={s.pickedBadge}>Pick submitted ✓</span>
                               )}
@@ -348,52 +354,14 @@ function App() {
                   )}
                 </>
               ) : (
-                <div>
-                  <button className="ah-btn-back" style={{ marginBottom: 16 }} onClick={() => { setSelectedRound(null); setRoundMatches(null); }}>
-                    ← Back
-                  </button>
-                  <h3 className="ah-section-title">Round {selectedRound.label} — Pick your team</h3>
-                  <p className="ah-meta">{selectedRound.startDate} → {selectedRound.endDate}</p>
-                  {usedTeams.length > 0 && (
-                    <p className="ah-meta">Already used: {usedTeams.join(', ')}</p>
-                  )}
-                  {roundMatches?.myPrediction && (
-                    <div className="ah-banner ah-banner--info">
-                      Current pick: <strong>{roundMatches.myPrediction.predictedTeam}</strong>
-                    </div>
-                  )}
-                  {!roundMatches ? (
-                    <p style={{ color: '#666' }}>Loading matches...</p>
-                  ) : roundMatches.matches.length === 0 ? (
-                    <div className="ah-card"><p style={{ color: '#666' }}>No matches for this round yet.</p></div>
-                  ) : (
-                    roundMatches.matches.map(match => {
-                      const myPick = roundMatches.myPrediction?.predictedTeam;
-                      return (
-                        <div key={match.id} className="ah-card">
-                          <p className="ah-meta">{match.date} · {match.location}</p>
-                          <div style={s.teamRow}>
-                            <TeamBtn
-                              team={match.homeTeam}
-                              isUsed={usedTeams.includes(match.homeTeam) && myPick !== match.homeTeam}
-                              isSelected={myPick === match.homeTeam}
-                              disabled={submitting}
-                              onSelect={() => handlePredict(match.id, match.homeTeam, selectedRound!.id)}
-                            />
-                            <span style={s.vs}>vs</span>
-                            <TeamBtn
-                              team={match.awayTeam}
-                              isUsed={usedTeams.includes(match.awayTeam) && myPick !== match.awayTeam}
-                              isSelected={myPick === match.awayTeam}
-                              disabled={submitting}
-                              onSelect={() => handlePredict(match.id, match.awayTeam, selectedRound!.id)}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
+                <PickView
+                  round={selectedRound}
+                  roundMatches={roundMatches}
+                  usedTeams={usedTeams}
+                  submitting={submitting}
+                  onBack={() => { setSelectedRound(null); setRoundMatches(null); }}
+                  onPredict={handlePredict}
+                />
               )}
             </div>
           )}
@@ -458,6 +426,94 @@ function App() {
 
 // --- Sub-components ---
 
+// PickView: team-centric pick UI. Shows each team once (deduplicated across all matches in the
+// round). When a team plays multiple games in the round, we always use the first match for that
+// team (lowest match_number) when recording the prediction — the player picks a team, not a game.
+interface PickViewProps {
+  round: Round;
+  roundMatches: MatchesResponse | null;
+  usedTeams: string[];
+  submitting: boolean;
+  onBack: () => void;
+  onPredict: (matchId: number, team: string, roundId: number) => void;
+}
+
+function PickView({ round, roundMatches, usedTeams, submitting, onBack, onPredict }: PickViewProps) {
+  // Build team → first-match-id map (deduplicates double-fixture teams).
+  // Matches arrive sorted by match_number from the backend.
+  const teamMatchMap = useMemo(() => {
+    const map = new Map<string, number>(); // team → matchId
+    for (const match of (roundMatches?.matches || [])) {
+      if (!map.has(match.homeTeam)) map.set(match.homeTeam, match.id);
+      if (!map.has(match.awayTeam)) map.set(match.awayTeam, match.id);
+    }
+    return map;
+  }, [roundMatches]);
+
+  const teamsSorted = useMemo(
+    () => Array.from(teamMatchMap.keys()).sort(),
+    [teamMatchMap]
+  );
+
+  const myPick = roundMatches?.myPrediction?.predictedTeam ?? null;
+
+  return (
+    <div>
+      <button className="ah-btn-back" style={{ marginBottom: 16 }} onClick={onBack}>
+        ← Back
+      </button>
+      <h3 className="ah-section-title">Round {round.label} — Pick your team</h3>
+      <p className="ah-meta">{round.startDate} → {round.endDate}</p>
+      {round.submissionDeadline && (
+        <p className="ah-meta" style={{ color: '#E65100' }}>
+          Pick deadline: {new Date(round.submissionDeadline).toLocaleString()}
+        </p>
+      )}
+      {usedTeams.length > 0 && (
+        <p className="ah-meta">Already used: {usedTeams.join(', ')}</p>
+      )}
+      {myPick && (
+        <div className="ah-banner ah-banner--info">
+          Current pick: <strong>{myPick}</strong>
+        </div>
+      )}
+
+      {!roundMatches ? (
+        <p style={{ color: '#666' }}>Loading matches...</p>
+      ) : teamsSorted.length === 0 ? (
+        <div className="ah-card"><p style={{ color: '#666' }}>No matches for this round yet.</p></div>
+      ) : (
+        <>
+          <div style={s.teamGrid}>
+            {teamsSorted.map(team => {
+              const matchId = teamMatchMap.get(team)!;
+              return (
+                <TeamBtn
+                  key={team}
+                  team={team}
+                  isUsed={usedTeams.includes(team) && myPick !== team}
+                  isSelected={myPick === team}
+                  disabled={submitting}
+                  onSelect={() => onPredict(matchId, team, round.id)}
+                />
+              );
+            })}
+          </div>
+
+          {/* Matches for reference */}
+          <h4 className="ah-section-title" style={{ marginTop: 16 }}>Matches this round</h4>
+          {roundMatches.matches.map(match => (
+            <div key={match.id} style={s.matchRef}>
+              <span style={s.matchRefTeams}>{match.homeTeam} vs {match.awayTeam}</span>
+              <span className="ah-meta">{match.date}</span>
+            </div>
+          ))}
+        </>
+      )}
+    </div>
+  );
+}
+
 interface TeamBtnProps {
   team: string;
   isUsed: boolean;
@@ -472,21 +528,21 @@ function TeamBtn({ team, isUsed, isSelected, disabled, onSelect }: TeamBtnProps)
       onClick={onSelect}
       disabled={disabled || isUsed}
       style={{
-        flex: 1,
-        padding: '12px 8px',
+        padding: '10px 8px',
         border: `2px solid ${isSelected ? '#2196F3' : isUsed ? '#ddd' : '#e0e0e0'}`,
         borderRadius: 8,
         backgroundColor: isSelected ? '#E3F2FD' : isUsed ? '#f9f9f9' : 'white',
         color: isUsed && !isSelected ? '#bbb' : '#333',
         cursor: isUsed && !isSelected ? 'not-allowed' : 'pointer',
         fontWeight: isSelected ? 700 : 400,
-        fontSize: 14,
+        fontSize: 13,
         textAlign: 'center' as const,
+        width: '100%',
       }}
     >
       {team}
-      {isSelected && <div style={{ fontSize: 11, color: '#1565C0', marginTop: 2 }}>Your pick ✓</div>}
-      {isUsed && !isSelected && <div style={{ fontSize: 11, color: '#bbb', marginTop: 2 }}>Already used</div>}
+      {isSelected && <div style={{ fontSize: 11, color: '#1565C0', marginTop: 2 }}>✓ Your pick</div>}
+      {isUsed && !isSelected && <div style={{ fontSize: 11, color: '#bbb', marginTop: 2 }}>Used</div>}
     </button>
   );
 }
@@ -535,8 +591,20 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: 12,
     fontWeight: 500,
   },
-  teamRow: { display: 'flex', gap: 10, alignItems: 'stretch' },
-  vs: { color: '#999', fontSize: 13, alignSelf: 'center', flexShrink: 0 },
+  teamGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+    gap: 8,
+  },
+  matchRef: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '6px 0',
+    borderBottom: '1px solid #f0f0f0',
+    fontSize: 13,
+  },
+  matchRefTeams: { color: '#333' },
   standingsTable: {
     backgroundColor: 'white',
     border: '1px solid #e0e0e0',

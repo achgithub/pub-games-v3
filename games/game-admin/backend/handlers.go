@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -406,7 +407,7 @@ func handleGetLMSRounds(w http.ResponseWriter, r *http.Request) {
 	gameID := vars["gameId"]
 
 	rows, err := lmsDB.Query(`
-		SELECT id, label, start_date, end_date, status
+		SELECT id, label, start_date, end_date, submission_deadline, status
 		FROM rounds WHERE game_id = $1 ORDER BY label
 	`, gameID)
 	if err != nil {
@@ -419,8 +420,9 @@ func handleGetLMSRounds(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var id, label int
 		var startDate, endDate time.Time
+		var deadline sql.NullTime
 		var status string
-		if err := rows.Scan(&id, &label, &startDate, &endDate, &status); err != nil {
+		if err := rows.Scan(&id, &label, &startDate, &endDate, &deadline, &status); err != nil {
 			continue
 		}
 		var predCount int
@@ -429,13 +431,18 @@ func handleGetLMSRounds(w http.ResponseWriter, r *http.Request) {
 			id,
 		).Scan(&predCount)
 
+		var deadlineStr interface{}
+		if deadline.Valid {
+			deadlineStr = deadline.Time.Format(time.RFC3339)
+		}
 		rounds = append(rounds, map[string]interface{}{
-			"id":        id,
-			"label":     label,
-			"startDate": startDate.Format("2006-01-02"),
-			"endDate":   endDate.Format("2006-01-02"),
-			"status":    status,
-			"predCount": predCount,
+			"id":                 id,
+			"label":              label,
+			"startDate":          startDate.Format("2006-01-02"),
+			"endDate":            endDate.Format("2006-01-02"),
+			"submissionDeadline": deadlineStr,
+			"status":             status,
+			"predCount":          predCount,
 		})
 	}
 	if rounds == nil {
@@ -445,17 +452,18 @@ func handleGetLMSRounds(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleCreateRound creates a new round for a game using a date range.
-// Body: { gameId, label, startDate (YYYY-MM-DD), endDate (YYYY-MM-DD) }
+// Body: { gameId, label, startDate (YYYY-MM-DD), endDate (YYYY-MM-DD), submissionDeadline (RFC3339 or "2006-01-02T15:04", optional) }
 func handleCreateRound(w http.ResponseWriter, r *http.Request) {
 	if !requireWritePermission(w, r) {
 		return
 	}
 
 	var req struct {
-		GameID    int    `json:"gameId"`
-		Label     int    `json:"label"`
-		StartDate string `json:"startDate"`
-		EndDate   string `json:"endDate"`
+		GameID             int    `json:"gameId"`
+		Label              int    `json:"label"`
+		StartDate          string `json:"startDate"`
+		EndDate            string `json:"endDate"`
+		SubmissionDeadline string `json:"submissionDeadline"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.GameID == 0 || req.Label == 0 || req.StartDate == "" || req.EndDate == "" {
 		sendError(w, "gameId, label, startDate, and endDate are required", http.StatusBadRequest)
@@ -477,10 +485,26 @@ func handleCreateRound(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Parse optional submission deadline (datetime-local format: "2006-01-02T15:04")
+	var deadline sql.NullTime
+	if req.SubmissionDeadline != "" {
+		parsed, err := time.ParseInLocation("2006-01-02T15:04", req.SubmissionDeadline, time.Local)
+		if err != nil {
+			// Try RFC3339 fallback
+			parsed, err = time.Parse(time.RFC3339, req.SubmissionDeadline)
+			if err != nil {
+				sendError(w, "submissionDeadline must be YYYY-MM-DDTHH:MM", http.StatusBadRequest)
+				return
+			}
+		}
+		deadline = sql.NullTime{Time: parsed, Valid: true}
+	}
+
 	var id int
 	err = lmsDB.QueryRow(`
-		INSERT INTO rounds (game_id, label, start_date, end_date) VALUES ($1, $2, $3, $4) RETURNING id
-	`, req.GameID, req.Label, startDate, endDate).Scan(&id)
+		INSERT INTO rounds (game_id, label, start_date, end_date, submission_deadline)
+		VALUES ($1, $2, $3, $4, $5) RETURNING id
+	`, req.GameID, req.Label, startDate, endDate, deadline).Scan(&id)
 	if err != nil {
 		if strings.Contains(err.Error(), "unique") {
 			sendError(w, fmt.Sprintf("Round %d already exists for this game", req.Label), http.StatusConflict)
@@ -493,6 +517,7 @@ func handleCreateRound(w http.ResponseWriter, r *http.Request) {
 
 	logAudit(r.Header.Get("X-Admin-Email"), "lms_round_create", strconv.Itoa(id), map[string]interface{}{
 		"gameId": req.GameID, "label": req.Label, "startDate": req.StartDate, "endDate": req.EndDate,
+		"submissionDeadline": req.SubmissionDeadline,
 	})
 	sendJSON(w, map[string]interface{}{"success": true, "id": id})
 }
@@ -772,7 +797,15 @@ func handleProcessRound(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get all predictions for this round
+	// Auto-pick: for every active player without a prediction, pick the first available
+	// team alphabetically (not yet used by that player this game).
+	// This covers players who missed the submission deadline.
+	autoPicked := applyAutoPicks(gameID, roundID, fixtureFileID, startDate, endDate)
+	if autoPicked > 0 {
+		log.Printf("Auto-picked for %d player(s) in round %d", autoPicked, roundID)
+	}
+
+	// Get all predictions for this round (including any just auto-picked)
 	rows, err := lmsDB.Query(`
 		SELECT p.id, p.user_id, p.predicted_team, p.match_id,
 		       m.home_team, m.away_team, m.result, m.status, m.match_date
@@ -854,14 +887,15 @@ func handleProcessRound(w http.ResponseWriter, r *http.Request) {
 	}
 
 	logAudit(r.Header.Get("X-Admin-Email"), "lms_round_process", gameIDStr+"/"+labelStr, map[string]interface{}{
-		"roundId": roundID, "survived": survived, "eliminated": eliminated, "byes": byes,
+		"roundId": roundID, "survived": survived, "eliminated": eliminated, "byes": byes, "autoPicked": autoPicked,
 	})
 	sendJSON(w, map[string]interface{}{
-		"success":   true,
-		"processed": len(preds),
-		"survived":  survived,
+		"success":    true,
+		"processed":  len(preds),
+		"survived":   survived,
 		"eliminated": eliminated,
-		"byes":      byes,
+		"byes":       byes,
+		"autoPicked": autoPicked,
 	})
 }
 
@@ -929,6 +963,131 @@ func handleGetAllPredictions(w http.ResponseWriter, r *http.Request) {
 }
 
 // --- Helpers ---
+
+// applyAutoPicks inserts predictions for active players who haven't picked for a round.
+// For each such player, picks the first alphabetically available team (not yet used this game).
+// Returns the number of auto-picks inserted.
+func applyAutoPicks(gameID, roundID, fixtureFileID int, startDate, endDate time.Time) int {
+	// Get all active players who haven't picked this round
+	unpickedRows, err := lmsDB.Query(`
+		SELECT gp.user_id FROM game_players gp
+		WHERE gp.game_id = $1 AND gp.is_active = TRUE
+		AND NOT EXISTS (
+			SELECT 1 FROM predictions p
+			WHERE p.user_id = gp.user_id AND p.game_id = gp.game_id AND p.round_id = $2 AND p.voided = FALSE
+		)
+	`, gameID, roundID)
+	if err != nil {
+		log.Printf("applyAutoPicks: failed to query unpicked players: %v", err)
+		return 0
+	}
+	var unpickedPlayers []string
+	for unpickedRows.Next() {
+		var uid string
+		if unpickedRows.Scan(&uid) == nil {
+			unpickedPlayers = append(unpickedPlayers, uid)
+		}
+	}
+	unpickedRows.Close()
+	if len(unpickedPlayers) == 0 {
+		return 0
+	}
+
+	// Build team → first match ID map for this round (ordered by match_number so "first" is deterministic)
+	teamFirstMatch := map[string]int{}
+	matchRows, err := lmsDB.Query(`
+		SELECT home_team, away_team, id FROM matches
+		WHERE fixture_file_id = $1 AND match_date BETWEEN $2 AND $3
+		ORDER BY match_number
+	`, fixtureFileID, startDate, endDate)
+	if err != nil {
+		log.Printf("applyAutoPicks: failed to query round matches: %v", err)
+		return 0
+	}
+	for matchRows.Next() {
+		var home, away string
+		var matchID int
+		if matchRows.Scan(&home, &away, &matchID) == nil {
+			if _, ok := teamFirstMatch[home]; !ok {
+				teamFirstMatch[home] = matchID
+			}
+			if _, ok := teamFirstMatch[away]; !ok {
+				teamFirstMatch[away] = matchID
+			}
+		}
+	}
+	matchRows.Close()
+
+	// Sort teams alphabetically
+	allTeams := make([]string, 0, len(teamFirstMatch))
+	for t := range teamFirstMatch {
+		allTeams = append(allTeams, t)
+	}
+	sort.Strings(allTeams)
+
+	autoPicked := 0
+	for _, userID := range unpickedPlayers {
+		// Get teams this player has already used this game (other rounds, non-voided)
+		usedRows, err := lmsDB.Query(`
+			SELECT predicted_team FROM predictions
+			WHERE user_id = $1 AND game_id = $2 AND voided = FALSE AND round_id != $3
+		`, userID, gameID, roundID)
+		if err != nil {
+			log.Printf("applyAutoPicks: failed to query used teams for %s: %v", userID, err)
+			continue
+		}
+		usedTeams := map[string]bool{}
+		for usedRows.Next() {
+			var t string
+			if usedRows.Scan(&t) == nil {
+				usedTeams[t] = true
+			}
+		}
+		usedRows.Close()
+
+		// Find first available team alphabetically
+		pickedTeam := ""
+		pickedMatchID := 0
+		for _, team := range allTeams {
+			if !usedTeams[team] {
+				pickedTeam = team
+				pickedMatchID = teamFirstMatch[team]
+				break
+			}
+		}
+
+		if pickedTeam == "" {
+			// Extremely unlikely: player has used every team. Give a bye with any match.
+			if len(allTeams) > 0 {
+				pickedTeam = allTeams[0]
+				pickedMatchID = teamFirstMatch[pickedTeam]
+				_, err = lmsDB.Exec(`
+					INSERT INTO predictions (user_id, game_id, round_id, match_id, predicted_team, bye)
+					VALUES ($1, $2, $3, $4, $5, TRUE)
+					ON CONFLICT (user_id, game_id, round_id) DO NOTHING
+				`, userID, gameID, roundID, pickedMatchID, pickedTeam)
+				if err == nil {
+					autoPicked++
+					log.Printf("applyAutoPicks: gave forced bye to %s (all teams used)", userID)
+				}
+			}
+			continue
+		}
+
+		_, err = lmsDB.Exec(`
+			INSERT INTO predictions (user_id, game_id, round_id, match_id, predicted_team)
+			VALUES ($1, $2, $3, $4, $5)
+			ON CONFLICT (user_id, game_id, round_id) DO NOTHING
+		`, userID, gameID, roundID, pickedMatchID, pickedTeam)
+		if err == nil {
+			autoPicked++
+			log.Printf("applyAutoPicks: auto-picked %s for user %s (round %d)", pickedTeam, userID, roundID)
+		} else {
+			log.Printf("applyAutoPicks: failed to insert for %s: %v", userID, err)
+		}
+	}
+	return autoPicked
+}
 
 // parseResult parses a match result string and returns the winning team.
 // Returns ("", false) for a draw, ("", true) for postponed, or (teamName, false) for a win.

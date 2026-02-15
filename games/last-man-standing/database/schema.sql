@@ -66,14 +66,17 @@ CREATE TABLE game_players (
 -- Rounds belong to a game and are defined by a date window.
 -- Matches whose match_date falls within [start_date, end_date] are in scope for the round.
 -- label is the display number (1, 2, 3, ...) — auto-incremented by admin, not from CSV.
+-- submission_deadline: optional deadline for player picks. After this time, admin can trigger
+-- auto-pick (first alphabetically available team) for players who haven't picked.
 CREATE TABLE rounds (
-    id         SERIAL PRIMARY KEY,
-    game_id    INTEGER NOT NULL REFERENCES games(id),
-    label      INTEGER NOT NULL,               -- display number (Round 1, Round 2, ...)
-    start_date DATE NOT NULL,
-    end_date   DATE NOT NULL,
-    status     TEXT DEFAULT 'draft',           -- 'draft', 'open', 'closed'
-    created_at TIMESTAMP DEFAULT NOW(),
+    id                  SERIAL PRIMARY KEY,
+    game_id             INTEGER NOT NULL REFERENCES games(id),
+    label               INTEGER NOT NULL,               -- display number (Round 1, Round 2, ...)
+    start_date          DATE NOT NULL,
+    end_date            DATE NOT NULL,
+    submission_deadline TIMESTAMP,                      -- optional pick deadline
+    status              TEXT DEFAULT 'draft',           -- 'draft', 'open', 'closed'
+    created_at          TIMESTAMP DEFAULT NOW(),
     UNIQUE(game_id, label)
 );
 

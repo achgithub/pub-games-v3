@@ -28,6 +28,7 @@ interface Round {
   label: number;
   startDate: string;
   endDate: string;
+  submissionDeadline: string | null;
   status: string;
   predCount: number;
 }
@@ -480,6 +481,12 @@ function followingTuesday(startDate: string): string {
   return d.toISOString().slice(0, 10);
 }
 
+// Returns the default submission deadline: noon on the start date (Wednesday).
+// Format: YYYY-MM-DDTHH:MM (for datetime-local input).
+function defaultDeadline(startDate: string): string {
+  return startDate ? startDate + 'T12:00' : '';
+}
+
 // --- RoundsTab ---
 
 function RoundsTab({ gameId, api, isReadOnly }: {
@@ -491,6 +498,7 @@ function RoundsTab({ gameId, api, isReadOnly }: {
   const [newLabel, setNewLabel] = useState('');
   const [newStartDate, setNewStartDate] = useState('');
   const [newEndDate, setNewEndDate] = useState('');
+  const [newDeadline, setNewDeadline] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -505,16 +513,20 @@ function RoundsTab({ gameId, api, isReadOnly }: {
         setNewLabel(String(nextLabel));
         setNewStartDate(start);
         setNewEndDate(followingTuesday(start));
+        setNewDeadline(defaultDeadline(start));
       })
       .catch(err => setError(err.message));
   }, [api, gameId]);
 
   useEffect(() => { load(); }, [load]);
 
-  // When start date changes, auto-update end date to +6 days
+  // When start date changes, auto-update end date and deadline
   const handleStartDateChange = (val: string) => {
     setNewStartDate(val);
-    if (val) setNewEndDate(followingTuesday(val));
+    if (val) {
+      setNewEndDate(followingTuesday(val));
+      setNewDeadline(defaultDeadline(val));
+    }
   };
 
   const createRound = async () => {
@@ -527,6 +539,7 @@ function RoundsTab({ gameId, api, isReadOnly }: {
           label: parseInt(newLabel),
           startDate: newStartDate,
           endDate: newEndDate,
+          submissionDeadline: newDeadline || undefined,
         }),
       });
       setSuccess(`Round ${newLabel} created`);
@@ -596,6 +609,15 @@ function RoundsTab({ gameId, api, isReadOnly }: {
                 onChange={e => setNewEndDate(e.target.value)}
               />
             </div>
+            <div>
+              <label className="ah-label">Pick deadline (optional)</label>
+              <input
+                className="ah-input"
+                type="datetime-local"
+                value={newDeadline}
+                onChange={e => setNewDeadline(e.target.value)}
+              />
+            </div>
           </div>
           <button
             className="ah-btn-primary"
@@ -619,6 +641,11 @@ function RoundsTab({ gameId, api, isReadOnly }: {
                 <strong>Round {round.label}</strong>
                 <span style={{ ...s.statusDot, color: statusColor(round.status) }}> {round.status}</span>
                 <p className="ah-meta">{round.startDate} → {round.endDate} · {round.predCount} picks</p>
+                {round.submissionDeadline && (
+                  <p className="ah-meta" style={{ color: '#E65100' }}>
+                    Deadline: {new Date(round.submissionDeadline).toLocaleString()}
+                  </p>
+                )}
               </div>
               {!isReadOnly && (
                 <div style={{ display: 'flex', gap: 8 }}>
@@ -656,7 +683,7 @@ function ResultsTab({ gameId, api, isReadOnly }: {
   const [resultInputs, setResultInputs] = useState<Record<number, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [processResult, setProcessResult] = useState<{ survived: number; eliminated: number } | null>(null);
+  const [processResult, setProcessResult] = useState<{ survived: number; eliminated: number; autoPicked: number } | null>(null);
 
   // Load rounds for this game
   useEffect(() => {
@@ -700,8 +727,9 @@ function ResultsTab({ gameId, api, isReadOnly }: {
   const processRound = async () => {
     try {
       const data = await api(`/api/lms/rounds/${gameId}/${selectedRound}/process`, { method: 'POST' });
-      setProcessResult({ survived: data.survived, eliminated: data.eliminated });
-      setSuccess(`Round ${selectedRound} processed — ${data.survived} survived, ${data.eliminated} eliminated`);
+      setProcessResult({ survived: data.survived, eliminated: data.eliminated, autoPicked: data.autoPicked || 0 });
+      const autoMsg = data.autoPicked ? `, ${data.autoPicked} auto-picked` : '';
+      setSuccess(`Round ${selectedRound} processed — ${data.survived} survived, ${data.eliminated} eliminated${autoMsg}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to process round');
     }
@@ -794,6 +822,7 @@ function ResultsTab({ gameId, api, isReadOnly }: {
               {processResult && (
                 <p className="ah-meta" style={{ marginTop: 8, color: '#333' }}>
                   ✅ {processResult.survived} survived · ❌ {processResult.eliminated} eliminated
+                  {processResult.autoPicked > 0 && ` · 🤖 ${processResult.autoPicked} auto-picked`}
                 </p>
               )}
             </div>

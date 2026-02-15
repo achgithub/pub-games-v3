@@ -1,11 +1,50 @@
 # Activity Hub Migration - Session State
 
-**Last Updated**: 2026-02-12
-**Session ID**: Phase 0, A, B, C (Part 1), Identity Shell Improvements & LMS Migration Complete + Shared CSS + Fixture File Architecture
-**Current Phase**: LMS fixture file architecture complete — awaiting Pi deployment
-**Status**: Committed, not yet deployed. Pi needs DB recreation (breaking schema change).
+**Last Updated**: 2026-02-15
+**Session ID**: Phase 0, A, B, C (Part 1), Identity Shell Improvements & LMS Migration Complete + Shared CSS + Fixture File Architecture + Date-Range Rounds + Bug Fixes
+**Current Phase**: LMS bug fixes committed — awaiting Pi deployment
+**Status**: Committed (see below), not yet deployed. Pi needs DB recreation (breaking schema change — adds submission_deadline to rounds).
 
 ## Completed
+
+### LMS Bug Fixes ✅ (2026-02-15) — awaiting Pi deployment
+
+Two bugs fixed, both requiring DB recreation (schema change to rounds).
+
+**Bug 1: Duplicate team when team plays twice in a round**
+- Root cause: player UI was match-centric (one card per fixture) — team appearing in 2 games showed up twice
+- Fix: new `PickView` component in player frontend — team-centric UI
+  - Deduplicates teams across all matches in the round
+  - Shows alphabetically sorted team buttons in a grid
+  - When a team plays multiple times, always uses their earliest match (by `match_number`) as the prediction's `match_id`
+  - Matches shown below as reference (not as pick targets)
+  - Old `TeamBtn` repurposed as grid cell (removed `flex: 1` layout)
+
+**Bug 2: Submission deadline + auto-pick**
+- Root cause: `submission_deadline` was not included in the date-range round redesign
+- Fix:
+  - Schema: added `submission_deadline TIMESTAMP` (nullable) to `rounds` table
+  - Game-admin backend: `handleCreateRound` accepts `submissionDeadline` (datetime-local format); `handleGetLMSRounds` returns it
+  - Game-admin backend: `handleProcessRound` now calls `applyAutoPicks()` before processing — auto-picks first alphabetically available team for any active player who hasn't picked. Edge case (all teams used) gives a forced bye.
+  - Game-admin frontend: deadline field in round creation (auto-fills to noon on start date); shown in round list; process result shows auto-picked count
+  - Player backend: `handleGetOpenRounds` returns `submissionDeadline`
+  - Player frontend: deadline shown on open round cards (orange text)
+
+**⚠️ BREAKING CHANGE — Pi requires DB recreation (schema adds submission_deadline):**
+```bash
+cd ~/pub-games-v3 && git pull
+psql -U activityhub -h localhost -p 5555 -d postgres -c "DROP DATABASE IF EXISTS last_man_standing_db;"
+psql -U activityhub -h localhost -p 5555 -d postgres -c "CREATE DATABASE last_man_standing_db;"
+psql -U activityhub -h localhost -p 5555 -d last_man_standing_db -f games/last-man-standing/database/schema.sql
+cd ~/pub-games-v3/games/game-admin/frontend && npm run build && cp -r build/* ../backend/static/
+cd ~/pub-games-v3/games/last-man-standing/frontend && npm run build && cp -r build/* ../backend/static/
+~/pub-games-v3/scripts/stop_core.sh
+~/pub-games-v3/scripts/start_core.sh
+```
+
+---
+
+
 
 ### Phase 0: Database Rename ✅ (2026-02-09)
 - ✅ Created `activityhub` user with CREATEROLE and CREATEDB privileges
@@ -61,41 +100,60 @@
 - ✅ `guest_accessible` column, guest login endpoint, "Continue as Guest" button
 - ✅ Migration: `scripts/migrate_add_guest_mode.sh`
 
-### LMS Fixture File Architecture ✅ (2026-02-12) — awaiting Pi deployment
+### LMS Fixture File Architecture + Date-Range Rounds ✅ (2026-02-14) — awaiting Pi deployment
 
-Redesigned LMS data model and game-admin UI to support multiple games sharing one fixture file.
+Two combined breaking schema changes — deploy together.
 
-**Key architectural change:** `matches` now belongs to `fixture_files`, not `games`. Results are facts about the real-world match, shared across all games using that fixture file. Prediction evaluation is still scoped per game.
+#### Fixture File Architecture (commit 6d3cc30)
+
+`matches` now belongs to `fixture_files`, not `games`. Results are facts about the real-world match, shared across all games using that fixture file. Prediction evaluation is still scoped per game.
+
+- New `fixture_files` table; `matches.fixture_file_id` replaces `matches.game_id`
+- `games.fixture_file_id` foreign key to fixture_files
+- game-admin: Fixtures tab (upload CSV, view matches), create game requires `fixtureFileId`
+
+#### Date-Range Rounds (commit 66c5d05)
+
+Rounds are now defined by a **date window** (start_date / end_date), not a CSV round number. Admin creates rounds each week with auto-incrementing display labels (Round 1, 2, 3...). Matches are grouped by whether their `match_date` falls within the window.
+
+**Bye rule:** if a match is postponed or moves outside the round window, the player gets a bye — they survive the round but the team is consumed (cannot be reused).
 
 **Schema changes (`last_man_standing_db`):**
-- New `fixture_files` table (name, timestamps)
-- `matches.fixture_file_id` replaces `matches.game_id`
-- `games.fixture_file_id` foreign key to fixture_files
+- `matches.date TEXT` → `match_date DATE` (enables BETWEEN queries)
+- `rounds`: replaced `round_number + submission_deadline` with `label INTEGER`, `start_date DATE`, `end_date DATE`
+- `predictions`: `round_number INTEGER` → `round_id INTEGER REFERENCES rounds(id)`; added `bye BOOLEAN`
+- `games`: removed `postponement_rule` column (bye rule is now universal)
 
 **game-admin backend:**
-- `GET /api/lms/fixtures` — list fixture files with match counts
-- `POST /api/lms/fixtures/upload` — find-or-create fixture file, upsert matches
-- `GET /api/lms/fixtures/{id}/matches` — matches for a fixture file
-- `POST /api/lms/rounds/{gameId}/{round}/process` — explicit batch evaluation (pre-flight: all matches must have results)
-- `PUT /api/lms/matches/{id}/result` — store result only, NO auto-evaluation
-- Create game now requires `fixtureFileId`
+- Round creation: `{ gameId, label, startDate, endDate }`
+- Match filtering: `match_date BETWEEN start_date AND end_date`
+- Process round: postponed or out-of-window → `bye=TRUE` (survive, team consumed); draws eliminate
+- CSV upload: multi-format date parser (ISO, DD/MM, DD-MM); reports skipped count
+- Route params: `{label}` for round identification in admin routes
 
-**player backend:** Match queries now join via `games.fixture_file_id`
+**game-admin frontend:**
+- Round form: date range pickers with auto-fill defaults (next Wednesday → +6 days = Tuesday)
+- Results tab: round selector shows "Round N (start → end) [status]"
+- Predictions tab: Bye status indicator
 
-**game-admin frontend:** Full 5-tab rewrite
-- **Fixtures** — upload CSV, view fixture files and matches by round
-- **Games** — create game with fixture file selection, set current/complete
-- **Rounds** — create/open/close rounds
-- **Results** — round selector, per-match result entry, "Process Round X" button (disabled until all matches have results)
-- **Predictions** — view picks with round filter
+**player backend:**
+- Open rounds: returns `id, label, startDate, endDate, hasPredicted`
+- Matches: fetched by round ID, filtered by round's date range
+- Submit prediction: accepts `roundId` (not `roundNumber`)
+- History: returns label as `roundNumber`, includes `startDate/endDate/bye`
 
-**Commit:** 6d3cc30
+**player frontend:**
+- Open rounds: shows `Round {label}` + date range (no more deadline)
+- Pick detail view: round label + date range
+- Prediction submit: sends `roundId`
+- History: date range per round, Bye status badge (blue 🔄)
 
 **⚠️ BREAKING CHANGE — Pi requires DB recreation:**
 ```bash
 cd ~/pub-games-v3 && git pull
 psql -U activityhub -h localhost -p 5555 -d last_man_standing_db -f games/last-man-standing/database/schema.sql
 cd ~/pub-games-v3/games/game-admin/frontend && npm run build && cp -r build/* ../backend/static/
+cd ~/pub-games-v3/games/last-man-standing/frontend && npm run build && cp -r build/* ../backend/static/
 ~/pub-games-v3/scripts/stop_core.sh
 ~/pub-games-v3/scripts/start_core.sh
 ```
@@ -238,20 +296,21 @@ Game Admin App (Port 5070)  ← NEW
 
 ## Next Steps
 
-**Immediate (commit 6d3cc30 — fixture file architecture):**
+**Immediate (commits 6d3cc30 + 66c5d05 — combined breaking change):**
 1. Push and pull on Pi
-2. Recreate `last_man_standing_db` schema (breaking change — commands above)
-3. Rebuild game-admin frontend only (LMS player frontend unchanged)
+2. Recreate `last_man_standing_db` schema (commands above)
+3. Rebuild both game-admin and LMS player frontends
 4. Restart core services
-5. End-to-end test: upload fixture CSV → create game → create round → set results → process round
+5. End-to-end test (see workflow below)
 
 **Workflow to verify:**
-1. Upload "Premier League 2025/26" CSV → fixture file created
-2. Create "Andy's Friends" game → pick fixture file → open for registration
-3. Create "Julie's Friends" → same fixture file
-4. Players join, make picks for round 1
-5. Admin enters results match by match
-6. "Process Round 1" per game → verify eliminations are scoped per game
+1. Upload Premier League CSV → fixture file created, matches stored with `match_date`
+2. Create "Andy's Friends" game → pick fixture file
+3. Create Round 1: label=1, From=next Wednesday, To=following Tuesday
+4. Open the round → players join and make picks
+5. Admin enters results for all matches in the window
+6. "Process Round 1" → check: correct picks survive, wrong picks eliminated, postponed = bye
+7. Verify bye: player survives, team appears in "used teams", cannot be reused
 
 **Pending:**
 1. Grant `game_admin` role to appropriate users via Setup Admin
@@ -262,48 +321,6 @@ Game Admin App (Port 5070)  ← NEW
 2. Add more game modules to game-admin as new games are created
 3. SSL/TLS (easy to add when needed)
 4. SSE reconnection on user change (would fix impersonation presence delay)
-
----
-
-## ⚠️ Design Decision Pending: LMS Round Model Needs Rethink
-
-**Problem:** The current model uses a `round_number` integer (from the CSV and DB). This is fragile — football matches move, get rescheduled, and a fixed round number doesn't map cleanly to real-world scheduling.
-
-**Proposed approach — Date-Range Rounds:**
-
-- A round is defined by a **date range** (start date / end date), not a round number
-- Admin creates a round by selecting a date range (e.g. 15 Aug → 18 Aug)
-- All matches whose date falls within that range are automatically included in that round
-- The `round_number` column in the CSV upload becomes **irrelevant** — ignore it
-- Admin typically schedules up to an **18-day horizon**; subsequent CSV re-uploads may shift match dates/times
-
-**Match movement rules:**
-- Match shifts slightly within the window → still counted as part of the round, no special handling
-- Match postponed / moved **outside** the window → player gets a **bye** (survives the round) but **the team they picked is still consumed** (cannot be reused later in the game)
-- This is fair: the player made a commitment, the team slot is used, but they're not penalised by elimination for an event outside their control
-
-**Admin workflow (revised):**
-1. Upload fixture CSV (with or without results)
-2. Create round: select game + date range → system previews matching matches
-3. Open round → players pick a team for any match in the window
-4. Admin re-uploads CSV if dates/times change before deadline
-5. After deadline: admin confirms results in Results tab (sets status = completed)
-6. "Process Round" — evaluates predictions against confirmed results, applies bye rule for postponed matches
-
-**What needs to change in the schema:**
-- `rounds` table: replace `round_number INTEGER` + `submission_deadline TEXT` with `start_date TIMESTAMP`, `end_date TIMESTAMP` (keep a display label/number for UI)
-- `predictions` table: replace `round_number INTEGER` with `round_id INTEGER REFERENCES rounds(id)`; `match_id` stays as-is
-- `matches`: `round_number` column becomes a hint only (from CSV), not used for grouping
-
-**What needs to change in the backend:**
-- Round creation: accept `startDate` / `endDate`, auto-resolve which matches are in scope
-- Prediction submission: validate match belongs to the round's date range
-- Process Round: handle bye case for matches where status != 'completed' at processing time
-- All queries joining on `round_number` rewritten to join on `round_id`
-
-**Key principle:** Logic should be based on **match dates relative to the round window** and **player-entered picks**, not on a CSV-assigned integer. This makes the system resilient to real-world schedule changes.
-
-**This is a breaking schema change** — do not implement until the current fixture file architecture is deployed and tested end-to-end first.
 
 ## Notes
 - LMS uses NO Redis/SSE — deadline-based HTTP polling only

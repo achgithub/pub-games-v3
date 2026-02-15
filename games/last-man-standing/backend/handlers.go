@@ -140,7 +140,7 @@ func handleGetOpenRounds(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rows, err := appDB.Query(`
-		SELECT id, label, start_date, end_date, status
+		SELECT id, label, start_date, end_date, submission_deadline, status
 		FROM rounds
 		WHERE game_id = $1 AND status = 'open'
 		ORDER BY label
@@ -156,8 +156,9 @@ func handleGetOpenRounds(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var id, label int
 		var startDate, endDate time.Time
+		var deadline sql.NullTime
 		var status string
-		if err := rows.Scan(&id, &label, &startDate, &endDate, &status); err != nil {
+		if err := rows.Scan(&id, &label, &startDate, &endDate, &deadline, &status); err != nil {
 			continue
 		}
 		var hasPrediction bool
@@ -168,13 +169,18 @@ func handleGetOpenRounds(w http.ResponseWriter, r *http.Request) {
 			)
 		`, user.Email, gameID, id).Scan(&hasPrediction)
 
+		var deadlineStr interface{}
+		if deadline.Valid {
+			deadlineStr = deadline.Time.Format(time.RFC3339)
+		}
 		rounds = append(rounds, map[string]interface{}{
-			"id":           id,
-			"label":        label,
-			"startDate":    startDate.Format("2006-01-02"),
-			"endDate":      endDate.Format("2006-01-02"),
-			"status":       status,
-			"hasPredicted": hasPrediction,
+			"id":                 id,
+			"label":              label,
+			"startDate":          startDate.Format("2006-01-02"),
+			"endDate":            endDate.Format("2006-01-02"),
+			"submissionDeadline": deadlineStr,
+			"status":             status,
+			"hasPredicted":       hasPrediction,
 		})
 	}
 
