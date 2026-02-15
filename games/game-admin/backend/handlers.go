@@ -380,6 +380,46 @@ func handleSetCurrentGame(w http.ResponseWriter, r *http.Request) {
 	sendJSON(w, map[string]interface{}{"success": true})
 }
 
+// handleDeleteGame permanently deletes a game and all associated data (rounds, predictions, players).
+func handleDeleteGame(w http.ResponseWriter, r *http.Request) {
+	if !requireWritePermission(w, r) {
+		return
+	}
+
+	vars := mux.Vars(r)
+	gameID := vars["id"]
+
+	var exists bool
+	lmsDB.QueryRow("SELECT EXISTS(SELECT 1 FROM games WHERE id = $1)", gameID).Scan(&exists)
+	if !exists {
+		sendError(w, "Game not found", http.StatusNotFound)
+		return
+	}
+
+	tx, err := lmsDB.Begin()
+	if err != nil {
+		sendError(w, "Failed to start transaction", http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	tx.Exec("DELETE FROM predictions WHERE game_id = $1", gameID)
+	tx.Exec("DELETE FROM game_players WHERE game_id = $1", gameID)
+	tx.Exec("DELETE FROM rounds WHERE game_id = $1", gameID)
+	if _, err := tx.Exec("DELETE FROM games WHERE id = $1", gameID); err != nil {
+		sendError(w, "Failed to delete game", http.StatusInternalServerError)
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
+		sendError(w, "Failed to commit delete", http.StatusInternalServerError)
+		return
+	}
+
+	logAudit(r.Header.Get("X-Admin-Email"), "lms_game_delete", gameID, nil)
+	sendJSON(w, map[string]interface{}{"success": true})
+}
+
 // handleCompleteGame marks a game as completed.
 func handleCompleteGame(w http.ResponseWriter, r *http.Request) {
 	if !requireWritePermission(w, r) {
@@ -558,6 +598,45 @@ func handleUpdateRoundStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	logAudit(r.Header.Get("X-Admin-Email"), "lms_round_status", gameID+"/"+label, map[string]interface{}{"status": req.Status})
+	sendJSON(w, map[string]interface{}{"success": true})
+}
+
+// handleDeleteRound permanently deletes a round and all its predictions.
+func handleDeleteRound(w http.ResponseWriter, r *http.Request) {
+	if !requireWritePermission(w, r) {
+		return
+	}
+
+	vars := mux.Vars(r)
+	gameID := vars["gameId"]
+	label := vars["label"]
+
+	var roundID int
+	err := lmsDB.QueryRow("SELECT id FROM rounds WHERE game_id = $1 AND label = $2", gameID, label).Scan(&roundID)
+	if err != nil {
+		sendError(w, "Round not found", http.StatusNotFound)
+		return
+	}
+
+	tx, err := lmsDB.Begin()
+	if err != nil {
+		sendError(w, "Failed to start transaction", http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	tx.Exec("DELETE FROM predictions WHERE round_id = $1", roundID)
+	if _, err := tx.Exec("DELETE FROM rounds WHERE id = $1", roundID); err != nil {
+		sendError(w, "Failed to delete round", http.StatusInternalServerError)
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
+		sendError(w, "Failed to commit delete", http.StatusInternalServerError)
+		return
+	}
+
+	logAudit(r.Header.Get("X-Admin-Email"), "lms_round_delete", gameID+"/"+label, nil)
 	sendJSON(w, map[string]interface{}{"success": true})
 }
 

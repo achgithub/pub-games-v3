@@ -50,12 +50,14 @@ func main() {
 	api.HandleFunc("/lms/games", handleCreateLMSGame).Methods("POST")
 	api.HandleFunc("/lms/games/{id}/set-current", handleSetCurrentGame).Methods("PUT")
 	api.HandleFunc("/lms/games/{id}/complete", handleCompleteGame).Methods("PUT")
+	api.HandleFunc("/lms/games/{id}", handleDeleteGame).Methods("DELETE")
 
 	// LMS round management
 	api.HandleFunc("/lms/rounds/{gameId}", handleGetLMSRounds).Methods("GET")
 	api.HandleFunc("/lms/rounds", handleCreateRound).Methods("POST")
 	api.HandleFunc("/lms/rounds/{gameId}/{label}/status", handleUpdateRoundStatus).Methods("PUT")
 	api.HandleFunc("/lms/rounds/{gameId}/{label}/summary", handleGetAdminRoundSummary).Methods("GET")
+	api.HandleFunc("/lms/rounds/{gameId}/{label}", handleDeleteRound).Methods("DELETE")
 
 	// LMS fixture file management
 	api.HandleFunc("/lms/fixtures", handleGetFixtures).Methods("GET")

@@ -155,7 +155,7 @@ function App() {
         <FixturesTab api={api} isReadOnly={isReadOnly} />
       )}
       {activeTab === 'games' && (
-        <GamesTab api={api} isReadOnly={isReadOnly} onGameSelect={setSelectedGameId} />
+        <GamesTab api={api} isReadOnly={isReadOnly} onGameSelect={(id) => { setSelectedGameId(id); setActiveTab('rounds'); }} />
       )}
       {activeTab === 'rounds' && selectedGameId && (
         <RoundsTab gameId={selectedGameId} api={api} isReadOnly={isReadOnly} />
@@ -386,6 +386,18 @@ function GamesTab({ api, isReadOnly, onGameSelect }: {
     }
   };
 
+  const deleteGame = async (id: number, name: string) => {
+    if (!window.confirm(`Permanently delete "${name}" and ALL its rounds, predictions, and players? This cannot be undone.`)) return;
+    try {
+      await api(`/api/lms/games/${id}`, { method: 'DELETE' });
+      setSuccess('Game deleted');
+      load();
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed');
+    }
+  };
+
   return (
     <div>
       {error && <div className="ah-banner ah-banner--error" onClick={() => setError(null)}>{error}</div>}
@@ -446,14 +458,15 @@ function GamesTab({ api, isReadOnly, onGameSelect }: {
                 <p className="ah-meta">Status: {game.status} · Fixture: {game.fixtureName || '—'}</p>
               </div>
               {!isReadOnly && (
-                <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                   {String(game.id) !== currentGameId && (
                     <button className="ah-btn-outline" onClick={() => setCurrent(game.id)}>Set Current</button>
                   )}
-                  <button className="ah-btn-outline" onClick={() => onGameSelect(String(game.id))}>Rounds</button>
+                  <button className="ah-btn-outline" onClick={() => onGameSelect(String(game.id))}>Rounds →</button>
                   {game.status === 'active' && (
                     <button className="ah-btn-danger" onClick={() => completeGame(game.id)}>Complete</button>
                   )}
+                  <button className="ah-btn-danger" onClick={() => deleteGame(game.id, game.name)}>Delete</button>
                 </div>
               )}
             </div>
@@ -564,6 +577,18 @@ function RoundsTab({ gameId, api, isReadOnly }: {
     }
   };
 
+  const deleteRound = async (label: number) => {
+    if (!window.confirm(`Permanently delete Round ${label} and all its predictions?`)) return;
+    try {
+      await api(`/api/lms/rounds/${gameId}/${label}`, { method: 'DELETE' });
+      setSuccess(`Round ${label} deleted`);
+      load();
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed');
+    }
+  };
+
   const statusColor = (status: string) => {
     if (status === 'open') return '#4CAF50';
     if (status === 'closed') return '#F44336';
@@ -648,7 +673,7 @@ function RoundsTab({ gameId, api, isReadOnly }: {
                 )}
               </div>
               {!isReadOnly && (
-                <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                   {round.status !== 'open' && (
                     <button className="ah-btn-outline" style={{ color: '#4CAF50', borderColor: '#4CAF50' }}
                       onClick={() => updateStatus(round.label, 'open')}>
@@ -660,6 +685,7 @@ function RoundsTab({ gameId, api, isReadOnly }: {
                       Close
                     </button>
                   )}
+                  <button className="ah-btn-danger" onClick={() => deleteRound(round.label)}>Delete</button>
                 </div>
               )}
             </div>
