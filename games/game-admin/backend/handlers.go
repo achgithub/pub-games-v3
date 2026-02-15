@@ -1203,3 +1203,340 @@ func logAudit(adminEmail, actionType, targetID string, details map[string]interf
 		log.Printf("Warning: Failed to log audit action: %v", err)
 	}
 }
+
+// ============================================================
+// Sweepstakes admin handlers
+// ============================================================
+
+// handleGetSweepCompetitions returns all sweepstakes competitions.
+func handleGetSweepCompetitions(w http.ResponseWriter, r *http.Request) {
+	rows, err := sweepstakesDB.Query(`
+		SELECT id, name, type, status, COALESCE(description, ''), created_at
+		FROM competitions
+		ORDER BY created_at DESC
+	`)
+	if err != nil {
+		sendError(w, "Failed to load competitions", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	type Comp struct {
+		ID          int    `json:"id"`
+		Name        string `json:"name"`
+		Type        string `json:"type"`
+		Status      string `json:"status"`
+		Description string `json:"description"`
+		CreatedAt   string `json:"createdAt"`
+	}
+	comps := []Comp{}
+	for rows.Next() {
+		var c Comp
+		if err := rows.Scan(&c.ID, &c.Name, &c.Type, &c.Status, &c.Description, &c.CreatedAt); err != nil {
+			continue
+		}
+		comps = append(comps, c)
+	}
+	sendJSON(w, map[string]interface{}{"competitions": comps})
+}
+
+// handleCreateSweepCompetition creates a new sweepstakes competition.
+func handleCreateSweepCompetition(w http.ResponseWriter, r *http.Request) {
+	if !requireWritePermission(w, r) {
+		return
+	}
+	var req struct {
+		Name        string `json:"name"`
+		Type        string `json:"type"`
+		Description string `json:"description"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Name == "" || req.Type == "" {
+		sendError(w, "name and type are required", http.StatusBadRequest)
+		return
+	}
+	var id int
+	err := sweepstakesDB.QueryRow(`
+		INSERT INTO competitions (name, type, description) VALUES ($1, $2, $3) RETURNING id
+	`, req.Name, req.Type, sql.NullString{String: req.Description, Valid: req.Description != ""}).Scan(&id)
+	if err != nil {
+		sendError(w, "Failed to create competition: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	sendJSON(w, map[string]interface{}{"id": id, "name": req.Name, "type": req.Type, "status": "draft"})
+}
+
+// handleUpdateSweepCompetition updates a competition's status/name/description.
+func handleUpdateSweepCompetition(w http.ResponseWriter, r *http.Request) {
+	if !requireWritePermission(w, r) {
+		return
+	}
+	id := mux.Vars(r)["id"]
+	var req struct {
+		Name        string `json:"name"`
+		Type        string `json:"type"`
+		Status      string `json:"status"`
+		Description string `json:"description"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		sendError(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+	// If completing, require at least one entry with position set
+	if req.Status == "completed" {
+		var count int
+		sweepstakesDB.QueryRow(`SELECT COUNT(*) FROM entries WHERE competition_id = $1 AND position IS NOT NULL`, id).Scan(&count)
+		if count == 0 {
+			sendError(w, "Cannot complete: set at least one entry position first", http.StatusBadRequest)
+			return
+		}
+	}
+	_, err := sweepstakesDB.Exec(`
+		UPDATE competitions SET name=$1, type=$2, status=$3, description=$4 WHERE id=$5
+	`, req.Name, req.Type, req.Status, sql.NullString{String: req.Description, Valid: req.Description != ""}, id)
+	if err != nil {
+		sendError(w, "Failed to update: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+// handleDeleteSweepCompetition deletes a competition and all its data.
+func handleDeleteSweepCompetition(w http.ResponseWriter, r *http.Request) {
+	if !requireWritePermission(w, r) {
+		return
+	}
+	id := mux.Vars(r)["id"]
+	_, err := sweepstakesDB.Exec(`DELETE FROM competitions WHERE id = $1`, id)
+	if err != nil {
+		sendError(w, "Failed to delete competition: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+// handleGetSweepEntries returns entries for a competition.
+func handleGetSweepEntries(w http.ResponseWriter, r *http.Request) {
+	compID := mux.Vars(r)["id"]
+	rows, err := sweepstakesDB.Query(`
+		SELECT id, competition_id, name, seed, number, status, position, created_at
+		FROM entries WHERE competition_id = $1
+		ORDER BY COALESCE(position, 999), COALESCE(seed, 999), COALESCE(number, 999), name
+	`, compID)
+	if err != nil {
+		sendError(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	type EntryRow struct {
+		ID            int     `json:"id"`
+		CompetitionID int     `json:"competition_id"`
+		Name          string  `json:"name"`
+		Seed          *int    `json:"seed"`
+		Number        *int    `json:"number"`
+		Status        string  `json:"status"`
+		Position      *int    `json:"position"`
+		CreatedAt     string  `json:"created_at"`
+	}
+	entries := []EntryRow{}
+	for rows.Next() {
+		var e EntryRow
+		var seed, number, position sql.NullInt64
+		if err := rows.Scan(&e.ID, &e.CompetitionID, &e.Name, &seed, &number, &e.Status, &position, &e.CreatedAt); err != nil {
+			continue
+		}
+		if seed.Valid {
+			v := int(seed.Int64)
+			e.Seed = &v
+		}
+		if number.Valid {
+			v := int(number.Int64)
+			e.Number = &v
+		}
+		if position.Valid {
+			v := int(position.Int64)
+			e.Position = &v
+		}
+		entries = append(entries, e)
+	}
+	sendJSON(w, map[string]interface{}{"entries": entries})
+}
+
+// handleGetSweepAllDraws returns all draws for a competition with entry and user info.
+func handleGetSweepAllDraws(w http.ResponseWriter, r *http.Request) {
+	compID := mux.Vars(r)["id"]
+	rows, err := sweepstakesDB.Query(`
+		SELECT d.id, d.user_id, d.entry_id, d.drawn_at,
+		       e.name, e.status, e.seed, e.number, e.position
+		FROM draws d
+		JOIN entries e ON d.entry_id = e.id
+		WHERE d.competition_id = $1
+		ORDER BY COALESCE(e.position, 999), d.drawn_at
+	`, compID)
+	if err != nil {
+		sendError(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	draws := []map[string]interface{}{}
+	for rows.Next() {
+		var id, entryID int
+		var userID, entryName, entryStatus, drawnAt string
+		var seed, number, position sql.NullInt64
+		if err := rows.Scan(&id, &userID, &entryID, &drawnAt, &entryName, &entryStatus, &seed, &number, &position); err != nil {
+			continue
+		}
+		d := map[string]interface{}{
+			"id": id, "user_id": userID, "entry_id": entryID,
+			"drawn_at": drawnAt, "entry_name": entryName, "entry_status": entryStatus,
+		}
+		if seed.Valid {
+			d["seed"] = int(seed.Int64)
+		}
+		if number.Valid {
+			d["number"] = int(number.Int64)
+		}
+		if position.Valid {
+			d["position"] = int(position.Int64)
+		}
+		draws = append(draws, d)
+	}
+	sendJSON(w, map[string]interface{}{"draws": draws})
+}
+
+// handleUploadSweepEntries uploads entries for a competition from a CSV file.
+// CSV format: name[, seed_or_number]
+func handleUploadSweepEntries(w http.ResponseWriter, r *http.Request) {
+	if !requireWritePermission(w, r) {
+		return
+	}
+	compID := r.FormValue("competition_id")
+	if compID == "" {
+		sendError(w, "competition_id required", http.StatusBadRequest)
+		return
+	}
+
+	var compType string
+	if err := sweepstakesDB.QueryRow(`SELECT type FROM competitions WHERE id = $1`, compID).Scan(&compType); err != nil {
+		sendError(w, "Competition not found", http.StatusNotFound)
+		return
+	}
+
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		sendError(w, "No file uploaded", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	reader := csv.NewReader(file)
+	records, err := reader.ReadAll()
+	if err != nil {
+		sendError(w, "Invalid CSV", http.StatusBadRequest)
+		return
+	}
+
+	count, skipped := 0, 0
+	for i, record := range records {
+		if i == 0 {
+			continue // skip header
+		}
+		if len(record) < 1 {
+			continue
+		}
+		name := strings.TrimSpace(record[0])
+		if name == "" {
+			continue
+		}
+		var seed, number *int
+		if len(record) > 1 && record[1] != "" {
+			if n, err := strconv.Atoi(strings.TrimSpace(record[1])); err == nil {
+				if compType == "knockout" {
+					seed = &n
+				} else {
+					number = &n
+				}
+			}
+		}
+		_, err := sweepstakesDB.Exec(`
+			INSERT INTO entries (competition_id, name, seed, number, status) VALUES ($1, $2, $3, $4, 'available')
+			ON CONFLICT (competition_id, name) DO NOTHING
+		`, compID, name, seed, number)
+		if err != nil {
+			skipped++
+		} else {
+			count++
+		}
+	}
+	sendJSON(w, map[string]interface{}{"uploaded": count, "skipped": skipped})
+}
+
+// handleUpdateSweepEntry updates an entry's status or position.
+func handleUpdateSweepEntry(w http.ResponseWriter, r *http.Request) {
+	if !requireWritePermission(w, r) {
+		return
+	}
+	id := mux.Vars(r)["id"]
+	var req struct {
+		Status   string `json:"status"`
+		Position *int   `json:"position"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		sendError(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+	_, err := sweepstakesDB.Exec(`
+		UPDATE entries SET status = COALESCE(NULLIF($1, ''), status), position = $2 WHERE id = $3
+	`, req.Status, req.Position, id)
+	if err != nil {
+		sendError(w, "Failed to update entry: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+// handleUpdateSweepPosition updates the position of an entry (for rankings).
+func handleUpdateSweepPosition(w http.ResponseWriter, r *http.Request) {
+	if !requireWritePermission(w, r) {
+		return
+	}
+	compID := mux.Vars(r)["id"]
+	var req struct {
+		EntryID  int  `json:"entry_id"`
+		Position *int `json:"position"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		sendError(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+	_, err := sweepstakesDB.Exec(`
+		UPDATE entries SET position = $1 WHERE id = $2 AND competition_id = $3
+	`, req.Position, req.EntryID, compID)
+	if err != nil {
+		sendError(w, "Failed to update position: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+// handleDeleteSweepEntry deletes an entry (only if not yet drawn).
+func handleDeleteSweepEntry(w http.ResponseWriter, r *http.Request) {
+	if !requireWritePermission(w, r) {
+		return
+	}
+	id := mux.Vars(r)["id"]
+	// Check if drawn
+	var drawCount int
+	sweepstakesDB.QueryRow(`SELECT COUNT(*) FROM draws WHERE entry_id = $1`, id).Scan(&drawCount)
+	if drawCount > 0 {
+		sendError(w, "Cannot delete an entry that has been drawn", http.StatusBadRequest)
+		return
+	}
+	_, err := sweepstakesDB.Exec(`DELETE FROM entries WHERE id = $1`, id)
+	if err != nil {
+		sendError(w, "Failed to delete entry: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}

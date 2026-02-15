@@ -1,26 +1,13 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import axios from 'axios';
-import './App.css';
+
+// --- Types ---
 
 interface Competition {
   id: number;
   name: string;
   type: 'knockout' | 'race';
-  status: 'draft' | 'open' | 'locked' | 'completed' | 'archived';
-  description?: string;
-  start_date?: string;
-  end_date?: string;
-}
-
-interface Entry {
-  id: number;
-  competition_id: number;
-  name: string;
-  status: string;
-  seed?: number;
-  number?: number;
-  position?: number;
-  stage?: string;
+  status: 'open' | 'locked' | 'completed';
+  description: string;
 }
 
 interface Draw {
@@ -28,854 +15,470 @@ interface Draw {
   user_id: string;
   competition_id: number;
   entry_id: number;
-  entry_name: string;
-  user_name?: string;
   drawn_at: string;
-  entry_status?: string;
+  entry_name: string;
+  entry_status: string;
+  comp_name: string;
+  comp_status: string;
   seed?: number;
   number?: number;
   position?: number;
 }
 
-interface BlindBox {
-  box_number: number;
+interface CompDraw {
+  id: number;
+  user_id: string;
+  entry_name: string;
+  entry_status: string;
+  seed?: number;
+  number?: number;
+  position?: number;
 }
 
-// Parse query params from URL
-function useQueryParams() {
+// --- Hooks ---
+
+function useUrlParams() {
   return useMemo(() => {
     const params = new URLSearchParams(window.location.search);
     return {
-      userId: params.get('userId'),
+      userId: params.get('userId') || '',
       userName: params.get('userName') || params.get('userId') || 'Player',
-      isAdmin: params.get('isAdmin') === 'true',
-      gameId: params.get('gameId'),
-      token: params.get('token'),
+      token: params.get('token') || '',
+      impersonatedBy: params.get('impersonatedBy') || '',
     };
   }, []);
 }
 
-const API_BASE = window.location.origin;
+function useApi(token: string) {
+  return useCallback(
+    async (path: string, options: RequestInit = {}) => {
+      const headers: Record<string, string> = {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(options.headers as Record<string, string> || {}),
+      };
+      if (!(options.body instanceof FormData)) {
+        headers['Content-Type'] = 'application/json';
+      }
+      const res = await fetch(path, { ...options, headers });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `HTTP ${res.status}`);
+      }
+      if (res.status === 204) return null;
+      return res.json();
+    },
+    [token]
+  );
+}
+
+// --- Toast ---
+
+function Toast({ message }: { message: string | null }) {
+  if (!message) return null;
+  return (
+    <div style={{
+      position: 'fixed', bottom: 24, right: 24,
+      backgroundColor: '#323232', color: 'white',
+      padding: '12px 20px', borderRadius: 8, fontSize: 13,
+      fontWeight: 500, zIndex: 9999,
+      boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+      pointerEvents: 'none', maxWidth: 320,
+    }}>
+      {message}
+    </div>
+  );
+}
+
+// --- Main App ---
+
+type Tab = 'competitions' | 'my-picks';
 
 function App() {
-  const { userId, userName, isAdmin, token } = useQueryParams();
+  const { userId, userName, token, impersonatedBy } = useUrlParams();
+  const api = useApi(token);
 
-  // Create authenticated axios instance
-  const api = useMemo(() => {
-    if (!token) return axios.create({ baseURL: API_BASE });
-
-    return axios.create({
-      baseURL: API_BASE,
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-  }, [token]);
-
-  // Add 401 interceptor for session expiry
-  useEffect(() => {
-    const interceptor = api.interceptors.response.use(
-      response => response,
-      error => {
-        if (error.response?.status === 401) {
-          alert('Session expired. Please login again.');
-          window.location.href = `http://${window.location.hostname}:3001`;
-        }
-        return Promise.reject(error);
-      }
-    );
-    return () => api.interceptors.response.eject(interceptor);
-  }, [api]);
-  const [view, setView] = useState<string>('dashboard');
-  const [competitions, setCompetitions] = useState<Competition[]>([]);
-  const [selectedComp, setSelectedComp] = useState<Competition | null>(null);
-  const [entries, setEntries] = useState<Entry[]>([]);
-  const [userDraws, setUserDraws] = useState<Draw[]>([]);
-  const [blindBoxes, setBlindBoxes] = useState<BlindBox[]>([]);
-  const [availableCount, setAvailableCount] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const loadCompetitions = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await api.get('/api/competitions');
-      setCompetitions(response.data || []);
-      setError(null);
-    } catch (err) {
-      setError('Failed to load competitions');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [api]);
-
-  const loadUserDraws = useCallback(async () => {
-    if (!userId) return;
-    try {
-      const response = await api.get('/api/draws');
-      setUserDraws(response.data || []);
-    } catch (err) {
-      console.error('Error loading draws:', err);
-    }
-  }, [userId, api]);
-
-  const loadEntries = useCallback(async (compId: number) => {
-    try {
-      const response = await api.get(`/api/competitions/${compId}/entries`);
-      setEntries(response.data || []);
-    } catch (err) {
-      console.error('Error loading entries:', err);
-    }
-  }, [api]);
-
-  const loadBlindBoxes = useCallback(async (compId: number) => {
-    if (!userId) return;
-    try {
-      const response = await api.get(`/api/competitions/${compId}/blind-boxes`);
-      setBlindBoxes(response.data || []);
-    } catch (err) {
-      console.error('Error loading blind boxes:', err);
-      setBlindBoxes([]);
-    }
-  }, [userId, api]);
-
-  const loadAvailableCount = useCallback(async (compId: number) => {
-    try {
-      const response = await api.get(`/api/competitions/${compId}/available-count`);
-      setAvailableCount(response.data?.count || 0);
-    } catch (err) {
-      console.error(err);
-    }
-  }, [api]);
-
-  useEffect(() => {
-    if (userId) {
-      loadCompetitions();
-      loadUserDraws();
-    }
-  }, [userId, loadCompetitions, loadUserDraws]);
-
-  useEffect(() => {
-    if (selectedComp && view === 'pick-box') {
-      loadBlindBoxes(selectedComp.id);
-      loadAvailableCount(selectedComp.id);
-    }
-  }, [selectedComp, view, loadBlindBoxes, loadAvailableCount]);
-
-  // Must have userId and token to play
   if (!userId || !token) {
     return (
-      <div style={styles.container}>
+      <div className="ah-container">
         <h2>Sweepstakes</h2>
-        <p style={{ color: '#666', marginTop: 20 }}>
-          Missing authentication. Please access this app through the Identity Shell.
-        </p>
-        <button
-          onClick={() => {
-            const shellUrl = `http://${window.location.hostname}:3001`;
-            window.location.href = shellUrl;
-          }}
-          style={styles.button}
-        >
-          Go to Identity Shell
+        <p style={{ color: '#666' }}>Access this app through the lobby.</p>
+        <button className="ah-lobby-btn" onClick={() => { window.location.href = `http://${window.location.hostname}:3001`; }}>
+          Go to Lobby
         </button>
       </div>
     );
   }
 
-  if (loading && competitions.length === 0) {
-    return <div style={styles.container}>Loading...</div>;
-  }
+  return (
+    <div className="ah-container">
+      <div className="ah-header">
+        <h2 className="ah-header-title">Sweepstakes</h2>
+        <button className="ah-lobby-btn" onClick={() => { window.location.href = `http://${window.location.hostname}:3001`; }}>
+          ← Lobby
+        </button>
+      </div>
 
-  const handleCreateCompetition = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const form = e.currentTarget;
-    const formData = new FormData(form);
+      {impersonatedBy && (
+        <div className="ah-banner ah-banner--warning">
+          Impersonating <strong>{userName}</strong> (as {impersonatedBy})
+        </div>
+      )}
 
+      <SweepstakesApp userId={userId} userName={userName} api={api} />
+    </div>
+  );
+}
+
+// --- SweepstakesApp (inner) ---
+
+function SweepstakesApp({ userId, userName, api }: {
+  userId: string;
+  userName: string;
+  api: ReturnType<typeof useApi>;
+}) {
+  const [activeTab, setActiveTab] = useState<Tab>('competitions');
+  const [competitions, setCompetitions] = useState<Competition[]>([]);
+  const [userDraws, setUserDraws] = useState<Draw[]>([]);
+  const [selectedComp, setSelectedComp] = useState<Competition | null>(null);
+  const [pickView, setPickView] = useState(false);  // show blind box selector
+  const [revealed, setRevealed] = useState<{ name: string; seed?: number; number?: number } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const loadCompetitions = useCallback(async () => {
     try {
-      await api.post('/api/competitions', {
-        name: formData.get('name'),
-        type: formData.get('type'),
-        status: 'draft',
-        description: formData.get('description') || '',
-      });
-      form.reset();
-      loadCompetitions();
-      alert('Competition created successfully!');
-    } catch (err: any) {
-      alert('Failed to create competition: ' + (err.response?.data || err.message));
+      const data = await api('/api/competitions');
+      setCompetitions(data || []);
+    } catch (err) {
+      setError('Failed to load competitions');
     }
+  }, [api]);
+
+  const loadUserDraws = useCallback(async () => {
+    try {
+      const data = await api('/api/draws');
+      setUserDraws(data || []);
+    } catch (err) {
+      console.error('Failed to load user draws', err);
+    }
+  }, [api]);
+
+  useEffect(() => {
+    loadCompetitions();
+    loadUserDraws();
+  }, [loadCompetitions, loadUserDraws]);
+
+  // Auto-dismiss success toast
+  useEffect(() => {
+    if (!success) return;
+    const t = setTimeout(() => setSuccess(null), 4000);
+    return () => clearTimeout(t);
+  }, [success]);
+
+  const openPickView = (comp: Competition) => {
+    setSelectedComp(comp);
+    setRevealed(null);
+    setPickView(true);
+    setActiveTab('competitions');
   };
 
-  const handleUpdateCompetition = async (compId: number, updates: Partial<Competition>) => {
+  const handleChooseBox = async (boxNumber: number) => {
+    if (!selectedComp) return;
+    if (!window.confirm(`Pick Box #${boxNumber}?`)) return;
     try {
-      await api.put(`/api/competitions/${compId}`, updates);
-      loadCompetitions();
-      if (selectedComp?.id === compId) {
-        setSelectedComp({ ...selectedComp, ...updates });
-      }
-    } catch (err: any) {
-      alert(err.response?.data || 'Failed to update competition');
-    }
-  };
-
-  const handleChooseBlindBox = async (boxNumber: number) => {
-    if (!selectedComp || !window.confirm(`Select Box #${boxNumber}?`)) return;
-
-    try {
-      const res = await api.post(`/api/competitions/${selectedComp.id}/choose-blind-box`, {
-        box_number: boxNumber
+      const data = await api(`/api/competitions/${selectedComp.id}/choose-blind-box`, {
+        method: 'POST',
+        body: JSON.stringify({ box_number: boxNumber }),
       });
-
-      alert(`You got: ${res.data.entry_name}!`);
+      setRevealed({ name: data.entry_name, seed: data.seed, number: data.number });
       loadUserDraws();
-      setView('my-entries');
-    } catch (err: any) {
-      alert(err.response?.data || 'Failed to select box.');
+      loadCompetitions();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Selection failed');
     }
   };
 
   const handleRandomPick = async () => {
-    if (!selectedComp || !window.confirm('Let the computer pick a random box for you?')) return;
-
-    try {
-      const res = await api.post(`/api/competitions/${selectedComp.id}/random-pick`);
-
-      alert(`You got: ${res.data.entry_name}!`);
-      loadUserDraws();
-      setView('my-entries');
-    } catch (err: any) {
-      alert(err.response?.data || 'Failed to pick.');
-    }
-  };
-
-  const handleUploadEntries = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-
-    try {
-      const res = await api.post('/api/entries/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      alert(res.data);
-      if (selectedComp) loadEntries(selectedComp.id);
-      e.currentTarget.reset();
-    } catch (err: any) {
-      alert('Failed to upload entries: ' + (err.response?.data || err.message));
-    }
-  };
-
-  const handleDeleteEntry = async (entryId: number) => {
-    if (!window.confirm('Delete this entry?') || !selectedComp) return;
-    try {
-      await api.delete(`/api/entries/${entryId}`);
-      loadEntries(selectedComp.id);
-    } catch (err) {
-      alert('Failed to delete entry');
-    }
-  };
-
-  const handleUpdatePosition = async (entryId: number, position: number | null) => {
     if (!selectedComp) return;
+    if (!window.confirm('Pick a random box?')) return;
     try {
-      await api.post(`/api/competitions/${selectedComp.id}/update-position`, {
-        entry_id: entryId,
-        position: position
-      });
-      loadEntries(selectedComp.id);
-    } catch (err: any) {
-      alert('Failed to update position: ' + (err.response?.data || err.message));
+      const data = await api(`/api/competitions/${selectedComp.id}/random-pick`, { method: 'POST' });
+      setRevealed({ name: data.entry_name, seed: data.seed, number: data.number });
+      loadUserDraws();
+      loadCompetitions();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Selection failed');
     }
   };
 
-  const activeCompetitions = competitions.filter(c =>
-    c.status === 'open' || c.status === 'locked' || c.status === 'completed'
-  );
-
   return (
-    <div style={styles.app}>
-      <header style={styles.header}>
-        <h1>🎁 Sweepstakes</h1>
-        <p>Welcome, {userName}! {isAdmin && <span style={{ color: '#4CAF50', fontWeight: 'bold' }}>(Admin)</span>}</p>
-      </header>
+    <>
+      {error && <div className="ah-banner ah-banner--error" onClick={() => setError(null)}>{error}</div>}
+      <Toast message={success} />
 
-      <nav style={styles.nav}>
-        {!isAdmin && (
-          <>
-            <button onClick={() => setView('dashboard')} style={view === 'dashboard' ? styles.navButtonActive : styles.navButton}>
-              Competitions
-            </button>
-            <button onClick={() => setView('my-entries')} style={view === 'my-entries' ? styles.navButtonActive : styles.navButton}>
-              My Entries ({userDraws.length})
-            </button>
-          </>
-        )}
-        {isAdmin && (
-          <>
-            <button onClick={() => setView('admin-manage')} style={view === 'admin-manage' ? styles.navButtonActive : styles.navButton}>
-              Manage Competitions
-            </button>
-            <button onClick={() => setView('admin-entries')} style={view === 'admin-entries' ? styles.navButtonActive : styles.navButton}>
-              Entries
-            </button>
-            <button onClick={() => setView('admin-participants')} style={view === 'admin-participants' ? styles.navButtonActive : styles.navButton}>
-              View Participants
-            </button>
-          </>
-        )}
-      </nav>
-
-      <main style={styles.main}>
-        {error && <div style={styles.error}>{error}</div>}
-
-        {/* User Dashboard */}
-        {!isAdmin && view === 'dashboard' && (
-          <UserDashboard
-            competitions={activeCompetitions}
-            userDraws={userDraws}
-            onSelectCompetition={(comp) => {
-              setSelectedComp(comp);
-              setView('pick-box');
-            }}
-          />
-        )}
-
-        {/* Blind Box Selection */}
-        {!isAdmin && view === 'pick-box' && selectedComp && (
-          <PickBoxView
-            competition={selectedComp}
-            blindBoxes={blindBoxes}
-            availableCount={availableCount}
-            onChooseBox={handleChooseBlindBox}
-            onRandomPick={handleRandomPick}
-            onBack={() => setView('dashboard')}
-          />
-        )}
-
-        {/* My Entries */}
-        {!isAdmin && view === 'my-entries' && (
-          <MyEntriesView userDraws={userDraws} competitions={competitions} />
-        )}
-
-        {/* Admin: Manage Competitions */}
-        {isAdmin && view === 'admin-manage' && (
-          <ManageCompetitions
-            competitions={competitions}
-            onCreateCompetition={handleCreateCompetition}
-            onUpdateCompetition={handleUpdateCompetition}
-            onSelectCompetition={(comp) => {
-              setSelectedComp(comp);
-              loadEntries(comp.id);
-              setView('admin-entries');
-            }}
-          />
-        )}
-
-        {/* Admin: Manage Entries */}
-        {isAdmin && view === 'admin-entries' && (
-          <ManageEntries
-            competitions={competitions}
-            entries={entries}
-            selectedCompetition={selectedComp}
-            onSelectCompetition={(comp) => {
-              setSelectedComp(comp);
-              loadEntries(comp.id);
-            }}
-            onUploadEntries={handleUploadEntries}
-            onDeleteEntry={handleDeleteEntry}
-            onUpdatePosition={handleUpdatePosition}
-          />
-        )}
-
-        {/* Admin: View Participants */}
-        {isAdmin && view === 'admin-participants' && (
-          <ParticipantsView
-            competitions={competitions}
-            selectedComp={selectedComp}
-            onSelectCompetition={async (comp) => {
-              setSelectedComp(comp);
-              try {
-                const res = await api.get(`/api/competitions/${comp.id}/all-draws`);
-                setUserDraws(res.data || []);
-              } catch (err) {
-                console.error(err);
-              }
-            }}
-            draws={userDraws}
-          />
-        )}
-      </main>
-    </div>
-  );
-}
-
-// Component: User Dashboard
-function UserDashboard({ competitions, userDraws, onSelectCompetition }: {
-  competitions: Competition[];
-  userDraws: Draw[];
-  onSelectCompetition: (comp: Competition) => void;
-}) {
-  return (
-    <div style={styles.section}>
-      <h2>Open Competitions</h2>
-      {competitions.length > 0 ? (
-        <div style={styles.grid}>
-          {competitions.map(comp => {
-            const draws = userDraws.filter(d => d.competition_id === comp.id);
-            const hasEntry = draws.length > 0;
-
-            return (
-              <div key={comp.id} style={styles.card}>
-                <h3>{comp.name}</h3>
-                <div style={{marginBottom: 10}}>
-                  <span style={{...styles.badge, backgroundColor: comp.status === 'open' ? '#10b981' : '#6b7280'}}>
-                    {comp.status}
-                  </span>
-                  <span style={{...styles.badge, backgroundColor: '#3b82f6', marginLeft: 8}}>
-                    {comp.type}
-                  </span>
-                </div>
-                {comp.description && <p style={{color: '#6b7280', marginBottom: 15}}>{comp.description}</p>}
-
-                {hasEntry && (
-                  <div style={{...styles.card, backgroundColor: '#f0fdf4', marginTop: 10}}>
-                    <h4 style={{marginBottom: 8}}>Your Entry</h4>
-                    {draws.map(draw => (
-                      <div key={draw.id}>
-                        <p style={{fontWeight: 'bold'}}>{draw.entry_name}</p>
-                        {draw.seed && <p>Seed #{draw.seed}</p>}
-                        {draw.number && <p>#{draw.number}</p>}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {comp.status === 'open' && !hasEntry && (
-                  <button onClick={() => onSelectCompetition(comp)} style={styles.button}>
-                    📦 Pick Your Box
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <p>No active competitions</p>
+      {/* Blind box picker view (overlays tab content) */}
+      {pickView && selectedComp && !revealed && (
+        <PickBoxView
+          comp={selectedComp}
+          api={api}
+          userId={userId}
+          onChooseBox={handleChooseBox}
+          onRandomPick={handleRandomPick}
+          onBack={() => setPickView(false)}
+        />
       )}
-    </div>
-  );
-}
 
-// Component: Blind Box Selection
-function PickBoxView({ competition, blindBoxes, availableCount, onChooseBox, onRandomPick, onBack }: {
-  competition: Competition;
-  blindBoxes: BlindBox[];
-  availableCount: number;
-  onChooseBox: (boxNumber: number) => void;
-  onRandomPick: () => void;
-  onBack: () => void;
-}) {
-  return (
-    <div style={styles.section}>
-      <button onClick={onBack} style={{...styles.button, backgroundColor: '#6b7280', marginBottom: 20}}>
-        ← Back
-      </button>
-
-      <h2>📦 Pick Your Mystery Box - {competition.name}</h2>
-      <p>{availableCount} boxes remaining</p>
-
-      <button onClick={onRandomPick} style={{...styles.button, fontSize: 18, padding: '15px 40px', margin: '20px 0'}}>
-        🎲 Random Spin
-      </button>
-
-      <p style={{textAlign: 'center', color: '#6b7280', margin: '20px 0'}}>— OR —</p>
-
-      {blindBoxes.length > 0 ? (
-        <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 15}}>
-          {blindBoxes.map(box => (
-            <div key={box.box_number} style={{...styles.card, textAlign: 'center', cursor: 'pointer'}}
-                 onClick={() => onChooseBox(box.box_number)}>
-              <div style={{fontSize: 40}}>📦</div>
-              <h3>Box #{box.box_number}</h3>
-            </div>
-          ))}
+      {/* Reveal view after picking */}
+      {pickView && revealed && (
+        <div className="ah-card" style={{ textAlign: 'center', padding: 40 }}>
+          <p style={{ fontSize: 48, margin: 0 }}>🎉</p>
+          <h2 style={{ marginTop: 12 }}>You got: {revealed.name}!</h2>
+          {revealed.seed != null && <p className="ah-meta">Seed #{revealed.seed}</p>}
+          {revealed.number != null && <p className="ah-meta">#{revealed.number}</p>}
+          <button className="ah-btn-primary" style={{ marginTop: 20 }} onClick={() => { setPickView(false); setRevealed(null); }}>
+            Back to Competitions
+          </button>
         </div>
-      ) : (
-        <p>All boxes have been selected or you've already picked one!</p>
       )}
-    </div>
-  );
-}
 
-// Component: My Entries
-function MyEntriesView({ userDraws, competitions }: {
-  userDraws: Draw[];
-  competitions: Competition[];
-}) {
-  return (
-    <div style={styles.section}>
-      <h2>My Entries ({userDraws.length})</h2>
-      {userDraws.length > 0 ? (
-        <div style={styles.grid}>
-          {userDraws.map(draw => {
-            const comp = competitions.find(c => c.id === draw.competition_id);
-            return (
-              <div key={draw.id} style={styles.card}>
-                <p style={{fontWeight: 'bold', marginBottom: 10}}>{comp?.name || 'Unknown Competition'}</p>
-                <h3>{draw.entry_name}</h3>
-                {draw.seed && <p>Seed #{draw.seed}</p>}
-                {draw.number && <p>#{draw.number}</p>}
-                <p style={{color: '#6b7280', fontSize: 14, marginTop: 10}}>
-                  Selected: {new Date(draw.drawn_at).toLocaleDateString()}
-                </p>
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <p>You haven't entered any competitions yet.</p>
-      )}
-    </div>
-  );
-}
-
-// Component: Admin - Manage Competitions
-function ManageCompetitions({ competitions, onCreateCompetition, onUpdateCompetition, onSelectCompetition }: {
-  competitions: Competition[];
-  onCreateCompetition: (e: React.FormEvent<HTMLFormElement>) => void;
-  onUpdateCompetition: (id: number, updates: Partial<Competition>) => void;
-  onSelectCompetition: (comp: Competition) => void;
-}) {
-  return (
-    <div style={styles.section}>
-      <h2>Manage Competitions</h2>
-
-      <div style={{...styles.card, marginBottom: 30}}>
-        <h3>Create New Competition</h3>
-        <form onSubmit={onCreateCompetition}>
-          <input type="text" name="name" placeholder="Competition Name" required style={styles.input} />
-          <select name="type" required style={styles.input}>
-            <option value="">Select Type</option>
-            <option value="knockout">Knockout</option>
-            <option value="race">Race</option>
-          </select>
-          <textarea name="description" placeholder="Description" style={styles.input} />
-          <button type="submit" style={styles.button}>Create Competition</button>
-        </form>
-      </div>
-
-      <h3>All Competitions</h3>
-      <div style={styles.grid}>
-        {competitions.map(comp => (
-          <div key={comp.id} style={styles.card}>
-            <h3>{comp.name}</h3>
-            <div style={{marginBottom: 10}}>
-              <span style={{...styles.badge, backgroundColor: getStatusColor(comp.status)}}>{comp.status}</span>
-              <span style={{...styles.badge, backgroundColor: '#3b82f6', marginLeft: 8}}>{comp.type}</span>
-            </div>
-            <p>{comp.description}</p>
-
-            <div style={{marginTop: 15, display: 'flex', flexDirection: 'column', gap: 8}}>
-              {comp.status === 'draft' && (
-                <button onClick={() => onUpdateCompetition(comp.id, {...comp, status: 'open'})} style={styles.button}>
-                  📢 Open for Users
-                </button>
-              )}
-              {comp.status === 'open' && (
-                <button onClick={() => {
-                  if (window.confirm('Lock the competition?')) {
-                    onUpdateCompetition(comp.id, {...comp, status: 'locked'});
-                  }
-                }} style={styles.button}>
-                  🔒 Lock Competition
-                </button>
-              )}
-              {comp.status === 'locked' && (
-                <button onClick={() => {
-                  if (window.confirm('Mark as completed?')) {
-                    onUpdateCompetition(comp.id, {...comp, status: 'completed'});
-                  }
-                }} style={styles.button}>
-                  🏁 Complete
-                </button>
-              )}
-              <button onClick={() => onSelectCompetition(comp)} style={{...styles.button, backgroundColor: '#6b7280'}}>
-                Manage Entries
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// Component: Admin - Manage Entries
-function ManageEntries({ competitions, entries, selectedCompetition, onSelectCompetition, onUploadEntries, onDeleteEntry, onUpdatePosition }: {
-  competitions: Competition[];
-  entries: Entry[];
-  selectedCompetition: Competition | null;
-  onSelectCompetition: (comp: Competition) => void;
-  onUploadEntries: (e: React.FormEvent<HTMLFormElement>) => void;
-  onDeleteEntry: (id: number) => void;
-  onUpdatePosition: (entryId: number, position: number | null) => void;
-}) {
-  return (
-    <div style={styles.section}>
-      <h2>Manage Entries</h2>
-
-      <select
-        onChange={(e) => {
-          const comp = competitions.find(c => c.id === parseInt(e.target.value));
-          if (comp) onSelectCompetition(comp);
-        }}
-        value={selectedCompetition?.id || ''}
-        style={styles.input}
-      >
-        <option value="">Select Competition</option>
-        {competitions.map(c => (
-          <option key={c.id} value={c.id}>{c.name} ({c.status})</option>
-        ))}
-      </select>
-
-      {selectedCompetition && (
+      {/* Normal tab content */}
+      {!pickView && (
         <>
-          <div style={{...styles.card, marginTop: 20}}>
-            <h3>Bulk Upload (CSV)</h3>
-            <form onSubmit={onUploadEntries}>
-              <input type="hidden" name="competition_id" value={selectedCompetition.id} />
-              <input type="hidden" name="type" value={selectedCompetition.type} />
-              <input type="file" name="file" accept=".csv" required style={styles.input} />
-              <button type="submit" style={styles.button}>Upload CSV</button>
-            </form>
-            <p style={{color: '#6b7280', fontSize: 14, marginTop: 10}}>
-              CSV Format - Knockout: Name, Seed | Race: Name, Number
-            </p>
+          <div className="ah-tabs">
+            {(['competitions', 'my-picks'] as Tab[]).map(tab => (
+              <button
+                key={tab}
+                className={`ah-tab${activeTab === tab ? ' active' : ''}`}
+                onClick={() => setActiveTab(tab)}
+              >
+                {tab === 'competitions' ? 'Competitions' : `My Picks (${userDraws.length})`}
+              </button>
+            ))}
           </div>
 
-          {entries.length > 0 && (
-            <div style={{marginTop: 30, overflowX: 'auto'}}>
-              <h3>Current Entries ({entries.length})</h3>
-              <table style={{width: '100%', borderCollapse: 'collapse', marginTop: 15}}>
-                <thead>
-                  <tr style={{backgroundColor: '#f3f4f6'}}>
-                    <th style={styles.th}>Name</th>
-                    <th style={styles.th}>Seed/Number</th>
-                    <th style={styles.th}>Status</th>
-                    <th style={styles.th}>Position</th>
-                    <th style={styles.th}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {entries.map(entry => (
-                    <tr key={entry.id} style={{borderBottom: '1px solid #e5e7eb'}}>
-                      <td style={styles.td}>{entry.name}</td>
-                      <td style={styles.td}>{entry.seed || entry.number || '-'}</td>
-                      <td style={styles.td}>
-                        <span style={{...styles.badge, fontSize: 12}}>{entry.status}</span>
-                      </td>
-                      <td style={styles.td}>
-                        <select
-                          value={entry.position || ''}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            onUpdatePosition(entry.id, val ? parseInt(val) : null);
-                          }}
-                          style={{padding: 5, width: 100}}
-                        >
-                          <option value="">None</option>
-                          <option value="1">1st</option>
-                          <option value="2">2nd</option>
-                          <option value="3">3rd</option>
-                          <option value="4">4th</option>
-                          <option value="5">5th</option>
-                          <option value="999">Last</option>
-                        </select>
-                      </td>
-                      <td style={styles.td}>
-                        <button
-                          onClick={() => onDeleteEntry(entry.id)}
-                          style={{...styles.button, backgroundColor: '#ef4444', padding: '5px 10px', fontSize: 12}}
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          {activeTab === 'competitions' && (
+            <CompetitionsTab
+              competitions={competitions}
+              userDraws={userDraws}
+              api={api}
+              onPickBox={openPickView}
+            />
+          )}
+          {activeTab === 'my-picks' && (
+            <MyPicksTab userDraws={userDraws} />
           )}
         </>
       )}
+    </>
+  );
+}
+
+// --- CompetitionsTab ---
+
+function CompetitionsTab({ competitions, userDraws, api, onPickBox }: {
+  competitions: Competition[];
+  userDraws: Draw[];
+  api: ReturnType<typeof useApi>;
+  onPickBox: (comp: Competition) => void;
+}) {
+  const [viewDrawsFor, setViewDrawsFor] = useState<number | null>(null);
+  const [compDraws, setCompDraws] = useState<CompDraw[]>([]);
+
+  const loadCompDraws = async (compId: number) => {
+    if (viewDrawsFor === compId) { setViewDrawsFor(null); return; }
+    const data = await api(`/api/competitions/${compId}/all-draws`).catch(() => []);
+    setCompDraws(data || []);
+    setViewDrawsFor(compId);
+  };
+
+  const userPickFor = (compId: number) => userDraws.find(d => d.competition_id === compId);
+
+  if (competitions.length === 0) {
+    return <div className="ah-card"><p style={{ color: '#666' }}>No active competitions right now.</p></div>;
+  }
+
+  return (
+    <div>
+      {competitions.map(comp => {
+        const userPick = userPickFor(comp.id);
+        const isViewingDraws = viewDrawsFor === comp.id;
+
+        return (
+          <div key={comp.id} className="ah-card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div style={{ flex: 1 }}>
+                <strong style={{ fontSize: 16 }}>{comp.name}</strong>
+                <div style={{ marginTop: 4 }}>
+                  <span style={{ ...badge, backgroundColor: statusColor(comp.status) }}>{comp.status}</span>
+                  <span style={{ ...badge, backgroundColor: '#2196F3', marginLeft: 6 }}>{comp.type}</span>
+                </div>
+                {comp.description && <p className="ah-meta" style={{ marginTop: 6 }}>{comp.description}</p>}
+
+                {userPick && (
+                  <div style={{ marginTop: 8, padding: '8px 12px', backgroundColor: '#e8f5e9', borderRadius: 6 }}>
+                    <span style={{ fontWeight: 600 }}>Your pick: {userPick.entry_name}</span>
+                    {userPick.seed != null && <span className="ah-meta" style={{ marginLeft: 8 }}>Seed #{userPick.seed}</span>}
+                    {userPick.number != null && <span className="ah-meta" style={{ marginLeft: 8 }}>#{userPick.number}</span>}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0, marginLeft: 12 }}>
+                {comp.status === 'open' && !userPick && (
+                  <button className="ah-btn-primary" onClick={() => onPickBox(comp)}>
+                    Pick Your Box
+                  </button>
+                )}
+                {(comp.status === 'locked' || comp.status === 'completed') && (
+                  <button className="ah-btn-outline" onClick={() => loadCompDraws(comp.id)}>
+                    {isViewingDraws ? 'Hide Results' : 'View Results'}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {isViewingDraws && (
+              <div style={{ marginTop: 12 }}>
+                <p className="ah-meta" style={{ marginBottom: 8 }}>All picks ({compDraws.length}):</p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 8 }}>
+                  {compDraws.map((d, idx) => (
+                    <div key={idx} style={{ padding: '8px 12px', backgroundColor: '#f8f8f8', borderRadius: 6 }}>
+                      <div style={{ fontWeight: 600, fontSize: 14 }}>{d.entry_name}</div>
+                      <div className="ah-meta">{d.user_id}</div>
+                      {d.position != null && d.position !== 999 && (
+                        <div style={{ color: '#F57C00', fontWeight: 600, fontSize: 12, marginTop: 2 }}>
+                          {posLabel(d.position)}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-// Component: Admin - View Participants
-function ParticipantsView({ competitions, selectedComp, onSelectCompetition, draws }: {
-  competitions: Competition[];
-  selectedComp: Competition | null;
-  onSelectCompetition: (comp: Competition) => void;
-  draws: Draw[];
+// --- PickBoxView ---
+
+function PickBoxView({ comp, api, userId, onChooseBox, onRandomPick, onBack }: {
+  comp: Competition;
+  api: ReturnType<typeof useApi>;
+  userId: string;
+  onChooseBox: (n: number) => void;
+  onRandomPick: () => void;
+  onBack: () => void;
 }) {
+  const [boxCount, setBoxCount] = useState(0);
+
+  useEffect(() => {
+    api(`/api/competitions/${comp.id}/available-count`)
+      .then(data => setBoxCount(data?.count || 0))
+      .catch(() => {});
+  }, [api, comp.id]);
+
   return (
-    <div style={styles.section}>
-      <h2>View All Participants</h2>
+    <div>
+      <button className="ah-btn-outline" style={{ marginBottom: 12 }} onClick={onBack}>← Back</button>
 
-      <select
-        onChange={(e) => {
-          const comp = competitions.find(c => c.id === parseInt(e.target.value));
-          if (comp) onSelectCompetition(comp);
-        }}
-        value={selectedComp?.id || ''}
-        style={styles.input}
-      >
-        <option value="">Select Competition</option>
-        {competitions.map(c => (
-          <option key={c.id} value={c.id}>{c.name} ({c.status})</option>
-        ))}
-      </select>
+      <div className="ah-card" style={{ marginBottom: 16 }}>
+        <h3 className="ah-section-title">{comp.name}</h3>
+        <p className="ah-meta">{boxCount} boxes remaining</p>
+        <button
+          className="ah-btn-primary"
+          style={{ marginTop: 8 }}
+          onClick={onRandomPick}
+        >
+          Random Spin
+        </button>
+      </div>
 
-      {selectedComp && draws.length > 0 && (
-        <div style={{...styles.grid, marginTop: 30}}>
-          {draws.map((draw, idx) => (
-            <div key={idx} style={styles.card}>
-              <h3>{draw.user_name || draw.user_id}</h3>
-              <p style={{fontWeight: 'bold', fontSize: 18}}>{draw.entry_name}</p>
-              {draw.position && draw.position !== 999 && (
-                <div style={{fontSize: 20, fontWeight: 'bold', margin: '10px 0'}}>
-                  🏆 {draw.position}{draw.position === 1 ? 'st' : draw.position === 2 ? 'nd' : draw.position === 3 ? 'rd' : 'th'} Place
-                </div>
-              )}
-              {draw.position === 999 && (
-                <div style={{fontSize: 20, fontWeight: 'bold', margin: '10px 0'}}>
-                  🏴 Last Place
-                </div>
-              )}
-              {draw.seed && <p>Seed #{draw.seed}</p>}
-              {draw.number && <p>#{draw.number}</p>}
-            </div>
-          ))}
-        </div>
+      {boxCount > 0 ? (
+        <>
+          <p className="ah-meta" style={{ marginBottom: 8 }}>— or choose a box —</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: 10 }}>
+            {Array.from({ length: boxCount }, (_, i) => i + 1).map(n => (
+              <div
+                key={n}
+                className="ah-card"
+                style={{ textAlign: 'center', cursor: 'pointer', padding: '16px 8px' }}
+                onClick={() => onChooseBox(n)}
+              >
+                <div style={{ fontSize: 32 }}>📦</div>
+                <div style={{ fontWeight: 600, marginTop: 4 }}>#{n}</div>
+              </div>
+            ))}
+          </div>
+        </>
+      ) : (
+        <div className="ah-card"><p style={{ color: '#666' }}>All boxes have been selected.</p></div>
       )}
     </div>
   );
 }
 
-function getStatusColor(status: string): string {
+// --- MyPicksTab ---
+
+function MyPicksTab({ userDraws }: { userDraws: Draw[] }) {
+  if (userDraws.length === 0) {
+    return <div className="ah-card"><p style={{ color: '#666' }}>You haven't entered any competitions yet.</p></div>;
+  }
+
+  return (
+    <div>
+      {userDraws.map(draw => (
+        <div key={draw.id} className="ah-card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <p className="ah-meta">{draw.comp_name}</p>
+              <strong style={{ fontSize: 16 }}>{draw.entry_name}</strong>
+              {draw.seed != null && <span className="ah-meta" style={{ marginLeft: 8 }}>Seed #{draw.seed}</span>}
+              {draw.number != null && <span className="ah-meta" style={{ marginLeft: 8 }}>#{draw.number}</span>}
+              {draw.position != null && draw.position !== 999 && (
+                <p style={{ color: '#F57C00', fontWeight: 600, marginTop: 4 }}>{posLabel(draw.position)}</p>
+              )}
+            </div>
+            <span style={{ ...badge, backgroundColor: statusColor(draw.comp_status) }}>{draw.comp_status}</span>
+          </div>
+          <p className="ah-meta" style={{ marginTop: 6 }}>
+            Picked {new Date(draw.drawn_at).toLocaleDateString()}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// --- Helpers ---
+
+function statusColor(status: string): string {
   switch (status) {
-    case 'open': return '#10b981';
-    case 'draft': return '#f59e0b';
-    case 'locked': return '#ef4444';
-    case 'completed': return '#3b82f6';
-    case 'archived': return '#6b7280';
-    default: return '#6b7280';
+    case 'open': return '#4CAF50';
+    case 'locked': return '#FF9800';
+    case 'completed': return '#2196F3';
+    case 'archived': return '#9E9E9E';
+    default: return '#9E9E9E';
   }
 }
 
-const styles = {
-  app: {
-    minHeight: '100vh',
-    backgroundColor: '#f5f5f5',
-  },
-  container: {
-    backgroundColor: '#f5f5f5',
-    minHeight: '100vh',
-    padding: '20px',
-    fontFamily: 'system-ui, -apple-system, sans-serif',
-  },
-  header: {
-    backgroundColor: '#ffffff',
-    padding: '20px',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-    marginBottom: '20px',
-  },
-  nav: {
-    backgroundColor: '#ffffff',
-    padding: '10px 20px',
-    display: 'flex',
-    gap: '10px',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-    marginBottom: '20px',
-  },
-  navButton: {
-    padding: '10px 20px',
-    border: 'none',
-    backgroundColor: '#f3f4f6',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    fontSize: 14,
-  } as React.CSSProperties,
-  navButtonActive: {
-    padding: '10px 20px',
-    border: 'none',
-    backgroundColor: '#3b82f6',
-    color: 'white',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    fontSize: 14,
-  } as React.CSSProperties,
-  main: {
-    padding: '20px',
-  },
-  section: {
-    maxWidth: '1200px',
-    margin: '0 auto',
-  },
-  grid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-    gap: '20px',
-    marginTop: '20px',
-  },
-  card: {
-    backgroundColor: '#ffffff',
-    borderRadius: '8px',
-    padding: '20px',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-  },
-  badge: {
-    display: 'inline-block',
-    padding: '4px 12px',
-    borderRadius: '12px',
-    fontSize: '12px',
-    fontWeight: 500,
-    color: 'white',
-  } as React.CSSProperties,
-  button: {
-    background: 'linear-gradient(135deg, #667eea, #764ba2)',
-    color: 'white',
-    border: 'none',
-    padding: '12px 30px',
-    fontSize: 16,
-    fontWeight: 500,
-    borderRadius: 8,
-    cursor: 'pointer',
-    width: '100%',
-  } as React.CSSProperties,
-  input: {
-    width: '100%',
-    padding: '12px',
-    marginBottom: '15px',
-    borderRadius: '6px',
-    border: '1px solid #e5e7eb',
-    fontSize: 14,
-  } as React.CSSProperties,
-  error: {
-    color: '#d32f2f',
-    backgroundColor: '#ffebee',
-    padding: '12px',
-    borderRadius: '4px',
-    marginBottom: '20px',
-  },
-  th: {
-    padding: '12px',
-    textAlign: 'left' as const,
-    fontWeight: 600,
-  },
-  td: {
-    padding: '12px',
-  },
+function posLabel(pos: number): string {
+  if (pos === 1) return '1st Place';
+  if (pos === 2) return '2nd Place';
+  if (pos === 3) return '3rd Place';
+  if (pos === 999) return 'Last Place';
+  return `${pos}th Place`;
+}
+
+const badge: React.CSSProperties = {
+  display: 'inline-block',
+  padding: '2px 10px',
+  borderRadius: 10,
+  fontSize: 11,
+  fontWeight: 600,
+  color: 'white',
 };
 
 export default App;

@@ -13,8 +13,9 @@ import (
 )
 
 var (
-	lmsDB       *sql.DB // last_man_standing_db — used by handlers
-	gameAdminDB *sql.DB // game_admin_db — used for audit log
+	lmsDB          *sql.DB // last_man_standing_db — used by handlers
+	gameAdminDB    *sql.DB // game_admin_db — used for audit log
+	sweepstakesDB  *sql.DB // sweepstakes_db — used by sweepstakes admin handlers
 )
 
 func main() {
@@ -35,6 +36,12 @@ func main() {
 		log.Fatal("Failed to connect to game admin database:", err)
 	}
 	defer gameAdminDB.Close()
+
+	sweepstakesDB, err = database.InitDatabaseByName("sweepstakes_db")
+	if err != nil {
+		log.Fatal("Failed to connect to sweepstakes database:", err)
+	}
+	defer sweepstakesDB.Close()
 
 	r := mux.NewRouter()
 
@@ -74,6 +81,20 @@ func main() {
 
 	// LMS predictions (read)
 	api.HandleFunc("/lms/predictions", handleGetAllPredictions).Methods("GET")
+
+	// Sweepstakes competition management
+	api.HandleFunc("/sweepstakes/competitions", handleGetSweepCompetitions).Methods("GET")
+	api.HandleFunc("/sweepstakes/competitions", handleCreateSweepCompetition).Methods("POST")
+	api.HandleFunc("/sweepstakes/competitions/{id}", handleUpdateSweepCompetition).Methods("PUT")
+	api.HandleFunc("/sweepstakes/competitions/{id}", handleDeleteSweepCompetition).Methods("DELETE")
+	api.HandleFunc("/sweepstakes/competitions/{id}/entries", handleGetSweepEntries).Methods("GET")
+	api.HandleFunc("/sweepstakes/competitions/{id}/all-draws", handleGetSweepAllDraws).Methods("GET")
+	api.HandleFunc("/sweepstakes/competitions/{id}/update-position", handleUpdateSweepPosition).Methods("POST")
+
+	// Sweepstakes entry management
+	api.HandleFunc("/sweepstakes/entries/upload", handleUploadSweepEntries).Methods("POST")
+	api.HandleFunc("/sweepstakes/entries/{id}", handleUpdateSweepEntry).Methods("PUT")
+	api.HandleFunc("/sweepstakes/entries/{id}", handleDeleteSweepEntry).Methods("DELETE")
 
 	// Serve React frontend
 	r.PathPrefix("/static/").Handler(http.FileServer(http.Dir("./static")))

@@ -3,16 +3,12 @@ package main
 import "time"
 
 type Competition struct {
-	ID              int        `json:"id"`
-	Name            string     `json:"name"`
-	Type            string     `json:"type"` // knockout or race
-	Status          string     `json:"status"`
-	StartDate       *time.Time `json:"start_date"`
-	EndDate         *time.Time `json:"end_date"`
-	Description     string     `json:"description"`
-	SelectionMode   string     `json:"selection_mode"`
-	BlindBoxInterval int        `json:"blind_box_interval"`
-	CreatedAt       time.Time  `json:"created_at"`
+	ID          int       `json:"id"`
+	Name        string    `json:"name"`
+	Type        string    `json:"type"` // knockout or race
+	Status      string    `json:"status"`
+	Description string    `json:"description"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 type Entry struct {
@@ -34,16 +30,4 @@ type Draw struct {
 	DrawnAt       time.Time `json:"drawn_at"`
 	EntryName     string    `json:"entry_name"`
 	UserName      string    `json:"user_name"`
-}
-
-type SelectionLock struct {
-	CompetitionID int       `json:"competition_id"`
-	UserID        string    `json:"user_id"`
-	UserName      string    `json:"user_name"`
-	LockedAt      time.Time `json:"locked_at"`
-}
-
-type Config struct {
-	AppID        string                   `json:"appId"`
-	GameOptions []map[string]interface{} `json:"gameOptions"`
 }

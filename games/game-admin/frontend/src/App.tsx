@@ -77,7 +77,10 @@ function useApi(token: string) {
 
 // --- Main App ---
 
-type Tab = 'fixtures' | 'games' | 'rounds' | 'results' | 'predictions';
+type Module = 'lms' | 'sweepstakes';
+type LMSTab = 'fixtures' | 'games' | 'rounds' | 'results' | 'predictions';
+type SweepTab = 'sw-competitions' | 'sw-entries';
+type Tab = LMSTab | SweepTab;
 
 function App() {
   const { userId, token } = useUrlParams();
@@ -86,6 +89,7 @@ function App() {
   const [config, setConfig] = useState<Config | null>(null);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [activeModule, setActiveModule] = useState<Module>('lms');
   const [activeTab, setActiveTab] = useState<Tab>('fixtures');
   const [selectedGameId, setSelectedGameId] = useState<string>('');
 
@@ -125,49 +129,89 @@ function App() {
   return (
     <div className="ah-container">
       <div className="ah-header">
-        <h2 className="ah-header-title">🎮 Game Admin — LMS</h2>
+        <h2 className="ah-header-title">Game Admin</h2>
         {isReadOnly && <span style={s.readOnlyBadge}>Read-only</span>}
         <button className="ah-lobby-btn" onClick={goToLobby}>← Lobby</button>
       </div>
 
-      <div className="ah-tabs">
-        {(['fixtures', 'games', 'rounds', 'results', 'predictions'] as Tab[]).map(tab => (
+      {/* Module switcher */}
+      <div style={{ display: 'flex', gap: 8, padding: '8px 0', borderBottom: '2px solid #e0e0e0', marginBottom: 8 }}>
+        {(['lms', 'sweepstakes'] as Module[]).map(mod => (
           <button
-            key={tab}
-            className={`ah-tab${activeTab === tab ? ' active' : ''}`}
-            onClick={() => setActiveTab(tab)}
+            key={mod}
+            onClick={() => {
+              setActiveModule(mod);
+              setActiveTab(mod === 'lms' ? 'fixtures' : 'sw-competitions');
+            }}
+            style={{
+              padding: '6px 18px', borderRadius: 6, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13,
+              backgroundColor: activeModule === mod ? '#1565C0' : '#e0e0e0',
+              color: activeModule === mod ? 'white' : '#333',
+            }}
           >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            {mod === 'lms' ? 'Last Man Standing' : 'Sweepstakes'}
           </button>
         ))}
       </div>
 
-      {/* Game selector for tabs that need it */}
-      {(activeTab === 'rounds' || activeTab === 'results' || activeTab === 'predictions') && (
-        <GameSelector
-          selectedGameId={selectedGameId}
-          onSelect={setSelectedGameId}
-          api={api}
-        />
+      {/* LMS module */}
+      {activeModule === 'lms' && (
+        <>
+          <div className="ah-tabs">
+            {(['fixtures', 'games', 'rounds', 'results', 'predictions'] as LMSTab[]).map(tab => (
+              <button
+                key={tab}
+                className={`ah-tab${activeTab === tab ? ' active' : ''}`}
+                onClick={() => setActiveTab(tab)}
+              >
+                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              </button>
+            ))}
+          </div>
+
+          {(activeTab === 'rounds' || activeTab === 'results' || activeTab === 'predictions') && (
+            <GameSelector selectedGameId={selectedGameId} onSelect={setSelectedGameId} api={api} />
+          )}
+
+          {activeTab === 'fixtures' && <FixturesTab api={api} isReadOnly={isReadOnly} />}
+          {activeTab === 'games' && (
+            <GamesTab api={api} isReadOnly={isReadOnly} onGameSelect={(id) => { setSelectedGameId(id); setActiveTab('rounds'); }} />
+          )}
+          {activeTab === 'rounds' && selectedGameId && <RoundsTab gameId={selectedGameId} api={api} isReadOnly={isReadOnly} />}
+          {activeTab === 'results' && selectedGameId && <ResultsTab gameId={selectedGameId} api={api} isReadOnly={isReadOnly} />}
+          {activeTab === 'predictions' && selectedGameId && <PredictionsTab gameId={selectedGameId} api={api} />}
+          {(activeTab === 'rounds' || activeTab === 'results' || activeTab === 'predictions') && !selectedGameId && (
+            <div className="ah-card"><p style={{ color: '#666' }}>Select a game above to continue.</p></div>
+          )}
+        </>
       )}
 
-      {activeTab === 'fixtures' && (
-        <FixturesTab api={api} isReadOnly={isReadOnly} />
-      )}
-      {activeTab === 'games' && (
-        <GamesTab api={api} isReadOnly={isReadOnly} onGameSelect={(id) => { setSelectedGameId(id); setActiveTab('rounds'); }} />
-      )}
-      {activeTab === 'rounds' && selectedGameId && (
-        <RoundsTab gameId={selectedGameId} api={api} isReadOnly={isReadOnly} />
-      )}
-      {activeTab === 'results' && selectedGameId && (
-        <ResultsTab gameId={selectedGameId} api={api} isReadOnly={isReadOnly} />
-      )}
-      {activeTab === 'predictions' && selectedGameId && (
-        <PredictionsTab gameId={selectedGameId} api={api} />
-      )}
-      {(activeTab === 'rounds' || activeTab === 'results' || activeTab === 'predictions') && !selectedGameId && (
-        <div className="ah-card"><p style={{ color: '#666' }}>Select a game above to continue.</p></div>
+      {/* Sweepstakes module */}
+      {activeModule === 'sweepstakes' && (
+        <>
+          <div className="ah-tabs">
+            {([['sw-competitions', 'Competitions'], ['sw-entries', 'Entries']] as [SweepTab, string][]).map(([tab, label]) => (
+              <button
+                key={tab}
+                className={`ah-tab${activeTab === tab ? ' active' : ''}`}
+                onClick={() => setActiveTab(tab)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {activeTab === 'sw-competitions' && (
+            <SweepCompetitionsTab
+              api={api}
+              isReadOnly={isReadOnly}
+              onSelectComp={() => setActiveTab('sw-entries')}
+            />
+          )}
+          {activeTab === 'sw-entries' && (
+            <SweepEntriesTab api={api} isReadOnly={isReadOnly} />
+          )}
+        </>
       )}
     </div>
   );
@@ -925,6 +969,371 @@ function PredictionsTab({ gameId, api }: { gameId: string; api: ReturnType<typeo
               <span style={{ flex: 1, fontSize: 12 }}>{statusIcon(p)}</span>
             </div>
           ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// --- SweepCompetitionsTab ---
+
+interface SweepComp {
+  id: number;
+  name: string;
+  type: string;
+  status: string;
+  description: string;
+  createdAt: string;
+}
+
+function SweepCompetitionsTab({ api, isReadOnly, onSelectComp }: {
+  api: ReturnType<typeof useApi>;
+  isReadOnly: boolean;
+  onSelectComp: () => void;
+}) {
+  const [comps, setComps] = useState<SweepComp[]>([]);
+  const [newName, setNewName] = useState('');
+  const [newType, setNewType] = useState('knockout');
+  const [newDesc, setNewDesc] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const load = useCallback(() => {
+    api('/api/sweepstakes/competitions').then(d => setComps(d.competitions || [])).catch(err => setError(err.message));
+  }, [api]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const createComp = async () => {
+    if (!newName.trim()) return;
+    try {
+      await api('/api/sweepstakes/competitions', {
+        method: 'POST',
+        body: JSON.stringify({ name: newName.trim(), type: newType, description: newDesc }),
+      });
+      setNewName(''); setNewDesc('');
+      setSuccess('Competition created');
+      load();
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed');
+    }
+  };
+
+  const updateStatus = async (comp: SweepComp, status: string) => {
+    if (!window.confirm(`Set "${comp.name}" to ${status}?`)) return;
+    try {
+      await api(`/api/sweepstakes/competitions/${comp.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ ...comp, status }),
+      });
+      setSuccess('Status updated');
+      load();
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed');
+    }
+  };
+
+  const deleteComp = async (id: number, name: string) => {
+    if (!window.confirm(`Permanently delete "${name}" and all its data?`)) return;
+    try {
+      await api(`/api/sweepstakes/competitions/${id}`, { method: 'DELETE' });
+      setSuccess('Competition deleted');
+      load();
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed');
+    }
+  };
+
+  const swStatusColor = (status: string) => {
+    if (status === 'open') return '#4CAF50';
+    if (status === 'draft') return '#FF9800';
+    if (status === 'locked') return '#F44336';
+    if (status === 'completed') return '#2196F3';
+    return '#9E9E9E';
+  };
+
+  return (
+    <div>
+      {error && <div className="ah-banner ah-banner--error" onClick={() => setError(null)}>{error}</div>}
+      <Toast message={success} />
+
+      {!isReadOnly && (
+        <div className="ah-card">
+          <h3 className="ah-section-title">Create Competition</h3>
+          <input
+            className="ah-input"
+            style={{ width: '100%' }}
+            placeholder="Competition name (e.g. World Cup 2026)"
+            value={newName}
+            onChange={e => setNewName(e.target.value)}
+          />
+          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+            <div>
+              <label className="ah-label">Type: </label>
+              <select value={newType} onChange={e => setNewType(e.target.value)} className="ah-select">
+                <option value="knockout">Knockout</option>
+                <option value="race">Race</option>
+              </select>
+            </div>
+            <input
+              className="ah-input"
+              style={{ flex: 1 }}
+              placeholder="Description (optional)"
+              value={newDesc}
+              onChange={e => setNewDesc(e.target.value)}
+            />
+          </div>
+          <button className="ah-btn-primary" style={{ marginTop: 10 }} onClick={createComp} disabled={!newName.trim()}>
+            Create
+          </button>
+        </div>
+      )}
+
+      <h3 className="ah-section-title">All Competitions</h3>
+      {comps.length === 0 ? (
+        <div className="ah-card"><p style={{ color: '#666' }}>No competitions yet.</p></div>
+      ) : (
+        comps.map(comp => (
+          <div key={comp.id} className="ah-card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <strong>{comp.name}</strong>
+                <p className="ah-meta">
+                  <span style={{ display: 'inline-block', padding: '1px 8px', borderRadius: 8, fontSize: 11, fontWeight: 600, color: 'white', backgroundColor: swStatusColor(comp.status), marginRight: 6 }}>{comp.status}</span>
+                  {comp.type}
+                </p>
+                {comp.description && <p className="ah-meta">{comp.description}</p>}
+              </div>
+              {!isReadOnly && (
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end', flexShrink: 0, marginLeft: 12 }}>
+                  {comp.status === 'draft' && (
+                    <button className="ah-btn-outline" style={{ color: '#4CAF50', borderColor: '#4CAF50' }} onClick={() => updateStatus(comp, 'open')}>Open</button>
+                  )}
+                  {comp.status === 'open' && (
+                    <button className="ah-btn-danger" onClick={() => updateStatus(comp, 'locked')}>Lock</button>
+                  )}
+                  {comp.status === 'locked' && (
+                    <button className="ah-btn-outline" onClick={() => updateStatus(comp, 'completed')}>Complete</button>
+                  )}
+                  <button className="ah-btn-outline" onClick={onSelectComp}>Entries →</button>
+                  <button className="ah-btn-danger" onClick={() => deleteComp(comp.id, comp.name)}>Delete</button>
+                </div>
+              )}
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+// --- SweepEntriesTab ---
+
+interface SweepEntry {
+  id: number;
+  competition_id: number;
+  name: string;
+  seed?: number;
+  number?: number;
+  status: string;
+  position?: number;
+}
+
+interface SweepDraw {
+  id: number;
+  user_id: string;
+  entry_id: number;
+  drawn_at: string;
+  entry_name: string;
+  entry_status: string;
+  seed?: number;
+  number?: number;
+  position?: number;
+}
+
+function SweepEntriesTab({ api, isReadOnly }: {
+  api: ReturnType<typeof useApi>;
+  isReadOnly: boolean;
+}) {
+  const [comps, setComps] = useState<SweepComp[]>([]);
+  const [selectedCompId, setSelectedCompId] = useState('');
+  const [entries, setEntries] = useState<SweepEntry[]>([]);
+  const [draws, setDraws] = useState<SweepDraw[]>([]);
+  const [showDraws, setShowDraws] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    api('/api/sweepstakes/competitions').then(d => setComps(d.competitions || [])).catch(() => {});
+  }, [api]);
+
+  const loadEntries = useCallback((compId: string) => {
+    if (!compId) return;
+    api(`/api/sweepstakes/competitions/${compId}/entries`)
+      .then(d => setEntries(d.entries || []))
+      .catch(err => setError(err.message));
+  }, [api]);
+
+  const loadDraws = useCallback((compId: string) => {
+    if (!compId) return;
+    api(`/api/sweepstakes/competitions/${compId}/all-draws`)
+      .then(d => setDraws(d.draws || []))
+      .catch(err => setError(err.message));
+  }, [api]);
+
+  const selectComp = (id: string) => {
+    setSelectedCompId(id);
+    setShowDraws(false);
+    if (id) { loadEntries(id); loadDraws(id); }
+  };
+
+  const uploadEntries = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedCompId) return;
+    const formData = new FormData();
+    formData.append('competition_id', selectedCompId);
+    formData.append('file', file);
+    try {
+      const data = await api('/api/sweepstakes/entries/upload', { method: 'POST', body: formData });
+      setSuccess(`${data.uploaded} entries uploaded${data.skipped ? `, ${data.skipped} skipped` : ''}`);
+      loadEntries(selectedCompId);
+      setTimeout(() => setSuccess(null), 4000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload failed');
+    }
+    e.target.value = '';
+  };
+
+  const updatePosition = async (entryId: number, position: number | null) => {
+    if (!selectedCompId) return;
+    try {
+      await api(`/api/sweepstakes/competitions/${selectedCompId}/update-position`, {
+        method: 'POST',
+        body: JSON.stringify({ entry_id: entryId, position }),
+      });
+      loadEntries(selectedCompId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed');
+    }
+  };
+
+  const deleteEntry = async (id: number) => {
+    if (!window.confirm('Delete this entry?')) return;
+    try {
+      await api(`/api/sweepstakes/entries/${id}`, { method: 'DELETE' });
+      setSuccess('Entry deleted');
+      loadEntries(selectedCompId);
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete');
+    }
+  };
+
+  return (
+    <div>
+      {error && <div className="ah-banner ah-banner--error" onClick={() => setError(null)}>{error}</div>}
+      <Toast message={success} />
+
+      <div style={{ marginBottom: 16 }}>
+        <label className="ah-label">Competition: </label>
+        <select value={selectedCompId} onChange={e => selectComp(e.target.value)} className="ah-select">
+          <option value="">— select —</option>
+          {comps.map(c => (
+            <option key={c.id} value={String(c.id)}>{c.name} ({c.status})</option>
+          ))}
+        </select>
+      </div>
+
+      {selectedCompId && !isReadOnly && (
+        <div className="ah-card">
+          <h3 className="ah-section-title">Upload Entries (CSV)</h3>
+          <p className="ah-meta">Format: Name[, seed or number]. Re-uploading skips existing names.</p>
+          <input type="file" accept=".csv" onChange={uploadEntries} style={{ marginTop: 8 }} />
+        </div>
+      )}
+
+      {selectedCompId && (
+        <div style={{ marginTop: 8 }}>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+            <button className={`ah-tab${!showDraws ? ' active' : ''}`} onClick={() => setShowDraws(false)}>
+              Entries ({entries.length})
+            </button>
+            <button className={`ah-tab${showDraws ? ' active' : ''}`} onClick={() => setShowDraws(true)}>
+              Draws ({draws.length})
+            </button>
+          </div>
+
+          {!showDraws && (
+            entries.length === 0 ? (
+              <div className="ah-card"><p style={{ color: '#666' }}>No entries yet. Upload a CSV above.</p></div>
+            ) : (
+              <div className="ah-table">
+                <div className="ah-table-header">
+                  <span style={{ flex: 3 }}>Name</span>
+                  <span style={{ flex: 1 }}>Seed/No.</span>
+                  <span style={{ flex: 1 }}>Status</span>
+                  <span style={{ flex: 1 }}>Position</span>
+                  {!isReadOnly && <span style={{ flex: 1 }}>Actions</span>}
+                </div>
+                {entries.map(entry => (
+                  <div key={entry.id} className="ah-table-row">
+                    <span style={{ flex: 3, fontSize: 13 }}>{entry.name}</span>
+                    <span style={{ flex: 1, fontSize: 13 }}>{entry.seed ?? entry.number ?? '—'}</span>
+                    <span style={{ flex: 1, fontSize: 12, color: entry.status === 'taken' ? '#4CAF50' : '#666' }}>{entry.status}</span>
+                    <span style={{ flex: 1 }}>
+                      {!isReadOnly ? (
+                        <select
+                          value={entry.position ?? ''}
+                          onChange={e => updatePosition(entry.id, e.target.value ? parseInt(e.target.value) : null)}
+                          style={{ padding: '3px 6px', fontSize: 12 }}
+                        >
+                          <option value="">—</option>
+                          {[1,2,3,4,5,6,7,8,999].map(p => (
+                            <option key={p} value={p}>{p === 999 ? 'Last' : `${p}${p===1?'st':p===2?'nd':p===3?'rd':'th'}`}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span style={{ fontSize: 12, color: '#666' }}>{entry.position ?? '—'}</span>
+                      )}
+                    </span>
+                    {!isReadOnly && (
+                      <span style={{ flex: 1 }}>
+                        <button className="ah-btn-danger" style={{ padding: '3px 8px', fontSize: 11 }} onClick={() => deleteEntry(entry.id)}>
+                          Delete
+                        </button>
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )
+          )}
+
+          {showDraws && (
+            draws.length === 0 ? (
+              <div className="ah-card"><p style={{ color: '#666' }}>No draws yet.</p></div>
+            ) : (
+              <div className="ah-table">
+                <div className="ah-table-header">
+                  <span style={{ flex: 2 }}>User</span>
+                  <span style={{ flex: 2 }}>Entry</span>
+                  <span style={{ flex: 1 }}>Position</span>
+                  <span style={{ flex: 1 }}>Drawn</span>
+                </div>
+                {draws.map((d, idx) => (
+                  <div key={idx} className="ah-table-row">
+                    <span style={{ flex: 2, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.user_id}</span>
+                    <span style={{ flex: 2, fontSize: 13, fontWeight: 500 }}>{d.entry_name}</span>
+                    <span style={{ flex: 1, fontSize: 12, color: '#666' }}>{d.position ?? '—'}</span>
+                    <span style={{ flex: 1, fontSize: 12, color: '#666' }}>{new Date(d.drawn_at).toLocaleDateString()}</span>
+                  </div>
+                ))}
+              </div>
+            )
+          )}
         </div>
       )}
     </div>
