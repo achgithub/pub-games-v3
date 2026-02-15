@@ -1,11 +1,61 @@
 # Activity Hub Migration - Session State
 
 **Last Updated**: 2026-02-15
-**Session ID**: Phase 0, A, B, C (Part 1), Identity Shell Improvements & LMS Migration Complete + Shared CSS + Fixture File Architecture + Date-Range Rounds + Bug Fixes
-**Current Phase**: LMS bug fixes committed — awaiting Pi deployment
-**Status**: Committed (see below), not yet deployed. Pi needs DB recreation (breaking schema change — adds submission_deadline to rounds).
+**Session ID**: Phase 0, A, B, C (Part 1), Identity Shell Improvements & LMS Migration Complete + Shared CSS + Fixture File Architecture + Date-Range Rounds + Bug Fixes + Sweepstakes Migration
+**Current Phase**: Sweepstakes migration committed — awaiting Pi deployment
+**Status**: Committed (see below), not yet deployed. Pi needs sweepstakes_db recreation + LMS DB recreation (if not done yet).
 
 ## Completed
+
+### Sweepstakes Migration ✅ (2026-02-15) — awaiting Pi deployment
+
+Migrated sweepstakes from pub-games-v2 to v3. Same split pattern as LMS.
+
+**Player app (port 4031):**
+- Rewritten with activity-hub-common (no Redis, no custom auth)
+- DB UNIQUE constraints replace Redis locking:
+  - `UNIQUE(competition_id, entry_id)` — entry can only be drawn once
+  - `UNIQUE(user_id, competition_id)` — one draw per user per competition
+- Frontend: .ah-* CSS, lobby button, impersonation banner, inline reveal after picking
+- Views: Competitions tab (pick box / view results) + My Picks tab
+
+**Game Admin additions:**
+- `sweepstakesDB` connection to `sweepstakes_db`
+- New `/api/sweepstakes/*` routes: CRUD competitions, CSV entry upload, position, draws
+- Module switcher in frontend: [Last Man Standing] [Sweepstakes]
+- Sweepstakes section: Competitions tab + Entries tab (with Draws sub-view)
+
+**Schema changes (sweepstakes_db):**
+- Removed: `selection_mode`, `blind_box_interval`, `start_date`, `end_date` from competitions
+- Removed: `stage`, `eliminated_date` from entries
+- Added: UNIQUE constraints on draws (replaces Redis)
+- Entry status simplified to `available/taken`
+
+**App registry:** `scripts/migrate_add_sweepstakes_app.sql`
+
+**⚠️ Pi deployment — sweepstakes_db recreation required:**
+```bash
+cd ~/pub-games-v3 && git pull
+go mod tidy  # run in games/sweepstakes/backend/
+psql -U activityhub -h localhost -p 5555 -d postgres -c "DROP DATABASE IF EXISTS sweepstakes_db;"
+psql -U activityhub -h localhost -p 5555 -d postgres -c "CREATE DATABASE sweepstakes_db;"
+psql -U activityhub -h localhost -p 5555 -d sweepstakes_db -f games/sweepstakes/database/schema.sql
+
+# Build frontends
+cd ~/pub-games-v3/games/sweepstakes/frontend && npm run build && cp -r build/* ../backend/static/
+cd ~/pub-games-v3/games/game-admin/frontend && npm run build && cp -r build/* ../backend/static/
+
+# Register sweepstakes in app registry
+psql -U activityhub -h localhost -p 5555 -d activity_hub -f scripts/migrate_add_sweepstakes_app.sql
+
+~/pub-games-v3/scripts/stop_core.sh
+~/pub-games-v3/scripts/start_core.sh
+```
+
+Note: `go mod tidy` must be run in `games/sweepstakes/backend/` on Pi before first build
+(go.sum was cleared since Redis was removed and activity-hub-common was added).
+
+---
 
 ### LMS Bug Fixes ✅ (2026-02-15) — awaiting Pi deployment
 
