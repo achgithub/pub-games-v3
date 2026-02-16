@@ -1,13 +1,43 @@
 # Activity Hub Migration - Session State
 
-**Last Updated**: 2026-02-15
-**Session ID**: Phase 0, A, B, C (Part 1), Identity Shell Improvements & LMS Migration Complete + Shared CSS + Fixture File Architecture + Date-Range Rounds + Bug Fixes + Sweepstakes Migration
-**Current Phase**: Sweepstakes migration committed — awaiting Pi deployment
-**Status**: Committed (see below), not yet deployed. Pi needs sweepstakes_db recreation + LMS DB recreation (if not done yet).
+**Last Updated**: 2026-02-16
+**Session ID**: Phase 0, A, B, C (Part 1), Identity Shell Improvements & LMS Migration Complete + Shared CSS + Fixture File Architecture + Date-Range Rounds + Bug Fixes + Sweepstakes Migration + Shared Library Migrations
+**Current Phase**: tic-tac-toe + dots backend migrated to activity-hub-common
+**Status**: Sweepstakes deployed ✅. Tic-tac-toe + dots committed, awaiting Pi build/test.
+
+## ⚠️ Next Session — Start Here
+1. Push + pull tic-tac-toe and dots commits on Pi
+2. Build and test tic-tac-toe: `cd games/tic-tac-toe/backend && go mod tidy && go run *.go`
+3. Build and test dots: `cd games/dots/backend && go mod tidy && go run *.go`
+4. End-to-end test tic-tac-toe (create game, make moves, SSE stream, forfeit)
+5. Fix impersonation exit bug in identity-shell (apps missing after ending session)
 
 ## Completed
 
-### Sweepstakes Migration ✅ (2026-02-15) — awaiting Pi deployment
+### Tic-Tac-Toe + Dots: Shared Library Migration ✅ (2026-02-16) — awaiting Pi build/test
+
+Migrated both game backends to `activity-hub-common`. No functional changes — auth/db/config patterns unified.
+
+**Changes (both apps):**
+- Deleted inline `auth.go` → replaced with `authlib.Middleware` / `authlib.SSEMiddleware`
+- Removed inline `InitDatabase` / `InitIdentityDatabase` → shared `database.InitDatabase` / `database.InitIdentityDatabase`
+- Identity DB now connects to `activity_hub` (was `pubgames`), credentials `activityhub`/`pubgames`
+- `getUserFromContext(r)` → `authlib.GetUserFromContext(r.Context())`
+- `go.mod` updated: new module names, `activity-hub-common` dependency, local `replace` directive
+- `go.sum` cleared for `go mod tidy` on Pi
+- Redis kept inline (game-specific, not shared)
+- dots: `createTables` kept inline, called from `main` after DB init
+
+**Pi build commands:**
+```bash
+cd ~/pub-games-v3 && git pull
+cd games/tic-tac-toe/backend && go mod tidy && go run *.go
+cd games/dots/backend && go mod tidy && go run *.go
+```
+
+---
+
+### Sweepstakes Migration ✅ (2026-02-15) — deployed ✅
 
 Migrated sweepstakes from pub-games-v2 to v3. Same split pattern as LMS.
 
