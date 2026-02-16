@@ -6,18 +6,17 @@ import (
 	"net/http"
 	"os"
 
+	authlib "github.com/achgithub/activity-hub-common/auth"
+	"github.com/achgithub/activity-hub-common/config"
+	"github.com/achgithub/activity-hub-common/database"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
 )
 
 var db *sql.DB
-var identityDB *sql.DB
 
-const (
-	APP_NAME     = "Dots"
-	BACKEND_PORT = "4011"
-)
+const APP_NAME = "Dots"
 
 func main() {
 	log.Printf("🔵 %s Backend Starting", APP_NAME)
@@ -28,38 +27,47 @@ func main() {
 	}
 	log.Println("✅ Connected to Redis")
 
-	// Initialize local PostgreSQL
+	// Initialize app database
 	var err error
-	db, err = InitDatabase()
+	db, err = database.InitDatabase("dots")
 	if err != nil {
-		log.Fatal("Failed to connect to local PostgreSQL:", err)
+		log.Fatal("Failed to connect to app database:", err)
 	}
 	defer db.Close()
-	log.Println("✅ Connected to local PostgreSQL")
+
+	if err := createTables(db); err != nil {
+		log.Fatal("Failed to create tables:", err)
+	}
 
 	// Initialize identity database (for authentication)
-	identityDB, err = InitIdentityDatabase()
+	identityDB, err := database.InitIdentityDatabase()
 	if err != nil {
 		log.Fatal("Failed to connect to identity database:", err)
 	}
 	defer identityDB.Close()
-	log.Println("✅ Connected to identity database")
+
+	// Build per-route middleware
+	authMiddleware := authlib.Middleware(identityDB)
+	sseMiddleware := authlib.SSEMiddleware(identityDB)
 
 	// Setup router
 	r := mux.NewRouter()
 
-	// Public endpoints (no authentication required)
+	// Public endpoints
 	r.HandleFunc("/api/health", handleHealth).Methods("GET")
 	r.HandleFunc("/api/config", handleGetConfig).Methods("GET")
 
+	// SSE endpoint uses query-param auth (EventSource limitation)
+	r.Handle("/api/game/{gameId}/stream",
+		sseMiddleware(http.HandlerFunc(handleGameStream))).Methods("GET")
+
 	// Authenticated endpoints
-	r.HandleFunc("/api/game/{gameId}/stream", SSEAuthMiddleware(handleGameStream)).Methods("GET")
-	r.HandleFunc("/api/game/{gameId}", AuthMiddleware(handleGetGame)).Methods("GET")
-	r.HandleFunc("/api/game", AuthMiddleware(handleCreateGame)).Methods("POST")
-	r.HandleFunc("/api/move", AuthMiddleware(handleMakeMove)).Methods("POST")
-	r.HandleFunc("/api/game/{gameId}/forfeit", AuthMiddleware(handleForfeitHTTP)).Methods("POST")
-	r.HandleFunc("/api/game/{gameId}/claim-win", AuthMiddleware(handleClaimWinHTTP)).Methods("POST")
-	r.HandleFunc("/api/stats/{userId}", AuthMiddleware(handleGetStats)).Methods("GET")
+	r.Handle("/api/game/{gameId}", authMiddleware(http.HandlerFunc(handleGetGame))).Methods("GET")
+	r.Handle("/api/game", authMiddleware(http.HandlerFunc(handleCreateGame))).Methods("POST")
+	r.Handle("/api/move", authMiddleware(http.HandlerFunc(handleMakeMove))).Methods("POST")
+	r.Handle("/api/game/{gameId}/forfeit", authMiddleware(http.HandlerFunc(handleForfeitHTTP))).Methods("POST")
+	r.Handle("/api/game/{gameId}/claim-win", authMiddleware(http.HandlerFunc(handleClaimWinHTTP))).Methods("POST")
+	r.Handle("/api/stats/{userId}", authMiddleware(http.HandlerFunc(handleGetStats))).Methods("GET")
 
 	// Serve static frontend files (React build output)
 	staticDir := getEnv("STATIC_DIR", "./static")
@@ -73,19 +81,16 @@ func main() {
 		handlers.AllowCredentials(),
 	)
 
-	// Start server
-	port := getEnv("BACKEND_PORT", BACKEND_PORT)
+	port := config.GetEnv("PORT", "4011")
 	log.Printf("🚀 %s backend listening on :%s", APP_NAME, port)
 	log.Fatal(http.ListenAndServe(":"+port, corsHandler(r)))
 }
 
-// handleHealth - Health check endpoint
 func handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte(`{"status":"ok","service":"dots"}`))
 }
 
-// getEnv gets environment variable with fallback
 func getEnv(key, fallback string) string {
 	if value := os.Getenv(key); value != "" {
 		return value

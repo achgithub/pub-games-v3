@@ -2,50 +2,13 @@ package main
 
 import (
 	"database/sql"
-	"fmt"
-	"os"
 	"time"
 
 	_ "github.com/lib/pq"
 )
 
-// InitDatabase initializes the PostgreSQL connection
-func InitDatabase() (*sql.DB, error) {
-	host := getEnvDB("DB_HOST", "127.0.0.1")
-	port := getEnvDB("DB_PORT", "5555")
-	user := getEnvDB("DB_USER", "pubgames")
-	password := getEnvDB("DB_PASS", "pubgames")
-	dbname := getEnvDB("DB_NAME", "dots_db")
-
-	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		host, port, user, password, dbname)
-
-	db, err := sql.Open("postgres", connStr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open database: %w", err)
-	}
-
-	if err := db.Ping(); err != nil {
-		return nil, fmt.Errorf("failed to ping database: %w", err)
-	}
-
-	if err := createTables(db); err != nil {
-		return nil, fmt.Errorf("failed to create tables: %w", err)
-	}
-
-	return db, nil
-}
-
-func getEnvDB(key, fallback string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return fallback
-}
-
 func createTables(db *sql.DB) error {
 	schema := `
-	-- Games history table
 	CREATE TABLE IF NOT EXISTS games (
 		id VARCHAR(100) PRIMARY KEY,
 		challenge_id VARCHAR(100),
@@ -62,7 +25,6 @@ func createTables(db *sql.DB) error {
 		completed_at TIMESTAMP
 	);
 
-	-- Player stats table
 	CREATE TABLE IF NOT EXISTS player_stats (
 		player_id VARCHAR(255) PRIMARY KEY,
 		player_name VARCHAR(255),
@@ -74,12 +36,10 @@ func createTables(db *sql.DB) error {
 		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);
 
-	-- Indexes
 	CREATE INDEX IF NOT EXISTS idx_games_player1 ON games(player1_id);
 	CREATE INDEX IF NOT EXISTS idx_games_player2 ON games(player2_id);
 	CREATE INDEX IF NOT EXISTS idx_games_completed ON games(completed_at DESC);
 	`
-
 	_, err := db.Exec(schema)
 	return err
 }
@@ -176,27 +136,5 @@ func GetPlayerStats(playerID string) (map[string]interface{}, error) {
 		"totalBoxes":  totalBoxes,
 		"gamesPlayed": gamesPlayed,
 	}, nil
-}
 
-// InitIdentityDatabase connects to the identity database for authentication
-func InitIdentityDatabase() (*sql.DB, error) {
-	host := getEnvDB("DB_HOST", "127.0.0.1")
-	port := getEnvDB("DB_PORT", "5555")
-	user := getEnvDB("DB_USER", "pubgames")
-	password := getEnvDB("DB_PASS", "pubgames")
-	dbname := "pubgames" // Identity database
-
-	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		host, port, user, password, dbname)
-
-	db, err := sql.Open("postgres", connStr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open identity database: %w", err)
-	}
-
-	if err := db.Ping(); err != nil {
-		return nil, fmt.Errorf("failed to connect to identity database: %w", err)
-	}
-
-	return db, nil
 }

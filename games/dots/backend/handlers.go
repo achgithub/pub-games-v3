@@ -9,6 +9,7 @@ import (
 	"os"
 	"time"
 
+	authlib "github.com/achgithub/activity-hub-common/auth"
 	"github.com/gorilla/mux"
 )
 
@@ -121,9 +122,8 @@ func handleGetGame(w http.ResponseWriter, r *http.Request) {
 
 // handleCreateGame creates a new game (called by identity shell)
 func handleCreateGame(w http.ResponseWriter, r *http.Request) {
-	// Get authenticated user from context
-	user := getUserFromContext(r)
-	if user == nil {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
 		sendError(w, "Unauthorized", 401)
 		return
 	}
@@ -227,9 +227,8 @@ func handleCreateGame(w http.ResponseWriter, r *http.Request) {
 
 // handleMakeMove processes a move
 func handleMakeMove(w http.ResponseWriter, r *http.Request) {
-	// Get authenticated user from context
-	user := getUserFromContext(r)
-	if user == nil {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
 		sendError(w, "Unauthorized", 401)
 		return
 	}
@@ -354,9 +353,8 @@ func handleGetStats(w http.ResponseWriter, r *http.Request) {
 
 // handleGameStream handles SSE connections for real-time updates
 func handleGameStream(w http.ResponseWriter, r *http.Request) {
-	// Get authenticated user from context
-	user := getUserFromContext(r)
-	if user == nil {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -478,9 +476,8 @@ func handleGameStream(w http.ResponseWriter, r *http.Request) {
 
 // handleForfeitHTTP handles forfeit requests
 func handleForfeitHTTP(w http.ResponseWriter, r *http.Request) {
-	// Get authenticated user from context
-	user := getUserFromContext(r)
-	if user == nil {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
 		sendError(w, "Unauthorized", 401)
 		return
 	}
@@ -552,9 +549,8 @@ func handleForfeitHTTP(w http.ResponseWriter, r *http.Request) {
 
 // handleClaimWinHTTP handles claim-win requests when opponent disconnects
 func handleClaimWinHTTP(w http.ResponseWriter, r *http.Request) {
-	// Get authenticated user from context
-	user := getUserFromContext(r)
-	if user == nil {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
 		sendError(w, "Unauthorized", 401)
 		return
 	}
