@@ -1,4 +1,4 @@
-module github.com/achgithub/activity-hub/game-admin
+module github.com/achgithub/activity-hub/quiz-display
 
 go 1.25
 

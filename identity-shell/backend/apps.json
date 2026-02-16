@@ -83,6 +83,49 @@
       "category": "utility",
       "url": "http://{host}:5040",
       "backendPort": 5040
+    },
+    {
+      "id": "quiz-player",
+      "name": "Quiz Player",
+      "icon": "🧠",
+      "type": "iframe",
+      "description": "Join and play live pub quizzes",
+      "category": "game",
+      "url": "http://{host}:4041",
+      "backendPort": 4041,
+      "realtime": "sse"
+    },
+    {
+      "id": "quiz-master",
+      "name": "Quiz Master",
+      "icon": "🎤",
+      "type": "iframe",
+      "description": "Run and control a live quiz session",
+      "category": "utility",
+      "url": "http://{host}:5080",
+      "backendPort": 5080,
+      "realtime": "sse"
+    },
+    {
+      "id": "quiz-display",
+      "name": "Quiz Display",
+      "icon": "📺",
+      "type": "iframe",
+      "description": "Full-screen TV display for quiz sessions",
+      "category": "utility",
+      "url": "http://{host}:5081",
+      "backendPort": 5081,
+      "realtime": "sse"
+    },
+    {
+      "id": "mobile-test",
+      "name": "Mobile Test",
+      "icon": "📱",
+      "type": "iframe",
+      "description": "Verify media (text, image, audio) works on your device",
+      "category": "utility",
+      "url": "http://{host}:4061",
+      "backendPort": 4061
     }
   ]
 }

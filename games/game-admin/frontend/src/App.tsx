@@ -77,10 +77,11 @@ function useApi(token: string) {
 
 // --- Main App ---
 
-type Module = 'lms' | 'sweepstakes';
+type Module = 'lms' | 'sweepstakes' | 'quiz';
 type LMSTab = 'fixtures' | 'games' | 'rounds' | 'results' | 'predictions';
 type SweepTab = 'sw-competitions' | 'sw-entries';
-type Tab = LMSTab | SweepTab;
+type QuizTab = 'quiz-media' | 'quiz-questions' | 'quiz-packs';
+type Tab = LMSTab | SweepTab | QuizTab;
 
 function App() {
   const { userId, token } = useUrlParams();
@@ -136,12 +137,12 @@ function App() {
 
       {/* Module switcher */}
       <div style={{ display: 'flex', gap: 8, padding: '8px 0', borderBottom: '2px solid #e0e0e0', marginBottom: 8 }}>
-        {(['lms', 'sweepstakes'] as Module[]).map(mod => (
+        {(['lms', 'sweepstakes', 'quiz'] as Module[]).map(mod => (
           <button
             key={mod}
             onClick={() => {
               setActiveModule(mod);
-              setActiveTab(mod === 'lms' ? 'fixtures' : 'sw-competitions');
+              setActiveTab(mod === 'lms' ? 'fixtures' : mod === 'sweepstakes' ? 'sw-competitions' : 'quiz-media');
             }}
             style={{
               padding: '6px 18px', borderRadius: 6, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13,
@@ -149,7 +150,7 @@ function App() {
               color: activeModule === mod ? 'white' : '#333',
             }}
           >
-            {mod === 'lms' ? 'Last Man Standing' : 'Sweepstakes'}
+            {mod === 'lms' ? 'Last Man Standing' : mod === 'sweepstakes' ? 'Sweepstakes' : 'Quiz'}
           </button>
         ))}
       </div>
@@ -211,6 +212,27 @@ function App() {
           {activeTab === 'sw-entries' && (
             <SweepEntriesTab api={api} isReadOnly={isReadOnly} />
           )}
+        </>
+      )}
+
+      {/* Quiz module */}
+      {activeModule === 'quiz' && (
+        <>
+          <div className="ah-tabs">
+            {([['quiz-media', 'Media'], ['quiz-questions', 'Questions'], ['quiz-packs', 'Packs']] as [QuizTab, string][]).map(([tab, label]) => (
+              <button
+                key={tab}
+                className={`ah-tab${activeTab === tab ? ' active' : ''}`}
+                onClick={() => setActiveTab(tab)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {activeTab === 'quiz-media' && <QuizMediaTab api={api} isReadOnly={isReadOnly} />}
+          {activeTab === 'quiz-questions' && <QuizQuestionsTab api={api} isReadOnly={isReadOnly} />}
+          {activeTab === 'quiz-packs' && <QuizPacksTab api={api} isReadOnly={isReadOnly} />}
         </>
       )}
     </div>
@@ -1361,6 +1383,554 @@ function Toast({ message }: { message: string | null }) {
       maxWidth: 320,
     }}>
       {message}
+    </div>
+  );
+}
+
+// --- Quiz types ---
+
+interface MediaFile {
+  id: number;
+  filename: string;
+  originalName: string;
+  type: 'image' | 'audio';
+  filePath: string;
+  sizeBytes: number;
+  createdAt: string;
+}
+
+interface QuizQuestion {
+  id: number;
+  text: string;
+  answer: string;
+  category: string;
+  difficulty: string;
+  type: string;
+  imageId: number | null;
+  audioId: number | null;
+  isTestContent: boolean;
+  createdAt: string;
+  imagePath: string;
+  audioPath: string;
+}
+
+interface QuizPack {
+  id: number;
+  name: string;
+  description: string;
+  createdBy: string;
+  createdAt: string;
+  roundCount: number;
+}
+
+interface QuizRound {
+  id: number;
+  roundNumber: number;
+  name: string;
+  type: string;
+  timeLimitSeconds: number;
+  questionCount: number;
+  questions: Array<{position: number; id: number; text: string; answer: string; type: string; imagePath: string; audioPath: string}>;
+}
+
+// --- QuizMediaTab ---
+
+function QuizMediaTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isReadOnly: boolean }) {
+  const [files, setFiles] = useState<MediaFile[]>([]);
+  const [filter, setFilter] = useState<'all' | 'image' | 'audio'>('all');
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const load = useCallback(() => {
+    const q = filter !== 'all' ? `?type=${filter}` : '';
+    api(`/api/quiz/media${q}`).then(d => setFiles(d.files || [])).catch(err => setError(err.message));
+  }, [api, filter]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const upload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const data = await api('/api/quiz/media/upload', { method: 'POST', body: formData });
+      setSuccess(`Uploaded: ${data.originalName}`);
+      load();
+      setTimeout(() => setSuccess(null), 4000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload failed');
+    }
+    e.target.value = '';
+  };
+
+  const deleteFile = async (id: number, name: string) => {
+    if (!window.confirm(`Delete "${name}"? Questions using this file will lose their media.`)) return;
+    try {
+      await api(`/api/quiz/media/${id}`, { method: 'DELETE' });
+      setSuccess('File deleted');
+      load();
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Delete failed');
+    }
+  };
+
+  return (
+    <div>
+      {error && <div className="ah-banner ah-banner--error" onClick={() => setError(null)}>{error}</div>}
+      <Toast message={success} />
+
+      {!isReadOnly && (
+        <div className="ah-card">
+          <h3 className="ah-section-title">Upload Media</h3>
+          <p className="ah-meta">Images: JPG, PNG, GIF, WebP (max 10MB). Audio: MP3, OGG, WAV, M4A (max 20MB).</p>
+          <input type="file" accept="image/*,audio/*,.mp3,.ogg,.wav,.m4a" onChange={upload} style={{ marginTop: 8 }} />
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12, marginTop: 8 }}>
+        {(['all', 'image', 'audio'] as const).map(f => (
+          <button
+            key={f}
+            className={`ah-tab${filter === f ? ' active' : ''}`}
+            onClick={() => setFilter(f)}
+          >
+            {f.charAt(0).toUpperCase() + f.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {files.length === 0 ? (
+        <div className="ah-card"><p style={{ color: '#666' }}>No media files yet.</p></div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
+          {files.map(f => (
+            <div key={f.id} className="ah-card" style={{ padding: 10 }}>
+              {f.type === 'image' ? (
+                <img
+                  src={f.filePath}
+                  alt={f.originalName}
+                  style={{ width: '100%', height: 120, objectFit: 'cover', borderRadius: 4, marginBottom: 8 }}
+                  onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
+              ) : (
+                <div style={{ height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  backgroundColor: '#f5f5f5', borderRadius: 4, marginBottom: 8, fontSize: 32 }}>
+                  🎵
+                  <audio controls src={f.filePath} style={{ width: '90%', marginTop: 4 }} />
+                </div>
+              )}
+              <p style={{ fontSize: 12, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={f.originalName}>
+                {f.originalName}
+              </p>
+              <p className="ah-meta">{(f.sizeBytes / 1024).toFixed(0)} KB</p>
+              {!isReadOnly && (
+                <button className="ah-btn-danger" style={{ marginTop: 6, width: '100%', padding: '4px 8px', fontSize: 12 }}
+                  onClick={() => deleteFile(f.id, f.originalName)}>
+                  Delete
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// --- QuizQuestionsTab ---
+
+function QuizQuestionsTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isReadOnly: boolean }) {
+  const [questions, setQuestions] = useState<QuizQuestion[]>([]);
+  const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
+  const [filterType, setFilterType] = useState('');
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [form, setForm] = useState({ text: '', answer: '', category: '', difficulty: 'medium', type: 'text', imageId: '', audioId: '', isTestContent: false });
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const load = useCallback(() => {
+    const q = filterType ? `?type=${filterType}` : '';
+    api(`/api/quiz/questions${q}`).then(d => setQuestions(d.questions || [])).catch(err => setError(err.message));
+    api('/api/quiz/media').then(d => setMediaFiles(d.files || [])).catch(() => {});
+  }, [api, filterType]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const resetForm = () => {
+    setForm({ text: '', answer: '', category: '', difficulty: 'medium', type: 'text', imageId: '', audioId: '', isTestContent: false });
+    setEditingId(null);
+  };
+
+  const startEdit = (q: QuizQuestion) => {
+    setForm({
+      text: q.text, answer: q.answer, category: q.category, difficulty: q.difficulty,
+      type: q.type, imageId: q.imageId ? String(q.imageId) : '', audioId: q.audioId ? String(q.audioId) : '',
+      isTestContent: q.isTestContent,
+    });
+    setEditingId(q.id);
+  };
+
+  const save = async () => {
+    if (!form.text.trim() || !form.answer.trim()) { setError('Text and answer required'); return; }
+    const body = {
+      text: form.text.trim(), answer: form.answer.trim(), category: form.category.trim(),
+      difficulty: form.difficulty, type: form.type,
+      imageId: form.imageId ? parseInt(form.imageId) : null,
+      audioId: form.audioId ? parseInt(form.audioId) : null,
+      isTestContent: form.isTestContent,
+    };
+    try {
+      if (editingId) {
+        await api(`/api/quiz/questions/${editingId}`, { method: 'PUT', body: JSON.stringify(body) });
+        setSuccess('Question updated');
+      } else {
+        await api('/api/quiz/questions', { method: 'POST', body: JSON.stringify(body) });
+        setSuccess('Question created');
+      }
+      resetForm();
+      load();
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed');
+    }
+  };
+
+  const deleteQ = async (id: number) => {
+    if (!window.confirm('Delete this question?')) return;
+    try {
+      await api(`/api/quiz/questions/${id}`, { method: 'DELETE' });
+      setSuccess('Question deleted');
+      load();
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed');
+    }
+  };
+
+  const images = mediaFiles.filter(f => f.type === 'image');
+  const audios = mediaFiles.filter(f => f.type === 'audio');
+
+  return (
+    <div>
+      {error && <div className="ah-banner ah-banner--error" onClick={() => setError(null)}>{error}</div>}
+      <Toast message={success} />
+
+      {!isReadOnly && (
+        <div className="ah-card">
+          <h3 className="ah-section-title">{editingId ? 'Edit Question' : 'Add Question'}</h3>
+          <textarea
+            className="ah-input"
+            style={{ width: '100%', height: 60, resize: 'vertical' }}
+            placeholder="Question text"
+            value={form.text}
+            onChange={e => setForm(f => ({ ...f, text: e.target.value }))}
+          />
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+            <input className="ah-input" style={{ flex: 2 }} placeholder="Answer" value={form.answer} onChange={e => setForm(f => ({ ...f, answer: e.target.value }))} />
+            <input className="ah-input" style={{ flex: 1 }} placeholder="Category" value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} />
+            <select className="ah-select" value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
+              <option value="text">Text</option>
+              <option value="picture">Picture</option>
+              <option value="music">Music</option>
+            </select>
+            <select className="ah-select" value={form.difficulty} onChange={e => setForm(f => ({ ...f, difficulty: e.target.value }))}>
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="hard">Hard</option>
+            </select>
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+            {(form.type === 'picture' || form.type === 'text') && (
+              <div>
+                <label className="ah-label">Image: </label>
+                <select className="ah-select" value={form.imageId} onChange={e => setForm(f => ({ ...f, imageId: e.target.value }))}>
+                  <option value="">— none —</option>
+                  {images.map(img => <option key={img.id} value={img.id}>{img.originalName}</option>)}
+                </select>
+              </div>
+            )}
+            {(form.type === 'music' || form.type === 'text') && (
+              <div>
+                <label className="ah-label">Audio: </label>
+                <select className="ah-select" value={form.audioId} onChange={e => setForm(f => ({ ...f, audioId: e.target.value }))}>
+                  <option value="">— none —</option>
+                  {audios.map(aud => <option key={aud.id} value={aud.id}>{aud.originalName}</option>)}
+                </select>
+              </div>
+            )}
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}>
+              <input type="checkbox" checked={form.isTestContent} onChange={e => setForm(f => ({ ...f, isTestContent: e.target.checked }))} />
+              Test content
+            </label>
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+            <button className="ah-btn-primary" onClick={save}>{editingId ? 'Update' : 'Add Question'}</button>
+            {editingId && <button className="ah-btn-outline" onClick={resetForm}>Cancel</button>}
+          </div>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+        {['', 'text', 'picture', 'music'].map(t => (
+          <button key={t} className={`ah-tab${filterType === t ? ' active' : ''}`} onClick={() => setFilterType(t)}>
+            {t === '' ? 'All' : t.charAt(0).toUpperCase() + t.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {questions.length === 0 ? (
+        <div className="ah-card"><p style={{ color: '#666' }}>No questions yet.</p></div>
+      ) : (
+        questions.map(q => (
+          <div key={q.id} className="ah-card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontWeight: 500, fontSize: 14 }}>{q.text}</p>
+                <p className="ah-meta">Answer: <strong>{q.answer}</strong> · {q.type} · {q.difficulty} {q.category && `· ${q.category}`}</p>
+                {q.imagePath && <p className="ah-meta" style={{ color: '#1565C0' }}>Image attached</p>}
+                {q.audioPath && <p className="ah-meta" style={{ color: '#E65100' }}>Audio attached</p>}
+                {q.isTestContent && <span style={{ ...s.currentBadge, backgroundColor: '#E8F5E9', color: '#2E7D32' }}>TEST</span>}
+              </div>
+              {!isReadOnly && (
+                <div style={{ display: 'flex', gap: 6, flexShrink: 0, marginLeft: 12 }}>
+                  <button className="ah-btn-outline" onClick={() => startEdit(q)}>Edit</button>
+                  <button className="ah-btn-danger" onClick={() => deleteQ(q.id)}>Delete</button>
+                </div>
+              )}
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+// --- QuizPacksTab ---
+
+function QuizPacksTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isReadOnly: boolean }) {
+  const [packs, setPacks] = useState<QuizPack[]>([]);
+  const [questions, setQuestions] = useState<QuizQuestion[]>([]);
+  const [selectedPackId, setSelectedPackId] = useState<number | null>(null);
+  const [rounds, setRounds] = useState<QuizRound[]>([]);
+  const [newPackName, setNewPackName] = useState('');
+  const [newPackDesc, setNewPackDesc] = useState('');
+  const [newRoundName, setNewRoundName] = useState('');
+  const [newRoundType, setNewRoundType] = useState('text');
+  const [newRoundTimeLimit, setNewRoundTimeLimit] = useState('');
+  const [editRoundId, setEditRoundId] = useState<number | null>(null);
+  const [roundQuestionIds, setRoundQuestionIds] = useState<number[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const loadPacks = useCallback(() => {
+    api('/api/quiz/packs').then(d => setPacks(d.packs || [])).catch(err => setError(err.message));
+    api('/api/quiz/questions').then(d => setQuestions(d.questions || [])).catch(() => {});
+  }, [api]);
+
+  useEffect(() => { loadPacks(); }, [loadPacks]);
+
+  const loadRounds = useCallback((packId: number) => {
+    api(`/api/quiz/packs/${packId}/rounds`).then(d => setRounds(d.rounds || [])).catch(err => setError(err.message));
+  }, [api]);
+
+  useEffect(() => { if (selectedPackId) loadRounds(selectedPackId); }, [selectedPackId, loadRounds]);
+
+  const createPack = async () => {
+    if (!newPackName.trim()) return;
+    try {
+      await api('/api/quiz/packs', { method: 'POST', body: JSON.stringify({ name: newPackName.trim(), description: newPackDesc.trim() }) });
+      setNewPackName(''); setNewPackDesc('');
+      setSuccess('Pack created');
+      loadPacks();
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed');
+    }
+  };
+
+  const deletePack = async (id: number, name: string) => {
+    if (!window.confirm(`Delete pack "${name}" and all its rounds?`)) return;
+    try {
+      await api(`/api/quiz/packs/${id}`, { method: 'DELETE' });
+      if (selectedPackId === id) { setSelectedPackId(null); setRounds([]); }
+      setSuccess('Pack deleted');
+      loadPacks();
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed');
+    }
+  };
+
+  const createRound = async () => {
+    if (!selectedPackId || !newRoundName.trim()) return;
+    const nextNum = rounds.length > 0 ? Math.max(...rounds.map(r => r.roundNumber)) + 1 : 1;
+    const body: Record<string, unknown> = { roundNumber: nextNum, name: newRoundName.trim(), type: newRoundType };
+    if (newRoundTimeLimit) body.timeLimitSeconds = parseInt(newRoundTimeLimit);
+    try {
+      await api(`/api/quiz/packs/${selectedPackId}/rounds`, { method: 'POST', body: JSON.stringify(body) });
+      setNewRoundName(''); setNewRoundTimeLimit('');
+      setSuccess('Round created');
+      loadRounds(selectedPackId);
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed');
+    }
+  };
+
+  const deleteRound = async (roundId: number) => {
+    if (!window.confirm('Delete this round?')) return;
+    try {
+      await api(`/api/quiz/packs/${selectedPackId}/rounds/${roundId}`, { method: 'DELETE' });
+      setSuccess('Round deleted');
+      if (selectedPackId) loadRounds(selectedPackId);
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed');
+    }
+  };
+
+  const openRoundEdit = (round: QuizRound) => {
+    setEditRoundId(round.id);
+    setRoundQuestionIds(round.questions.map(q => q.id));
+  };
+
+  const saveRoundQuestions = async () => {
+    if (!editRoundId || !selectedPackId) return;
+    try {
+      await api(`/api/quiz/packs/${selectedPackId}/rounds/${editRoundId}/questions`, {
+        method: 'PUT', body: JSON.stringify({ questionIds: roundQuestionIds }),
+      });
+      setSuccess('Round questions saved');
+      setEditRoundId(null);
+      loadRounds(selectedPackId);
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed');
+    }
+  };
+
+  const toggleQuestion = (qid: number) => {
+    setRoundQuestionIds(prev =>
+      prev.includes(qid) ? prev.filter(id => id !== qid) : [...prev, qid]
+    );
+  };
+
+  return (
+    <div>
+      {error && <div className="ah-banner ah-banner--error" onClick={() => setError(null)}>{error}</div>}
+      <Toast message={success} />
+
+      {!isReadOnly && (
+        <div className="ah-card">
+          <h3 className="ah-section-title">Create Pack</h3>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input className="ah-input" style={{ flex: 2 }} placeholder="Pack name" value={newPackName} onChange={e => setNewPackName(e.target.value)} />
+            <input className="ah-input" style={{ flex: 3 }} placeholder="Description (optional)" value={newPackDesc} onChange={e => setNewPackDesc(e.target.value)} />
+            <button className="ah-btn-primary" onClick={createPack} disabled={!newPackName.trim()}>Create</button>
+          </div>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+        {/* Pack list */}
+        <div style={{ flex: '1 1 220px' }}>
+          <h3 className="ah-section-title">Packs</h3>
+          {packs.length === 0 ? (
+            <div className="ah-card"><p style={{ color: '#666' }}>No packs yet.</p></div>
+          ) : (
+            packs.map(p => (
+              <div key={p.id} className="ah-card"
+                style={{ borderLeft: selectedPackId === p.id ? '4px solid #1565C0' : undefined, cursor: 'pointer' }}
+                onClick={() => setSelectedPackId(p.id)}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <strong>{p.name}</strong>
+                    <p className="ah-meta">{p.roundCount} round{p.roundCount !== 1 ? 's' : ''}</p>
+                    {p.description && <p className="ah-meta">{p.description}</p>}
+                  </div>
+                  {!isReadOnly && (
+                    <button className="ah-btn-danger" style={{ fontSize: 11, padding: '3px 8px' }}
+                      onClick={e => { e.stopPropagation(); deletePack(p.id, p.name); }}>
+                      Delete
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Rounds for selected pack */}
+        {selectedPackId && (
+          <div style={{ flex: '2 1 340px' }}>
+            <h3 className="ah-section-title">Rounds in {packs.find(p => p.id === selectedPackId)?.name}</h3>
+
+            {!isReadOnly && (
+              <div className="ah-card" style={{ marginBottom: 12 }}>
+                <h4 style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Add Round</h4>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <input className="ah-input" style={{ flex: 2 }} placeholder="Round name" value={newRoundName} onChange={e => setNewRoundName(e.target.value)} />
+                  <select className="ah-select" value={newRoundType} onChange={e => setNewRoundType(e.target.value)}>
+                    <option value="text">Text</option>
+                    <option value="picture">Picture</option>
+                    <option value="music">Music</option>
+                  </select>
+                  <input className="ah-input" style={{ width: 90 }} placeholder="Time (s)" type="number" value={newRoundTimeLimit} onChange={e => setNewRoundTimeLimit(e.target.value)} />
+                  <button className="ah-btn-primary" onClick={createRound} disabled={!newRoundName.trim()}>Add</button>
+                </div>
+              </div>
+            )}
+
+            {rounds.length === 0 ? (
+              <div className="ah-card"><p style={{ color: '#666' }}>No rounds yet.</p></div>
+            ) : (
+              rounds.map(rd => (
+                <div key={rd.id} className="ah-card">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <strong>Round {rd.roundNumber}: {rd.name}</strong>
+                      <p className="ah-meta">{rd.type} · {rd.questionCount} questions{rd.timeLimitSeconds ? ` · ${rd.timeLimitSeconds}s` : ''}</p>
+                    </div>
+                    {!isReadOnly && (
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button className="ah-btn-outline" style={{ fontSize: 11 }} onClick={() => openRoundEdit(rd)}>
+                          {editRoundId === rd.id ? 'Editing' : 'Edit Q'}
+                        </button>
+                        <button className="ah-btn-danger" style={{ fontSize: 11 }} onClick={() => deleteRound(rd.id)}>Del</button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Inline question editor */}
+                  {editRoundId === rd.id && (
+                    <div style={{ marginTop: 12, borderTop: '1px solid #e0e0e0', paddingTop: 10 }}>
+                      <p style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Select questions (in order):</p>
+                      <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+                        {questions.map(q => (
+                          <label key={q.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '4px 0', cursor: 'pointer', fontSize: 12 }}>
+                            <input type="checkbox" checked={roundQuestionIds.includes(q.id)} onChange={() => toggleQuestion(q.id)} />
+                            <span>
+                              <strong>{q.text.length > 60 ? q.text.slice(0, 60) + '...' : q.text}</strong>
+                              <span style={{ color: '#666' }}> — {q.answer} ({q.type})</span>
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                      <p className="ah-meta" style={{ marginTop: 4 }}>{roundQuestionIds.length} selected (order = selection order)</p>
+                      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                        <button className="ah-btn-primary" onClick={saveRoundQuestions}>Save</button>
+                        <button className="ah-btn-outline" onClick={() => setEditRoundId(null)}>Cancel</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

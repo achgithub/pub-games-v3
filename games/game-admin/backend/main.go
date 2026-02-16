@@ -13,9 +13,10 @@ import (
 )
 
 var (
-	lmsDB          *sql.DB // last_man_standing_db — used by handlers
-	gameAdminDB    *sql.DB // game_admin_db — used for audit log
-	sweepstakesDB  *sql.DB // sweepstakes_db — used by sweepstakes admin handlers
+	lmsDB         *sql.DB // last_man_standing_db — used by handlers
+	gameAdminDB   *sql.DB // game_admin_db — used for audit log
+	sweepstakesDB *sql.DB // sweepstakes_db — used by sweepstakes admin handlers
+	quizDB        *sql.DB // quiz_db — used by quiz admin handlers
 )
 
 func main() {
@@ -42,6 +43,12 @@ func main() {
 		log.Fatal("Failed to connect to sweepstakes database:", err)
 	}
 	defer sweepstakesDB.Close()
+
+	quizDB, err = database.InitDatabaseByName("quiz_db")
+	if err != nil {
+		log.Fatal("Failed to connect to quiz database:", err)
+	}
+	defer quizDB.Close()
 
 	r := mux.NewRouter()
 
@@ -95,6 +102,31 @@ func main() {
 	api.HandleFunc("/sweepstakes/entries/upload", handleUploadSweepEntries).Methods("POST")
 	api.HandleFunc("/sweepstakes/entries/{id}", handleUpdateSweepEntry).Methods("PUT")
 	api.HandleFunc("/sweepstakes/entries/{id}", handleDeleteSweepEntry).Methods("DELETE")
+
+	// Quiz media management
+	api.HandleFunc("/quiz/media/upload", handleQuizMediaUpload).Methods("POST")
+	api.HandleFunc("/quiz/media", handleGetQuizMedia).Methods("GET")
+	api.HandleFunc("/quiz/media/{id}", handleDeleteQuizMedia).Methods("DELETE")
+
+	// Quiz question management
+	api.HandleFunc("/quiz/questions", handleGetQuizQuestions).Methods("GET")
+	api.HandleFunc("/quiz/questions", handleCreateQuizQuestion).Methods("POST")
+	api.HandleFunc("/quiz/questions/{id}", handleUpdateQuizQuestion).Methods("PUT")
+	api.HandleFunc("/quiz/questions/{id}", handleDeleteQuizQuestion).Methods("DELETE")
+
+	// Quiz pack management
+	api.HandleFunc("/quiz/packs", handleGetQuizPacks).Methods("GET")
+	api.HandleFunc("/quiz/packs", handleCreateQuizPack).Methods("POST")
+	api.HandleFunc("/quiz/packs/{packId}", handleDeleteQuizPack).Methods("DELETE")
+
+	// Round management within a pack
+	api.HandleFunc("/quiz/packs/{packId}/rounds", handleGetPackRounds).Methods("GET")
+	api.HandleFunc("/quiz/packs/{packId}/rounds", handleCreatePackRound).Methods("POST")
+	api.HandleFunc("/quiz/packs/{packId}/rounds/{roundId}", handleDeletePackRound).Methods("DELETE")
+	api.HandleFunc("/quiz/packs/{packId}/rounds/{roundId}/questions", handleSetRoundQuestions).Methods("PUT")
+
+	// Serve uploaded media files
+	r.PathPrefix("/uploads/").Handler(http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
 
 	// Serve React frontend
 	r.PathPrefix("/static/").Handler(http.FileServer(http.Dir("./static")))
