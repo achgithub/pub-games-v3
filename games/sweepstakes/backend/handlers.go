@@ -165,7 +165,7 @@ func handleGetBlindBoxes(w http.ResponseWriter, r *http.Request) {
 	compID := mux.Vars(r)["id"]
 
 	var existingCount int
-	appDB.QueryRow(`SELECT COUNT(*) FROM draws WHERE user_id = $1 AND competition_id = $2`, user.ID, compID).Scan(&existingCount)
+	appDB.QueryRow(`SELECT COUNT(*) FROM draws WHERE user_id = $1 AND competition_id = $2`, user.Email, compID).Scan(&existingCount)
 	if existingCount > 0 {
 		respondJSON(w, http.StatusOK, []interface{}{})
 		return
@@ -209,7 +209,7 @@ func handleChooseBlindBox(w http.ResponseWriter, r *http.Request) {
 
 	// Check if user already has an entry (inside transaction for consistency)
 	var existingCount int
-	tx.QueryRow(`SELECT COUNT(*) FROM draws WHERE user_id = $1 AND competition_id = $2`, user.ID, compID).Scan(&existingCount)
+	tx.QueryRow(`SELECT COUNT(*) FROM draws WHERE user_id = $1 AND competition_id = $2`, user.Email, compID).Scan(&existingCount)
 	if existingCount > 0 {
 		http.Error(w, "You already have an entry in this competition", http.StatusBadRequest)
 		return
@@ -239,7 +239,7 @@ func handleChooseBlindBox(w http.ResponseWriter, r *http.Request) {
 	// Insert draw — UNIQUE(user_id, competition_id) and UNIQUE(competition_id, entry_id)
 	// constraints guard against concurrent double-picks
 	if _, err := tx.Exec(`INSERT INTO draws (user_id, competition_id, entry_id) VALUES ($1, $2, $3)`,
-		user.ID, compID, selectedEntryID); err != nil {
+		user.Email, compID, selectedEntryID); err != nil {
 		http.Error(w, "Selection failed — try again", http.StatusConflict)
 		return
 	}
@@ -286,7 +286,7 @@ func handleRandomPick(w http.ResponseWriter, r *http.Request) {
 	defer tx.Rollback()
 
 	var existingCount int
-	tx.QueryRow(`SELECT COUNT(*) FROM draws WHERE user_id = $1 AND competition_id = $2`, user.ID, compID).Scan(&existingCount)
+	tx.QueryRow(`SELECT COUNT(*) FROM draws WHERE user_id = $1 AND competition_id = $2`, user.Email, compID).Scan(&existingCount)
 	if existingCount > 0 {
 		http.Error(w, "You already have an entry in this competition", http.StatusBadRequest)
 		return
@@ -304,7 +304,7 @@ func handleRandomPick(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if _, err := tx.Exec(`INSERT INTO draws (user_id, competition_id, entry_id) VALUES ($1, $2, $3)`,
-		user.ID, compID, selectedEntryID); err != nil {
+		user.Email, compID, selectedEntryID); err != nil {
 		http.Error(w, "Selection failed — try again", http.StatusConflict)
 		return
 	}
@@ -350,7 +350,7 @@ func handleGetUserDraws(w http.ResponseWriter, r *http.Request) {
 		JOIN competitions c ON d.competition_id = c.id
 		WHERE d.user_id = $1
 		ORDER BY d.drawn_at DESC
-	`, user.ID)
+	`, user.Email)
 	if err != nil {
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
