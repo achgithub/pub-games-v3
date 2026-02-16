@@ -8,30 +8,6 @@ import (
 	_ "github.com/lib/pq"
 )
 
-// InitDatabase initializes PostgreSQL connection
-func InitDatabase() (*sql.DB, error) {
-	dbHost := getEnv("DB_HOST", "127.0.0.1")
-	dbPort := getEnv("DB_PORT", "5555")
-	dbUser := getEnv("DB_USER", "pubgames")
-	dbPass := getEnv("DB_PASS", "pubgames")
-	dbName := getEnv("DB_NAME", "tictactoe_db")
-
-	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		dbHost, dbPort, dbUser, dbPass, dbName)
-
-	db, err := sql.Open("postgres", connStr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open database: %w", err)
-	}
-
-	// Test connection
-	if err := db.Ping(); err != nil {
-		return nil, fmt.Errorf("failed to ping database: %w", err)
-	}
-
-	return db, nil
-}
-
 // SaveCompletedGame saves a completed game to PostgreSQL
 func SaveCompletedGame(game *Game) error {
 	query := `
@@ -74,9 +50,6 @@ func SaveCompletedGame(game *Game) error {
 
 // SaveMove saves a move to PostgreSQL for history/replay
 func SaveMove(move *Move) error {
-	// First, get the database game ID from the Redis game ID
-	// For now, we'll skip this - moves can be saved when game completes
-	// This is optional for v1
 	return nil
 }
 
@@ -139,7 +112,6 @@ func GetPlayerStats(userID string) (*PlayerStats, error) {
 	)
 
 	if err == sql.ErrNoRows {
-		// No stats yet, return zeros
 		return &PlayerStats{
 			UserID:      userID,
 			GamesPlayed: 0,
@@ -158,34 +130,9 @@ func GetPlayerStats(userID string) (*PlayerStats, error) {
 		stats.FastestWinMove = &fw
 	}
 
-	// Calculate win rate
 	if stats.GamesPlayed > 0 {
 		stats.WinRate = float64(stats.GamesWon) / float64(stats.GamesPlayed) * 100
 	}
 
 	return &stats, nil
-}
-
-// InitIdentityDatabase connects to the identity database for authentication
-func InitIdentityDatabase() (*sql.DB, error) {
-	dbHost := getEnv("DB_HOST", "127.0.0.1")
-	dbPort := getEnv("DB_PORT", "5555")
-	dbUser := getEnv("DB_USER", "pubgames")
-	dbPass := getEnv("DB_PASS", "pubgames")
-	dbName := "pubgames" // Identity database
-
-	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		dbHost, dbPort, dbUser, dbPass, dbName)
-
-	db, err := sql.Open("postgres", connStr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open identity database: %w", err)
-	}
-
-	if err := db.Ping(); err != nil {
-		return nil, fmt.Errorf("failed to connect to identity database: %w", err)
-	}
-
-	log.Printf("✅ Connected to identity database: %s", dbName)
-	return db, nil
 }
