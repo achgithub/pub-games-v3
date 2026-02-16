@@ -5,9 +5,62 @@
 - Ports: identity-shell: 3001, tic-tac-toe: 4001, dots: 4011, sweepstakes: 4031, last-man-standing: 4021, quiz-player: 4041, spoof: 4051, mobile-test: 4061, leaderboard: 5030, season-scheduler: 5040, smoke-test: 5010, setup-admin: 5020, display-admin: 5050, display-runtime: 5051, game-admin: 5070, quiz-master: 5080, quiz-display: 5081
 - Active work: Pub Quiz system implemented (game-admin quiz module + quiz-player + quiz-master + quiz-display + mobile-test) — awaiting Pi deployment
 - Known issues: SSE presence requires manual refresh after impersonation (acceptable for debugging tool)
-- Next: Deploy quiz apps on Pi — see Pi Deployment section below
+- Next: Deploy quiz apps on Pi — see "Quiz System Pi Deployment" section below
 - Build: `cd games/{app}/frontend && npm run build && cp -r build/* ../backend/static/`
 - PostgreSQL: Port 5555, password "pubgames", user "activityhub", database "activity_hub"
+
+## Quiz System Pi Deployment
+
+Run these steps after `git pull` on the Pi:
+
+```bash
+# 1. Create and initialise quiz_db
+psql -U activityhub -h localhost -p 5555 -d postgres -c "CREATE DATABASE quiz_db;"
+psql -U activityhub -h localhost -p 5555 -d quiz_db -f games/quiz-player/database/schema.sql
+
+# 2. Update game-admin deps (added redis + pq)
+cd ~/pub-games-v3/games/game-admin/backend && go mod tidy
+
+# 3. Resolve deps for new backends
+cd ~/pub-games-v3/games/quiz-player/backend  && go mod tidy
+cd ~/pub-games-v3/games/quiz-master/backend  && go mod tidy
+cd ~/pub-games-v3/games/quiz-display/backend && go mod tidy
+cd ~/pub-games-v3/games/mobile-test/backend  && go mod tidy
+
+# 4. Build all frontends (game-admin rebuilds to pick up quiz module)
+cd ~/pub-games-v3/games/game-admin/frontend   && npm run build && cp -r build/* ../backend/static/
+cd ~/pub-games-v3/games/quiz-player/frontend  && npm run build && cp -r build/* ../backend/static/
+cd ~/pub-games-v3/games/quiz-master/frontend  && npm run build && cp -r build/* ../backend/static/
+cd ~/pub-games-v3/games/quiz-display/frontend && npm run build && cp -r build/* ../backend/static/
+cd ~/pub-games-v3/games/mobile-test/frontend  && npm run build && cp -r build/* ../backend/static/
+
+# 5. Register apps in activity_hub
+psql -U activityhub -h localhost -p 5555 -d activity_hub -f scripts/migrate_add_quiz_apps.sql
+
+# 6. Shared uploads directory — create and symlink so all quiz backends
+#    read/write the same media files
+mkdir -p ~/pub-games-v3/games/game-admin/backend/uploads/quiz/images
+mkdir -p ~/pub-games-v3/games/game-admin/backend/uploads/quiz/audios
+ln -sfn ~/pub-games-v3/games/game-admin/backend/uploads \
+        ~/pub-games-v3/games/quiz-master/backend/uploads
+ln -sfn ~/pub-games-v3/games/game-admin/backend/uploads \
+        ~/pub-games-v3/games/quiz-display/backend/uploads
+ln -sfn ~/pub-games-v3/games/game-admin/backend/uploads \
+        ~/pub-games-v3/games/mobile-test/backend/uploads
+
+# 7. Start new services (add to whatever process manager you use)
+cd ~/pub-games-v3/games/quiz-player/backend  && go run *.go &
+cd ~/pub-games-v3/games/quiz-master/backend  && go run *.go &
+cd ~/pub-games-v3/games/quiz-display/backend && go run *.go &
+cd ~/pub-games-v3/games/mobile-test/backend  && go run *.go &
+```
+
+### Notes
+- Port 4051 was already taken by spoof — mobile-test uses **4061**
+- game-admin must be running for media uploads to work (it owns the uploads dir)
+- quiz-display URL format: `http://pi:5081/?session=JOINCODE` — no auth required
+- To grant quiz_master role: `UPDATE users SET roles = array_append(roles, 'quiz_master') WHERE email = 'user@example.com';`
+- Test workflow: Game Admin → Quiz → upload media → create questions → create pack → start quiz-master → join with quiz-player
 
 # Pub Games v3 - Documentation Index
 
