@@ -81,12 +81,21 @@
   color: #adb5bd;
 }
 
+/* Below-board container */
+.ttt-below-board {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  width: 100%;
+}
+
 /* Status message */
 .ttt-status {
   font-size: 18px;
   font-weight: 500;
   padding: 10px 20px;
-  margin-bottom: 20px;
   border-radius: 4px;
   background: #e9ecef;
   color: #495057;
@@ -114,7 +123,6 @@
 
 /* Claim Win button */
 .ttt-claim-win {
-  margin-bottom: 15px;
 }
 
 .ttt-claim-win-btn {
@@ -283,7 +291,6 @@
 }
 
 .ttt-error {
-  margin-top: 15px;
   padding: 10px 15px;
   background: #f8d7da;
   color: #721c24;
@@ -293,7 +300,6 @@
 
 /* Game actions */
 .ttt-actions {
-  margin-top: 20px;
 }
 
 .ttt-leave-btn {
@@ -385,7 +391,6 @@
 
 /* Back to Lobby */
 .ttt-back-to-lobby {
-  margin-top: 20px;
 }
 
 .ttt-lobby-btn {

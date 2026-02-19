@@ -188,20 +188,6 @@ const TicTacToeGame: React.FC<TicTacToeGameProps> = ({ gameId, user, token }) =>
         </div>
       </div>
 
-      {/* Status message */}
-      <div className={`ttt-status ${isMyTurn && !gameEnded ? 'ttt-status-myturn' : ''} ${gameEnded ? (iWon ? 'ttt-status-won' : 'ttt-status-lost') : ''} ${opponentDisconnected ? 'ttt-status-disconnected' : ''} ${connectionStatus === 'reconnecting' ? 'ttt-status-reconnecting' : ''}`}>
-        {getStatusMessage()}
-      </div>
-
-      {/* Claim Win button - appears when opponent has been disconnected long enough */}
-      {opponentDisconnected && claimWinAvailable && !gameEnded && (
-        <div className="ttt-claim-win">
-          <button className="ttt-claim-win-btn" onClick={claimWin}>
-            Claim Win
-          </button>
-        </div>
-      )}
-
       {/* Game board */}
       <TicTacToeBoard
         board={game.board}
@@ -211,14 +197,48 @@ const TicTacToeGame: React.FC<TicTacToeGameProps> = ({ gameId, user, token }) =>
         disabled={!ready || !connected || gameEnded || opponentDisconnected}
       />
 
-      {/* Game actions */}
-      {!gameEnded && connected && ready && (
-        <div className="ttt-actions">
-          <button className="ttt-leave-btn" onClick={handleForfeitClick}>
-            Leave Game
-          </button>
+      {/* Everything below the board — no layout shift above */}
+      <div className="ttt-below-board">
+        {/* Status message */}
+        <div className={`ttt-status ${isMyTurn && !gameEnded ? 'ttt-status-myturn' : ''} ${gameEnded ? (iWon ? 'ttt-status-won' : 'ttt-status-lost') : ''} ${opponentDisconnected ? 'ttt-status-disconnected' : ''} ${connectionStatus === 'reconnecting' ? 'ttt-status-reconnecting' : ''}`}>
+          {getStatusMessage()}
         </div>
-      )}
+
+        {/* Claim Win button */}
+        {opponentDisconnected && claimWinAvailable && !gameEnded && (
+          <div className="ttt-claim-win">
+            <button className="ttt-claim-win-btn" onClick={claimWin}>
+              Claim Win
+            </button>
+          </div>
+        )}
+
+        {error && <div className="ttt-error">{error}</div>}
+
+        {/* Game actions */}
+        {!gameEnded && connected && ready && (
+          <div className="ttt-actions">
+            <button className="ttt-leave-btn" onClick={handleForfeitClick}>
+              Leave Game
+            </button>
+          </div>
+        )}
+
+        {/* Back to Lobby - shown when game ends */}
+        {gameEnded && (
+          <div className="ttt-back-to-lobby">
+            <button
+              className="ttt-lobby-btn"
+              onClick={() => {
+                const shellUrl = `http://${window.location.hostname}:3001`;
+                window.location.href = shellUrl;
+              }}
+            >
+              Back to Lobby
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Forfeit confirmation modal */}
       {showForfeitConfirm && (
@@ -235,24 +255,6 @@ const TicTacToeGame: React.FC<TicTacToeGameProps> = ({ gameId, user, token }) =>
               </button>
             </div>
           </div>
-        </div>
-      )}
-
-      {error && <div className="ttt-error">{error}</div>}
-
-      {/* Back to Lobby - shown when game ends */}
-      {gameEnded && (
-        <div className="ttt-back-to-lobby">
-          <button
-            className="ttt-lobby-btn"
-            onClick={() => {
-              // Navigate back to shell/lobby
-              const shellUrl = `http://${window.location.hostname}:3001`;
-              window.location.href = shellUrl;
-            }}
-          >
-            Back to Lobby
-          </button>
         </div>
       )}
     </div>
