@@ -406,11 +406,26 @@ func handleGameStream(w http.ResponseWriter, r *http.Request) {
 
 	var opponentName string
 	if user.Email == game.Player1ID {
-		opponentName = game.Player1Name
-	} else {
 		opponentName = game.Player2Name
+	} else {
+		opponentName = game.Player1Name
 	}
 
+	// If the opponent is already connected, tell this client immediately (before subscribing,
+	// so we don't miss an event that was already published while we were setting up)
+	if connectedPlayers, err := GetConnectedPlayers(gameID); err == nil {
+		for _, pid := range connectedPlayers {
+			if pid == opponentID {
+				sendSSE(w, flusher, "opponent_connected", map[string]interface{}{
+					"userId": opponentID,
+					"name":   opponentName,
+				})
+				break
+			}
+		}
+	}
+
+	// Notify the opponent that this player has connected
 	PublishGameEvent(gameID, "opponent_connected", map[string]interface{}{
 		"userId": user.Email,
 		"name":   opponentName,

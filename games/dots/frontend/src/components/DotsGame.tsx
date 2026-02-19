@@ -292,10 +292,6 @@ const DotsGame: React.FC<DotsGameProps> = ({ gameId, user, token }) => {
 
   return (
     <div className="app">
-      <div className={`connection-status ${connected ? 'connected' : 'disconnected'}`}>
-        {connected ? '● Connected' : '○ Reconnecting...'}
-      </div>
-
       <div className="header">
         <h1>Dots & Boxes</h1>
       </div>
