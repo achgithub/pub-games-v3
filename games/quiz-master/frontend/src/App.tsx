@@ -353,7 +353,7 @@ function App() {
         {session && (
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <span style={s.joinCodeBadge}>{session.joinCode}</span>
-            <span style={s.statusBadge(session.status)}>{session.status}</span>
+            <span style={statusBadge(session.status)}>{session.status}</span>
           </div>
         )}
       </div>
@@ -645,9 +645,13 @@ function App() {
 
 // --- Styles ---
 
-const s: Record<string, React.CSSProperties> & {
-  statusBadge: (status: string) => React.CSSProperties;
-} = {
+const statusBadge = (status: string): React.CSSProperties => ({
+  fontSize: 12, fontWeight: 600, padding: '3px 8px', borderRadius: 8,
+  backgroundColor: status === 'active' ? '#E8F5E9' : status === 'lobby' ? '#FFF3E0' : '#ECEFF1',
+  color: status === 'active' ? '#2E7D32' : status === 'lobby' ? '#E65100' : '#607D8B',
+});
+
+const s: Record<string, React.CSSProperties> = {
   container: { maxWidth: 720, margin: '0 auto', padding: 16, fontFamily: 'inherit' },
   header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 8 },
   title: { fontSize: 22, fontWeight: 800, color: '#1565C0' },
@@ -669,11 +673,6 @@ const s: Record<string, React.CSSProperties> & {
   tabActive: { padding: '6px 14px', borderRadius: '6px 6px 0 0', border: 'none', backgroundColor: '#1565C0', color: 'white', cursor: 'pointer', fontSize: 13, fontWeight: 600 },
   joinCodeDisplay: { textAlign: 'center', padding: '20px 0' },
   joinCodeBadge: { fontSize: 20, fontWeight: 800, letterSpacing: 3, color: '#1565C0', backgroundColor: '#E3F2FD', padding: '4px 12px', borderRadius: 8 },
-  statusBadge: (status: string) => ({
-    fontSize: 12, fontWeight: 600, padding: '3px 8px', borderRadius: 8,
-    backgroundColor: status === 'active' ? '#E8F5E9' : status === 'lobby' ? '#FFF3E0' : '#ECEFF1',
-    color: status === 'active' ? '#2E7D32' : status === 'lobby' ? '#E65100' : '#607D8B',
-  }),
   roundBadge: { display: 'inline-block', backgroundColor: '#E3F2FD', color: '#1565C0', padding: '3px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600 },
   questionText: { fontSize: 18, fontWeight: 600, color: '#222', margin: '12px 0', lineHeight: 1.5 },
   mediaBadge: { display: 'inline-block', backgroundColor: '#E8F5E9', color: '#2E7D32', padding: '2px 8px', borderRadius: 8, fontSize: 12, margin: '4px 4px 0 0' },
