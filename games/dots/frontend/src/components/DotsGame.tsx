@@ -179,6 +179,18 @@ const DotsGame: React.FC<DotsGameProps> = ({ gameId, user, token }) => {
   const makeMove = async (row: number, col: number, horizontal: boolean) => {
     if (!isMyTurn()) return;
 
+    // Optimistically colour the line immediately so there's no grey delay
+    const myPlayerNum = getPlayerNum();
+    setGame(prev => {
+      if (!prev) return prev;
+      const updatedLines = prev.lines.map(l =>
+        l.row === row && l.col === col && l.horizontal === horizontal
+          ? { ...l, drawnBy: myPlayerNum }
+          : l
+      );
+      return { ...prev, lines: updatedLines };
+    });
+
     try {
       const response = await fetch(`${API_BASE}/move`, {
         method: 'POST',

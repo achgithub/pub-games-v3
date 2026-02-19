@@ -137,7 +137,7 @@ func MakeMove(game *Game, playerNum int, row, col int, horizontal bool) (int, bo
 
 	// If boxes were completed, player gets another turn
 	if boxesCompleted > 0 {
-		return boxesCompleted, false, "Box completed! Go again!"
+		return boxesCompleted, false, ""
 	}
 
 	// Switch turns
