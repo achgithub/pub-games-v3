@@ -3,9 +3,9 @@
 - Platform: Pi at [192.168.1.45], Mac for editing
 - Workflow: Edit on Mac → git push → pull & build on Pi
 - Ports: identity-shell: 3001, tic-tac-toe: 4001, dots: 4011, sweepstakes: 4031, last-man-standing: 4021, quiz-player: 4041, spoof: 4051, mobile-test: 4061, leaderboard: 5030, season-scheduler: 5040, smoke-test: 5010, setup-admin: 5020, display-admin: 5050, display-runtime: 5051, game-admin: 5070, quiz-master: 5080, quiz-display: 5081
-- Active work: Pub Quiz system implemented (game-admin quiz module + quiz-player + quiz-master + quiz-display + mobile-test) — awaiting Pi deployment
+- Active work: Quiz system deployed on Pi and working. Post-deployment polish done (see Recent Changes below).
 - Known issues: SSE presence requires manual refresh after impersonation (acceptable for debugging tool)
-- Next: Deploy quiz apps on Pi — see "Quiz System Pi Deployment" section below
+- Next: Ready for real quiz use. Run `bash scripts/seed_quiz_test_content.sh` on Pi to update mobile-test seed image to 600×600.
 - Build: `cd games/{app}/frontend && npm run build && cp -r build/* ../backend/static/`
 - PostgreSQL: Port 5555, password "pubgames", user "activityhub", database "activity_hub"
 

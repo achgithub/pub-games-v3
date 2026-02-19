@@ -1,20 +1,103 @@
 # Activity Hub Migration - Session State
 
-**Last Updated**: 2026-02-16
-**Session ID**: Phase 0, A, B, C (Part 1), Identity Shell Improvements & LMS Migration Complete + Shared CSS + Fixture File Architecture + Date-Range Rounds + Bug Fixes + Sweepstakes Migration + Shared Library Migrations
-**Current Phase**: tic-tac-toe + dots backend migrated to activity-hub-common
-**Status**: Sweepstakes deployed ✅. Tic-tac-toe + dots committed, awaiting Pi build/test.
+**Last Updated**: 2026-02-19
+**Current Phase**: Quiz system deployed + polish complete. Mobile-test redesigned.
+**Status**: All core systems operational on Pi. Ready for real quiz use.
 
 ## ⚠️ Next Session — Start Here
-1. Push + pull tic-tac-toe and dots commits on Pi
-2. Build and test tic-tac-toe: `cd games/tic-tac-toe/backend && go mod tidy && go run *.go`
-3. Build and test dots: `cd games/dots/backend && go mod tidy && go run *.go`
-4. End-to-end test tic-tac-toe (create game, make moves, SSE stream, forfeit)
-5. Fix impersonation exit bug in identity-shell (apps missing after ending session)
+
+All systems deployed. Outstanding Pi tasks after latest push:
+
+```bash
+cd ~/pub-games-v3 && git pull
+
+# Re-seed mobile-test with 600×600 image
+bash scripts/seed_quiz_test_content.sh
+
+# Rebuild mobile-test frontend (step-by-step test runner redesign)
+cd games/mobile-test/frontend && npm run build && cp -r build/* ../backend/static/
+
+# Restart mobile-test backend (new /api/ping + /api/test-sse endpoints)
+# (kill existing go run process first)
+cd games/mobile-test/backend && go run *.go &
+```
+
+No DB migrations required for any recent changes.
+
+**Known issues:**
+- SSE presence requires manual refresh after impersonation (acceptable — debugging tool only)
 
 ## Completed
 
-### Tic-Tac-Toe + Dots: Shared Library Migration ✅ (2026-02-16) — awaiting Pi build/test
+### Mobile Test Redesign ✅ (2026-02-19)
+
+Full redesign as a professional step-by-step test runner.
+
+**Backend (`handlers.go` + `main.go`):**
+- New `GET /api/ping` — unauthed, returns `{ok, time}` for HTTP latency measurement
+- New `GET /api/test-sse` — unauthed SSE, pushes 3 `ping` events (300ms apart) then `done` event
+- Both registered before the auth middleware (no token required)
+
+**Frontend (`App.tsx` — full rewrite):**
+- Card-based layout: header card, steps list card, image preview card, summary banner
+- "Run Tests" button triggers sequential runner:
+  1. HTTP Connectivity — ping latency in ms
+  2. SSE Connectivity — counts 3/3 messages received
+  3. Text Rendering — loads `/api/test-content`, shows question text
+  4. Image Loading — `new Image()` load test, preview shown on pass
+  5. Audio Playback — attempts autoplay; shows "Tap to Play" card if iOS blocks it
+- Animated SVG spinner per step while running; PASS/FAIL labels with colour coding
+- Green/amber summary banner on completion
+- "Run Again" button resets and reruns
+
+**Seed script updated:** 600×600 PNG (was 200×200) for retina displays.
+
+---
+
+### Dots & Boxes: Polish + Bug Fixes ✅ (2026-02-19)
+
+- **Removed toasts**: "Line drawn" and "Box completed! Go again!" messages removed from backend (`game_logic.go`)
+- **Waiting banner fix**: "Waiting for opponent to connect" now clears correctly on mobile and for the game originator
+  - Fixed race condition: `GetConnectedPlayers` pre-check sends direct `opponent_connected` SSE if opponent already connected when you join
+  - Also sets `opponentEverConnected=true` when `game_state` arrives with `status=active`
+- **Removed `● Connected` badge**: permanent status indicator removed from top of game screen
+- **Fixed opponentName bug**: Player 1 was seeing their own name as opponent name
+- **Line colour lag fix**: Added `drawn` class to owned lines in JSX; fixes CSS specificity issue where `.line:hover:not(.drawn)` was beating `.line.p1` on mobile (hover persists after tap)
+- **Optimistic line update**: Lines colour immediately on tap before SSE confirmation arrives
+- **Status messages below grid**: Turn indicator, waiting banners, actions all moved below the game board to prevent layout shift on load
+
+### Tic-Tac-Toe: Messages Below Board ✅ (2026-02-19)
+
+Moved all status elements (turn status, claim win, error, actions, back-to-lobby) into a `.ttt-below-board` flex container below the board — consistent with dots layout pattern.
+
+---
+
+### Quiz System: Full Implementation + Deployment ✅ (2026-02-19)
+
+Four new apps + game-admin quiz module, all deployed on Pi.
+
+**Apps:**
+- `quiz-player` (port 4041) — player joins by session code, answers questions, sees leaderboard
+- `quiz-master` (port 5080) — host controls: manage packs, run live quiz, reveal answers, show scores
+- `quiz-display` (port 5081) — TV display, unauthenticated (`?session=CODE`), shows questions/leaderboard
+- `mobile-test` (port 4061) — device compatibility checker (HTTP, SSE, text, image, audio)
+
+**game-admin Quiz module:**
+- Media uploads (images + audio) stored in `game-admin/backend/uploads/quiz/`
+- All quiz backends symlink to this shared uploads directory
+- Question management: text/picture/music types, `is_test_content` flag
+- Pack builder: group questions into packs with ordered rounds
+- Quiz session management: create, start, advance questions, end
+
+**Database:** `quiz_db` — schema at `games/quiz-player/database/schema.sql`
+
+**Seed script:** `scripts/seed_quiz_test_content.sh` — generates test PNG + WAV, inserts test questions
+
+**Pi deployment:** See "Quiz System Pi Deployment" section in CLAUDE.md
+
+---
+
+### Tic-Tac-Toe + Dots: Shared Library Migration ✅ (2026-02-16) — deployed ✅
 
 Migrated both game backends to `activity-hub-common`. No functional changes — auth/db/config patterns unified.
 
@@ -351,6 +434,9 @@ Game Admin App (Port 5070)  ← NEW
 | dots | 4011 |
 | last-man-standing | 4021 |
 | sweepstakes | 4031 |
+| quiz-player | 4041 |
+| spoof | 4051 |
+| mobile-test | 4061 |
 | smoke-test | 5010 |
 | setup-admin | 5020 |
 | leaderboard | 5030 |
@@ -358,6 +444,8 @@ Game Admin App (Port 5070)  ← NEW
 | display-admin | 5050 |
 | display-runtime | 5051 |
 | game-admin | 5070 |
+| quiz-master | 5080 |
+| quiz-display | 5081 |
 
 ## Current Database State
 
@@ -371,35 +459,20 @@ Game Admin App (Port 5070)  ← NEW
 - `game_admin_db` (audit_log) ✅ deployed
 
 **App Databases:**
-- `last_man_standing_db` ✅ deployed (fresh, no v2 data migration)
+- `last_man_standing_db` ✅ deployed
+- `quiz_db` ✅ deployed
 - `tictactoe_db`, `dots_db`, `spoof_db` etc. — unchanged
 
 ## Next Steps
 
-**Immediate (commits 6d3cc30 + 66c5d05 — combined breaking change):**
-1. Push and pull on Pi
-2. Recreate `last_man_standing_db` schema (commands above)
-3. Rebuild both game-admin and LMS player frontends
-4. Restart core services
-5. End-to-end test (see workflow below)
-
-**Workflow to verify:**
-1. Upload Premier League CSV → fixture file created, matches stored with `match_date`
-2. Create "Andy's Friends" game → pick fixture file
-3. Create Round 1: label=1, From=next Wednesday, To=following Tuesday
-4. Open the round → players join and make picks
-5. Admin enters results for all matches in the window
-6. "Process Round 1" → check: correct picks survive, wrong picks eliminated, postponed = bye
-7. Verify bye: player survives, team appears in "used teams", cannot be reused
-
-**Pending:**
-1. Grant `game_admin` role to appropriate users via Setup Admin
-2. Register LMS apps in `applications` table (if not already done)
+**Immediate Pi tasks (after latest push):**
+- Re-seed mobile-test: `bash scripts/seed_quiz_test_content.sh`
+- Rebuild + restart mobile-test (see top of file)
 
 **Future options:**
-1. Migrate other existing apps (dots, sweepstakes, etc.) to v3 patterns
-2. Add more game modules to game-admin as new games are created
-3. SSL/TLS (easy to add when needed)
+1. Quiz system — plan exists at `.claude/plans/radiant-sparking-kettle.md` for media clips, deduplication, and CSV import
+2. Add more game modules to game-admin as new games are built
+3. SSL/TLS when needed
 4. SSE reconnection on user change (would fix impersonation presence delay)
 
 ## Notes
