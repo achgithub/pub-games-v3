@@ -110,13 +110,18 @@ const DotsGame: React.FC<DotsGameProps> = ({ gameId, user, token }) => {
             setConnected(true);
             break;
           case 'game_state':
-          case 'move_update':
-            setGame(data.payload.game || data.payload as unknown as Game);
+          case 'move_update': {
+            const updatedGame = data.payload.game || data.payload as unknown as Game;
+            setGame(updatedGame);
+            if (updatedGame.status === 'active') {
+              setOpponentEverConnected(true);
+            }
             if (data.payload.message) {
               setMessage(data.payload.message);
               setTimeout(() => setMessage(''), 3000);
             }
             break;
+          }
           case 'opponent_connected':
             setOpponentConnected(true);
             setOpponentEverConnected(true);

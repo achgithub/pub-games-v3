@@ -147,7 +147,7 @@ func MakeMove(game *Game, playerNum int, row, col int, horizontal bool) (int, bo
 		game.CurrentTurn = 1
 	}
 
-	return 0, false, "Line drawn"
+	return 0, false, ""
 }
 
 // checkCompletedBoxes checks if drawing a line completed any boxes
