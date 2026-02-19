@@ -1,25 +1,30 @@
 # Activity Hub Migration - Session State
 
 **Last Updated**: 2026-02-19
-**Current Phase**: Quiz system deployed + polish complete. Mobile-test redesigned.
-**Status**: All core systems operational on Pi. Ready for real quiz use.
+**Current Phase**: UI modernisation — identity-shell lobby now light theme. Tailwind build infrastructure added.
+**Status**: All core systems operational on Pi. CSS committed, Pi has pulled — frontend rebuild needed.
 
 ## ⚠️ Next Session — Start Here
 
-All systems deployed. Outstanding Pi tasks after latest push:
+Pi has pulled. One rebuild needed to make the new lobby theme visible:
 
 ```bash
-cd ~/pub-games-v3 && git pull
+# Rebuild identity-shell frontend (light theme CSS)
+cd ~/pub-games-v3/identity-shell/frontend
+npm run build && cp -r build/* ../backend/static/
 
-# Re-seed mobile-test with 600×600 image
-bash scripts/seed_quiz_test_content.sh
+# Restart identity-shell
+~/pub-games-v3/scripts/stop_core.sh
+~/pub-games-v3/scripts/start_core.sh
+```
 
-# Rebuild mobile-test frontend (step-by-step test runner redesign)
-cd games/mobile-test/frontend && npm run build && cp -r build/* ../backend/static/
+Then hard-refresh browser (Cmd+Shift+R / Ctrl+Shift+R).
 
-# Restart mobile-test backend (new /api/ping + /api/test-sse endpoints)
-# (kill existing go run process first)
-cd games/mobile-test/backend && go run *.go &
+**Also pending (mobile-test — if not yet done):**
+```bash
+bash ~/pub-games-v3/scripts/seed_quiz_test_content.sh
+cd ~/pub-games-v3/games/mobile-test/frontend && npm run build && cp -r build/* ../backend/static/
+# restart mobile-test backend for /api/ping + /api/test-sse
 ```
 
 No DB migrations required for any recent changes.
@@ -28,6 +33,37 @@ No DB migrations required for any recent changes.
 - SSE presence requires manual refresh after impersonation (acceptable — debugging tool only)
 
 ## Completed
+
+### Identity Shell: Light Theme + Tailwind CSS Infrastructure ✅ (2026-02-19)
+
+**Shared CSS modernisation (`identity-shell/backend/static/activity-hub.css`):**
+- New Tailwind build pipeline: `lib/activity-hub-common/styles/` with `package.json`, `tailwind.config.js`, `activity-hub-src.css`
+- `scripts/build-shared-css.sh` — run on Pi after changing source CSS
+- Custom `brand` colour key = Material Blue (#2196F3 palette)
+- System font stack (no Google Fonts CDN — safe for offline pub use)
+- `.ah-*` component classes: cards, banners, buttons (primary/outline/danger/back), tabs, table, form inputs, header, lobby button
+- All interactive states: hover lift, coloured shadow, 150ms ease transitions
+- Warm stone neutral palette: `#F5F5F4` bg, `#1C1917` text, `#E7E5E4` borders
+
+**Identity Shell frontend — full light theme rewrite (4 CSS files):**
+- `index.css`: light body (stone-100 bg, stone-900 text), blue arc spinner
+- `LoginView.css`: white card on blue/green gradient, modern inputs with focus ring, blue button with hover lift
+- `Shell.css`: white header with shadow, stone icon buttons, outlined logout button
+- `Lobby.css`: white section cards with shadow, stone user rows, app cards with blue hover border/lift, light badges (blue=interactive, green=static)
+
+**Rebuild needed on Pi:**
+```bash
+cd ~/pub-games-v3/identity-shell/frontend
+npm run build && cp -r build/* ../backend/static/
+```
+
+**To rebuild shared CSS after source changes:**
+```bash
+bash ~/pub-games-v3/scripts/build-shared-css.sh
+# commit the updated identity-shell/backend/static/activity-hub.css
+```
+
+---
 
 ### Mobile Test Redesign ✅ (2026-02-19)
 
@@ -465,9 +501,9 @@ Game Admin App (Port 5070)  ← NEW
 
 ## Next Steps
 
-**Immediate Pi tasks (after latest push):**
-- Re-seed mobile-test: `bash scripts/seed_quiz_test_content.sh`
-- Rebuild + restart mobile-test (see top of file)
+**Immediate Pi tasks:**
+- Rebuild identity-shell frontend and restart (see top of file) — light theme CSS is committed and pulled
+- Mobile-test: rebuild frontend + re-seed if not done yet
 
 **Future options:**
 1. Quiz system — plan exists at `.claude/plans/radiant-sparking-kettle.md` for media clips, deduplication, and CSV import
