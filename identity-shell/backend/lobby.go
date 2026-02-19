@@ -491,7 +491,14 @@ func createGameForChallenge(challenge *Challenge, player1Name, player2Name strin
 		return "", fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	resp, err := http.Post(gameURL+"/api/game", "application/json", bytes.NewBuffer(jsonBody))
+	req, err := http.NewRequest("POST", gameURL+"/api/game", bytes.NewBuffer(jsonBody))
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer demo-token-"+challenge.FromUser)
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("failed to call game API: %w", err)
 	}
@@ -561,7 +568,14 @@ func createGameForMultiChallenge(challenge *Challenge) (string, error) {
 
 	log.Printf("🎮 Creating multi-player game with %d players", len(players))
 
-	resp, err := http.Post(gameURL+"/api/game", "application/json", bytes.NewBuffer(jsonBody))
+	req, err := http.NewRequest("POST", gameURL+"/api/game", bytes.NewBuffer(jsonBody))
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer demo-token-"+challenge.InitiatorID)
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("failed to call game API: %w", err)
 	}

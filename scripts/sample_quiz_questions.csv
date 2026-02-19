@@ -1,0 +1,21 @@
+text,answer,category,difficulty,type,image_guid,audio_guid,requires_media
+"What is the capital of Australia?",Canberra,Geography,easy,text,,,false
+"How many sides does a hexagon have?",6,Maths,easy,text,,,false
+"Which planet is known as the Red Planet?",Mars,Science,easy,text,,,false
+"In which year did the Titanic sink?",1912,History,medium,text,,,false
+"Who painted the Mona Lisa?",Leonardo da Vinci,Art,easy,text,,,false
+"What is the chemical symbol for gold?",Au,Science,medium,text,,,false
+"Which country invented champagne?",France,Food & Drink,medium,text,,,false
+"How many bones are in the adult human body?",206,Science,medium,text,,,false
+"What is the longest river in the world?",The Nile,Geography,medium,text,,,false
+"In which city is the Sagrada Familia located?",Barcelona,Geography,medium,text,,,false
+"Who wrote Romeo and Juliet?",William Shakespeare,Literature,easy,text,,,false
+"What is the square root of 144?",12,Maths,easy,text,,,false
+"Which element has the atomic number 1?",Hydrogen,Science,easy,text,,,false
+"What sport is played at Wimbledon?",Tennis,Sport,easy,text,,,false
+"How many players are on a standard rugby union team?",15,Sport,medium,text,,,false
+"Which US state is known as the Sunshine State?",Florida,Geography,medium,text,,,false
+"What is the hardest natural substance on Earth?",Diamond,Science,medium,text,,,false
+"In what year did the Berlin Wall fall?",1989,History,medium,text,,,false
+"What is the smallest country in the world by area?",Vatican City,Geography,hard,text,,,false
+"Which Shakespeare play features the character Iago?",Othello,Literature,hard,text,,,false
