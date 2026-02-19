@@ -212,7 +212,6 @@
 }
 
 .message {
-  margin-top: 20px;
   padding: 12px 24px;
   background: #e9ecef;
   border-radius: 8px;
@@ -306,7 +305,6 @@
 }
 
 .turn-indicator {
-  margin-top: 10px;
   padding: 10px 20px;
   background: #d4edda;
   color: #155724;
@@ -316,7 +314,6 @@
 }
 
 .waiting {
-  margin: 20px 0;
   padding: 15px;
   background: #fff3cd;
   color: #856404;
@@ -333,10 +330,18 @@
   text-align: center;
 }
 
+.below-grid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+
 .actions {
   display: flex;
   gap: 10px;
-  margin-top: 20px;
+  margin-top: 0;
 }
 
 .btn-secondary {

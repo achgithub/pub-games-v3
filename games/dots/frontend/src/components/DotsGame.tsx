@@ -298,11 +298,6 @@ const DotsGame: React.FC<DotsGameProps> = ({ gameId, user, token }) => {
 
       <div className="header">
         <h1>Dots & Boxes</h1>
-        {!gameEnded && (
-          <div className="turn-indicator">
-            {isMyTurn() ? 'Your Turn' : `${opponentName}'s Turn`}
-          </div>
-        )}
       </div>
 
       <div className="score">
@@ -314,21 +309,6 @@ const DotsGame: React.FC<DotsGameProps> = ({ gameId, user, token }) => {
         </div>
       </div>
 
-      {message && <div className="message">{message}</div>}
-
-      {!opponentEverConnected && !gameEnded && (
-        <div className="waiting">Waiting for opponent to connect...</div>
-      )}
-
-      {!opponentConnected && opponentEverConnected && !gameEnded && (
-        <div className="disconnected-warning">
-          Opponent disconnected. Waiting for reconnection...
-          <button onClick={claimWin} style={{ marginLeft: 10 }}>
-            Claim Win
-          </button>
-        </div>
-      )}
-
       <DotsGrid
         game={game}
         playerNum={playerNum}
@@ -336,16 +316,39 @@ const DotsGame: React.FC<DotsGameProps> = ({ gameId, user, token }) => {
         makeMove={makeMove}
       />
 
-      {!gameEnded && (
-        <div className="actions">
-          <button onClick={forfeit} className="btn-secondary">
-            Forfeit
-          </button>
-          <button onClick={returnToLobby} className="btn-lobby">
-            Return to Lobby
-          </button>
-        </div>
-      )}
+      <div className="below-grid">
+        {!gameEnded && (
+          <div className="turn-indicator">
+            {isMyTurn() ? 'Your Turn' : `${opponentName}'s Turn`}
+          </div>
+        )}
+
+        {message && <div className="message">{message}</div>}
+
+        {!opponentEverConnected && !gameEnded && (
+          <div className="waiting">Waiting for opponent to connect...</div>
+        )}
+
+        {!opponentConnected && opponentEverConnected && !gameEnded && (
+          <div className="disconnected-warning">
+            Opponent disconnected. Waiting for reconnection...
+            <button onClick={claimWin} style={{ marginLeft: 10 }}>
+              Claim Win
+            </button>
+          </div>
+        )}
+
+        {!gameEnded && (
+          <div className="actions">
+            <button onClick={forfeit} className="btn-secondary">
+              Forfeit
+            </button>
+            <button onClick={returnToLobby} className="btn-lobby">
+              Return to Lobby
+            </button>
+          </div>
+        )}
+      </div>
 
       {gameEnded && (
         <div className="game-over">
