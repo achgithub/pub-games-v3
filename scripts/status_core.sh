@@ -34,6 +34,8 @@ check_port() {
 check_port 3001 "Identity Shell"
 check_port 5020 "Setup Admin"
 check_port 5070 "Game Admin"
+check_port 4001 "Tic-Tac-Toe"
+check_port 4011 "Dots"
 check_port 4021 "Last Man Standing"
 check_port 4031 "Sweepstakes"
 check_port 4041 "Quiz Player"
