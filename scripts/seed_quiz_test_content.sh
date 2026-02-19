@@ -37,7 +37,7 @@ def png_chunk(tag, data):
     buf = tag + data
     return struct.pack('>I', len(data)) + buf + struct.pack('>I', zlib.crc32(buf) & 0xFFFFFFFF)
 
-W, H = 200, 200
+W, H = 600, 600
 # Each row: filter byte 0, then W × RGB
 row = bytes([0] + [70, 130, 180] * W)   # filter=0 + steel blue pixels
 # Compress all rows concatenated

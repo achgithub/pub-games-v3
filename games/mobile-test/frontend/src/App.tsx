@@ -482,10 +482,8 @@ const s: Record<string, React.CSSProperties> = {
   },
   previewImage: {
     display: 'block',
-    maxWidth: '100%',
-    maxHeight: 200,
+    width: '100%',
     borderRadius: 8,
-    margin: '0 auto',
   },
   summaryBanner: {
     display: 'flex',
