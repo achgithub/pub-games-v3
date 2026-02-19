@@ -428,7 +428,7 @@ function DotsGrid({
         cells.push(
           <div
             key={`h-${row}-${col}`}
-            className={`line horizontal ${owner ? `p${owner}` : ''} ${
+            className={`line horizontal ${owner ? `p${owner} drawn` : ''} ${
               isMyTurn && !owner ? 'clickable' : ''
             }`}
             onClick={() => handleLineClick(row, col, true)}
@@ -452,7 +452,7 @@ function DotsGrid({
         boxRow.push(
           <div
             key={`v-${row}-${col}`}
-            className={`line vertical ${vOwner ? `p${vOwner}` : ''} ${
+            className={`line vertical ${vOwner ? `p${vOwner} drawn` : ''} ${
               isMyTurn && !vOwner ? 'clickable' : ''
             }`}
             onClick={() => handleLineClick(row, col, false)}
