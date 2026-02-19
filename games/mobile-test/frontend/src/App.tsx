@@ -54,6 +54,7 @@ function App() {
   const [textStatus, setTextStatus] = useState<PanelStatus>('idle');
   const [imageStatus, setImageStatus] = useState<PanelStatus>('loading');
   const [audioStatus, setAudioStatus] = useState<PanelStatus>('idle');
+  const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -72,10 +73,11 @@ function App() {
   const playAudio = () => {
     if (!content?.music?.audioPath || !audioRef.current) return;
     setAudioStatus('loading');
+    setIsPlaying(false);
     audioRef.current.src = content.music.audioPath;
     audioRef.current.play()
-      .then(() => setAudioStatus('pass'))
-      .catch(() => setAudioStatus('fail'));
+      .then(() => { setAudioStatus('pass'); setIsPlaying(true); })
+      .catch(() => { setAudioStatus('fail'); setIsPlaying(false); });
   };
 
   if (!userId || !token) {
@@ -139,11 +141,14 @@ function App() {
         status={audioStatus}
         description="Checks that audio plays on this device. Tap the button to test."
       >
-        <audio ref={audioRef} style={{ display: 'none' }} onEnded={() => setAudioStatus('pass')} />
+        <audio ref={audioRef} style={{ display: 'none' }} onEnded={() => { setAudioStatus('pass'); setIsPlaying(false); }} />
         {content?.music?.audioPath ? (
           <div style={{ textAlign: 'center', padding: '8px 0' }}>
-            <button style={s.playBtn} onClick={playAudio} disabled={audioStatus === 'loading'}>
-              {audioStatus === 'loading' ? '⏳ Loading...' : audioStatus === 'pass' ? '🔊 Playing' : '▶ Play Audio'}
+            <button style={s.playBtn} onClick={playAudio} disabled={audioStatus === 'loading' || isPlaying}>
+              {audioStatus === 'loading' ? '⏳ Loading...'
+                : isPlaying ? '🔊 Playing...'
+                : audioStatus === 'pass' ? '▶ Play Again'
+                : '▶ Play Audio'}
             </button>
           </div>
         ) : (

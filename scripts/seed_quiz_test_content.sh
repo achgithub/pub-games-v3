@@ -37,7 +37,7 @@ def png_chunk(tag, data):
     buf = tag + data
     return struct.pack('>I', len(data)) + buf + struct.pack('>I', zlib.crc32(buf) & 0xFFFFFFFF)
 
-W, H = 10, 10
+W, H = 200, 200
 # Each row: filter byte 0, then W × RGB
 row = bytes([0] + [70, 130, 180] * W)   # filter=0 + steel blue pixels
 # Compress all rows concatenated
@@ -50,7 +50,7 @@ png = (
 )
 with open(sys.argv[1], 'wb') as f:
     f.write(png)
-print(f'  Written {len(png)} bytes ({W}x{H} blue PNG)')
+print(f'  Written {len(png)} bytes ({W}x{H} px blue PNG)')
 PYEOF
 
 # ── 4. Generate test WAV (3 seconds of silence, 8-bit mono 8 kHz) ─────────────
