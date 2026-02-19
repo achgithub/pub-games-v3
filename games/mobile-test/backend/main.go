@@ -34,6 +34,8 @@ func main() {
 	r := mux.NewRouter()
 
 	r.HandleFunc("/api/config", handleConfig).Methods("GET")
+	r.HandleFunc("/api/ping", handlePing).Methods("GET")
+	r.HandleFunc("/api/test-sse", handleTestSSE).Methods("GET")
 
 	// Auth required but any user can access
 	api := r.PathPrefix("/api").Subrouter()

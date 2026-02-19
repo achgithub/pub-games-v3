@@ -1,226 +1,532 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 
 // --- Types ---
 
-interface TestQuestion {
-  id: number;
-  text: string;
-  answer: string;
-  type: string;
-  imagePath: string;
-  audioPath: string;
+type StepStatus = 'pending' | 'running' | 'pass' | 'fail';
+type RunnerState = 'idle' | 'running' | 'done';
+
+interface Step {
+  id: string;
+  label: string;
+  detail: string;
+  status: StepStatus;
 }
 
-type PanelStatus = 'loading' | 'pass' | 'fail' | 'idle';
-
-// --- Hooks ---
-
-function useUrlParams() {
-  return useMemo(() => {
-    const params = new URLSearchParams(window.location.search);
-    return { userId: params.get('userId') || '', token: params.get('token') || '' };
-  }, []);
+interface TestContent {
+  text: { id: number; text: string } | null;
+  picture: { id: number; imagePath: string } | null;
+  music: { id: number; audioPath: string } | null;
 }
 
-function useApi(token: string) {
-  return useCallback(
-    async (path: string, options: RequestInit = {}) => {
-      const headers: Record<string, string> = {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      };
-      const res = await fetch(path, { ...options, headers });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res.json();
-    },
-    [token]
-  );
-}
+const INITIAL_STEPS: Step[] = [
+  { id: 'ping',  label: 'HTTP Connectivity',  detail: '', status: 'pending' },
+  { id: 'sse',   label: 'SSE Connectivity',   detail: '', status: 'pending' },
+  { id: 'text',  label: 'Text Rendering',     detail: '', status: 'pending' },
+  { id: 'image', label: 'Image Loading',      detail: '', status: 'pending' },
+  { id: 'audio', label: 'Audio Playback',     detail: '', status: 'pending' },
+];
 
 // --- Main App ---
 
 function App() {
-  const { userId, token } = useUrlParams();
-  const api = useApi(token);
+  const params = useMemo(() => new URLSearchParams(window.location.search), []);
+  const token = params.get('token') || '';
+  const userId = params.get('userId') || '';
 
-  const [content, setContent] = useState<{
-    text: TestQuestion | null;
-    picture: TestQuestion | null;
-    music: TestQuestion | null;
-  } | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [runnerState, setRunnerState] = useState<RunnerState>('idle');
+  const [steps, setSteps] = useState<Step[]>(INITIAL_STEPS);
+  const [audioNeedsGesture, setAudioNeedsGesture] = useState(false);
+  const audioTapResolve = useRef<(() => void) | null>(null);
+  const loadedContent = useRef<TestContent | null>(null);
 
-  // Panel statuses
-  const [textStatus, setTextStatus] = useState<PanelStatus>('idle');
-  const [imageStatus, setImageStatus] = useState<PanelStatus>('loading');
-  const [audioStatus, setAudioStatus] = useState<PanelStatus>('idle');
-  const [isPlaying, setIsPlaying] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  useEffect(() => {
-    if (!token) { setLoading(false); return; }
-    api('/api/test-content')
-      .then(data => {
-        setContent(data);
-        setTextStatus(data.text ? 'pass' : 'fail');
-        setImageStatus(data.picture?.imagePath ? 'loading' : 'fail');
-        setAudioStatus(data.music?.audioPath ? 'idle' : 'fail');
-      })
-      .catch(err => setError(err.message))
-      .finally(() => setLoading(false));
-  }, [api, token]);
-
-  const playAudio = () => {
-    if (!content?.music?.audioPath || !audioRef.current) return;
-    setAudioStatus('loading');
-    setIsPlaying(false);
-    audioRef.current.src = content.music.audioPath;
-    audioRef.current.play()
-      .then(() => { setAudioStatus('pass'); setIsPlaying(true); })
-      .catch(() => { setAudioStatus('fail'); setIsPlaying(false); });
+  const setStep = (id: string, patch: Partial<Step>) => {
+    setSteps(prev => prev.map(s => s.id === id ? { ...s, ...patch } : s));
   };
+
+  const runTests = async () => {
+    setAudioNeedsGesture(false);
+    setRunnerState('running');
+    setSteps(INITIAL_STEPS);
+    loadedContent.current = null;
+
+    // ── Step 1: HTTP ping ──────────────────────────────────────────────
+    setStep('ping', { status: 'running' });
+    try {
+      const t0 = Date.now();
+      const res = await fetch('/api/ping');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const ms = Date.now() - t0;
+      setStep('ping', { status: 'pass', detail: `${ms}ms` });
+    } catch (err) {
+      setStep('ping', { status: 'fail', detail: String(err) });
+      finishEarly();
+      return;
+    }
+
+    // ── Step 2: SSE connectivity ───────────────────────────────────────
+    setStep('sse', { status: 'running' });
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const es = new EventSource('/api/test-sse');
+        let count = 0;
+        es.addEventListener('ping', () => {
+          count++;
+          setStep('sse', { status: 'running', detail: `${count}/3 messages` });
+        });
+        es.addEventListener('done', () => {
+          es.close();
+          setStep('sse', { status: 'pass', detail: `${count}/3 messages received` });
+          resolve();
+        });
+        es.onerror = () => {
+          es.close();
+          reject(new Error('SSE connection failed'));
+        };
+        setTimeout(() => { es.close(); reject(new Error('SSE timeout')); }, 10000);
+      });
+    } catch (err) {
+      setStep('sse', { status: 'fail', detail: String(err) });
+      finishEarly();
+      return;
+    }
+
+    // ── Step 3: Load test content ──────────────────────────────────────
+    setStep('text', { status: 'running' });
+    let content: TestContent | null = null;
+    try {
+      const res = await fetch('/api/test-content', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      content = await res.json();
+      loadedContent.current = content;
+      if (!content?.text) throw new Error('No test text question seeded');
+      setStep('text', { status: 'pass', detail: content.text.text });
+    } catch (err) {
+      setStep('text', { status: 'fail', detail: String(err) });
+    }
+
+    // ── Step 4: Image loading ──────────────────────────────────────────
+    setStep('image', { status: 'running' });
+    const imagePath = content?.picture?.imagePath;
+    if (!imagePath) {
+      setStep('image', { status: 'fail', detail: 'No test image seeded' });
+    } else {
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => resolve();
+          img.onerror = () => reject(new Error('Image failed to load'));
+          img.src = imagePath;
+          setTimeout(() => reject(new Error('Image load timeout')), 10000);
+        });
+        setStep('image', { status: 'pass', detail: imagePath });
+      } catch (err) {
+        setStep('image', { status: 'fail', detail: String(err) });
+      }
+    }
+
+    // ── Step 5: Audio playback ─────────────────────────────────────────
+    setStep('audio', { status: 'running' });
+    const audioPath = content?.music?.audioPath;
+    if (!audioPath) {
+      setStep('audio', { status: 'fail', detail: 'No test audio seeded' });
+    } else {
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const audio = new Audio(audioPath);
+          audio.onended = () => resolve();
+          audio.onerror = () => reject(new Error('Audio failed to load'));
+          const playPromise = audio.play();
+          if (playPromise !== undefined) {
+            playPromise
+              .then(() => {
+                // Playing — wait for onended
+              })
+              .catch(() => {
+                // Autoplay blocked — ask user to tap
+                setAudioNeedsGesture(true);
+                audioTapResolve.current = () => {
+                  setAudioNeedsGesture(false);
+                  audio.play()
+                    .then(() => { /* wait for onended */ })
+                    .catch(() => reject(new Error('Audio blocked by browser')));
+                };
+              });
+          }
+          setTimeout(() => reject(new Error('Audio timeout')), 15000);
+        });
+        setStep('audio', { status: 'pass', detail: 'Played successfully' });
+      } catch (err) {
+        setStep('audio', { status: 'fail', detail: String(err) });
+      }
+    }
+
+    setRunnerState('done');
+  };
+
+  const finishEarly = () => {
+    setSteps(prev => prev.map(s =>
+      s.status === 'pending' ? { ...s, status: 'fail', detail: 'Skipped' } : s
+    ));
+    setRunnerState('done');
+  };
+
+  const allPass = steps.every(s => s.status === 'pass');
+  const anyFail = steps.some(s => s.status === 'fail');
+  const passCount = steps.filter(s => s.status === 'pass').length;
+  const failCount = steps.filter(s => s.status === 'fail').length;
 
   if (!userId || !token) {
     return (
-      <div style={s.container}>
-        <h2 style={s.title}>Mobile Test</h2>
-        <p style={s.muted}>Access this app through the lobby.</p>
+      <div style={s.page}>
+        <div style={s.card}>
+          <div style={s.cardHeader}>
+            <div style={s.appIcon}>MT</div>
+            <div>
+              <div style={s.appTitle}>Mobile Test</div>
+              <div style={s.appSubtitle}>Device Compatibility Check</div>
+            </div>
+          </div>
+          <p style={s.notice}>Access this app through the lobby to run tests.</p>
+        </div>
       </div>
     );
   }
 
-  if (loading) return <div style={s.container}><p style={s.muted}>Loading...</p></div>;
-
-  if (error) return (
-    <div style={s.container}>
-      <h2 style={s.title}>Mobile Test</h2>
-      <div style={s.errorBanner}>{error}</div>
-    </div>
-  );
-
   return (
-    <div style={s.container}>
-      <h2 style={s.title}>Mobile Media Test</h2>
-      <p style={s.muted}>Verify media works correctly on this device/browser.</p>
+    <div style={s.page}>
+      {/* Header card */}
+      <div style={s.card}>
+        <div style={s.cardHeader}>
+          <div style={s.appIcon}>MT</div>
+          <div>
+            <div style={s.appTitle}>Mobile Test</div>
+            <div style={s.appSubtitle}>Device Compatibility Check</div>
+          </div>
+        </div>
+        <p style={s.notice}>
+          Tests HTTP, SSE, text, image and audio delivery on this device and browser.
+        </p>
+      </div>
 
-      {/* Text panel */}
-      <Panel
-        title="Text"
-        status={textStatus}
-        description="Checks that text questions render correctly."
-      >
-        {content?.text ? (
-          <p style={s.questionText}>{content.text.text}</p>
-        ) : (
-          <p style={s.noContent}>No test text question found. Mark a question as "test content" in Game Admin.</p>
-        )}
-      </Panel>
+      {/* Steps card */}
+      <div style={s.card}>
+        <div style={s.sectionLabel}>Test Steps</div>
+        {steps.map((step, i) => (
+          <StepRow key={step.id} step={step} index={i} />
+        ))}
+      </div>
 
-      {/* Image panel */}
-      <Panel
-        title="Image"
-        status={imageStatus}
-        description="Checks that images load and display on this device."
-      >
-        {content?.picture?.imagePath ? (
-          <img
-            src={content.picture.imagePath}
-            alt="Test"
-            style={s.testImage}
-            onLoad={() => setImageStatus('pass')}
-            onError={() => setImageStatus('fail')}
-          />
-        ) : (
-          <p style={s.noContent}>No test picture question found. Add a question with an image and mark as "test content".</p>
-        )}
-      </Panel>
-
-      {/* Audio panel */}
-      <Panel
-        title="Audio"
-        status={audioStatus}
-        description="Checks that audio plays on this device. Tap the button to test."
-      >
-        <audio ref={audioRef} style={{ display: 'none' }} onEnded={() => { setAudioStatus('pass'); setIsPlaying(false); }} />
-        {content?.music?.audioPath ? (
-          <div style={{ textAlign: 'center', padding: '8px 0' }}>
-            <button style={s.playBtn} onClick={playAudio} disabled={audioStatus === 'loading' || isPlaying}>
-              {audioStatus === 'loading' ? '⏳ Loading...'
-                : isPlaying ? '🔊 Playing...'
-                : audioStatus === 'pass' ? '▶ Play Again'
-                : '▶ Play Audio'}
+      {/* Audio gesture prompt */}
+      {audioNeedsGesture && (
+        <div style={s.card}>
+          <div style={s.gestureRow}>
+            <span style={s.gestureIcon}>🔇</span>
+            <div>
+              <div style={s.gestureTitle}>Audio blocked by browser</div>
+              <div style={s.gestureSub}>Tap below to allow audio playback</div>
+            </div>
+            <button
+              style={s.tapBtn}
+              onClick={() => audioTapResolve.current?.()}
+            >
+              Tap to Play
             </button>
           </div>
-        ) : (
-          <p style={s.noContent}>No test music question found. Add a question with audio and mark as "test content".</p>
+        </div>
+      )}
+
+      {/* Image preview (shown after pass) */}
+      {runnerState !== 'idle' && steps.find(s => s.id === 'image')?.status === 'pass' &&
+        loadedContent.current?.picture?.imagePath && (
+        <div style={s.card}>
+          <div style={s.sectionLabel}>Image Preview</div>
+          <img
+            src={loadedContent.current.picture.imagePath}
+            alt="Test"
+            style={s.previewImage}
+          />
+        </div>
+      )}
+
+      {/* Summary banner */}
+      {runnerState === 'done' && (
+        <div style={{
+          ...s.summaryBanner,
+          backgroundColor: allPass ? '#E8F5E9' : '#FFF3E0',
+          borderColor: allPass ? '#4CAF50' : '#FF9800',
+        }}>
+          <div style={{ ...s.summaryIcon, color: allPass ? '#2E7D32' : '#E65100' }}>
+            {allPass ? '✓' : '!'}
+          </div>
+          <div>
+            <div style={{ ...s.summaryTitle, color: allPass ? '#2E7D32' : '#E65100' }}>
+              {allPass ? 'All tests passed' : anyFail ? `${failCount} test${failCount > 1 ? 's' : ''} failed` : 'Tests complete'}
+            </div>
+            <div style={s.summaryDetail}>
+              {passCount} passed · {failCount} failed
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Action button */}
+      {runnerState === 'idle' && (
+        <button style={s.runBtn} onClick={runTests}>
+          Run Tests
+        </button>
+      )}
+      {runnerState === 'running' && (
+        <button style={{ ...s.runBtn, ...s.runBtnDisabled }} disabled>
+          Running...
+        </button>
+      )}
+      {runnerState === 'done' && (
+        <button style={s.runBtn} onClick={runTests}>
+          Run Again
+        </button>
+      )}
+    </div>
+  );
+}
+
+// --- StepRow ---
+
+function StepRow({ step, index }: { step: Step; index: number }) {
+  const statusColor =
+    step.status === 'pass' ? '#4CAF50' :
+    step.status === 'fail' ? '#F44336' :
+    step.status === 'running' ? '#1565C0' : '#BDBDBD';
+
+  const statusIcon =
+    step.status === 'pass' ? '✓' :
+    step.status === 'fail' ? '✗' :
+    step.status === 'running' ? '◌' : '○';
+
+  return (
+    <div style={{
+      ...s.stepRow,
+      borderTop: index === 0 ? 'none' : '1px solid #F5F5F5',
+    }}>
+      <div style={{ ...s.stepIndex, color: statusColor }}>
+        {step.status === 'running'
+          ? <SpinnerIcon color={statusColor} />
+          : <span style={{ fontSize: 18, fontWeight: 700 }}>{statusIcon}</span>
+        }
+      </div>
+      <div style={s.stepBody}>
+        <div style={s.stepLabel}>{step.label}</div>
+        {step.detail && (
+          <div style={{
+            ...s.stepDetail,
+            color: step.status === 'fail' ? '#F44336' : '#888',
+          }}>
+            {step.detail}
+          </div>
         )}
-      </Panel>
-
-      <div style={s.summary}>
-        <SummaryItem label="Text" status={textStatus} />
-        <SummaryItem label="Image" status={imageStatus} />
-        <SummaryItem label="Audio" status={audioStatus} />
+      </div>
+      <div style={{ ...s.stepStatus, color: statusColor }}>
+        {step.status === 'pass' ? 'PASS' :
+         step.status === 'fail' ? 'FAIL' :
+         step.status === 'running' ? '...' : '—'}
       </div>
     </div>
   );
 }
 
-// --- Panel component ---
+// --- Simple CSS spinner via SVG ---
 
-function Panel({ title, status, description, children }: {
-  title: string;
-  status: PanelStatus;
-  description: string;
-  children: React.ReactNode;
-}) {
-  const statusIcon = status === 'pass' ? '✓' : status === 'fail' ? '✗' : status === 'loading' ? '⏳' : '—';
-  const statusColor = status === 'pass' ? '#4CAF50' : status === 'fail' ? '#F44336' : '#FF9800';
-
+function SpinnerIcon({ color }: { color: string }) {
   return (
-    <div style={{ ...s.panel, borderLeft: `4px solid ${statusColor}` }}>
-      <div style={s.panelHeader}>
-        <h3 style={s.panelTitle}>{title}</h3>
-        <span style={{ fontSize: 20, color: statusColor, fontWeight: 700 }}>{statusIcon}</span>
-      </div>
-      <p style={s.panelDesc}>{description}</p>
-      <div style={s.panelContent}>{children}</div>
-    </div>
-  );
-}
-
-// --- Summary item ---
-
-function SummaryItem({ label, status }: { label: string; status: PanelStatus }) {
-  const icon = status === 'pass' ? '✓' : status === 'fail' ? '✗' : '—';
-  const color = status === 'pass' ? '#4CAF50' : status === 'fail' ? '#F44336' : '#999';
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
-      <span style={{ color, fontWeight: 700, fontSize: 18 }}>{icon}</span>
-      <span style={{ fontWeight: 500 }}>{label}</span>
-      <span style={{ color, fontWeight: 600 }}>
-        {status === 'pass' ? 'OK' : status === 'fail' ? 'FAIL' : status === 'loading' ? 'Loading' : 'Not tested'}
-      </span>
-    </div>
+    <svg
+      width="18" height="18"
+      viewBox="0 0 18 18"
+      style={{ animation: 'spin 1s linear infinite', display: 'block' }}
+    >
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+      <circle cx="9" cy="9" r="7" fill="none" stroke="#E0E0E0" strokeWidth="2" />
+      <path d="M9 2 A7 7 0 0 1 16 9" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    </svg>
   );
 }
 
 // --- Styles ---
 
 const s: Record<string, React.CSSProperties> = {
-  container: { maxWidth: 480, margin: '0 auto', padding: 16, fontFamily: 'inherit' },
-  title: { fontSize: 20, fontWeight: 700, color: '#1565C0', marginBottom: 4 },
-  muted: { color: '#777', fontSize: 13, marginBottom: 16 },
-  errorBanner: { backgroundColor: '#FFEBEE', color: '#C62828', padding: 12, borderRadius: 8, fontSize: 13 },
-  panel: { backgroundColor: 'white', borderRadius: 10, padding: 16, boxShadow: '0 2px 6px rgba(0,0,0,0.07)', marginBottom: 12 },
-  panelHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
-  panelTitle: { fontSize: 15, fontWeight: 700, color: '#333' },
-  panelDesc: { fontSize: 12, color: '#888', marginBottom: 10 },
-  panelContent: {},
-  questionText: { fontSize: 16, color: '#222', lineHeight: 1.5 },
-  testImage: { maxWidth: '100%', maxHeight: 200, borderRadius: 8, display: 'block', margin: '0 auto' },
-  noContent: { fontSize: 13, color: '#999', fontStyle: 'italic' },
-  playBtn: { padding: '12px 24px', borderRadius: 8, border: 'none', backgroundColor: '#1565C0', color: 'white', fontSize: 15, fontWeight: 600, cursor: 'pointer' },
-  summary: { backgroundColor: 'white', borderRadius: 10, padding: 16, boxShadow: '0 2px 6px rgba(0,0,0,0.07)', display: 'flex', flexDirection: 'column', gap: 8 },
+  page: {
+    maxWidth: 480,
+    margin: '0 auto',
+    padding: '16px 16px 32px',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    backgroundColor: '#F5F7FA',
+    minHeight: '100vh',
+  },
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+  },
+  cardHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 10,
+  },
+  appIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: '#1565C0',
+    color: '#FFFFFF',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: 14,
+    fontWeight: 700,
+    letterSpacing: 0.5,
+    flexShrink: 0,
+  },
+  appTitle: {
+    fontSize: 17,
+    fontWeight: 700,
+    color: '#1A1A1A',
+  },
+  appSubtitle: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 2,
+  },
+  notice: {
+    fontSize: 13,
+    color: '#666',
+    lineHeight: 1.5,
+    margin: 0,
+  },
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: 600,
+    color: '#AAA',
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.8,
+    marginBottom: 8,
+  },
+  stepRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+    paddingTop: 12,
+    paddingBottom: 12,
+  },
+  stepIndex: {
+    width: 24,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  stepBody: {
+    flex: 1,
+    minWidth: 0,
+  },
+  stepLabel: {
+    fontSize: 14,
+    fontWeight: 600,
+    color: '#222',
+  },
+  stepDetail: {
+    fontSize: 12,
+    marginTop: 2,
+    whiteSpace: 'nowrap' as const,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+  },
+  stepStatus: {
+    fontSize: 11,
+    fontWeight: 700,
+    letterSpacing: 0.5,
+    flexShrink: 0,
+  },
+  gestureRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+  },
+  gestureIcon: {
+    fontSize: 28,
+    flexShrink: 0,
+  },
+  gestureTitle: {
+    fontSize: 14,
+    fontWeight: 600,
+    color: '#222',
+  },
+  gestureSub: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 2,
+  },
+  tapBtn: {
+    marginLeft: 'auto',
+    padding: '10px 16px',
+    borderRadius: 8,
+    border: 'none',
+    backgroundColor: '#1565C0',
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: 'pointer',
+    flexShrink: 0,
+  },
+  previewImage: {
+    display: 'block',
+    maxWidth: '100%',
+    maxHeight: 200,
+    borderRadius: 8,
+    margin: '0 auto',
+  },
+  summaryBanner: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 14,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    border: '1.5px solid',
+  },
+  summaryIcon: {
+    fontSize: 28,
+    fontWeight: 700,
+    flexShrink: 0,
+  },
+  summaryTitle: {
+    fontSize: 15,
+    fontWeight: 700,
+  },
+  summaryDetail: {
+    fontSize: 13,
+    color: '#888',
+    marginTop: 2,
+  },
+  runBtn: {
+    display: 'block',
+    width: '100%',
+    padding: 16,
+    borderRadius: 12,
+    border: 'none',
+    backgroundColor: '#1565C0',
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 700,
+    cursor: 'pointer',
+    letterSpacing: 0.3,
+  },
+  runBtnDisabled: {
+    backgroundColor: '#90A4AE',
+    cursor: 'not-allowed',
+  },
 };
 
 export default App;

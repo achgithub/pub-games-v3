@@ -3,8 +3,41 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"time"
 )
+
+func handlePing(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"ok":   true,
+		"time": time.Now().UnixMilli(),
+	})
+}
+
+func handleTestSSE(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "SSE not supported", http.StatusInternalServerError)
+		return
+	}
+
+	for n := 1; n <= 3; n++ {
+		time.Sleep(300 * time.Millisecond)
+		data, _ := json.Marshal(map[string]int{"n": n, "total": 3})
+		fmt.Fprintf(w, "event: ping\ndata: %s\n\n", data)
+		flusher.Flush()
+	}
+
+	fmt.Fprintf(w, "event: done\ndata: {}\n\n")
+	flusher.Flush()
+}
 
 func handleConfig(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
