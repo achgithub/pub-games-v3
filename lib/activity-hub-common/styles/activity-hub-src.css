@@ -1,0 +1,208 @@
+/* ============================================================
+   ACTIVITY HUB — Shared Platform CSS (Tailwind source)
+   Build:  cd lib/activity-hub-common/styles && npm run build
+   Output: identity-shell/backend/static/activity-hub.css
+   ============================================================ */
+
+@tailwind base;
+@tailwind components;
+
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+
+  body {
+    @apply font-sans antialiased m-0;
+    background-color: #F5F5F4;  /* stone-100 */
+    color: #1C1917;              /* stone-900 */
+  }
+
+  h1, h2, h3, h4 { color: #1C1917; }
+
+  button       { @apply font-sans cursor-pointer; }
+  button:disabled { @apply opacity-60 cursor-not-allowed; }
+
+  input, textarea, select { @apply font-sans; }
+
+  input:focus, textarea:focus, select:focus {
+    @apply outline-none border-brand-500 ring-2 ring-brand-500/20;
+  }
+}
+
+@layer components {
+
+  /* ── Layout ─────────────────────────────────────────────── */
+  .ah-container {
+    @apply max-w-4xl mx-auto px-4 text-stone-900;
+  }
+  .ah-container--wide   { @apply max-w-6xl; }
+  .ah-container--narrow { @apply max-w-xl; }
+
+  /* ── Card ────────────────────────────────────────────────── */
+  .ah-card {
+    @apply bg-white border border-stone-200 rounded-xl p-4 mb-3;
+    box-shadow: 0 1px 3px 0 rgba(0,0,0,0.07), 0 1px 2px -1px rgba(0,0,0,0.07);
+  }
+
+  /* ── Banners ─────────────────────────────────────────────── */
+  .ah-banner {
+    @apply rounded-lg px-4 py-2.5 mb-3 text-sm;
+  }
+  .ah-banner--error   { @apply bg-red-50   border border-red-200   text-red-800   cursor-pointer; }
+  .ah-banner--success { @apply bg-green-50 border border-green-200 text-green-800; }
+  .ah-banner--warning { @apply bg-amber-50 border border-amber-200 text-amber-800; }
+  .ah-banner--info    { @apply bg-brand-50 border border-brand-100 text-brand-800; }
+
+  /* ── Typography ──────────────────────────────────────────── */
+  .ah-section-title {
+    @apply text-xs font-semibold mb-3 uppercase tracking-wider;
+    color: #78716C;  /* stone-500 */
+  }
+  .ah-meta  { @apply text-sm my-1; color: #78716C; }
+  .ah-label { @apply text-sm mr-1; color: #78716C; }
+
+  /* ── Tabs ────────────────────────────────────────────────── */
+  .ah-tabs {
+    @apply flex mb-5 border-b border-stone-200;
+  }
+  .ah-tab {
+    @apply px-5 py-2.5 border-0 bg-transparent cursor-pointer text-sm font-medium
+           border-b-2 border-transparent -mb-px
+           transition-colors duration-150;
+    color: #78716C;
+  }
+  .ah-tab:hover { color: #1C1917; }
+  .ah-tab.active {
+    @apply border-b-2 border-brand-500;
+    color: #1976D2;
+  }
+
+  /* ── Buttons ─────────────────────────────────────────────── */
+  .ah-btn-primary {
+    @apply inline-flex items-center justify-center
+           px-5 py-2.5 rounded-lg border-0
+           bg-brand-500 text-white text-sm font-semibold
+           cursor-pointer whitespace-nowrap
+           transition-all duration-150
+           hover:bg-brand-600 hover:-translate-y-px
+           active:translate-y-0
+           focus-visible:outline focus-visible:outline-2
+           focus-visible:outline-offset-2 focus-visible:outline-brand-500;
+    box-shadow: 0 1px 3px 0 rgba(33,150,243,0.3);
+  }
+  .ah-btn-primary:hover:not(:disabled) {
+    box-shadow: 0 4px 12px 0 rgba(33,150,243,0.35);
+  }
+  .ah-btn-primary:disabled {
+    @apply opacity-50 cursor-not-allowed translate-y-0;
+    box-shadow: none;
+  }
+
+  .ah-btn-outline {
+    @apply inline-flex items-center justify-center
+           px-4 py-2 rounded-lg
+           bg-white text-brand-700 text-sm font-medium
+           cursor-pointer whitespace-nowrap
+           transition-colors duration-150
+           focus-visible:outline focus-visible:outline-2
+           focus-visible:outline-offset-2 focus-visible:outline-brand-500;
+    border: 1px solid #90CAF9;
+  }
+  .ah-btn-outline:hover:not(:disabled) {
+    background-color: #E3F2FD;
+    border-color: #42A5F5;
+  }
+  .ah-btn-outline:disabled { @apply opacity-50 cursor-not-allowed; }
+
+  .ah-btn-danger {
+    @apply inline-flex items-center justify-center
+           px-4 py-2 rounded-lg
+           bg-white text-red-600 text-sm font-medium
+           cursor-pointer whitespace-nowrap
+           transition-colors duration-150
+           focus-visible:outline focus-visible:outline-2
+           focus-visible:outline-offset-2 focus-visible:outline-red-500;
+    border: 1px solid #FCA5A5;
+  }
+  .ah-btn-danger:hover:not(:disabled) {
+    background-color: #FEF2F2;
+    border-color: #F87171;
+  }
+  .ah-btn-danger:disabled { @apply opacity-50 cursor-not-allowed; }
+
+  .ah-btn-back {
+    @apply inline-flex items-center justify-center
+           px-3 py-1.5 rounded-lg
+           bg-white text-sm
+           cursor-pointer whitespace-nowrap
+           transition-colors duration-150;
+    border: 1px solid #D6D3D1;
+    color: #78716C;
+  }
+  .ah-btn-back:hover { background-color: #F5F5F4; color: #44403C; }
+
+  /* ── Form elements ───────────────────────────────────────── */
+  .ah-input {
+    @apply px-3 py-2 rounded-lg text-sm font-sans
+           transition-colors duration-150
+           focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500;
+    border: 1px solid #D6D3D1;
+    color: #1C1917;
+    background: white;
+  }
+  .ah-input:hover:not(:disabled) { border-color: #A8A29E; }
+  .ah-input::placeholder { color: #A8A29E; }
+
+  .ah-select {
+    @apply px-3 py-2 rounded-lg text-sm font-sans bg-white cursor-pointer
+           transition-colors duration-150
+           focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500;
+    border: 1px solid #D6D3D1;
+    color: #1C1917;
+  }
+  .ah-select:hover { border-color: #A8A29E; }
+
+  /* ── App header ──────────────────────────────────────────── */
+  .ah-header {
+    @apply flex items-center gap-3 mb-4 flex-wrap;
+  }
+  .ah-header-title {
+    @apply text-xl font-bold m-0;
+    color: #1C1917;
+  }
+
+  /* ── Lobby button ────────────────────────────────────────── */
+  .ah-lobby-btn {
+    @apply ml-auto px-4 py-1.5 rounded-lg bg-white text-sm
+           no-underline inline-flex items-center
+           cursor-pointer transition-colors duration-150;
+    border: 1px solid #D6D3D1;
+    color: #78716C;
+  }
+  .ah-lobby-btn:hover {
+    background-color: #F5F5F4;
+    color: #44403C;
+    text-decoration: none;
+  }
+
+  /* ── Data table ──────────────────────────────────────────── */
+  .ah-table {
+    @apply rounded-xl overflow-hidden bg-white;
+    border: 1px solid #E7E5E4;
+  }
+  .ah-table-header {
+    @apply flex px-4 py-2.5 gap-2 border-b text-xs font-semibold uppercase tracking-wider;
+    background-color: #FAFAF9;
+    border-color: #E7E5E4;
+    color: #78716C;
+  }
+  .ah-table-row {
+    @apply flex px-4 py-2.5 gap-2 items-center border-b transition-colors duration-100;
+    border-color: #F5F5F4;
+  }
+  .ah-table-row:last-child { border-bottom: none; }
+  .ah-table-row:nth-child(even) { background-color: #FAFAF9; }
+  .ah-table-row:hover { background-color: #F5F5F4; }
+
+}
+
+@tailwind utilities;

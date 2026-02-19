@@ -1,0 +1,13 @@
+{
+  "name": "activity-hub-styles",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Shared CSS build for Activity Hub — produces activity-hub.css",
+  "scripts": {
+    "build": "tailwindcss -i activity-hub-src.css -o ../../../identity-shell/backend/static/activity-hub.css --minify",
+    "watch": "tailwindcss -i activity-hub-src.css -o ../../../identity-shell/backend/static/activity-hub.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.0"
+  }
+}
