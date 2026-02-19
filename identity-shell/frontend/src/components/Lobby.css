@@ -14,14 +14,14 @@
   top: 70px;
   left: 50%;
   transform: translateX(-50%);
-  background: #1e293b;
-  border: 1px solid #3b82f6;
+  background: #ffffff;
+  border: 1px solid #2196F3;
   padding: 0.75rem 1.5rem;
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(33, 150, 243, 0.15);
   z-index: 1000;
   animation: slideInDown 0.3s ease-out;
-  color: #f1f5f9;
+  color: #1C1917;
   font-size: 0.9rem;
   font-weight: 500;
 }
@@ -39,11 +39,11 @@
 .lobby-header h1 {
   font-size: 2.5rem;
   margin-bottom: 0.5rem;
-  color: #f1f5f9;
+  color: #1C1917;
 }
 
 .lobby-header p {
-  color: #94a3b8;
+  color: #78716C;
   font-size: 1.1rem;
 }
 
@@ -54,16 +54,17 @@
 }
 
 .lobby-section {
-  background: #1e293b;
-  border: 1px solid #334155;
+  background: #ffffff;
+  border: 1px solid #E7E5E4;
   border-radius: 12px;
   padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
 .lobby-section h2 {
   font-size: 1.25rem;
   margin-bottom: 1rem;
-  color: #cbd5e1;
+  color: #1C1917;
 }
 
 /* Online Users */
@@ -77,12 +78,12 @@
 .placeholder-text {
   font-size: 0.9rem;
   margin-bottom: 1rem;
-  color: #64748b;
+  color: #A8A29E;
 }
 
 .hint-text {
   font-size: 0.85rem;
-  color: #475569;
+  color: #A8A29E;
   font-style: italic;
 }
 
@@ -92,8 +93,9 @@
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.75rem;
-  background: #0f172a;
-  border-radius: 6px;
+  background: #FAFAF9;
+  border: 1px solid #F5F5F4;
+  border-radius: 8px;
 }
 
 .user-info {
@@ -105,12 +107,12 @@
 
 .user-name {
   font-weight: 500;
-  color: #f1f5f9;
+  color: #1C1917;
 }
 
 .user-app {
   font-size: 0.75rem;
-  color: #64748b;
+  color: #A8A29E;
   margin-left: 0.5rem;
 }
 
@@ -122,33 +124,33 @@
 }
 
 .status-dot.online {
-  background: #22c55e;
-  box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+  background: #22C55E;
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.4);
 }
 
 .status-dot.in_game {
-  background: #eab308;
-  box-shadow: 0 0 8px rgba(234, 179, 8, 0.5);
+  background: #EAB308;
+  box-shadow: 0 0 6px rgba(234, 179, 8, 0.4);
 }
 
 .status-dot.away {
-  background: #6b7280;
+  background: #A8A29E;
 }
 
 .challenge-btn {
   padding: 0.4rem 0.8rem;
-  background: #3b82f6;
+  background: #2196F3;
   color: white;
   border: none;
   border-radius: 6px;
   font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 150ms ease;
 }
 
 .challenge-btn:hover {
-  background: #2563eb;
+  background: #1E88E5;
 }
 
 /* Challenges */
@@ -163,14 +165,14 @@
 .challenge-subsection h3 {
   font-size: 1rem;
   margin-bottom: 0.75rem;
-  color: #94a3b8;
+  color: #78716C;
   font-weight: 500;
 }
 
 .challenge-item {
   padding: 1rem;
-  background: #0f172a;
-  border: 1px solid #334155;
+  background: #FAFAF9;
+  border: 1px solid #E7E5E4;
   border-radius: 8px;
   display: flex;
   flex-direction: column;
@@ -178,12 +180,12 @@
 }
 
 .challenge-info {
-  color: #cbd5e1;
+  color: #44403C;
   font-size: 0.9rem;
 }
 
 .challenge-info strong {
-  color: #f1f5f9;
+  color: #1C1917;
 }
 
 .challenge-actions {
@@ -199,42 +201,43 @@
   border-radius: 6px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background 150ms ease;
 }
 
 .accept-btn {
-  background: #22c55e;
+  background: #22C55E;
   color: white;
 }
 
 .accept-btn:hover {
-  background: #16a34a;
+  background: #16A34A;
 }
 
 .reject-btn {
-  background: #334155;
-  color: #cbd5e1;
+  background: #F5F5F4;
+  color: #44403C;
+  border: 1px solid #D6D3D1;
 }
 
 .reject-btn:hover {
-  background: #475569;
+  background: #E7E5E4;
 }
 
 .challenge-timer {
   font-size: 0.8rem;
-  color: #64748b;
+  color: #A8A29E;
   text-align: center;
 }
 
 .challenge-status {
   font-size: 0.85rem;
-  color: #94a3b8;
+  color: #78716C;
   text-align: center;
   font-style: italic;
 }
 
 .challenge-item.sent {
-  border-left: 3px solid #3b82f6;
+  border-left: 3px solid #2196F3;
 }
 
 /* App Grid */
@@ -249,21 +252,22 @@
 }
 
 .app-card {
-  background: #0f172a;
-  border: 2px solid #334155;
+  background: #ffffff;
+  border: 1px solid #E7E5E4;
   border-radius: 12px;
   padding: 1.5rem;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: border-color 150ms ease, transform 150ms ease, box-shadow 150ms ease;
   text-align: center;
   position: relative;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
 .app-card:hover {
-  border-color: #3b82f6;
-  background: #1e293b;
+  border-color: #2196F3;
+  background: #ffffff;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+  box-shadow: 0 4px 16px rgba(33, 150, 243, 0.15);
 }
 
 .app-icon {
@@ -275,20 +279,21 @@
 .app-card h3 {
   font-size: 1.1rem;
   margin-bottom: 0.5rem;
-  color: #f1f5f9;
+  color: #1C1917;
 }
 
 .app-card p {
   font-size: 0.85rem;
-  color: #94a3b8;
+  color: #78716C;
   margin-bottom: 0.75rem;
 }
 
 .app-type-badge {
   display: inline-block;
   padding: 0.25rem 0.75rem;
-  background: #334155;
-  color: #94a3b8;
+  background: #F5F5F4;
+  color: #78716C;
+  border: 1px solid #E7E5E4;
   border-radius: 12px;
   font-size: 0.75rem;
   text-transform: uppercase;
@@ -296,13 +301,15 @@
 }
 
 .app-card.interactive .app-type-badge {
-  background: #1e3a8a;
-  color: #93c5fd;
+  background: #EFF6FF;
+  color: #1976D2;
+  border-color: #BFDBFE;
 }
 
 .app-card.static .app-type-badge {
-  background: #064e3b;
-  color: #6ee7b7;
+  background: #F0FDF4;
+  color: #15803D;
+  border-color: #BBF7D0;
 }
 
 /* Responsive */
@@ -356,18 +363,18 @@
   background: linear-gradient(135deg, #667eea, #764ba2);
   color: #fff;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 150ms ease;
   white-space: nowrap;
 }
 
 .multi-challenge-btn:hover {
   background: linear-gradient(135deg, #5a6fd6, #6a4190);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.35);
 }
 
 .multi-challenge-btn:active {
