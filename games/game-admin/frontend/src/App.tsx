@@ -1391,16 +1391,31 @@ function Toast({ message }: { message: string | null }) {
 
 interface MediaFile {
   id: number;
+  guid: string;
   filename: string;
   originalName: string;
   type: 'image' | 'audio';
   filePath: string;
   sizeBytes: number;
   createdAt: string;
+  label: string;
+}
+
+interface MediaClip {
+  id: number;
+  guid: string;
+  mediaFileId: number;
+  label: string;
+  audioStartSec: number;
+  audioDurationSec: number | null;
+  mediaType: 'image' | 'audio';
+  filename: string;
+  filePath: string;
 }
 
 interface QuizQuestion {
   id: number;
+  guid: string;
   text: string;
   answer: string;
   category: string;
@@ -1408,6 +1423,9 @@ interface QuizQuestion {
   type: string;
   imageId: number | null;
   audioId: number | null;
+  imageClipId: number | null;
+  audioClipId: number | null;
+  requiresMedia: boolean;
   isTestContent: boolean;
   createdAt: string;
   imagePath: string;
@@ -1437,13 +1455,18 @@ interface QuizRound {
 
 function QuizMediaTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isReadOnly: boolean }) {
   const [files, setFiles] = useState<MediaFile[]>([]);
+  const [clips, setClips] = useState<MediaClip[]>([]);
   const [filter, setFilter] = useState<'all' | 'image' | 'audio'>('all');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  // addClipFor: id of media_file currently showing the "add clip" form
+  const [addClipFor, setAddClipFor] = useState<number | null>(null);
+  const [clipForm, setClipForm] = useState({ label: '', audioStartSec: '0', audioDurationSec: '' });
 
   const load = useCallback(() => {
     const q = filter !== 'all' ? `?type=${filter}` : '';
     api(`/api/quiz/media${q}`).then(d => setFiles(d.files || [])).catch(err => setError(err.message));
+    api('/api/quiz/clips').then(d => setClips(d.clips || [])).catch(() => {});
   }, [api, filter]);
 
   useEffect(() => { load(); }, [load]);
@@ -1455,7 +1478,11 @@ function QuizMediaTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isR
     formData.append('file', file);
     try {
       const data = await api('/api/quiz/media/upload', { method: 'POST', body: formData });
-      setSuccess(`Uploaded: ${data.originalName}`);
+      if (data.deduplicated) {
+        setSuccess(`File already exists — reusing record: ${data.originalName}`);
+      } else {
+        setSuccess(`Uploaded: ${data.originalName}`);
+      }
       load();
       setTimeout(() => setSuccess(null), 4000);
     } catch (err) {
@@ -1476,6 +1503,45 @@ function QuizMediaTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isR
     }
   };
 
+  const addClip = async (mediaFileId: number) => {
+    if (!clipForm.label.trim()) { setError('Clip label required'); return; }
+    try {
+      const dur = clipForm.audioDurationSec.trim() ? parseFloat(clipForm.audioDurationSec) : null;
+      await api('/api/quiz/clips', {
+        method: 'POST',
+        body: JSON.stringify({
+          mediaFileId,
+          label: clipForm.label.trim(),
+          audioStartSec: parseFloat(clipForm.audioStartSec) || 0,
+          audioDurationSec: dur,
+        }),
+      });
+      setClipForm({ label: '', audioStartSec: '0', audioDurationSec: '' });
+      setAddClipFor(null);
+      setSuccess('Clip added');
+      load();
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to add clip');
+    }
+  };
+
+  const deleteClip = async (clipId: number) => {
+    try {
+      await api(`/api/quiz/clips/${clipId}`, { method: 'DELETE' });
+      setSuccess('Clip deleted');
+      load();
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Delete failed');
+    }
+  };
+
+  const clipsByFile = clips.reduce<Record<number, MediaClip[]>>((acc, c) => {
+    (acc[c.mediaFileId] = acc[c.mediaFileId] || []).push(c);
+    return acc;
+  }, {});
+
   return (
     <div>
       {error && <div className="ah-banner ah-banner--error" onClick={() => setError(null)}>{error}</div>}
@@ -1485,11 +1551,12 @@ function QuizMediaTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isR
         <div className="ah-card">
           <h3 className="ah-section-title">Upload Media</h3>
           <p className="ah-meta">Images: JPG, PNG, GIF, WebP (max 10MB). Audio: MP3, OGG, WAV, M4A (max 20MB).</p>
+          <p className="ah-meta">Duplicate files are detected by content hash — re-uploading an identical file reuses the existing record.</p>
           <input type="file" accept="image/*,audio/*,.mp3,.ogg,.wav,.m4a" onChange={upload} style={{ marginTop: 8 }} />
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12, marginTop: 8 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12, marginTop: 8, alignItems: 'center', flexWrap: 'wrap' }}>
         {(['all', 'image', 'audio'] as const).map(f => (
           <button
             key={f}
@@ -1499,40 +1566,107 @@ function QuizMediaTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isR
             {f.charAt(0).toUpperCase() + f.slice(1)}
           </button>
         ))}
+        <button
+          className="ah-btn-outline"
+          style={{ marginLeft: 'auto', fontSize: 12 }}
+          onClick={() => window.open('/api/quiz/clips/export', '_blank')}
+        >
+          Export Reference Sheet (CSV)
+        </button>
       </div>
 
       {files.length === 0 ? (
         <div className="ah-card"><p style={{ color: '#666' }}>No media files yet.</p></div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
-          {files.map(f => (
-            <div key={f.id} className="ah-card" style={{ padding: 10 }}>
-              {f.type === 'image' ? (
-                <img
-                  src={f.filePath}
-                  alt={f.originalName}
-                  style={{ width: '100%', height: 120, objectFit: 'cover', borderRadius: 4, marginBottom: 8 }}
-                  onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                />
-              ) : (
-                <div style={{ height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  backgroundColor: '#f5f5f5', borderRadius: 4, marginBottom: 8, fontSize: 32 }}>
-                  🎵
-                  <audio controls src={f.filePath} style={{ width: '90%', marginTop: 4 }} />
-                </div>
-              )}
-              <p style={{ fontSize: 12, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={f.originalName}>
-                {f.originalName}
-              </p>
-              <p className="ah-meta">{(f.sizeBytes / 1024).toFixed(0)} KB</p>
-              {!isReadOnly && (
-                <button className="ah-btn-danger" style={{ marginTop: 6, width: '100%', padding: '4px 8px', fontSize: 12 }}
-                  onClick={() => deleteFile(f.id, f.originalName)}>
-                  Delete
-                </button>
-              )}
-            </div>
-          ))}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
+          {files.map(f => {
+            const fileClips = clipsByFile[f.id] || [];
+            return (
+              <div key={f.id} className="ah-card" style={{ padding: 10 }}>
+                {f.type === 'image' ? (
+                  <img
+                    src={f.filePath}
+                    alt={f.originalName}
+                    style={{ width: '100%', height: 120, objectFit: 'cover', borderRadius: 4, marginBottom: 8 }}
+                    onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
+                ) : (
+                  <div style={{ height: 80, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    backgroundColor: '#f5f5f5', borderRadius: 4, marginBottom: 8, gap: 4 }}>
+                    <span style={{ fontSize: 24 }}>🎵</span>
+                    <audio controls src={f.filePath} style={{ width: '95%' }} />
+                  </div>
+                )}
+                <p style={{ fontSize: 12, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={f.originalName}>
+                  {f.originalName}
+                </p>
+                <p className="ah-meta">{(f.sizeBytes / 1024).toFixed(0)} KB</p>
+
+                {/* Clips list */}
+                {fileClips.length > 0 && (
+                  <div style={{ marginTop: 6, borderTop: '1px solid #f0f0f0', paddingTop: 6 }}>
+                    {fileClips.map(c => (
+                      <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 3 }}>
+                        <span style={{ fontSize: 11, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={c.guid}>
+                          {c.label}
+                        </span>
+                        <button
+                          style={{ fontSize: 10, padding: '1px 5px', border: '1px solid #ccc', borderRadius: 3, cursor: 'pointer', background: 'white' }}
+                          title={c.guid}
+                          onClick={() => { navigator.clipboard.writeText(c.guid); setSuccess('GUID copied'); setTimeout(() => setSuccess(null), 2000); }}
+                        >
+                          GUID
+                        </button>
+                        {!isReadOnly && fileClips.length > 1 && (
+                          <button
+                            style={{ fontSize: 10, padding: '1px 5px', border: '1px solid #f44336', borderRadius: 3, cursor: 'pointer', background: 'white', color: '#f44336' }}
+                            onClick={() => deleteClip(c.id)}
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Add clip form (audio only) */}
+                {!isReadOnly && f.type === 'audio' && (
+                  addClipFor === f.id ? (
+                    <div style={{ marginTop: 6, borderTop: '1px solid #f0f0f0', paddingTop: 6 }}>
+                      <input className="ah-input" style={{ width: '100%', marginBottom: 4 }}
+                        placeholder="Clip label" value={clipForm.label}
+                        onChange={e => setClipForm(cf => ({ ...cf, label: e.target.value }))} />
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        <input className="ah-input" style={{ flex: 1 }} placeholder="Start (s)" type="number" step="0.1"
+                          value={clipForm.audioStartSec}
+                          onChange={e => setClipForm(cf => ({ ...cf, audioStartSec: e.target.value }))} />
+                        <input className="ah-input" style={{ flex: 1 }} placeholder="Dur (s)" type="number" step="0.1"
+                          value={clipForm.audioDurationSec}
+                          onChange={e => setClipForm(cf => ({ ...cf, audioDurationSec: e.target.value }))} />
+                      </div>
+                      <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+                        <button className="ah-btn-primary" style={{ flex: 1, fontSize: 11, padding: '4px 0' }} onClick={() => addClip(f.id)}>Add</button>
+                        <button className="ah-btn-outline" style={{ flex: 1, fontSize: 11, padding: '4px 0' }} onClick={() => setAddClipFor(null)}>Cancel</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button className="ah-btn-outline" style={{ marginTop: 6, width: '100%', fontSize: 11 }}
+                      onClick={() => { setAddClipFor(f.id); setClipForm({ label: '', audioStartSec: '0', audioDurationSec: '' }); }}>
+                      + Add Clip
+                    </button>
+                  )
+                )}
+
+                {!isReadOnly && (
+                  <button className="ah-btn-danger" style={{ marginTop: 6, width: '100%', padding: '4px 8px', fontSize: 12 }}
+                    onClick={() => deleteFile(f.id, f.originalName)}>
+                    Delete File
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
@@ -1543,30 +1677,40 @@ function QuizMediaTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isR
 
 function QuizQuestionsTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isReadOnly: boolean }) {
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
-  const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
+  const [clips, setClips] = useState<MediaClip[]>([]);
   const [filterType, setFilterType] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [form, setForm] = useState({ text: '', answer: '', category: '', difficulty: 'medium', type: 'text', imageId: '', audioId: '', isTestContent: false });
+  const [form, setForm] = useState({
+    text: '', answer: '', category: '', difficulty: 'medium', type: 'text',
+    imageClipId: '', audioClipId: '', requiresMedia: false, isTestContent: false,
+  });
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [importResult, setImportResult] = useState<string | null>(null);
 
   const load = useCallback(() => {
     const q = filterType ? `?type=${filterType}` : '';
     api(`/api/quiz/questions${q}`).then(d => setQuestions(d.questions || [])).catch(err => setError(err.message));
-    api('/api/quiz/media').then(d => setMediaFiles(d.files || [])).catch(() => {});
+    api('/api/quiz/clips').then(d => setClips(d.clips || [])).catch(() => {});
   }, [api, filterType]);
 
   useEffect(() => { load(); }, [load]);
 
+  const imageClips = clips.filter(c => c.mediaType === 'image');
+  const audioClips = clips.filter(c => c.mediaType === 'audio');
+
   const resetForm = () => {
-    setForm({ text: '', answer: '', category: '', difficulty: 'medium', type: 'text', imageId: '', audioId: '', isTestContent: false });
+    setForm({ text: '', answer: '', category: '', difficulty: 'medium', type: 'text', imageClipId: '', audioClipId: '', requiresMedia: false, isTestContent: false });
     setEditingId(null);
   };
 
   const startEdit = (q: QuizQuestion) => {
     setForm({
       text: q.text, answer: q.answer, category: q.category, difficulty: q.difficulty,
-      type: q.type, imageId: q.imageId ? String(q.imageId) : '', audioId: q.audioId ? String(q.audioId) : '',
+      type: q.type,
+      imageClipId: q.imageClipId ? String(q.imageClipId) : '',
+      audioClipId: q.audioClipId ? String(q.audioClipId) : '',
+      requiresMedia: q.requiresMedia,
       isTestContent: q.isTestContent,
     });
     setEditingId(q.id);
@@ -1577,8 +1721,9 @@ function QuizQuestionsTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>;
     const body = {
       text: form.text.trim(), answer: form.answer.trim(), category: form.category.trim(),
       difficulty: form.difficulty, type: form.type,
-      imageId: form.imageId ? parseInt(form.imageId) : null,
-      audioId: form.audioId ? parseInt(form.audioId) : null,
+      imageClipId: form.imageClipId ? parseInt(form.imageClipId) : null,
+      audioClipId: form.audioClipId ? parseInt(form.audioClipId) : null,
+      requiresMedia: form.requiresMedia,
       isTestContent: form.isTestContent,
     };
     try {
@@ -1609,8 +1754,29 @@ function QuizQuestionsTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>;
     }
   };
 
-  const images = mediaFiles.filter(f => f.type === 'image');
-  const audios = mediaFiles.filter(f => f.type === 'audio');
+  const importCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const data = await api('/api/quiz/questions/import', { method: 'POST', body: formData });
+      let msg = `Imported ${data.imported} question${data.imported !== 1 ? 's' : ''}`;
+      if (data.skipped && data.skipped.length > 0) {
+        msg += `. Skipped ${data.skipped.length}: ${data.skipped.map((s: {row: number; reason: string}) => `row ${s.row}: ${s.reason}`).join('; ')}`;
+      }
+      setImportResult(msg);
+      load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Import failed');
+    }
+    e.target.value = '';
+  };
+
+  const csvTemplate = 'text,answer,category,difficulty,type,image_guid,audio_guid,requires_media\n' +
+    '"What is 2+2?",4,Maths,easy,text,,,false\n' +
+    '"Name this song",Bohemian Rhapsody,Music,medium,music,,<audio-clip-guid>,true\n';
+  const templateHref = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csvTemplate);
 
   return (
     <div>
@@ -1644,22 +1810,26 @@ function QuizQuestionsTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>;
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
             {(form.type === 'picture' || form.type === 'text') && (
               <div>
-                <label className="ah-label">Image: </label>
-                <select className="ah-select" value={form.imageId} onChange={e => setForm(f => ({ ...f, imageId: e.target.value }))}>
+                <label className="ah-label">Image clip: </label>
+                <select className="ah-select" value={form.imageClipId} onChange={e => setForm(f => ({ ...f, imageClipId: e.target.value }))}>
                   <option value="">— none —</option>
-                  {images.map(img => <option key={img.id} value={img.id}>{img.originalName}</option>)}
+                  {imageClips.map(c => <option key={c.id} value={c.id}>{c.label} — {c.filename}</option>)}
                 </select>
               </div>
             )}
             {(form.type === 'music' || form.type === 'text') && (
               <div>
-                <label className="ah-label">Audio: </label>
-                <select className="ah-select" value={form.audioId} onChange={e => setForm(f => ({ ...f, audioId: e.target.value }))}>
+                <label className="ah-label">Audio clip: </label>
+                <select className="ah-select" value={form.audioClipId} onChange={e => setForm(f => ({ ...f, audioClipId: e.target.value }))}>
                   <option value="">— none —</option>
-                  {audios.map(aud => <option key={aud.id} value={aud.id}>{aud.originalName}</option>)}
+                  {audioClips.map(c => <option key={c.id} value={c.id}>{c.label} — {c.filename}</option>)}
                 </select>
               </div>
             )}
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}>
+              <input type="checkbox" checked={form.requiresMedia} onChange={e => setForm(f => ({ ...f, requiresMedia: e.target.checked }))} />
+              Requires media
+            </label>
             <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}>
               <input type="checkbox" checked={form.isTestContent} onChange={e => setForm(f => ({ ...f, isTestContent: e.target.checked }))} />
               Test content
@@ -1669,6 +1839,27 @@ function QuizQuestionsTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>;
             <button className="ah-btn-primary" onClick={save}>{editingId ? 'Update' : 'Add Question'}</button>
             {editingId && <button className="ah-btn-outline" onClick={resetForm}>Cancel</button>}
           </div>
+        </div>
+      )}
+
+      {/* CSV Import */}
+      {!isReadOnly && (
+        <div className="ah-card">
+          <h3 className="ah-section-title">Import Questions (CSV)</h3>
+          <p className="ah-meta">
+            Required columns: <code>text</code>, <code>answer</code>.
+            Optional: <code>category</code>, <code>difficulty</code>, <code>type</code>, <code>image_guid</code>, <code>audio_guid</code>, <code>requires_media</code>.
+            GUIDs come from the Media tab's Export Reference Sheet.
+          </p>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8, flexWrap: 'wrap' }}>
+            <input type="file" accept=".csv" onChange={importCSV} />
+            <a href={templateHref} download="quiz-questions-template.csv" className="ah-btn-outline" style={{ fontSize: 12, textDecoration: 'none', padding: '5px 10px' }}>
+              Download Template
+            </a>
+          </div>
+          {importResult && (
+            <p className="ah-meta" style={{ marginTop: 8, color: '#333' }}>{importResult}</p>
+          )}
         </div>
       )}
 
@@ -1691,6 +1882,9 @@ function QuizQuestionsTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>;
                 <p className="ah-meta">Answer: <strong>{q.answer}</strong> · {q.type} · {q.difficulty} {q.category && `· ${q.category}`}</p>
                 {q.imagePath && <p className="ah-meta" style={{ color: '#1565C0' }}>Image attached</p>}
                 {q.audioPath && <p className="ah-meta" style={{ color: '#E65100' }}>Audio attached</p>}
+                {q.requiresMedia && !q.imageClipId && !q.audioClipId && (
+                  <span style={{ ...s.currentBadge, backgroundColor: '#FFEBEE', color: '#C62828', marginLeft: 0 }}>NEEDS CLIP</span>
+                )}
                 {q.isTestContent && <span style={{ ...s.currentBadge, backgroundColor: '#E8F5E9', color: '#2E7D32' }}>TEST</span>}
               </div>
               {!isReadOnly && (
@@ -1904,27 +2098,36 @@ function QuizPacksTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isR
                   </div>
 
                   {/* Inline question editor */}
-                  {editRoundId === rd.id && (
-                    <div style={{ marginTop: 12, borderTop: '1px solid #e0e0e0', paddingTop: 10 }}>
-                      <p style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Select questions (in order):</p>
-                      <div style={{ maxHeight: 200, overflowY: 'auto' }}>
-                        {questions.map(q => (
-                          <label key={q.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '4px 0', cursor: 'pointer', fontSize: 12 }}>
-                            <input type="checkbox" checked={roundQuestionIds.includes(q.id)} onChange={() => toggleQuestion(q.id)} />
-                            <span>
-                              <strong>{q.text.length > 60 ? q.text.slice(0, 60) + '...' : q.text}</strong>
-                              <span style={{ color: '#666' }}> — {q.answer} ({q.type})</span>
-                            </span>
-                          </label>
-                        ))}
+                  {editRoundId === rd.id && (() => {
+                    const usableQuestions = questions.filter(q => !(q.requiresMedia && !q.imageClipId && !q.audioClipId));
+                    const excludedCount = questions.length - usableQuestions.length;
+                    return (
+                      <div style={{ marginTop: 12, borderTop: '1px solid #e0e0e0', paddingTop: 10 }}>
+                        <p style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Select questions (in order):</p>
+                        {excludedCount > 0 && (
+                          <p className="ah-meta" style={{ color: '#E65100', marginBottom: 6 }}>
+                            {excludedCount} question{excludedCount !== 1 ? 's' : ''} hidden — marked as requiring media but no clip assigned.
+                          </p>
+                        )}
+                        <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+                          {usableQuestions.map(q => (
+                            <label key={q.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '4px 0', cursor: 'pointer', fontSize: 12 }}>
+                              <input type="checkbox" checked={roundQuestionIds.includes(q.id)} onChange={() => toggleQuestion(q.id)} />
+                              <span>
+                                <strong>{q.text.length > 60 ? q.text.slice(0, 60) + '...' : q.text}</strong>
+                                <span style={{ color: '#666' }}> — {q.answer} ({q.type})</span>
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                        <p className="ah-meta" style={{ marginTop: 4 }}>{roundQuestionIds.length} selected (order = selection order)</p>
+                        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                          <button className="ah-btn-primary" onClick={saveRoundQuestions}>Save</button>
+                          <button className="ah-btn-outline" onClick={() => setEditRoundId(null)}>Cancel</button>
+                        </div>
                       </div>
-                      <p className="ah-meta" style={{ marginTop: 4 }}>{roundQuestionIds.length} selected (order = selection order)</p>
-                      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                        <button className="ah-btn-primary" onClick={saveRoundQuestions}>Save</button>
-                        <button className="ah-btn-outline" onClick={() => setEditRoundId(null)}>Cancel</button>
-                      </div>
-                    </div>
-                  )}
+                    );
+                  })()}
                 </div>
               ))
             )}

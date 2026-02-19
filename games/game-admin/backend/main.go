@@ -108,9 +108,17 @@ func main() {
 	api.HandleFunc("/quiz/media", handleGetQuizMedia).Methods("GET")
 	api.HandleFunc("/quiz/media/{id}", handleDeleteQuizMedia).Methods("DELETE")
 
+	// Quiz clip management (export must be before /{id} to avoid route collision)
+	api.HandleFunc("/quiz/clips", handleGetQuizClips).Methods("GET")
+	api.HandleFunc("/quiz/clips/export", handleExportClipsCSV).Methods("GET")
+	api.HandleFunc("/quiz/clips", handleCreateQuizClip).Methods("POST")
+	api.HandleFunc("/quiz/clips/{id}", handleUpdateQuizClip).Methods("PUT")
+	api.HandleFunc("/quiz/clips/{id}", handleDeleteQuizClip).Methods("DELETE")
+
 	// Quiz question management
 	api.HandleFunc("/quiz/questions", handleGetQuizQuestions).Methods("GET")
 	api.HandleFunc("/quiz/questions", handleCreateQuizQuestion).Methods("POST")
+	api.HandleFunc("/quiz/questions/import", handleImportQuizQuestions).Methods("POST")
 	api.HandleFunc("/quiz/questions/{id}", handleUpdateQuizQuestion).Methods("PUT")
 	api.HandleFunc("/quiz/questions/{id}", handleDeleteQuizQuestion).Methods("DELETE")
 
