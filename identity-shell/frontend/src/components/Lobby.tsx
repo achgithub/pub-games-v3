@@ -4,6 +4,7 @@ import { AppDefinition, UserPresence, Challenge, ChallengeOptions, GameConfig } 
 import ChallengeModal from './ChallengeModal';
 import MultiPlayerChallengeModal from './MultiPlayerChallengeModal';
 import ChallengeProgress from './ChallengeProgress';
+import GameChallengeModal from './GameChallengeModal';
 
 interface LobbyProps {
   apps: AppDefinition[];
@@ -39,13 +40,21 @@ const Lobby: React.FC<LobbyProps> = ({
   // Force re-render every second to update timers and filter expired challenges
   const [, setTick] = useState(0);
 
-  // Challenge modal state - just target user, game is selected in modal
+  // Online users visibility state
+  const [showOnlineUsers, setShowOnlineUsers] = useState(false);
+
+  // Challenge modal state - now starts with game selection
   const [challengeModal, setChallengeModal] = useState<{
     targetUser: string;
   } | null>(null);
 
   // Multi-player challenge modal state
   const [multiPlayerModalOpen, setMultiPlayerModalOpen] = useState(false);
+
+  // New challenge flow modal state - starts with game, then selects users
+  const [newChallengeModal, setNewChallengeModal] = useState<{
+    app: AppDefinition;
+  } | null>(null);
 
   // Get challengeable games (category: game, has realtime support, has backend port)
   const challengeableApps = apps.filter(app =>
@@ -125,6 +134,26 @@ const Lobby: React.FC<LobbyProps> = ({
     await onRejectChallenge(challengeId);
   };
 
+  // Handle new challenge flow confirmation
+  const handleNewChallengeConfirm = async (appId: string, playerIds: string[], options: ChallengeOptions) => {
+    const app = apps.find(a => a.id === appId);
+    const isGroupGame = app?.minPlayers && app.minPlayers > 2;
+
+    if (isGroupGame) {
+      // Multi-player challenge
+      const minPlayers = app?.minPlayers || playerIds.length;
+      const maxPlayers = app?.maxPlayers || playerIds.length;
+      await onSendMultiChallenge(playerIds, appId, minPlayers, maxPlayers, options);
+    } else {
+      // 1v1 challenge (take first player)
+      if (playerIds.length > 0) {
+        await onSendChallenge(playerIds[0], appId, options);
+      }
+    }
+
+    setNewChallengeModal(null);
+  };
+
   return (
     <div className="lobby">
       {/* Notification Toast */}
@@ -135,67 +164,83 @@ const Lobby: React.FC<LobbyProps> = ({
       )}
 
       <div className="lobby-header">
-        <h1>🏠 Game Lobby</h1>
-        <p>Select a game or challenge someone!</p>
+        <h1>Game Lobby</h1>
+        <p>Select a game to start playing</p>
       </div>
 
       <div className="lobby-sections">
-        {/* Online Users Section */}
+        {/* Online Users Section - Collapsible */}
         <section className="lobby-section">
-          <div className="section-header-with-action">
-            <h2>👥 Online Now ({onlineUsers.length})</h2>
-            {multiPlayerApps.length > 0 && onlineUsers.length >= 2 && (
-              <button
-                className="multi-challenge-btn"
-                onClick={() => setMultiPlayerModalOpen(true)}
-              >
-                🎮 Challenge Multiple
-              </button>
-            )}
+          <div
+            className="section-header-clickable"
+            onClick={() => setShowOnlineUsers(!showOnlineUsers)}
+            onMouseEnter={() => setShowOnlineUsers(true)}
+          >
+            <h2>Online ({onlineUsers.length})</h2>
+            <span className="expand-icon">{showOnlineUsers ? '▼' : '▶'}</span>
           </div>
-          <div className="online-users">
-            {onlineUsers.length === 0 ? (
-              <p className="placeholder-text">No other users online</p>
-            ) : (
-              onlineUsers.map((user) => (
-                <div key={user.email} className="user-item">
-                  <div className="user-info">
-                    <span className={`status-dot ${user.status}`}></span>
-                    <span className="user-name">{user.displayName}</span>
-                    {user.currentApp && (
-                      <span className="user-app">Playing {user.currentApp}</span>
-                    )}
+
+          {/* User's own status */}
+          <div className="user-status-self">
+            <div className="user-info">
+              <span className="status-dot online"></span>
+              <span className="user-name">{userName} (you)</span>
+            </div>
+          </div>
+
+          {/* Collapsible online users list */}
+          {showOnlineUsers && (
+            <div
+              className="online-users"
+              onMouseLeave={() => setShowOnlineUsers(false)}
+            >
+              {onlineUsers.length === 0 ? (
+                <p className="placeholder-text">No other users online</p>
+              ) : (
+                onlineUsers.map((user) => (
+                  <div key={user.email} className="user-item">
+                    <div className="user-info">
+                      <span className={`status-dot ${user.status}`}></span>
+                      <span className="user-name">{user.displayName}</span>
+                      {user.currentApp && (
+                        <span className="user-app">Playing {user.currentApp}</span>
+                      )}
+                    </div>
                   </div>
-                  {user.email !== userEmail && challengeableApps.length > 0 && (
-                    <button
-                      className="challenge-btn"
-                      onClick={() => handleChallengeUser(user.email)}
-                    >
-                      Challenge
-                    </button>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
+                ))
+              )}
+            </div>
+          )}
         </section>
 
         {/* Available Apps Section */}
         <section className="lobby-section lobby-apps">
-          <h2>🎮 Available Games</h2>
+          <h2>Available Games</h2>
           <div className="app-grid">
-            {availableGames.map((app) => (
-              <button
-                key={app.id}
-                className={`app-card ${app.type}`}
-                onClick={() => onAppClick(app.id)}
-              >
-                <div className="app-icon">{app.icon}</div>
-                <h3>{app.name}</h3>
-                <p>{app.description}</p>
-                <span className="app-type-badge">{app.type}</span>
-              </button>
-            ))}
+            {availableGames.map((app) => {
+              const isChallengeable = challengeableApps.some(ca => ca.id === app.id);
+
+              return (
+                <button
+                  key={app.id}
+                  className={`app-card ${app.type}`}
+                  onClick={() => {
+                    if (isChallengeable) {
+                      // Open challenge modal for challengeable games
+                      setNewChallengeModal({ app });
+                    } else {
+                      // Navigate directly for non-challengeable apps
+                      onAppClick(app.id);
+                    }
+                  }}
+                >
+                  <div className="app-icon">{app.icon}</div>
+                  <h3>{app.name}</h3>
+                  <p>{app.description}</p>
+                  <span className="app-type-badge">{app.category}</span>
+                </button>
+              );
+            })}
           </div>
         </section>
 
@@ -346,6 +391,19 @@ const Lobby: React.FC<LobbyProps> = ({
           multiPlayerApps={multiPlayerApps}
           onConfirm={handleConfirmMultiChallenge}
           onCancel={() => setMultiPlayerModalOpen(false)}
+          fetchGameConfig={fetchGameConfig}
+        />
+      )}
+
+      {/* New Game Challenge Modal */}
+      {newChallengeModal && (
+        <GameChallengeModal
+          app={newChallengeModal.app}
+          currentUserEmail={userEmail}
+          currentUserName={userName}
+          onlineUsers={onlineUsers}
+          onConfirm={handleNewChallengeConfirm}
+          onCancel={() => setNewChallengeModal(null)}
           fetchGameConfig={fetchGameConfig}
         />
       )}

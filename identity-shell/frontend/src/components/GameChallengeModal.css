@@ -1,0 +1,352 @@
+.game-challenge-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.game-challenge-modal {
+  background: #ffffff;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Header */
+.game-challenge-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid #F0F0F0;
+}
+
+.game-challenge-icon {
+  font-size: 2.5rem;
+}
+
+.game-challenge-header h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1C1917;
+  margin: 0;
+}
+
+/* Body */
+.game-challenge-body {
+  padding: 2rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.challenge-prompt {
+  font-size: 0.875rem;
+  color: #666;
+  margin-bottom: 1.5rem;
+}
+
+.challenge-prompt strong {
+  color: #1C1917;
+  font-weight: 600;
+}
+
+/* Player filter */
+.player-filter {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border: 1px solid #E0E0E0;
+  border-radius: 6px;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.player-filter:focus {
+  outline: none;
+  border-color: #1C1917;
+  box-shadow: 0 0 0 1px #1C1917;
+}
+
+/* Player list */
+.player-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.player-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  border: 1px solid #F0F0F0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.player-item:hover {
+  background: #FAFAFA;
+  border-color: #E0E0E0;
+}
+
+.player-item.selected {
+  background: #F5F5F5;
+  border-color: #1C1917;
+  box-shadow: 0 0 0 1px #1C1917;
+}
+
+.player-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.player-name {
+  font-weight: 500;
+  color: #1C1917;
+  font-size: 0.9rem;
+}
+
+.player-app {
+  font-size: 0.75rem;
+  color: #999;
+  margin-left: 0.5rem;
+}
+
+.player-checkbox {
+  width: 24px;
+  height: 24px;
+  border: 2px solid #E0E0E0;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  color: #1C1917;
+  transition: all 150ms ease;
+}
+
+.player-item.selected .player-checkbox {
+  background: #1C1917;
+  border-color: #1C1917;
+  color: white;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-dot.online {
+  background: #22C55E;
+}
+
+.status-dot.in_game {
+  background: #F59E0B;
+}
+
+.status-dot.away {
+  background: #D1D5DB;
+}
+
+.no-players {
+  text-align: center;
+  color: #999;
+  padding: 2rem;
+  font-size: 0.875rem;
+}
+
+.selected-count {
+  margin-top: 1rem;
+  font-size: 0.875rem;
+  color: #666;
+  text-align: center;
+}
+
+/* Game options */
+.game-options {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.game-options h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1C1917;
+  margin-bottom: 0.5rem;
+}
+
+.game-option {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.game-option label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #1C1917;
+}
+
+.game-option select,
+.game-option input[type="number"] {
+  padding: 0.75rem 1rem;
+  border: 1px solid #E0E0E0;
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.game-option select:focus,
+.game-option input[type="number"]:focus {
+  outline: none;
+  border-color: #1C1917;
+  box-shadow: 0 0 0 1px #1C1917;
+}
+
+.game-option.checkbox {
+  flex-direction: row;
+  align-items: center;
+}
+
+.game-option.checkbox label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.game-option.checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.no-options {
+  text-align: center;
+  color: #999;
+  padding: 2rem;
+  font-size: 0.875rem;
+}
+
+.gcm-loading {
+  text-align: center;
+  color: #999;
+  padding: 2rem;
+  font-size: 0.875rem;
+}
+
+/* Footer */
+.game-challenge-footer {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1.5rem 2rem;
+  border-top: 1px solid #F0F0F0;
+  justify-content: flex-end;
+}
+
+.gcm-cancel-btn,
+.gcm-back-btn,
+.gcm-next-btn,
+.gcm-confirm-btn {
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.gcm-cancel-btn {
+  background: #ffffff;
+  color: #1C1917;
+  border: 1px solid #E0E0E0;
+}
+
+.gcm-cancel-btn:hover {
+  background: #F5F5F5;
+  border-color: #CCC;
+}
+
+.gcm-back-btn {
+  background: #F5F5F5;
+  color: #1C1917;
+  border: 1px solid #E0E0E0;
+}
+
+.gcm-back-btn:hover {
+  background: #E0E0E0;
+}
+
+.gcm-next-btn,
+.gcm-confirm-btn {
+  background: #1C1917;
+  color: white;
+  border: none;
+}
+
+.gcm-next-btn:hover,
+.gcm-confirm-btn:hover {
+  background: #333;
+}
+
+.gcm-next-btn:disabled,
+.gcm-confirm-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .game-challenge-modal {
+    width: 95%;
+    max-height: 90vh;
+  }
+
+  .game-challenge-header {
+    padding: 1rem 1.5rem;
+  }
+
+  .game-challenge-body {
+    padding: 1.5rem;
+  }
+
+  .game-challenge-footer {
+    padding: 1rem 1.5rem;
+  }
+}

@@ -73,6 +73,46 @@
   color: #666;
 }
 
+/* Collapsible section header */
+.section-header-clickable {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  padding: 0.5rem 0;
+  margin-bottom: 1rem;
+  user-select: none;
+}
+
+.section-header-clickable h2 {
+  margin: 0;
+}
+
+.expand-icon {
+  font-size: 0.75rem;
+  color: #999;
+  transition: transform 150ms ease;
+}
+
+/* User's own status */
+.user-status-self {
+  padding: 1rem 0;
+  border-bottom: 2px solid #F0F0F0;
+  margin-bottom: 1rem;
+}
+
+.user-status-self .user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.user-status-self .user-name {
+  font-weight: 600;
+  color: #1C1917;
+  font-size: 0.9rem;
+}
+
 /* Online Users */
 .online-users,
 .challenges {
