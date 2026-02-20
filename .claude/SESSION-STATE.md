@@ -88,6 +88,8 @@ function App() {
 
 **What was created:** Built `games/smoke-test/` as the definitive reference implementation. This is a complete, working example of the Activity Hub stack with all recommended patterns.
 
+**Fixed:** Redis version (v8) and middleware patterns to match tic-tac-toe reference.
+
 **Ready for Pi deployment:**
 ```bash
 # On Pi:
