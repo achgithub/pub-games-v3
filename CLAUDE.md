@@ -3,14 +3,31 @@
 - Platform: Pi at [192.168.1.29] (was 192.168.1.45 - IP changed after WiFi crash), Mac for editing
 - Workflow: Edit on Mac → commit → USER pushes → pull & build on Pi
 - Ports: identity-shell: 3001, tic-tac-toe: 4001, dots: 4011, sweepstakes: 4031, last-man-standing: 4021, quiz-player: 4041, spoof: 4051, mobile-test: 4061, leaderboard: 5030, season-scheduler: 5040, smoke-test: 5010, setup-admin: 5020, display-admin: 5050, display-runtime: 5051, game-admin: 5070, quiz-master: 5080, quiz-display: 5081
-- Active work: Migrating apps to shared CSS pattern (LMS, sweepstakes, game-admin need fixing)
+- Reference implementation: `games/smoke-test/` - COPY THIS when creating new apps
+- Active work: Created smoke-test as definitive reference (PostgreSQL + Redis + SSE + shared CSS)
 - Known issues: SSE presence requires manual refresh after impersonation (acceptable for debugging tool)
 - Build: `cd games/{app}/frontend && npm run build && cp -r build/* ../backend/static/`
 - PostgreSQL: Port 5555, password "pubgames", user "activityhub", database "activity_hub"
 
+## ⚠️ CRITICAL: Reference Implementation
+
+**WHEN CREATING A NEW APP, COPY `games/smoke-test/`**
+
+Smoke-test demonstrates the complete Activity Hub stack:
+- ✅ Shared CSS pattern (dynamic load from identity-shell)
+- ✅ TypeScript frontend
+- ✅ activity-hub-common library for auth
+- ✅ PostgreSQL for persistent data
+- ✅ Redis for ephemeral state + pub/sub
+- ✅ SSE for real-time updates
+- ✅ URL parameter parsing (userId, userName, token)
+- ✅ Activity Hub CSS classes (.ah-*)
+
+See `games/smoke-test/README.md` for complete documentation.
+
 ## ⚠️ CRITICAL: Shared CSS Architecture (DO NOT DEVIATE)
 
-**THE PATTERN - Reference: `games/setup-admin/`**
+**THE PATTERN - Reference: `games/smoke-test/`**
 
 All apps MUST load Activity Hub CSS from identity-shell. This is NOT optional.
 

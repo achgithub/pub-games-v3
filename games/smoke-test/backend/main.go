@@ -1,0 +1,77 @@
+package main
+
+import (
+	"database/sql"
+	"log"
+	"net/http"
+
+	authlib "github.com/achgithub/activity-hub-common/auth"
+	"github.com/achgithub/activity-hub-common/database"
+	"github.com/gorilla/handlers"
+	"github.com/gorilla/mux"
+	_ "github.com/lib/pq"
+)
+
+var db *sql.DB
+
+const APP_NAME = "Smoke Test"
+
+func main() {
+	log.Printf("🧪 %s Backend Starting", APP_NAME)
+
+	// Initialize Redis
+	if err := InitRedis(); err != nil {
+		log.Fatal("Failed to connect to Redis:", err)
+	}
+	log.Println("✅ Connected to Redis")
+
+	// Initialize app database
+	var err error
+	db, err = database.InitDatabase("smoke_test")
+	if err != nil {
+		log.Fatal("Failed to connect to app database:", err)
+	}
+	defer db.Close()
+
+	// Initialize identity database (for authentication)
+	identityDB, err := database.InitIdentityDatabase()
+	if err != nil {
+		log.Fatal("Failed to connect to identity database:", err)
+	}
+	defer identityDB.Close()
+
+	// Build per-route middleware
+	authMiddleware := authlib.Middleware(identityDB)
+	sseMiddleware := authlib.SSEMiddleware(identityDB)
+
+	// Setup router
+	r := mux.NewRouter()
+
+	// Public endpoint
+	r.HandleFunc("/api/config", HandleConfig).Methods("GET")
+
+	// Protected endpoints (require authentication)
+	r.HandleFunc("/api/counter", authMiddleware(HandleGetCounter)).Methods("GET")
+	r.HandleFunc("/api/counter/increment", authMiddleware(HandleIncrementCounter)).Methods("POST")
+	r.HandleFunc("/api/activity", authMiddleware(HandleGetActivity)).Methods("GET")
+
+	// SSE endpoint for real-time counter updates
+	r.HandleFunc("/api/events", sseMiddleware(HandleSSE)).Methods("GET")
+
+	// Serve static files (React build output)
+	staticDir := "./static"
+	r.PathPrefix("/").Handler(http.FileServer(http.Dir(staticDir)))
+
+	// CORS configuration
+	corsHandler := handlers.CORS(
+		handlers.AllowedOrigins([]string{"*"}),
+		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
+		handlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
+		handlers.AllowCredentials(),
+	)
+
+	// Start server
+	port := "5010"
+	log.Printf("🚀 %s backend listening on :%s", APP_NAME, port)
+	log.Fatal(http.ListenAndServe(":"+port, corsHandler(r)))
+}

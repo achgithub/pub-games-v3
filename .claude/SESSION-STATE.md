@@ -1,14 +1,30 @@
 # Activity Hub Migration - Session State
 
 **Last Updated**: 2026-02-20
-**Current Phase**: CSS architecture fix + app styling migration
-**Status**: Shared CSS pattern re-established. Identity-shell working. Need to migrate LMS/sweepstakes/game-admin.
+**Current Phase**: Reference implementation created (smoke-test)
+**Status**: Created `games/smoke-test/` as definitive reference with full stack (PostgreSQL + Redis + SSE + shared CSS + TypeScript). This is THE template for new apps.
+
+## ⚠️ CRITICAL: Reference Implementation
+
+**WHEN CREATING A NEW APP, COPY `games/smoke-test/`**
+
+Smoke-test (port 5010) is the complete reference implementation demonstrating:
+- ✅ Shared CSS pattern (dynamic load from identity-shell)
+- ✅ TypeScript frontend with all Activity Hub CSS classes
+- ✅ activity-hub-common library for auth
+- ✅ PostgreSQL for persistent data (activity_log)
+- ✅ Redis for ephemeral state (counter) + pub/sub
+- ✅ SSE for real-time updates
+- ✅ URL parameter parsing (userId, userName, token)
+- ✅ Proper error handling and loading states
+
+See `games/smoke-test/README.md` for complete documentation and checklist.
 
 ## ⚠️ CRITICAL: Shared CSS Architecture
 
 **THE PATTERN (DO NOT DEVIATE):**
 
-All apps load Activity Hub CSS from identity-shell's shared endpoint. Setup-admin is the reference implementation.
+All apps load Activity Hub CSS from identity-shell's shared endpoint. Reference: `games/smoke-test/`
 
 **Files required in each app:**
 
@@ -70,14 +86,41 @@ function App() {
 
 ## ⚠️ Next Session — Start Here
 
-**What happened:** CSS loading was broken for LMS/sweepstakes/game-admin. Root cause: `activity-hub.css` file was missing from Pi working directory (existed in git, but deleted locally). Fixed with `git restore identity-shell/backend/static/activity-hub.css`.
+**What was created:** Built `games/smoke-test/` as the definitive reference implementation. This is a complete, working example of the Activity Hub stack with all recommended patterns.
 
-**Status:**
-- ✅ Identity-shell: Working (Settings modal modernized, favorites persist to DB)
-- ✅ Setup-admin: Working (reference implementation for shared CSS pattern)
-- ❌ Last-man-standing: Needs rebuild with correct pattern
-- ❌ Sweepstakes: Needs rebuild with correct pattern
-- ❌ Game-admin: Needs rebuild with correct pattern
+**Ready for Pi deployment:**
+```bash
+# On Pi:
+cd ~/pub-games-v3 && git pull
+
+# Create database
+psql -U activityhub -h localhost -p 5555 -d postgres -c "CREATE DATABASE smoke_test_db;"
+psql -U activityhub -h localhost -p 5555 -d smoke_test_db -f games/smoke-test/database/schema.sql
+
+# Build and deploy
+cd games/smoke-test/backend && go mod tidy
+cd ../frontend && npm install && npm run build && cp -r build/* ../backend/static/
+cd ../backend && go run *.go &
+```
+
+**Next steps:**
+1. Test smoke-test on Pi to verify it works
+2. Use smoke-test as template to audit/fix other apps:
+   - tic-tac-toe (has Redis/SSE but old CSS)
+   - dots (has Redis/SSE but old CSS)
+   - last-man-standing (no Redis/SSE, old CSS)
+   - sweepstakes (no Redis/SSE, old CSS)
+   - game-admin (no Redis/SSE, old CSS)
+
+**App status:**
+- ✅ smoke-test: REFERENCE IMPLEMENTATION (created, not deployed yet)
+- ✅ identity-shell: Working
+- ⚠️ tic-tac-toe: Works but needs CSS migration to shared pattern
+- ⚠️ dots: Works but needs CSS migration to shared pattern
+- ❌ last-man-standing: Needs CSS migration
+- ❌ sweepstakes: Needs CSS migration
+- ❌ game-admin: Needs CSS migration
+- ✅ setup-admin: Working with shared CSS
 
 **To migrate an app to shared CSS:**
 
