@@ -201,13 +201,8 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout, onEndImpersonation }) => 
                     userEmail={user.email}
                     userName={user.name}
                     onlineUsers={onlineUsers}
-                    receivedChallenges={receivedChallenges}
-                    sentChallenges={sentChallenges}
-                    notification={notification}
                     onSendChallenge={sendChallenge}
                     onSendMultiChallenge={sendMultiChallenge}
-                    onAcceptChallenge={acceptChallenge}
-                    onRejectChallenge={rejectChallenge}
                     fetchGameConfig={fetchGameConfig}
                   />
                 }
