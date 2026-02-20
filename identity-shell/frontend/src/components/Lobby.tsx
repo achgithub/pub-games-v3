@@ -9,15 +9,10 @@ interface LobbyProps {
   apps: AppDefinition[];
   onAppClick: (appId: string) => void;
   userEmail: string;
-  userName: string; // Add display name for multi-player modal
+  userName: string;
   onlineUsers: UserPresence[];
-  receivedChallenges: Challenge[];
-  sentChallenges: Challenge[];
-  notification: string | null;
   onSendChallenge: (toUser: string, appId: string, options?: ChallengeOptions) => Promise<boolean>;
   onSendMultiChallenge: (playerIds: string[], appId: string, minPlayers: number, maxPlayers: number, options?: ChallengeOptions) => Promise<boolean>;
-  onAcceptChallenge: (challengeId: string, userId?: string) => Promise<boolean>;
-  onRejectChallenge: (challengeId: string) => Promise<boolean>;
   fetchGameConfig: (appId: string, backendPort: number) => Promise<GameConfig | null>;
 }
 
@@ -27,13 +22,8 @@ const Lobby: React.FC<LobbyProps> = ({
   userEmail,
   userName,
   onlineUsers,
-  receivedChallenges,
-  sentChallenges,
-  notification,
   onSendChallenge,
   onSendMultiChallenge,
-  onAcceptChallenge,
-  onRejectChallenge,
   fetchGameConfig,
 }) => {
   // Online users overlay state
@@ -112,13 +102,6 @@ const Lobby: React.FC<LobbyProps> = ({
 
   return (
     <div className="lobby">
-      {/* Notification Toast */}
-      {notification && (
-        <div className="lobby-notification">
-          {notification}
-        </div>
-      )}
-
       <div className="lobby-header">
         <h1>Game Lobby</h1>
         <p>Select a game to start playing</p>
