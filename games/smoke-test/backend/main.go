@@ -51,12 +51,12 @@ func main() {
 	r.HandleFunc("/api/config", HandleConfig).Methods("GET")
 
 	// Protected endpoints (require authentication)
-	r.HandleFunc("/api/counter", authMiddleware(HandleGetCounter)).Methods("GET")
-	r.HandleFunc("/api/counter/increment", authMiddleware(HandleIncrementCounter)).Methods("POST")
-	r.HandleFunc("/api/activity", authMiddleware(HandleGetActivity)).Methods("GET")
+	r.Handle("/api/counter", authMiddleware(http.HandlerFunc(HandleGetCounter))).Methods("GET")
+	r.Handle("/api/counter/increment", authMiddleware(http.HandlerFunc(HandleIncrementCounter))).Methods("POST")
+	r.Handle("/api/activity", authMiddleware(http.HandlerFunc(HandleGetActivity))).Methods("GET")
 
 	// SSE endpoint for real-time counter updates
-	r.HandleFunc("/api/events", sseMiddleware(HandleSSE)).Methods("GET")
+	r.Handle("/api/events", sseMiddleware(http.HandlerFunc(HandleSSE))).Methods("GET")
 
 	// Serve static files (React build output)
 	staticDir := "./static"

@@ -9,7 +9,7 @@ import (
 	"time"
 
 	authlib "github.com/achgithub/activity-hub-common/auth"
-	"github.com/redis/go-redis/v9"
+	"github.com/go-redis/redis/v8"
 )
 
 const REDIS_COUNTER_KEY = "smoke_test:counter"
@@ -47,7 +47,11 @@ func HandleGetCounter(w http.ResponseWriter, r *http.Request) {
 
 // HandleIncrementCounter increments the counter and broadcasts via Redis pub/sub
 func HandleIncrementCounter(w http.ResponseWriter, r *http.Request) {
-	user := authlib.GetUserFromContext(r.Context())
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 
 	// Increment counter in Redis
 	newVal, err := redisClient.Incr(ctx, REDIS_COUNTER_KEY).Result()
