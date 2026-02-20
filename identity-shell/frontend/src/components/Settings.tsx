@@ -136,7 +136,7 @@ const Settings: React.FC<SettingsProps> = ({ apps, onClose, onSave }) => {
   };
 
   const handleReset = () => {
-    if (!confirm('Reset all app settings to default? This will unhide all apps and restore original order.')) {
+    if (!window.confirm('Reset all app settings to default? This will unhide all apps and restore original order.')) {
       return;
     }
 
