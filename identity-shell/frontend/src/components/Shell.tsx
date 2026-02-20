@@ -52,7 +52,6 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout, onEndImpersonation }) => 
     onlineUsers,
     receivedChallenges,
     sentChallenges,
-    notification,
     sendChallenge,
     sendMultiChallenge,
     acceptChallenge,
