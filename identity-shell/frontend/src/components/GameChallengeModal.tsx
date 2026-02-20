@@ -5,7 +5,6 @@ import './GameChallengeModal.css';
 interface GameChallengeModalProps {
   app: AppDefinition;
   currentUserEmail: string;
-  currentUserName: string;
   onlineUsers: UserPresence[];
   onConfirm: (appId: string, playerIds: string[], options: ChallengeOptions) => void;
   onCancel: () => void;
@@ -15,7 +14,6 @@ interface GameChallengeModalProps {
 const GameChallengeModal: React.FC<GameChallengeModalProps> = ({
   app,
   currentUserEmail,
-  currentUserName,
   onlineUsers,
   onConfirm,
   onCancel,

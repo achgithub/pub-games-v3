@@ -400,7 +400,6 @@ const Lobby: React.FC<LobbyProps> = ({
         <GameChallengeModal
           app={newChallengeModal.app}
           currentUserEmail={userEmail}
-          currentUserName={userName}
           onlineUsers={onlineUsers}
           onConfirm={handleNewChallengeConfirm}
           onCancel={() => setNewChallengeModal(null)}
