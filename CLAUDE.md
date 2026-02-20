@@ -1,13 +1,99 @@
 ## Session Start - Read This First
 
-- Platform: Pi at [192.168.1.45], Mac for editing
-- Workflow: Edit on Mac → git push → pull & build on Pi
+- Platform: Pi at [192.168.1.29] (was 192.168.1.45 - IP changed after WiFi crash), Mac for editing
+- Workflow: Edit on Mac → commit → USER pushes → pull & build on Pi
 - Ports: identity-shell: 3001, tic-tac-toe: 4001, dots: 4011, sweepstakes: 4031, last-man-standing: 4021, quiz-player: 4041, spoof: 4051, mobile-test: 4061, leaderboard: 5030, season-scheduler: 5040, smoke-test: 5010, setup-admin: 5020, display-admin: 5050, display-runtime: 5051, game-admin: 5070, quiz-master: 5080, quiz-display: 5081
-- Active work: Quiz system deployed on Pi and working. Post-deployment polish done (see Recent Changes below).
+- Active work: Migrating apps to shared CSS pattern (LMS, sweepstakes, game-admin need fixing)
 - Known issues: SSE presence requires manual refresh after impersonation (acceptable for debugging tool)
-- Next: Ready for real quiz use. Run `bash scripts/seed_quiz_test_content.sh` on Pi to update mobile-test seed image to 600×600.
 - Build: `cd games/{app}/frontend && npm run build && cp -r build/* ../backend/static/`
 - PostgreSQL: Port 5555, password "pubgames", user "activityhub", database "activity_hub"
+
+## ⚠️ CRITICAL: Shared CSS Architecture (DO NOT DEVIATE)
+
+**THE PATTERN - Reference: `games/setup-admin/`**
+
+All apps MUST load Activity Hub CSS from identity-shell. This is NOT optional.
+
+### How It Works
+
+1. **Identity-shell serves CSS** at `http://{host}:3001/shared/activity-hub.css`
+   - File: `identity-shell/backend/static/activity-hub.css` (MUST exist in git and on Pi)
+   - Route: `r.PathPrefix("/shared/").Handler(http.StripPrefix("/shared/", http.FileServer(http.Dir("./static"))))`
+   - CORS enabled for cross-origin loading
+
+2. **Each app loads CSS dynamically** in `index.tsx`:
+```typescript
+// games/{app}/frontend/src/index.tsx
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App';
+
+// Inject shared Activity Hub styles from identity-shell
+const link = document.createElement('link');
+link.rel = 'stylesheet';
+link.href = `http://${window.location.hostname}:3001/shared/activity-hub.css`;
+document.head.appendChild(link);
+
+const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
+root.render(<App />);
+```
+
+3. **Minimal App.css** for base styles (optional but recommended):
+```css
+/* games/{app}/frontend/src/App.css */
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  background: #F5F5F4;
+  color: #1C1917;
+}
+* { box-sizing: border-box; }
+```
+
+4. **Use Activity Hub classes** in components:
+   - `.ah-container` / `.ah-container--narrow` / `.ah-container--wide`
+   - `.ah-card`
+   - `.ah-btn-primary` / `.ah-btn-outline` / `.ah-btn-danger` / `.ah-btn-back`
+   - `.ah-tabs` / `.ah-tab` / `.ah-tab.active`
+   - `.ah-banner` / `.ah-banner--error` / `.ah-banner--warning` / etc.
+   - `.ah-input` / `.ah-select`
+   - `.ah-lobby-btn`
+   - Full reference: `identity-shell/backend/static/activity-hub.css`
+
+### Why This Pattern
+
+- **Single source of truth** - all apps share one CSS file
+- **IP-agnostic** - uses `window.location.hostname` (works on any IP/localhost)
+- **No duplication** - CSS not bundled into each app
+- **Easy updates** - change CSS once, all apps get it
+
+### Troubleshooting
+
+**CSS not loading (404 error)?**
+```bash
+# On Pi - verify file exists
+ls -la ~/pub-games-v3/identity-shell/backend/static/activity-hub.css
+
+# If missing, restore from git
+git restore identity-shell/backend/static/activity-hub.css
+
+# Verify it's being served
+curl http://localhost:3001/shared/activity-hub.css | head -20
+```
+
+**App not styled?**
+1. Check browser console for CSS 404 errors
+2. Verify `index.tsx` has dynamic CSS loading code
+3. Hard refresh browser (Cmd+Shift+R) or use private window
+4. Check app was rebuilt after code changes
+
+### DO NOT
+
+- ❌ Bundle Activity Hub CSS into each app
+- ❌ Copy CSS file to each app's directory
+- ❌ Use different CSS loading patterns per app
+- ❌ Create app-specific versions of Activity Hub CSS
+- ❌ Use `@import` in CSS files (dynamic script tag only)
 
 ## Quiz System Pi Deployment
 

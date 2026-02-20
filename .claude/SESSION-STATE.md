@@ -1,36 +1,110 @@
 # Activity Hub Migration - Session State
 
 **Last Updated**: 2026-02-20
-**Current Phase**: Identity-shell UX improvements — modern minimal UI, game-first challenge flow, header notifications
-**Status**: All core systems operational on Pi. Major UI overhaul committed, ready for Pi rebuild.
+**Current Phase**: CSS architecture fix + app styling migration
+**Status**: Shared CSS pattern re-established. Identity-shell working. Need to migrate LMS/sweepstakes/game-admin.
+
+## ⚠️ CRITICAL: Shared CSS Architecture
+
+**THE PATTERN (DO NOT DEVIATE):**
+
+All apps load Activity Hub CSS from identity-shell's shared endpoint. Setup-admin is the reference implementation.
+
+**Files required in each app:**
+
+1. **`index.tsx`** - Dynamic CSS loading:
+```typescript
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App';
+
+// Inject shared Activity Hub styles from identity-shell
+const link = document.createElement('link');
+link.rel = 'stylesheet';
+link.href = `http://${window.location.hostname}:3001/shared/activity-hub.css`;
+document.head.appendChild(link);
+
+const root = ReactDOM.createRoot(
+  document.getElementById('root') as HTMLElement
+);
+root.render(<App />);
+```
+
+2. **`App.css`** - Minimal base styles (optional, but recommended):
+```css
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  background: #F5F5F4;
+  color: #1C1917;
+}
+
+* {
+  box-sizing: border-box;
+}
+```
+
+3. **`App.tsx`** - Import App.css and use Activity Hub classes:
+```typescript
+import React from 'react';
+import './App.css';
+
+function App() {
+  return (
+    <div className="ah-container ah-container--narrow">
+      <div className="ah-card">
+        <h2 className="ah-section-title">Title</h2>
+        <button className="ah-btn-primary">Action</button>
+      </div>
+    </div>
+  );
+}
+```
+
+**How it works:**
+- Identity-shell backend serves CSS at `http://{host}:3001/shared/activity-hub.css`
+- Route: `r.PathPrefix("/shared/").Handler(http.StripPrefix("/shared/", http.FileServer(http.Dir("./static"))))`
+- File location: `identity-shell/backend/static/activity-hub.css` (MUST be committed to git)
+- All apps dynamically load this CSS in their index.tsx
+- CORS configured to allow cross-origin CSS loading (`AllowedOrigins: ["*"]`)
 
 ## ⚠️ Next Session — Start Here
 
-Major identity-shell improvements committed. Rebuild needed:
+**What happened:** CSS loading was broken for LMS/sweepstakes/game-admin. Root cause: `activity-hub.css` file was missing from Pi working directory (existed in git, but deleted locally). Fixed with `git restore identity-shell/backend/static/activity-hub.css`.
+
+**Status:**
+- ✅ Identity-shell: Working (Settings modal modernized, favorites persist to DB)
+- ✅ Setup-admin: Working (reference implementation for shared CSS pattern)
+- ❌ Last-man-standing: Needs rebuild with correct pattern
+- ❌ Sweepstakes: Needs rebuild with correct pattern
+- ❌ Game-admin: Needs rebuild with correct pattern
+
+**To migrate an app to shared CSS:**
 
 ```bash
-cd ~/pub-games-v3
-git pull
+# 1. Ensure setup-admin pattern in index.tsx (dynamic CSS loading)
+# 2. Add minimal App.css (body/box-sizing)
+# 3. Import App.css in App.tsx
+# 4. Use Activity Hub classes (.ah-container, .ah-card, etc.)
+# 5. Rebuild and test
 
-# Rebuild identity-shell frontend
-cd identity-shell/frontend
-npm run build && cp -r build/* ../backend/static/
+cd ~/pub-games-v3/games/{app}/frontend
+npm run build
+cp -r build/* ../backend/static/
 
-# Restart identity-shell
-~/pub-games-v3/scripts/stop_core.sh
-~/pub-games-v3/scripts/start_core.sh
+# Restart services
+cd ~/pub-games-v3/scripts
+./stop_core.sh
+./start_core.sh
 ```
 
-Then hard-refresh browser (Cmd+Shift+R / Ctrl+Shift+R).
+**Verification:**
+```bash
+# CSS must be served by identity-shell
+curl http://localhost:3001/shared/activity-hub.css | head -20
 
-**What Changed:**
-- Modern minimal UI (no emoji, clean typography, generous whitespace)
-- Game-first challenge flow (click game → select opponents → configure)
-- Challenges moved to header notification button (floating overlay)
-- Online users in floating overlay (minimal screen footprint)
-- Single-column lobby layout (maximum space for games)
-
-No DB migrations required.
+# Should show Activity Hub CSS, not 404
+```
 
 **Known issues:**
 - SSE presence requires manual refresh after impersonation (acceptable — debugging tool only)
