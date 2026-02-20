@@ -3,36 +3,36 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(160deg, #EFF6FF 0%, #F5F5F4 50%, #F0FDF4 100%);
-  padding: 1rem;
+  background: #FAFAFA;
+  padding: 2rem;
 }
 
 .login-container {
   background: #ffffff;
-  border: 1px solid #E7E5E4;
-  border-radius: 16px;
-  padding: 2.5rem 2rem;
+  border: 1px solid #F0F0F0;
+  border-radius: 8px;
+  padding: 3rem 2.5rem;
   width: 100%;
-  max-width: 400px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
+  max-width: 420px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .login-header {
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: 3rem;
 }
 
 .login-header h1 {
-  font-size: 1.875rem;
-  font-weight: 800;
-  margin-bottom: 0.375rem;
-  color: #2196F3;
-  letter-spacing: -0.02em;
+  font-size: 2.25rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: #1C1917;
+  letter-spacing: -0.03em;
 }
 
 .login-header p {
-  color: #78716C;
-  font-size: 0.9rem;
+  color: #666;
+  font-size: 1rem;
 }
 
 .login-form {
@@ -49,35 +49,35 @@
 
 .form-group label {
   font-size: 0.875rem;
-  font-weight: 600;
-  color: #44403C;
+  font-weight: 500;
+  color: #1C1917;
 }
 
 .form-group input {
-  padding: 0.75rem 0.875rem;
-  border: 1px solid #D6D3D1;
-  border-radius: 8px;
+  padding: 0.875rem 1rem;
+  border: 1px solid #E0E0E0;
+  border-radius: 6px;
   background: #ffffff;
   color: #1C1917;
   font-size: 1rem;
   transition: border-color 150ms ease, box-shadow 150ms ease;
 }
 
-.form-group input::placeholder { color: #A8A29E; }
+.form-group input::placeholder { color: #999; }
 
 .form-group input:focus {
   outline: none;
-  border-color: #2196F3;
-  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.15);
+  border-color: #1C1917;
+  box-shadow: 0 0 0 1px #1C1917;
 }
 
 .form-group input:hover:not(:focus):not(:disabled) {
-  border-color: #A8A29E;
+  border-color: #CCC;
 }
 
 .form-group input:disabled {
-  background: #F5F5F4;
-  opacity: 0.7;
+  background: #F5F5F5;
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
@@ -91,32 +91,28 @@
 }
 
 .login-button {
-  padding: 0.875rem;
-  background: #2196F3;
+  padding: 1rem;
+  background: #1C1917;
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background 150ms ease, transform 150ms ease, box-shadow 150ms ease;
-  box-shadow: 0 1px 3px rgba(33, 150, 243, 0.3);
+  transition: background 150ms ease;
 }
 
 .login-button:hover:not(:disabled) {
-  background: #1E88E5;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.35);
+  background: #333;
 }
 
 .login-button:active:not(:disabled) {
-  transform: translateY(0);
+  background: #000;
 }
 
 .login-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-  box-shadow: none;
 }
 
 .login-footer {
@@ -125,17 +121,17 @@
 }
 
 .demo-hint {
-  font-size: 0.8rem;
-  color: #A8A29E;
+  font-size: 0.875rem;
+  color: #999;
 }
 
 .demo-hint code {
-  background: #F5F5F4;
-  padding: 0.15rem 0.4rem;
+  background: #F5F5F5;
+  padding: 0.2rem 0.5rem;
   border-radius: 4px;
-  color: #57534E;
+  color: #666;
   font-weight: 600;
-  border: 1px solid #E7E5E4;
+  border: 1px solid #E0E0E0;
 }
 
 /* QR section */
@@ -151,7 +147,7 @@
 
 .qr-label {
   font-size: 0.875rem;
-  color: #78716C;
+  color: #666;
   font-weight: 500;
   margin: 0;
 }
@@ -159,9 +155,9 @@
 .qr-section svg {
   background: white;
   padding: 0.5rem;
-  border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  border: 1px solid #E7E5E4;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  border: 1px solid #F0F0F0;
 }
 
 /* Guest section */
@@ -199,11 +195,11 @@
 }
 
 .guest-button {
-  padding: 0.875rem;
-  background: #F5F5F4;
-  color: #44403C;
-  border: 1px solid #D6D3D1;
-  border-radius: 8px;
+  padding: 1rem;
+  background: #ffffff;
+  color: #1C1917;
+  border: 1px solid #E0E0E0;
+  border-radius: 6px;
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
@@ -211,8 +207,8 @@
 }
 
 .guest-button:hover:not(:disabled) {
-  background: #E7E5E4;
-  border-color: #A8A29E;
+  background: #F5F5F5;
+  border-color: #CCC;
 }
 
 .guest-button:disabled {

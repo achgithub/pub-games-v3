@@ -6,13 +6,13 @@ body {
                'Helvetica Neue', Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #F5F5F4;
+  background-color: #FAFAFA;
   color: #1C1917;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, 'Courier New', monospace;
 }
 
 #root {
@@ -27,17 +27,22 @@ code {
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  gap: 1rem;
-  color: #78716C;
+  gap: 1.5rem;
+  color: #666;
+}
+
+.app-loading p {
+  font-size: 0.9rem;
+  font-weight: 500;
 }
 
 .spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid #E7E5E4;
-  border-top-color: #2196F3;
+  width: 32px;
+  height: 32px;
+  border: 2px solid #F0F0F0;
+  border-top-color: #1C1917;
   border-radius: 50%;
-  animation: spin 0.7s linear infinite;
+  animation: spin 0.6s linear infinite;
 }
 
 @keyframes spin {

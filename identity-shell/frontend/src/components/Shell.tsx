@@ -86,7 +86,7 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout, onEndImpersonation }) => 
       <header className="shell-header">
         <div className="shell-header-left">
           <button className="logo-button" onClick={() => navigate('/lobby')}>
-            🎮 <span className="logo-text">PubGames V3</span>
+            <span className="logo-text">PubGames</span>
           </button>
         </div>
 
@@ -97,7 +97,7 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout, onEndImpersonation }) => 
               onClick={() => navigate('/lobby')}
               title="Lobby"
             >
-              🏠
+              Lobby
             </button>
           )}
           <button
@@ -105,7 +105,7 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout, onEndImpersonation }) => 
             onClick={() => navigate('/profile')}
             title="Profile"
           >
-            👤
+            Profile
           </button>
         </nav>
 
@@ -113,10 +113,10 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout, onEndImpersonation }) => 
           {!user.is_guest && (
             <>
               <button className="settings-icon-button" onClick={() => setShowSettings(true)} title="Settings">
-                ⚙️
+                Settings
               </button>
               <button className="notification-button" title="Notifications">
-                🔔
+                Notifications
                 {notificationCount > 0 && (
                   <span className="notification-badge">{notificationCount}</span>
                 )}
@@ -126,7 +126,7 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout, onEndImpersonation }) => 
           <div className="user-menu">
             <span className="user-email">{user.is_guest ? 'Guest' : user.email}</span>
             <button className="logout-button" onClick={onLogout}>
-              {user.is_guest ? 'Exit' : 'Logout'}
+              {user.is_guest ? 'Exit' : 'Sign out'}
             </button>
           </div>
         </div>

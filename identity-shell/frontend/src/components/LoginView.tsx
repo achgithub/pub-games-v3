@@ -43,8 +43,8 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin, onGuestLogin }) => {
     <div className="login-view">
       <div className="login-container">
         <div className="login-header">
-          <h1>🎮 PubGames V3</h1>
-          <p>Identity Shell Prototype</p>
+          <h1>PubGames</h1>
+          <p>Sign in to continue</p>
         </div>
 
         <form onSubmit={handleSubmit} className="login-form">
