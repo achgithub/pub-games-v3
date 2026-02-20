@@ -93,11 +93,14 @@ function App() {
 # On Pi:
 cd ~/pub-games-v3 && git pull
 
-# Create database
+# 1. Create database
 psql -U activityhub -h localhost -p 5555 -d postgres -c "CREATE DATABASE smoke_test_db;"
 psql -U activityhub -h localhost -p 5555 -d smoke_test_db -f games/smoke-test/database/schema.sql
 
-# Build and deploy
+# 2. Register app in activity_hub
+psql -U activityhub -h localhost -p 5555 -d activity_hub -f scripts/migrate_add_smoke_test.sql
+
+# 3. Build and deploy
 cd games/smoke-test/backend && go mod tidy
 cd ../frontend && npm install && npm run build && cp -r build/* ../backend/static/
 cd ../backend && go run *.go &
@@ -117,10 +120,10 @@ cd ../backend && go run *.go &
 - ✅ identity-shell: Working
 - ⚠️ tic-tac-toe: Works but needs CSS migration to shared pattern
 - ⚠️ dots: Works but needs CSS migration to shared pattern
+- ⚠️ setup-admin: Loads shared CSS but has custom overrides in App.css - needs migration
 - ❌ last-man-standing: Needs CSS migration
 - ❌ sweepstakes: Needs CSS migration
 - ❌ game-admin: Needs CSS migration
-- ✅ setup-admin: Working with shared CSS
 
 **To migrate an app to shared CSS:**
 
