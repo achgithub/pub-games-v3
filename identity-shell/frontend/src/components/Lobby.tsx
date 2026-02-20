@@ -93,11 +93,6 @@ const Lobby: React.FC<LobbyProps> = ({
   // Filter out lobby itself from the grid
   const availableGames = apps.filter(app => app.id !== 'lobby');
 
-  // Open challenge modal for a user
-  const handleChallengeUser = (opponentEmail: string) => {
-    setChallengeModal({ targetUser: opponentEmail });
-  };
-
   // Send challenge from modal (appId now comes from modal)
   const handleConfirmChallenge = async (appId: string, options: ChallengeOptions) => {
     if (challengeModal) {
