@@ -1,5 +1,5 @@
 #!/bin/bash
-# Start core services: identity-shell, setup-admin, game-admin, tic-tac-toe, dots, last-man-standing, sweepstakes, quiz-player, quiz-master, quiz-display, mobile-test
+# Start core services: identity-shell, setup-admin, game-admin, tic-tac-toe, dots, last-man-standing, sweepstakes, quiz-player, quiz-master, quiz-display, mobile-test, smoke-test
 
 # Check if tmux session exists
 if tmux has-session -t core 2>/dev/null; then
@@ -55,6 +55,10 @@ tmux send-keys -t core:quiz-display "cd ~/pub-games-v3/games/quiz-display/backen
 # Mobile Test (port 4061)
 tmux new-window -t core -n mobile-test
 tmux send-keys -t core:mobile-test "cd ~/pub-games-v3/games/mobile-test/backend && go run *.go" C-m
+
+# Smoke Test (port 5010)
+tmux new-window -t core -n smoke-test
+tmux send-keys -t core:smoke-test "cd ~/pub-games-v3/games/smoke-test/backend && go run *.go" C-m
 
 echo "Core services started in tmux session 'core'"
 echo ""
