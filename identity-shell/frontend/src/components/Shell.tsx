@@ -91,25 +91,6 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout, onEndImpersonation }) => 
           </button>
         </div>
 
-        <nav className="shell-nav">
-          {!user.is_guest && (
-            <button
-              className="nav-button"
-              onClick={() => navigate('/lobby')}
-              title="Lobby"
-            >
-              Lobby
-            </button>
-          )}
-          <button
-            className="nav-button"
-            onClick={() => navigate('/profile')}
-            title="Profile"
-          >
-            Profile
-          </button>
-        </nav>
-
         <div className="shell-header-right">
           {!user.is_guest && (
             <>
@@ -129,7 +110,13 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout, onEndImpersonation }) => 
             </>
           )}
           <div className="user-menu">
-            <span className="user-email">{user.is_guest ? 'Guest' : user.email}</span>
+            <button
+              className="user-email-btn"
+              onClick={() => navigate('/profile')}
+              title="Profile"
+            >
+              {user.is_guest ? 'Guest' : user.email}
+            </button>
             <button className="logout-button" onClick={onLogout}>
               {user.is_guest ? 'Exit' : 'Sign out'}
             </button>

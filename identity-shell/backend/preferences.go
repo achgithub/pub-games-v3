@@ -10,6 +10,7 @@ import (
 type UserAppPreference struct {
 	AppID       string `json:"appId"`
 	IsHidden    bool   `json:"isHidden"`
+	IsFavorite  bool   `json:"isFavorite"`
 	CustomOrder *int   `json:"customOrder"` // Pointer to allow null
 }
 
@@ -25,7 +26,7 @@ func handleGetUserPreferences(w http.ResponseWriter, r *http.Request) {
 
 	// Query user preferences
 	rows, err := db.Query(`
-		SELECT app_id, is_hidden, custom_order
+		SELECT app_id, is_hidden, COALESCE(is_favorite, FALSE), custom_order
 		FROM user_app_preferences
 		WHERE user_email = $1
 	`, email)
@@ -41,7 +42,7 @@ func handleGetUserPreferences(w http.ResponseWriter, r *http.Request) {
 		var pref UserAppPreference
 		var customOrder sql.NullInt64
 
-		err := rows.Scan(&pref.AppID, &pref.IsHidden, &customOrder)
+		err := rows.Scan(&pref.AppID, &pref.IsHidden, &pref.IsFavorite, &customOrder)
 		if err != nil {
 			log.Printf("Error scanning preference: %v", err)
 			continue
@@ -106,9 +107,9 @@ func handleUpdateUserPreferences(w http.ResponseWriter, r *http.Request) {
 		}
 
 		_, err = tx.Exec(`
-			INSERT INTO user_app_preferences (user_email, app_id, is_hidden, custom_order, updated_at)
-			VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
-		`, email, pref.AppID, pref.IsHidden, customOrder)
+			INSERT INTO user_app_preferences (user_email, app_id, is_hidden, is_favorite, custom_order, updated_at)
+			VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
+		`, email, pref.AppID, pref.IsHidden, pref.IsFavorite, customOrder)
 
 		if err != nil {
 			log.Printf("Failed to insert preference: %v", err)

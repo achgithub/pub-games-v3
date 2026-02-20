@@ -13,6 +13,7 @@ interface SettingsProps {
 interface AppPreference {
   appId: string;
   isHidden: boolean;
+  isFavorite: boolean;
   customOrder: number | null;
 }
 
@@ -43,22 +44,26 @@ const Settings: React.FC<SettingsProps> = ({ apps, onClose, onSave }) => {
           prefsMap.set(pref.appId, {
             appId: pref.appId,
             isHidden: pref.isHidden,
+            isFavorite: pref.isFavorite || false,
             customOrder: pref.customOrder
           });
         });
       }
 
-      // Create preferences for all apps (use existing or defaults)
-      const allPrefs = apps.map((app) => {
-        const existing = prefsMap.get(app.id);
-        return {
-          appId: app.id,
-          isHidden: existing?.isHidden || false,
-          customOrder: existing?.customOrder !== null && existing?.customOrder !== undefined
-            ? existing.customOrder
-            : (app.displayOrder ?? null)
-        };
-      });
+      // Create preferences for all apps (use existing or defaults), exclude lobby
+      const allPrefs = apps
+        .filter(app => app.id !== 'lobby')
+        .map((app) => {
+          const existing = prefsMap.get(app.id);
+          return {
+            appId: app.id,
+            isHidden: existing?.isHidden || false,
+            isFavorite: existing?.isFavorite || false,
+            customOrder: existing?.customOrder !== null && existing?.customOrder !== undefined
+              ? existing.customOrder
+              : (app.displayOrder ?? null)
+          };
+        });
 
       // Sort by custom order
       allPrefs.sort((a, b) => {
@@ -130,6 +135,31 @@ const Settings: React.FC<SettingsProps> = ({ apps, onClose, onSave }) => {
     setSaving(false);
   };
 
+  const handleReset = () => {
+    if (!confirm('Reset all app settings to default? This will unhide all apps and restore original order.')) {
+      return;
+    }
+
+    // Reset to defaults
+    const resetPrefs = apps
+      .filter(app => app.id !== 'lobby')
+      .map((app, index) => ({
+        appId: app.id,
+        isHidden: false,
+        isFavorite: false,
+        customOrder: app.displayOrder ?? index * 10
+      }));
+
+    // Sort by display order
+    resetPrefs.sort((a, b) => {
+      const aOrder = (a.customOrder !== null && a.customOrder !== undefined) ? a.customOrder : 999;
+      const bOrder = (b.customOrder !== null && b.customOrder !== undefined) ? b.customOrder : 999;
+      return aOrder - bOrder;
+    });
+
+    setAppPreferences(resetPrefs);
+  };
+
   const getAppName = (appId: string) => {
     const app = apps.find(a => a.id === appId);
     return app ? `${app.icon} ${app.name}` : appId;
@@ -139,7 +169,7 @@ const Settings: React.FC<SettingsProps> = ({ apps, onClose, onSave }) => {
     <div className="settings-overlay" onClick={onClose}>
       <div className="settings-modal" onClick={(e) => e.stopPropagation()}>
         <div className="settings-header">
-          <h2>⚙️ App Settings</h2>
+          <h2>App Settings</h2>
           <button className="close-button" onClick={onClose}>✕</button>
         </div>
 
@@ -188,12 +218,17 @@ const Settings: React.FC<SettingsProps> = ({ apps, onClose, onSave }) => {
             </div>
 
             <div className="settings-footer">
-              <button className="cancel-button" onClick={onClose}>
-                Cancel
+              <button className="reset-button" onClick={handleReset}>
+                Reset to Default
               </button>
-              <button className="save-button" onClick={handleSave} disabled={saving}>
-                {saving ? 'Saving...' : 'Save Changes'}
-              </button>
+              <div className="footer-actions">
+                <button className="cancel-button" onClick={onClose}>
+                  Cancel
+                </button>
+                <button className="save-button" onClick={handleSave} disabled={saving}>
+                  {saving ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
             </div>
           </>
         )}

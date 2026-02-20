@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './Lobby.css';
 import { AppDefinition, UserPresence, ChallengeOptions, GameConfig } from '../types';
 import ChallengeModal from './ChallengeModal';
@@ -15,6 +15,15 @@ interface LobbyProps {
   onSendMultiChallenge: (playerIds: string[], appId: string, minPlayers: number, maxPlayers: number, options?: ChallengeOptions) => Promise<boolean>;
   fetchGameConfig: (appId: string, backendPort: number) => Promise<GameConfig | null>;
 }
+
+interface AppPreference {
+  appId: string;
+  isHidden: boolean;
+  isFavorite: boolean;
+  customOrder: number | null;
+}
+
+const API_BASE = `http://${window.location.hostname}:3001/api`;
 
 const Lobby: React.FC<LobbyProps> = ({
   apps,
@@ -33,14 +42,45 @@ const Lobby: React.FC<LobbyProps> = ({
   const [favoriteUsers, setFavoriteUsers] = useState<Set<string>>(new Set());
   const [blockedUsers, setBlockedUsers] = useState<Set<string>>(new Set());
 
-  // Favorite apps - stored in local state for now
+  // Favorite apps - fetched from database
   const [favoriteAppIds, setFavoriteAppIds] = useState<Set<string>>(new Set());
+  const [appPreferences, setAppPreferences] = useState<AppPreference[]>([]);
 
   // Appear offline toggle
   const [appearOffline, setAppearOffline] = useState(false);
 
   // Section collapse state
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
+
+  // Fetch app preferences (including favorites) on mount
+  useEffect(() => {
+    const fetchPreferences = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      try {
+        const response = await fetch(`${API_BASE}/user/preferences`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+
+        if (data.preferences) {
+          setAppPreferences(data.preferences);
+          // Extract favorite app IDs
+          const favorites = new Set<string>(
+            data.preferences
+              .filter((pref: AppPreference) => pref.isFavorite)
+              .map((pref: AppPreference) => pref.appId)
+          );
+          setFavoriteAppIds(favorites);
+        }
+      } catch (error) {
+        console.error('Failed to fetch preferences:', error);
+      }
+    };
+
+    fetchPreferences();
+  }, []);
 
   const toggleSection = (sectionId: string) => {
     const newCollapsed = new Set(collapsedSections);
@@ -80,15 +120,62 @@ const Lobby: React.FC<LobbyProps> = ({
     setBlockedUsers(newBlocked);
   };
 
-  const toggleFavoriteApp = (appId: string, e: React.MouseEvent) => {
+  const toggleFavoriteApp = async (appId: string, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent opening the app
+
+    const isFavorite = favoriteAppIds.has(appId);
     const newFavorites = new Set(favoriteAppIds);
-    if (newFavorites.has(appId)) {
+
+    if (isFavorite) {
       newFavorites.delete(appId);
     } else {
       newFavorites.add(appId);
     }
+
+    // Update local state immediately for responsive UI
     setFavoriteAppIds(newFavorites);
+
+    // Save to database
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+      // Build updated preferences array
+      const updatedPreferences = apps
+        .filter(app => app.id !== 'lobby')
+        .map((app) => {
+          const existing = appPreferences.find(p => p.appId === app.id);
+          return {
+            appId: app.id,
+            isHidden: existing?.isHidden || false,
+            isFavorite: app.id === appId ? !isFavorite : (existing?.isFavorite || false),
+            customOrder: existing?.customOrder !== null && existing?.customOrder !== undefined
+              ? existing.customOrder
+              : (app.displayOrder ?? null)
+          };
+        });
+
+      const response = await fetch(`${API_BASE}/user/preferences`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ preferences: updatedPreferences })
+      });
+
+      if (response.ok) {
+        setAppPreferences(updatedPreferences);
+      } else {
+        console.error('Failed to save favorite preference');
+        // Revert on failure
+        setFavoriteAppIds(favoriteAppIds);
+      }
+    } catch (error) {
+      console.error('Failed to save favorite:', error);
+      // Revert on failure
+      setFavoriteAppIds(favoriteAppIds);
+    }
   };
 
   // Challenge modal state - now starts with game selection

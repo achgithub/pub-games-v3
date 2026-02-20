@@ -45,26 +45,6 @@
   color: #1C1917;
 }
 
-.shell-nav {
-  display: flex;
-  gap: 1.5rem;
-}
-
-.nav-button {
-  background: none;
-  border: none;
-  color: #666;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  padding: 0;
-  transition: color 150ms ease;
-}
-
-.nav-button:hover {
-  color: #1C1917;
-}
-
 .shell-header-right {
   display: flex;
   align-items: center;
@@ -122,9 +102,19 @@
   gap: 1rem;
 }
 
-.user-email {
+.user-email-btn {
+  background: none;
+  border: none;
   color: #666;
   font-size: 0.875rem;
+  cursor: pointer;
+  padding: 0;
+  transition: color 150ms ease;
+}
+
+.user-email-btn:hover {
+  color: #1C1917;
+  text-decoration: underline;
 }
 
 .logout-button {
@@ -288,13 +278,8 @@
     display: none;
   }
 
-  .user-email {
+  .user-email-btn {
     display: none;
-  }
-
-  .shell-nav {
-    flex: 1;
-    justify-content: center;
   }
 
   .impersonation-banner {
