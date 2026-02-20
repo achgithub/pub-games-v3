@@ -1,16 +1,19 @@
 # Activity Hub Migration - Session State
 
-**Last Updated**: 2026-02-19
-**Current Phase**: UI modernisation — identity-shell lobby now light theme. Tailwind build infrastructure added.
-**Status**: All core systems operational on Pi. CSS committed, Pi has pulled — frontend rebuild needed.
+**Last Updated**: 2026-02-20
+**Current Phase**: Identity-shell UX improvements — modern minimal UI, game-first challenge flow, header notifications
+**Status**: All core systems operational on Pi. Major UI overhaul committed, ready for Pi rebuild.
 
 ## ⚠️ Next Session — Start Here
 
-Pi has pulled. One rebuild needed to make the new lobby theme visible:
+Major identity-shell improvements committed. Rebuild needed:
 
 ```bash
-# Rebuild identity-shell frontend (light theme CSS)
-cd ~/pub-games-v3/identity-shell/frontend
+cd ~/pub-games-v3
+git pull
+
+# Rebuild identity-shell frontend
+cd identity-shell/frontend
 npm run build && cp -r build/* ../backend/static/
 
 # Restart identity-shell
@@ -20,14 +23,14 @@ npm run build && cp -r build/* ../backend/static/
 
 Then hard-refresh browser (Cmd+Shift+R / Ctrl+Shift+R).
 
-**Also pending (mobile-test — if not yet done):**
-```bash
-bash ~/pub-games-v3/scripts/seed_quiz_test_content.sh
-cd ~/pub-games-v3/games/mobile-test/frontend && npm run build && cp -r build/* ../backend/static/
-# restart mobile-test backend for /api/ping + /api/test-sse
-```
+**What Changed:**
+- Modern minimal UI (no emoji, clean typography, generous whitespace)
+- Game-first challenge flow (click game → select opponents → configure)
+- Challenges moved to header notification button (floating overlay)
+- Online users in floating overlay (minimal screen footprint)
+- Single-column lobby layout (maximum space for games)
 
-No DB migrations required for any recent changes.
+No DB migrations required.
 
 **Known issues:**
 - SSE presence requires manual refresh after impersonation (acceptable — debugging tool only)
