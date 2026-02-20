@@ -8,6 +8,7 @@ import Lobby from './Lobby';
 import AppContainer from './AppContainer';
 import ChallengeToast from './ChallengeToast';
 import Settings from './Settings';
+import ChallengesOverlay from './ChallengesOverlay';
 
 interface ShellProps {
   user: User;
@@ -19,6 +20,7 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout, onEndImpersonation }) => 
   const navigate = useNavigate();
   const [toastChallenge, setToastChallenge] = useState<any | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [showChallenges, setShowChallenges] = useState(false);
 
   // Debug: Log user info
   console.log('🔍 Shell received user:', user);
@@ -115,8 +117,12 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout, onEndImpersonation }) => 
               <button className="settings-icon-button" onClick={() => setShowSettings(true)} title="Settings">
                 Settings
               </button>
-              <button className="notification-button" title="Notifications">
-                Notifications
+              <button
+                className="notification-button"
+                onClick={() => setShowChallenges(!showChallenges)}
+                title="Challenges"
+              >
+                Challenges
                 {notificationCount > 0 && (
                   <span className="notification-badge">{notificationCount}</span>
                 )}
@@ -224,6 +230,21 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout, onEndImpersonation }) => 
           </Routes>
         )}
       </main>
+
+      {/* Challenges Overlay */}
+      {showChallenges && (
+        <ChallengesOverlay
+          receivedChallenges={receivedChallenges}
+          sentChallenges={sentChallenges}
+          apps={apps}
+          userEmail={user.email}
+          userName={user.name}
+          onlineUsers={onlineUsers}
+          onAccept={acceptChallenge}
+          onReject={rejectChallenge}
+          onClose={() => setShowChallenges(false)}
+        />
+      )}
 
       {/* Settings Modal */}
       {showSettings && (
