@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import './Lobby.css';
-import { AppDefinition, UserPresence, Challenge, ChallengeOptions, GameConfig } from '../types';
+import { AppDefinition, UserPresence, ChallengeOptions, GameConfig } from '../types';
 import ChallengeModal from './ChallengeModal';
 import MultiPlayerChallengeModal from './MultiPlayerChallengeModal';
 import GameChallengeModal from './GameChallengeModal';
