@@ -113,6 +113,21 @@
   border-radius: 6px;
   cursor: pointer;
   transition: all 150ms ease;
+  position: relative;
+}
+
+.player-item.favorite::before {
+  content: '★';
+  position: absolute;
+  left: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #F59E0B;
+  font-size: 0.875rem;
+}
+
+.player-item.favorite .player-info {
+  padding-left: 1.5rem;
 }
 
 .player-item:hover {

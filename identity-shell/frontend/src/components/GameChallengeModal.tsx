@@ -6,6 +6,7 @@ interface GameChallengeModalProps {
   app: AppDefinition;
   currentUserEmail: string;
   onlineUsers: UserPresence[];
+  favoriteUsers: Set<string>;
   onConfirm: (appId: string, playerIds: string[], options: ChallengeOptions) => void;
   onCancel: () => void;
   fetchGameConfig: (appId: string, backendPort: number) => Promise<GameConfig | null>;
@@ -15,6 +16,7 @@ const GameChallengeModal: React.FC<GameChallengeModalProps> = ({
   app,
   currentUserEmail,
   onlineUsers,
+  favoriteUsers,
   onConfirm,
   onCancel,
   fetchGameConfig,
@@ -31,13 +33,25 @@ const GameChallengeModal: React.FC<GameChallengeModalProps> = ({
   const minPlayers = app.minPlayers || 1;
   const maxPlayers = app.maxPlayers || (isGroupGame ? 6 : 1);
 
-  // Filter online users
-  const filteredUsers = onlineUsers.filter(user =>
-    user.email !== currentUserEmail &&
-    (filterText === '' ||
-      user.displayName.toLowerCase().includes(filterText.toLowerCase()) ||
-      user.email.toLowerCase().includes(filterText.toLowerCase()))
-  );
+  // Filter and sort online users (favorites first)
+  const filteredUsers = onlineUsers
+    .filter(user =>
+      user.email !== currentUserEmail &&
+      (filterText === '' ||
+        user.displayName.toLowerCase().includes(filterText.toLowerCase()) ||
+        user.email.toLowerCase().includes(filterText.toLowerCase()))
+    )
+    .sort((a, b) => {
+      const aIsFavorite = favoriteUsers.has(a.email);
+      const bIsFavorite = favoriteUsers.has(b.email);
+
+      // Favorites first
+      if (aIsFavorite && !bIsFavorite) return -1;
+      if (!aIsFavorite && bIsFavorite) return 1;
+
+      // Then alphabetical by display name
+      return a.displayName.localeCompare(b.displayName);
+    });
 
   // Load game config when component mounts
   useEffect(() => {
@@ -174,7 +188,7 @@ const GameChallengeModal: React.FC<GameChallengeModalProps> = ({
                   filteredUsers.map(user => (
                     <div
                       key={user.email}
-                      className={`player-item ${selectedPlayers.includes(user.email) ? 'selected' : ''}`}
+                      className={`player-item ${selectedPlayers.includes(user.email) ? 'selected' : ''} ${favoriteUsers.has(user.email) ? 'favorite' : ''}`}
                       onClick={() => togglePlayer(user.email)}
                     >
                       <div className="player-info">

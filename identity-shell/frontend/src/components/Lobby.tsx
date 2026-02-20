@@ -36,6 +36,19 @@ const Lobby: React.FC<LobbyProps> = ({
   // Appear offline toggle
   const [appearOffline, setAppearOffline] = useState(false);
 
+  // Section collapse state
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
+
+  const toggleSection = (sectionId: string) => {
+    const newCollapsed = new Set(collapsedSections);
+    if (newCollapsed.has(sectionId)) {
+      newCollapsed.delete(sectionId);
+    } else {
+      newCollapsed.add(sectionId);
+    }
+    setCollapsedSections(newCollapsed);
+  };
+
   const toggleFavorite = (email: string) => {
     const newFavorites = new Set(favoriteUsers);
     if (newFavorites.has(email)) {
@@ -225,60 +238,81 @@ const Lobby: React.FC<LobbyProps> = ({
       <div className="lobby-sections">
         {/* Available Apps Section */}
         <section className="lobby-section lobby-apps-full">
-          {/* Favorites Section */}
-          {favoriteApps.length > 0 && (
-            <div className="app-section">
+          {/* Favorites Section - Always show */}
+          <div className="app-section">
+            <div className="app-section-header" onClick={() => toggleSection('favorites')}>
               <h3 className="app-section-title">Favorites</h3>
-              <div className="app-grid">
-                {favoriteApps.map((app) => {
-                  const isChallengeable = challengeableApps.some(ca => ca.id === app.id);
-                  return (
-                    <button
-                      key={app.id}
-                      className={`app-card ${app.type}`}
-                      onClick={() => {
-                        if (isChallengeable) {
-                          setNewChallengeModal({ app });
-                        } else {
-                          onAppClick(app.id);
-                        }
-                      }}
-                    >
-                      <div className="app-icon">{app.icon}</div>
-                      <h3>{app.name}</h3>
-                      <p>{app.description}</p>
-                    </button>
-                  );
-                })}
-              </div>
+              <span className={`section-toggle ${collapsedSections.has('favorites') ? 'collapsed' : ''}`}>
+                ▼
+              </span>
             </div>
-          )}
+            <div className={`app-section-content ${collapsedSections.has('favorites') ? 'collapsed' : ''}`}>
+              {favoriteApps.length === 0 ? (
+                <div className="empty-favorites">
+                  <p>No favorite apps yet</p>
+                  <p style={{ fontSize: '0.8rem', marginTop: '0.5rem' }}>
+                    Star users in the online list to see them first in challenges
+                  </p>
+                </div>
+              ) : (
+                <div className="app-grid">
+                  {favoriteApps.map((app) => {
+                    const isChallengeable = challengeableApps.some(ca => ca.id === app.id);
+                    return (
+                      <button
+                        key={app.id}
+                        className={`app-card ${app.type}`}
+                        onClick={() => {
+                          if (isChallengeable) {
+                            setNewChallengeModal({ app });
+                          } else {
+                            onAppClick(app.id);
+                          }
+                        }}
+                      >
+                        <div className="app-icon">{app.icon}</div>
+                        <h3>{app.name}</h3>
+                        <p>{app.description}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* Games Section */}
           {gameApps.length > 0 && (
             <div className="app-section">
-              <h3 className="app-section-title">Games</h3>
-              <div className="app-grid">
-                {gameApps.map((app) => {
-                  const isChallengeable = challengeableApps.some(ca => ca.id === app.id);
-                  return (
-                    <button
-                      key={app.id}
-                      className={`app-card ${app.type}`}
-                      onClick={() => {
-                        if (isChallengeable) {
-                          setNewChallengeModal({ app });
-                        } else {
-                          onAppClick(app.id);
-                        }
-                      }}
-                    >
-                      <div className="app-icon">{app.icon}</div>
-                      <h3>{app.name}</h3>
-                      <p>{app.description}</p>
-                    </button>
-                  );
-                })}
+              <div className="app-section-header" onClick={() => toggleSection('games')}>
+                <h3 className="app-section-title">Games</h3>
+                <span className={`section-toggle ${collapsedSections.has('games') ? 'collapsed' : ''}`}>
+                  ▼
+                </span>
+              </div>
+              <div className={`app-section-content ${collapsedSections.has('games') ? 'collapsed' : ''}`}>
+                <div className="app-grid">
+                  {gameApps.map((app) => {
+                    const isChallengeable = challengeableApps.some(ca => ca.id === app.id);
+                    return (
+                      <button
+                        key={app.id}
+                        className={`app-card ${app.type}`}
+                        onClick={() => {
+                          if (isChallengeable) {
+                            setNewChallengeModal({ app });
+                          } else {
+                            onAppClick(app.id);
+                          }
+                        }}
+                      >
+                        <div className="app-icon">{app.icon}</div>
+                        <h3>{app.name}</h3>
+                        <p>{app.description}</p>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           )}
@@ -286,19 +320,26 @@ const Lobby: React.FC<LobbyProps> = ({
           {/* Utility Section */}
           {utilityApps.length > 0 && (
             <div className="app-section">
-              <h3 className="app-section-title">Utility</h3>
-              <div className="app-grid">
-                {utilityApps.map((app) => (
-                  <button
-                    key={app.id}
-                    className={`app-card ${app.type}`}
-                    onClick={() => onAppClick(app.id)}
-                  >
-                    <div className="app-icon">{app.icon}</div>
-                    <h3>{app.name}</h3>
-                    <p>{app.description}</p>
-                  </button>
-                ))}
+              <div className="app-section-header" onClick={() => toggleSection('utility')}>
+                <h3 className="app-section-title">Utility</h3>
+                <span className={`section-toggle ${collapsedSections.has('utility') ? 'collapsed' : ''}`}>
+                  ▼
+                </span>
+              </div>
+              <div className={`app-section-content ${collapsedSections.has('utility') ? 'collapsed' : ''}`}>
+                <div className="app-grid">
+                  {utilityApps.map((app) => (
+                    <button
+                      key={app.id}
+                      className={`app-card ${app.type}`}
+                      onClick={() => onAppClick(app.id)}
+                    >
+                      <div className="app-icon">{app.icon}</div>
+                      <h3>{app.name}</h3>
+                      <p>{app.description}</p>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           )}
@@ -306,19 +347,26 @@ const Lobby: React.FC<LobbyProps> = ({
           {/* Admin Section */}
           {adminApps.length > 0 && (
             <div className="app-section">
-              <h3 className="app-section-title">Admin</h3>
-              <div className="app-grid">
-                {adminApps.map((app) => (
-                  <button
-                    key={app.id}
-                    className={`app-card ${app.type}`}
-                    onClick={() => onAppClick(app.id)}
-                  >
-                    <div className="app-icon">{app.icon}</div>
-                    <h3>{app.name}</h3>
-                    <p>{app.description}</p>
-                  </button>
-                ))}
+              <div className="app-section-header" onClick={() => toggleSection('admin')}>
+                <h3 className="app-section-title">Admin</h3>
+                <span className={`section-toggle ${collapsedSections.has('admin') ? 'collapsed' : ''}`}>
+                  ▼
+                </span>
+              </div>
+              <div className={`app-section-content ${collapsedSections.has('admin') ? 'collapsed' : ''}`}>
+                <div className="app-grid">
+                  {adminApps.map((app) => (
+                    <button
+                      key={app.id}
+                      className={`app-card ${app.type}`}
+                      onClick={() => onAppClick(app.id)}
+                    >
+                      <div className="app-icon">{app.icon}</div>
+                      <h3>{app.name}</h3>
+                      <p>{app.description}</p>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           )}
@@ -354,6 +402,7 @@ const Lobby: React.FC<LobbyProps> = ({
           app={newChallengeModal.app}
           currentUserEmail={userEmail}
           onlineUsers={onlineUsers}
+          favoriteUsers={favoriteUsers}
           onConfirm={handleNewChallengeConfirm}
           onCancel={() => setNewChallengeModal(null)}
           fetchGameConfig={fetchGameConfig}
