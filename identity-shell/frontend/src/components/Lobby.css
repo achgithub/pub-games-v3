@@ -499,6 +499,12 @@
   border: 2px dashed #E0E0E0;
 }
 
+.empty-favorites p:first-child {
+  margin-bottom: 0.5rem;
+  color: #666;
+  font-weight: 500;
+}
+
 .app-card {
   background: #ffffff;
   border: 1px solid #F0F0F0;
@@ -509,6 +515,42 @@
   text-align: left;
   position: relative;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.app-favorite-btn {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #E0E0E0;
+  border-radius: 4px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  cursor: pointer;
+  opacity: 0;
+  transition: all 150ms ease;
+  color: #999;
+}
+
+.app-card:hover .app-favorite-btn {
+  opacity: 1;
+}
+
+.app-favorite-btn:hover {
+  background: white;
+  border-color: #CCC;
+  transform: scale(1.1);
+}
+
+.app-favorite-btn.favorited {
+  opacity: 1;
+  color: #F59E0B;
+  background: #FFFBEB;
+  border-color: #FDE68A;
 }
 
 .app-card:hover {

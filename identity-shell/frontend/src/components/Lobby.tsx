@@ -33,6 +33,9 @@ const Lobby: React.FC<LobbyProps> = ({
   const [favoriteUsers, setFavoriteUsers] = useState<Set<string>>(new Set());
   const [blockedUsers, setBlockedUsers] = useState<Set<string>>(new Set());
 
+  // Favorite apps - stored in local state for now
+  const [favoriteAppIds, setFavoriteAppIds] = useState<Set<string>>(new Set());
+
   // Appear offline toggle
   const [appearOffline, setAppearOffline] = useState(false);
 
@@ -77,6 +80,17 @@ const Lobby: React.FC<LobbyProps> = ({
     setBlockedUsers(newBlocked);
   };
 
+  const toggleFavoriteApp = (appId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent opening the app
+    const newFavorites = new Set(favoriteAppIds);
+    if (newFavorites.has(appId)) {
+      newFavorites.delete(appId);
+    } else {
+      newFavorites.add(appId);
+    }
+    setFavoriteAppIds(newFavorites);
+  };
+
   // Challenge modal state - now starts with game selection
   const [challengeModal, setChallengeModal] = useState<{
     targetUser: string;
@@ -111,8 +125,7 @@ const Lobby: React.FC<LobbyProps> = ({
   const availableApps = apps.filter(app => app.id !== 'lobby');
 
   // Group apps by category
-  // For now, favorites is empty - will be implemented with user preferences
-  const favoriteApps: AppDefinition[] = [];
+  const favoriteApps = availableApps.filter(app => favoriteAppIds.has(app.id));
   const gameApps = availableApps.filter(app => app.category === 'game');
   const utilityApps = availableApps.filter(app => app.category === 'utility');
   const adminApps = availableApps.filter(app => app.category === 'admin');
@@ -270,6 +283,13 @@ const Lobby: React.FC<LobbyProps> = ({
                           }
                         }}
                       >
+                        <button
+                          className={`app-favorite-btn ${favoriteAppIds.has(app.id) ? 'favorited' : ''}`}
+                          onClick={(e) => toggleFavoriteApp(app.id, e)}
+                          title={favoriteAppIds.has(app.id) ? 'Remove from favorites' : 'Add to favorites'}
+                        >
+                          {favoriteAppIds.has(app.id) ? '★' : '☆'}
+                        </button>
                         <div className="app-icon">{app.icon}</div>
                         <h3>{app.name}</h3>
                         <p>{app.description}</p>
@@ -306,6 +326,13 @@ const Lobby: React.FC<LobbyProps> = ({
                           }
                         }}
                       >
+                        <button
+                          className={`app-favorite-btn ${favoriteAppIds.has(app.id) ? 'favorited' : ''}`}
+                          onClick={(e) => toggleFavoriteApp(app.id, e)}
+                          title={favoriteAppIds.has(app.id) ? 'Remove from favorites' : 'Add to favorites'}
+                        >
+                          {favoriteAppIds.has(app.id) ? '★' : '☆'}
+                        </button>
                         <div className="app-icon">{app.icon}</div>
                         <h3>{app.name}</h3>
                         <p>{app.description}</p>
@@ -334,6 +361,13 @@ const Lobby: React.FC<LobbyProps> = ({
                       className={`app-card ${app.type}`}
                       onClick={() => onAppClick(app.id)}
                     >
+                      <button
+                        className={`app-favorite-btn ${favoriteAppIds.has(app.id) ? 'favorited' : ''}`}
+                        onClick={(e) => toggleFavoriteApp(app.id, e)}
+                        title={favoriteAppIds.has(app.id) ? 'Remove from favorites' : 'Add to favorites'}
+                      >
+                        {favoriteAppIds.has(app.id) ? '★' : '☆'}
+                      </button>
                       <div className="app-icon">{app.icon}</div>
                       <h3>{app.name}</h3>
                       <p>{app.description}</p>
@@ -361,6 +395,13 @@ const Lobby: React.FC<LobbyProps> = ({
                       className={`app-card ${app.type}`}
                       onClick={() => onAppClick(app.id)}
                     >
+                      <button
+                        className={`app-favorite-btn ${favoriteAppIds.has(app.id) ? 'favorited' : ''}`}
+                        onClick={(e) => toggleFavoriteApp(app.id, e)}
+                        title={favoriteAppIds.has(app.id) ? 'Remove from favorites' : 'Add to favorites'}
+                      >
+                        {favoriteAppIds.has(app.id) ? '★' : '☆'}
+                      </button>
                       <div className="app-icon">{app.icon}</div>
                       <h3>{app.name}</h3>
                       <p>{app.description}</p>
