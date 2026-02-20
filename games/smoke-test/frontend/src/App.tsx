@@ -31,31 +31,9 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [incrementing, setIncrementing] = useState(false);
 
-  // Must have userId and token
-  if (!userId || !token) {
-    return (
-      <div className="ah-container ah-container--narrow" style={{ paddingTop: 40 }}>
-        <div className="ah-card">
-          <h2 style={{ marginBottom: 12 }}>🧪 Smoke Test</h2>
-          <p className="ah-meta">
-            Missing authentication. Please access this app through the Activity Hub.
-          </p>
-          <button
-            className="ah-btn-primary"
-            onClick={() => {
-              window.location.href = `http://${window.location.hostname}:3001`;
-            }}
-            style={{ marginTop: 20 }}
-          >
-            Go to Lobby
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   // Fetch initial counter and activity
   useEffect(() => {
+    if (!token) return;
     const fetchData = async () => {
       try {
         // Fetch counter
@@ -84,6 +62,8 @@ function App() {
 
   // Setup SSE connection for real-time updates
   useEffect(() => {
+    if (!token) return;
+
     const eventSource = new EventSource(
       `${API_BASE}/api/events?token=${encodeURIComponent(token)}`
     );
@@ -136,6 +116,29 @@ function App() {
     }
     setIncrementing(false);
   };
+
+  // Auth check - after all hooks
+  if (!userId || !token) {
+    return (
+      <div className="ah-container ah-container--narrow" style={{ paddingTop: 40 }}>
+        <div className="ah-card">
+          <h2 style={{ marginBottom: 12 }}>🧪 Smoke Test</h2>
+          <p className="ah-meta">
+            Missing authentication. Please access this app through the Activity Hub.
+          </p>
+          <button
+            className="ah-btn-primary"
+            onClick={() => {
+              window.location.href = `http://${window.location.hostname}:3001`;
+            }}
+            style={{ marginTop: 20 }}
+          >
+            Go to Lobby
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
