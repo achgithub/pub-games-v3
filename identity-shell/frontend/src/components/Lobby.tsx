@@ -29,6 +29,41 @@ const Lobby: React.FC<LobbyProps> = ({
   // Online users overlay state
   const [showOnlineUsersOverlay, setShowOnlineUsersOverlay] = useState(false);
 
+  // User preferences (favorite/block) - stored in local state for now
+  const [favoriteUsers, setFavoriteUsers] = useState<Set<string>>(new Set());
+  const [blockedUsers, setBlockedUsers] = useState<Set<string>>(new Set());
+
+  // Appear offline toggle
+  const [appearOffline, setAppearOffline] = useState(false);
+
+  const toggleFavorite = (email: string) => {
+    const newFavorites = new Set(favoriteUsers);
+    if (newFavorites.has(email)) {
+      newFavorites.delete(email);
+    } else {
+      newFavorites.add(email);
+      // Remove from blocked if favoriting
+      const newBlocked = new Set(blockedUsers);
+      newBlocked.delete(email);
+      setBlockedUsers(newBlocked);
+    }
+    setFavoriteUsers(newFavorites);
+  };
+
+  const toggleBlock = (email: string) => {
+    const newBlocked = new Set(blockedUsers);
+    if (newBlocked.has(email)) {
+      newBlocked.delete(email);
+    } else {
+      newBlocked.add(email);
+      // Remove from favorites if blocking
+      const newFavorites = new Set(favoriteUsers);
+      newFavorites.delete(email);
+      setFavoriteUsers(newFavorites);
+    }
+    setBlockedUsers(newBlocked);
+  };
+
   // Challenge modal state - now starts with game selection
   const [challengeModal, setChallengeModal] = useState<{
     targetUser: string;
@@ -60,7 +95,14 @@ const Lobby: React.FC<LobbyProps> = ({
   );
 
   // Filter out lobby itself from the grid
-  const availableGames = apps.filter(app => app.id !== 'lobby');
+  const availableApps = apps.filter(app => app.id !== 'lobby');
+
+  // Group apps by category
+  // For now, favorites is empty - will be implemented with user preferences
+  const favoriteApps: AppDefinition[] = [];
+  const gameApps = availableApps.filter(app => app.category === 'game');
+  const utilityApps = availableApps.filter(app => app.category === 'utility');
+  const adminApps = availableApps.filter(app => app.category === 'admin');
 
   // Send challenge from modal (appId now comes from modal)
   const handleConfirmChallenge = async (appId: string, options: ChallengeOptions) => {
@@ -104,13 +146,19 @@ const Lobby: React.FC<LobbyProps> = ({
     <div className="lobby">
       <div className="lobby-header">
         <h1>Game Lobby</h1>
-        <p>Select a game to start playing</p>
 
         {/* User status and online users button */}
         <div className="user-status-bar">
           <div className="user-status-self">
-            <span className="status-dot online"></span>
+            <span className={`status-dot ${appearOffline ? 'away' : 'online'}`}></span>
             <span className="user-name">{userName}</span>
+            <button
+              className={`status-toggle ${appearOffline ? 'offline' : ''}`}
+              onClick={() => setAppearOffline(!appearOffline)}
+              title={appearOffline ? 'Appear online' : 'Appear offline'}
+            >
+              {appearOffline ? 'Offline' : 'Online'}
+            </button>
           </div>
 
           {onlineUsers.length > 0 && (
@@ -151,6 +199,22 @@ const Lobby: React.FC<LobbyProps> = ({
                       <span className="user-app">in {user.currentApp}</span>
                     )}
                   </div>
+                  <div className="user-item-actions">
+                    <button
+                      className={`user-action-btn ${favoriteUsers.has(user.email) ? 'favorite' : ''}`}
+                      onClick={() => toggleFavorite(user.email)}
+                      title={favoriteUsers.has(user.email) ? 'Remove from favorites' : 'Add to favorites'}
+                    >
+                      {favoriteUsers.has(user.email) ? '★' : '☆'}
+                    </button>
+                    <button
+                      className={`user-action-btn ${blockedUsers.has(user.email) ? 'blocked' : ''}`}
+                      onClick={() => toggleBlock(user.email)}
+                      title={blockedUsers.has(user.email) ? 'Unblock' : 'Block'}
+                    >
+                      {blockedUsers.has(user.email) ? '🚫' : '○'}
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -161,33 +225,103 @@ const Lobby: React.FC<LobbyProps> = ({
       <div className="lobby-sections">
         {/* Available Apps Section */}
         <section className="lobby-section lobby-apps-full">
-          <h2>Available Games</h2>
-          <div className="app-grid">
-            {availableGames.map((app) => {
-              const isChallengeable = challengeableApps.some(ca => ca.id === app.id);
+          {/* Favorites Section */}
+          {favoriteApps.length > 0 && (
+            <div className="app-section">
+              <h3 className="app-section-title">Favorites</h3>
+              <div className="app-grid">
+                {favoriteApps.map((app) => {
+                  const isChallengeable = challengeableApps.some(ca => ca.id === app.id);
+                  return (
+                    <button
+                      key={app.id}
+                      className={`app-card ${app.type}`}
+                      onClick={() => {
+                        if (isChallengeable) {
+                          setNewChallengeModal({ app });
+                        } else {
+                          onAppClick(app.id);
+                        }
+                      }}
+                    >
+                      <div className="app-icon">{app.icon}</div>
+                      <h3>{app.name}</h3>
+                      <p>{app.description}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
-              return (
-                <button
-                  key={app.id}
-                  className={`app-card ${app.type}`}
-                  onClick={() => {
-                    if (isChallengeable) {
-                      // Open challenge modal for challengeable games
-                      setNewChallengeModal({ app });
-                    } else {
-                      // Navigate directly for non-challengeable apps
-                      onAppClick(app.id);
-                    }
-                  }}
-                >
-                  <div className="app-icon">{app.icon}</div>
-                  <h3>{app.name}</h3>
-                  <p>{app.description}</p>
-                  <span className="app-type-badge">{app.category}</span>
-                </button>
-              );
-            })}
-          </div>
+          {/* Games Section */}
+          {gameApps.length > 0 && (
+            <div className="app-section">
+              <h3 className="app-section-title">Games</h3>
+              <div className="app-grid">
+                {gameApps.map((app) => {
+                  const isChallengeable = challengeableApps.some(ca => ca.id === app.id);
+                  return (
+                    <button
+                      key={app.id}
+                      className={`app-card ${app.type}`}
+                      onClick={() => {
+                        if (isChallengeable) {
+                          setNewChallengeModal({ app });
+                        } else {
+                          onAppClick(app.id);
+                        }
+                      }}
+                    >
+                      <div className="app-icon">{app.icon}</div>
+                      <h3>{app.name}</h3>
+                      <p>{app.description}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Utility Section */}
+          {utilityApps.length > 0 && (
+            <div className="app-section">
+              <h3 className="app-section-title">Utility</h3>
+              <div className="app-grid">
+                {utilityApps.map((app) => (
+                  <button
+                    key={app.id}
+                    className={`app-card ${app.type}`}
+                    onClick={() => onAppClick(app.id)}
+                  >
+                    <div className="app-icon">{app.icon}</div>
+                    <h3>{app.name}</h3>
+                    <p>{app.description}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Admin Section */}
+          {adminApps.length > 0 && (
+            <div className="app-section">
+              <h3 className="app-section-title">Admin</h3>
+              <div className="app-grid">
+                {adminApps.map((app) => (
+                  <button
+                    key={app.id}
+                    className={`app-card ${app.type}`}
+                    onClick={() => onAppClick(app.id)}
+                  >
+                    <div className="app-icon">{app.icon}</div>
+                    <h3>{app.name}</h3>
+                    <p>{app.description}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </section>
       </div>
 
