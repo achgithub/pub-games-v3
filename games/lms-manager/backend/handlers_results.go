@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -414,7 +413,7 @@ func HandleGetReport(w http.ResponseWriter, r *http.Request) {
 
 // HandleGetAvailableTeams - GET /api/rounds/{roundId}/available-teams
 func HandleGetAvailableTeams(w http.ResponseWriter, r *http.Request) {
-	user, ok := authlib.GetUserFromContext(r.Context())
+	_, ok := authlib.GetUserFromContext(r.Context())
 	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
@@ -459,7 +458,7 @@ func HandleGetAvailableTeams(w http.ResponseWriter, r *http.Request) {
 
 // HandleGetAvailablePlayers - GET /api/rounds/{roundId}/available-players
 func HandleGetAvailablePlayers(w http.ResponseWriter, r *http.Request) {
-	user, ok := authlib.GetUserFromContext(r.Context())
+	_, ok := authlib.GetUserFromContext(r.Context())
 	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
