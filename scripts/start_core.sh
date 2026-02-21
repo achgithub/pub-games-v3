@@ -1,5 +1,5 @@
 #!/bin/bash
-# Start core services: identity-shell, setup-admin, game-admin, tic-tac-toe, dots, last-man-standing, sweepstakes, quiz-player, quiz-master, quiz-display, mobile-test, smoke-test, leaderboard
+# Start core services: identity-shell, setup-admin, game-admin, tic-tac-toe, dots, last-man-standing, lms-manager, sweepstakes, quiz-player, quiz-master, quiz-display, mobile-test, smoke-test, leaderboard
 
 # Check if tmux session exists
 if tmux has-session -t core 2>/dev/null; then
@@ -35,6 +35,10 @@ tmux send-keys -t core:dots "cd ~/pub-games-v3/games/dots/backend && go run *.go
 # Last Man Standing (port 4021)
 tmux new-window -t core -n last-man-standing
 tmux send-keys -t core:last-man-standing "cd ~/pub-games-v3/games/last-man-standing/backend && go run *.go" C-m
+
+# LMS Manager (port 4022)
+tmux new-window -t core -n lms-manager
+tmux send-keys -t core:lms-manager "cd ~/pub-games-v3/games/lms-manager/backend && go run *.go" C-m
 
 # Sweepstakes (port 4031)
 tmux new-window -t core -n sweepstakes
