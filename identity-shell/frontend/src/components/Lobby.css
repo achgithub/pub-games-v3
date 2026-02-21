@@ -26,12 +26,12 @@
 }
 
 .lobby {
-  padding: 2rem 4rem 4rem;
+  padding: 1rem 4rem 4rem;
   width: 100%;
 }
 
 .lobby-header {
-  margin-bottom: 3rem;
+  margin-bottom: 1.5rem;
   position: relative;
 }
 
