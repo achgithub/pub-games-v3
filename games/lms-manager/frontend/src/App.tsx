@@ -58,6 +58,9 @@ interface GameReport {
 function App() {
   // Parse URL parameters
   const params = new URLSearchParams(window.location.search);
+  const userId = params.get('userId');
+  const userName = params.get('userName');
+  const token = params.get('token');
   const reportGameId = params.get('gameId');
   const isReportMode = reportGameId !== null;
 
@@ -119,49 +122,63 @@ function App() {
 
   // API calls
   const fetchTeams = async () => {
-    const response = await fetch('/api/teams');
+    const response = await fetch('/api/teams', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     if (response.ok) {
       setTeams(await response.json());
     }
   };
 
   const fetchPlayers = async () => {
-    const response = await fetch('/api/players');
+    const response = await fetch('/api/players', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     if (response.ok) {
       setPlayers(await response.json());
     }
   };
 
   const fetchGames = async () => {
-    const response = await fetch('/api/games');
+    const response = await fetch('/api/games', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     if (response.ok) {
       setGames(await response.json());
     }
   };
 
   const fetchRounds = async (gameId: number) => {
-    const response = await fetch(`/api/games/${gameId}/rounds`);
+    const response = await fetch(`/api/games/${gameId}/rounds`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     if (response.ok) {
       setRounds(await response.json());
     }
   };
 
   const fetchPicks = async (roundId: number) => {
-    const response = await fetch(`/api/rounds/${roundId}/picks`);
+    const response = await fetch(`/api/rounds/${roundId}/picks`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     if (response.ok) {
       setPicks(await response.json());
     }
   };
 
   const fetchAvailableTeams = async (roundId: number) => {
-    const response = await fetch(`/api/rounds/${roundId}/available-teams`);
+    const response = await fetch(`/api/rounds/${roundId}/available-teams`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     if (response.ok) {
       setAvailableTeams(await response.json());
     }
   };
 
   const fetchAvailablePlayers = async (roundId: number) => {
-    const response = await fetch(`/api/rounds/${roundId}/available-players`);
+    const response = await fetch(`/api/rounds/${roundId}/available-players`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     if (response.ok) {
       setAvailablePlayers(await response.json());
     }
@@ -179,7 +196,10 @@ function App() {
     if (!newTeamName.trim()) return;
     const response = await fetch('/api/teams', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
       body: JSON.stringify({ teamName: newTeamName }),
     });
     if (response.ok) {
@@ -190,7 +210,10 @@ function App() {
 
   const deleteTeam = async (id: number) => {
     if (!window.confirm('Delete this team?')) return;
-    const response = await fetch(`/api/teams/${id}`, { method: 'DELETE' });
+    const response = await fetch(`/api/teams/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
     if (response.ok) fetchTeams();
   };
 
@@ -198,7 +221,10 @@ function App() {
     if (!newPlayerNickname.trim()) return;
     const response = await fetch('/api/players', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
       body: JSON.stringify({ playerNickname: newPlayerNickname }),
     });
     if (response.ok) {
@@ -209,7 +235,10 @@ function App() {
 
   const deletePlayer = async (id: number) => {
     if (!window.confirm('Delete this player?')) return;
-    const response = await fetch(`/api/players/${id}`, { method: 'DELETE' });
+    const response = await fetch(`/api/players/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
     if (response.ok) fetchPlayers();
   };
 
@@ -220,7 +249,10 @@ function App() {
     }
     const response = await fetch('/api/games', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
       body: JSON.stringify({
         gameName: newGameName,
         teams: selectedTeams,
@@ -238,7 +270,10 @@ function App() {
 
   const deleteGame = async (id: number) => {
     if (!window.confirm('Delete this game? This will remove all rounds and picks.')) return;
-    const response = await fetch(`/api/games/${id}`, { method: 'DELETE' });
+    const response = await fetch(`/api/games/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
     if (response.ok) {
       if (selectedGameId === id) setSelectedGameId(null);
       fetchGames();
@@ -249,6 +284,7 @@ function App() {
     if (!selectedGameId) return;
     const response = await fetch(`/api/games/${selectedGameId}/rounds`, {
       method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
     });
     if (response.ok) {
       fetchRounds(selectedGameId);
@@ -259,7 +295,10 @@ function App() {
     if (!selectedRoundId) return;
     const response = await fetch(`/api/rounds/${selectedRoundId}/picks`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
       body: JSON.stringify({ playerNickname, teamName }),
     });
     if (response.ok) {
@@ -272,7 +311,10 @@ function App() {
   const setPickResult = async (pickId: number, result: 'win' | 'lose') => {
     const response = await fetch(`/api/picks/${pickId}/result`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
       body: JSON.stringify({ result }),
     });
     if (response.ok) {
@@ -281,14 +323,20 @@ function App() {
   };
 
   const closeRound = async (roundId: number) => {
-    const response = await fetch(`/api/rounds/${roundId}/close`, { method: 'POST' });
+    const response = await fetch(`/api/rounds/${roundId}/close`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
     if (response.ok) {
       fetchRounds(selectedGameId!);
     }
   };
 
   const processRound = async (roundId: number) => {
-    const response = await fetch(`/api/rounds/${roundId}/process`, { method: 'POST' });
+    const response = await fetch(`/api/rounds/${roundId}/process`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
     if (response.ok) {
       alert('Round processed - eliminated players updated');
       fetchRounds(selectedGameId!);
@@ -297,7 +345,10 @@ function App() {
 
   const declareWinner = async (gameId: number) => {
     if (!window.confirm('Declare all active players as winners and complete the game?')) return;
-    const response = await fetch(`/api/games/${gameId}/declare-winner`, { method: 'POST' });
+    const response = await fetch(`/api/games/${gameId}/declare-winner`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
     if (response.ok) {
       const data = await response.json();
       alert(`Winners: ${data.winners.join(', ')}`);
@@ -305,6 +356,32 @@ function App() {
       setSelectedGameId(null);
     }
   };
+
+  // Auth check for manager mode (not required for report mode)
+  if (!isReportMode && (!userId || !token)) {
+    return (
+      <>
+        <header className="ah-app-header">
+          <div className="ah-app-header-left">
+            <h1 className="ah-app-title">🎯 LMS Manager</h1>
+          </div>
+        </header>
+        <div className="ah-container ah-container--narrow">
+          <div className="ah-card">
+            <p className="ah-meta">
+              Missing authentication. Please access this app through the Activity Hub.
+            </p>
+            <button
+              className="ah-btn-primary"
+              onClick={() => window.location.href = `http://${window.location.hostname}:3001`}
+            >
+              Go to Lobby
+            </button>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   // Report mode view
   if (isReportMode && gameReport) {
