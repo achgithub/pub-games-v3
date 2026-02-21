@@ -18,8 +18,8 @@ import (
 
 // HandleSetPickResult - PUT /api/picks/{id}/result
 func HandleSetPickResult(w http.ResponseWriter, r *http.Request) {
-	user := authlib.GetUserFromContext(r.Context())
-	if user == nil {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -75,8 +75,8 @@ func HandleSetPickResult(w http.ResponseWriter, r *http.Request) {
 
 // HandleCloseRound - POST /api/rounds/{roundId}/close
 func HandleCloseRound(w http.ResponseWriter, r *http.Request) {
-	user := authlib.GetUserFromContext(r.Context())
-	if user == nil {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -119,8 +119,8 @@ func HandleCloseRound(w http.ResponseWriter, r *http.Request) {
 
 // HandleProcessRound - POST /api/rounds/{roundId}/process
 func HandleProcessRound(w http.ResponseWriter, r *http.Request) {
-	user := authlib.GetUserFromContext(r.Context())
-	if user == nil {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -195,8 +195,8 @@ func HandleProcessRound(w http.ResponseWriter, r *http.Request) {
 
 // HandleDeclareWinner - POST /api/games/{gameId}/declare-winner
 func HandleDeclareWinner(w http.ResponseWriter, r *http.Request) {
-	user := authlib.GetUserFromContext(r.Context())
-	if user == nil {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -414,8 +414,8 @@ func HandleGetReport(w http.ResponseWriter, r *http.Request) {
 
 // HandleGetAvailableTeams - GET /api/rounds/{roundId}/available-teams
 func HandleGetAvailableTeams(w http.ResponseWriter, r *http.Request) {
-	user := authlib.GetUserFromContext(r.Context())
-	if user == nil {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -459,8 +459,8 @@ func HandleGetAvailableTeams(w http.ResponseWriter, r *http.Request) {
 
 // HandleGetAvailablePlayers - GET /api/rounds/{roundId}/available-players
 func HandleGetAvailablePlayers(w http.ResponseWriter, r *http.Request) {
-	user := authlib.GetUserFromContext(r.Context())
-	if user == nil {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}

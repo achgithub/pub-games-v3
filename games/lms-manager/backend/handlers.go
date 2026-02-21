@@ -29,8 +29,8 @@ func HandleConfig(w http.ResponseWriter, r *http.Request) {
 
 // HandleGetTeams - GET /api/teams
 func HandleGetTeams(w http.ResponseWriter, r *http.Request) {
-	user := authlib.GetUserFromContext(r.Context())
-	if user == nil {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -63,8 +63,8 @@ func HandleGetTeams(w http.ResponseWriter, r *http.Request) {
 
 // HandleCreateTeam - POST /api/teams
 func HandleCreateTeam(w http.ResponseWriter, r *http.Request) {
-	user := authlib.GetUserFromContext(r.Context())
-	if user == nil {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -105,8 +105,8 @@ func HandleCreateTeam(w http.ResponseWriter, r *http.Request) {
 
 // HandleDeleteTeam - DELETE /api/teams/{id}
 func HandleDeleteTeam(w http.ResponseWriter, r *http.Request) {
-	user := authlib.GetUserFromContext(r.Context())
-	if user == nil {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -145,8 +145,8 @@ func HandleDeleteTeam(w http.ResponseWriter, r *http.Request) {
 
 // HandleGetPlayers - GET /api/players
 func HandleGetPlayers(w http.ResponseWriter, r *http.Request) {
-	user := authlib.GetUserFromContext(r.Context())
-	if user == nil {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -179,8 +179,8 @@ func HandleGetPlayers(w http.ResponseWriter, r *http.Request) {
 
 // HandleCreatePlayer - POST /api/players
 func HandleCreatePlayer(w http.ResponseWriter, r *http.Request) {
-	user := authlib.GetUserFromContext(r.Context())
-	if user == nil {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -221,8 +221,8 @@ func HandleCreatePlayer(w http.ResponseWriter, r *http.Request) {
 
 // HandleDeletePlayer - DELETE /api/players/{id}
 func HandleDeletePlayer(w http.ResponseWriter, r *http.Request) {
-	user := authlib.GetUserFromContext(r.Context())
-	if user == nil {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -261,8 +261,8 @@ func HandleDeletePlayer(w http.ResponseWriter, r *http.Request) {
 
 // HandleGetGames - GET /api/games
 func HandleGetGames(w http.ResponseWriter, r *http.Request) {
-	user := authlib.GetUserFromContext(r.Context())
-	if user == nil {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -297,8 +297,8 @@ func HandleGetGames(w http.ResponseWriter, r *http.Request) {
 
 // HandleCreateGame - POST /api/games
 func HandleCreateGame(w http.ResponseWriter, r *http.Request) {
-	user := authlib.GetUserFromContext(r.Context())
-	if user == nil {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -378,8 +378,8 @@ func HandleCreateGame(w http.ResponseWriter, r *http.Request) {
 
 // HandleDeleteGame - DELETE /api/games/{id}
 func HandleDeleteGame(w http.ResponseWriter, r *http.Request) {
-	user := authlib.GetUserFromContext(r.Context())
-	if user == nil {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}

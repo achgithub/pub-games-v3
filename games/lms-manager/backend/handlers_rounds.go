@@ -18,8 +18,8 @@ import (
 
 // HandleGetRounds - GET /api/games/{gameId}/rounds
 func HandleGetRounds(w http.ResponseWriter, r *http.Request) {
-	user := authlib.GetUserFromContext(r.Context())
-	if user == nil {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -67,8 +67,8 @@ func HandleGetRounds(w http.ResponseWriter, r *http.Request) {
 
 // HandleCreateRound - POST /api/games/{gameId}/rounds
 func HandleCreateRound(w http.ResponseWriter, r *http.Request) {
-	user := authlib.GetUserFromContext(r.Context())
-	if user == nil {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -127,8 +127,8 @@ func HandleCreateRound(w http.ResponseWriter, r *http.Request) {
 
 // HandleGetPicks - GET /api/rounds/{roundId}/picks
 func HandleGetPicks(w http.ResponseWriter, r *http.Request) {
-	user := authlib.GetUserFromContext(r.Context())
-	if user == nil {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -185,8 +185,8 @@ func HandleGetPicks(w http.ResponseWriter, r *http.Request) {
 
 // HandleCreatePick - POST /api/rounds/{roundId}/picks
 func HandleCreatePick(w http.ResponseWriter, r *http.Request) {
-	user := authlib.GetUserFromContext(r.Context())
-	if user == nil {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -244,8 +244,8 @@ func HandleCreatePick(w http.ResponseWriter, r *http.Request) {
 
 // HandleUpdatePick - PUT /api/picks/{id}
 func HandleUpdatePick(w http.ResponseWriter, r *http.Request) {
-	user := authlib.GetUserFromContext(r.Context())
-	if user == nil {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -302,8 +302,8 @@ func HandleUpdatePick(w http.ResponseWriter, r *http.Request) {
 
 // HandleDeletePick - DELETE /api/picks/{id}
 func HandleDeletePick(w http.ResponseWriter, r *http.Request) {
-	user := authlib.GetUserFromContext(r.Context())
-	if user == nil {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
