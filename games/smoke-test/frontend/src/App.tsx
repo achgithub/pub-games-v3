@@ -120,9 +120,9 @@ function App() {
   // Auth check - after all hooks
   if (!userId || !token) {
     return (
-      <div className="ah-container ah-container--narrow" style={{ paddingTop: 40 }}>
+      <div className="ah-container ah-container--narrow">
         <div className="ah-card">
-          <h2 style={{ marginBottom: 12 }}>🧪 Smoke Test</h2>
+          <h2 className="ah-header-title">🧪 Smoke Test</h2>
           <p className="ah-meta">
             Missing authentication. Please access this app through the Activity Hub.
           </p>
@@ -131,7 +131,6 @@ function App() {
             onClick={() => {
               window.location.href = `http://${window.location.hostname}:3001`;
             }}
-            style={{ marginTop: 20 }}
           >
             Go to Lobby
           </button>
@@ -142,7 +141,7 @@ function App() {
 
   if (loading) {
     return (
-      <div className="ah-container ah-container--narrow" style={{ paddingTop: 40 }}>
+      <div className="ah-container ah-container--narrow">
         <div className="ah-card">
           <p className="ah-meta">Loading...</p>
         </div>
@@ -151,11 +150,11 @@ function App() {
   }
 
   return (
-    <div className="ah-container ah-container--narrow" style={{ paddingTop: 20 }}>
+    <div className="ah-container ah-container--narrow">
       {/* Header */}
-      <div className="ah-card" style={{ marginBottom: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-          <h2 style={{ margin: 0 }}>🧪 Smoke Test</h2>
+      <div className="ah-card">
+        <div className="ah-header">
+          <h2 className="ah-header-title">🧪 Smoke Test</h2>
           <button
             className="ah-lobby-btn"
             onClick={() => {
@@ -165,7 +164,7 @@ function App() {
             ← Lobby
           </button>
         </div>
-        <p className="ah-meta" style={{ margin: 0 }}>
+        <p className="ah-meta">
           Welcome, {userName}! This app demonstrates the full Activity Hub stack.
         </p>
       </div>
@@ -173,45 +172,34 @@ function App() {
       {/* Counter Card */}
       <div className="ah-card">
         <h3 className="ah-section-title">Global Counter (Redis)</h3>
-        <div style={{ textAlign: 'center', marginBottom: 16 }}>
-          <div style={{ fontSize: 48, fontWeight: 'bold', color: '#2196F3' }}>
-            {counter}
-          </div>
-          <p className="ah-meta" style={{ marginTop: 8 }}>
+        <div className="counter-display">
+          <div className="counter-value">{counter}</div>
+          <p className="ah-meta">
             Counter value stored in Redis, updates broadcast via SSE
           </p>
         </div>
         <button
-          className="ah-btn-primary"
+          className="ah-btn-primary full-width"
           onClick={handleIncrement}
           disabled={incrementing}
-          style={{ width: '100%' }}
         >
           {incrementing ? 'Incrementing...' : '+ Increment Counter'}
         </button>
       </div>
 
       {/* Activity Log Card */}
-      <div className="ah-card" style={{ marginTop: 20 }}>
+      <div className="ah-card">
         <h3 className="ah-section-title">Recent Activity (PostgreSQL)</h3>
         {activities.length === 0 ? (
           <p className="ah-meta">No activity yet. Be the first to increment!</p>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div className="activity-list">
             {activities.map((activity, idx) => (
-              <div
-                key={idx}
-                style={{
-                  padding: '8px 12px',
-                  background: '#F5F5F4',
-                  borderRadius: 6,
-                  fontSize: 14,
-                }}
-              >
-                <div style={{ fontWeight: 500 }}>
+              <div key={idx} className="activity-item">
+                <div className="activity-user">
                   {activity.userName} → {activity.counterValue}
                 </div>
-                <div className="ah-meta" style={{ fontSize: 12 }}>
+                <div className="activity-time">
                   {new Date(activity.createdAt).toLocaleString()}
                 </div>
               </div>
@@ -221,9 +209,9 @@ function App() {
       </div>
 
       {/* Tech Stack Info */}
-      <div className="ah-card" style={{ marginTop: 20 }}>
+      <div className="ah-card">
         <h3 className="ah-section-title">Tech Stack</h3>
-        <ul style={{ marginLeft: 20, lineHeight: 1.8 }}>
+        <ul className="tech-stack-list">
           <li><strong>Frontend:</strong> React + TypeScript</li>
           <li><strong>CSS:</strong> Shared Activity Hub CSS (loaded dynamically)</li>
           <li><strong>Backend:</strong> Go with activity-hub-common library</li>
