@@ -643,10 +643,18 @@ Game Admin App (Port 5070)  ← NEW
    - Image/audio load timeouts (8s/5s)
    - Clearer failure detection for poor network conditions
    - ~30 minutes to implement
-3. Quiz system — plan exists at `.claude/plans/radiant-sparking-kettle.md` for media clips, deduplication, and CSV import
-4. Add more game modules to game-admin as new games are built
-5. SSL/TLS when needed
-6. SSE reconnection on user change (would fix impersonation presence delay)
+3. **Automated testing & CI/CD pipeline** — No automated tests currently
+   - Phase 1: Unit tests (Go + React) + GitHub Actions build validation (~8 hours)
+   - Phase 2: Integration tests + test databases (~8 hours)
+   - Phase 3: E2E tests + automated deployment (~16 hours)
+   - Phase 4: Coverage badges, notifications, performance tests (~4 hours)
+   - Benefits: catch bugs early, confidence in refactoring, faster development
+   - Start with smoke-test as reference, expand gradually
+   - Total effort: ~36+ hours (phased approach)
+4. Quiz system — plan exists at `.claude/plans/radiant-sparking-kettle.md` for media clips, deduplication, and CSV import
+5. Add more game modules to game-admin as new games are built
+6. SSL/TLS when needed
+7. SSE reconnection on user change (would fix impersonation presence delay)
 
 ## Notes
 - LMS uses NO Redis/SSE — deadline-based HTTP polling only

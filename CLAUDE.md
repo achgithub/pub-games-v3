@@ -522,3 +522,269 @@ pub-games-v3/
 **Implementation location**: `games/mobile-test/frontend/src/App.tsx`
 
 **Effort estimate**: 30 minutes
+
+### Automated Testing & CI/CD Pipeline
+
+**Goal**: Implement automated tests and continuous integration/deployment pipeline
+
+**Current state**:
+- No automated tests
+- Manual testing on Pi after deployment
+- No build validation before merge
+- Manual deployment process
+
+**Required implementation**:
+
+#### 1. Unit Tests
+
+**Backend (Go)**:
+```bash
+# games/{app}/backend/*_test.go
+go test ./...
+```
+- Handler tests (mock HTTP requests)
+- Business logic tests
+- Database query tests (using test database)
+- Redis interaction tests (using miniredis)
+
+**Frontend (TypeScript/React)**:
+```bash
+# games/{app}/frontend/src/**/*.test.tsx
+npm test
+```
+- Component rendering tests (React Testing Library)
+- Hook tests
+- Utility function tests
+
+**Coverage targets**: 70%+ for critical paths
+
+#### 2. Integration Tests
+
+**API endpoint tests**:
+```bash
+# scripts/test/integration/
+./test_identity_shell.sh
+./test_smoke_test.sh
+# etc.
+```
+- Authentication flow (login, token validation)
+- Protected endpoints (with valid/invalid tokens)
+- Database operations (CRUD)
+- SSE connection establishment
+
+**Database migration tests**:
+- Apply migrations to test database
+- Verify schema correctness
+- Test rollback scenarios
+
+#### 3. End-to-End Tests (Optional, Phase 2)
+
+**Browser automation** (Playwright/Cypress):
+- User login flow
+- Game creation and play
+- Real-time updates (SSE)
+- Multi-user scenarios
+
+**Complexity**: High - requires running full stack
+
+#### 4. CI/CD Pipeline (GitHub Actions)
+
+**File**: `.github/workflows/ci.yml`
+
+```yaml
+name: CI/CD Pipeline
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  # Phase 1: Build validation
+  validate-builds:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: [identity-shell, smoke-test, tic-tac-toe, dots, ...]
+    steps:
+      - uses: actions/checkout@v3
+
+      # Backend
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.25'
+      - name: Build backend
+        run: |
+          cd games/${{ matrix.app }}/backend
+          go mod download
+          go build -v ./...
+
+      # Frontend
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Build frontend
+        run: |
+          cd games/${{ matrix.app }}/frontend
+          npm ci
+          npm run build
+
+  # Phase 2: Unit tests
+  test-backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: pubgames
+          POSTGRES_USER: activityhub
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5555:5432
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.25'
+      - name: Run backend tests
+        run: |
+          for app in games/*/backend; do
+            cd $app && go test -v ./... || exit 1
+            cd ../../..
+          done
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5555
+          DB_USER: activityhub
+          DB_PASS: pubgames
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+
+  test-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Run frontend tests
+        run: |
+          for app in games/*/frontend; do
+            cd $app
+            npm ci
+            npm test -- --coverage --watchAll=false || exit 1
+            cd ../../..
+          done
+
+  # Phase 3: Integration tests (future)
+  integration-tests:
+    runs-on: ubuntu-latest
+    # ... full stack setup ...
+
+  # Phase 4: Deploy to Pi (on main branch only)
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [validate-builds, test-backend, test-frontend]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Deploy to Pi
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PI_HOST }}
+          username: ${{ secrets.PI_USERNAME }}
+          key: ${{ secrets.PI_SSH_KEY }}
+          script: |
+            cd ~/pub-games-v3
+            git pull
+            ./scripts/deploy_all.sh
+```
+
+#### 5. Test Infrastructure
+
+**New scripts needed**:
+```bash
+scripts/
+├── test/
+│   ├── setup_test_db.sh       # Create test databases
+│   ├── teardown_test_db.sh    # Clean up after tests
+│   ├── run_all_tests.sh       # Run full test suite locally
+│   └── integration/
+│       ├── test_auth.sh
+│       ├── test_smoke_test.sh
+│       └── ...
+└── deploy_all.sh               # Automated deployment script
+```
+
+**Test database pattern**:
+```bash
+# Setup
+psql -U activityhub -h localhost -p 5555 -d postgres \
+  -c "CREATE DATABASE test_activity_hub;"
+psql -U activityhub -h localhost -p 5555 -d test_activity_hub \
+  -f identity-shell/backend/schema.sql
+
+# Run tests with test DB
+export DB_NAME=test_activity_hub
+go test ./...
+
+# Teardown
+psql -U activityhub -h localhost -p 5555 -d postgres \
+  -c "DROP DATABASE test_activity_hub;"
+```
+
+#### 6. Implementation Phases
+
+**Phase 1 (Essential - 8 hours)**:
+- [ ] Add Go unit tests for critical backend handlers
+- [ ] Add React unit tests for key components
+- [ ] Create GitHub Actions workflow for build validation
+- [ ] PR checks: builds must pass before merge
+
+**Phase 2 (Recommended - 8 hours)**:
+- [ ] Integration test scripts for API endpoints
+- [ ] Automated test database setup/teardown
+- [ ] GitHub Actions: run tests on PR
+- [ ] Test coverage reporting
+
+**Phase 3 (Advanced - 16 hours)**:
+- [ ] E2E tests with Playwright
+- [ ] Automated deployment on main branch push
+- [ ] Deployment rollback capability
+- [ ] Test environment on separate Pi or Docker
+
+**Phase 4 (Polish - 4 hours)**:
+- [ ] Test coverage badges in README
+- [ ] Slack/email notifications on build failures
+- [ ] Automated dependency updates (Dependabot)
+- [ ] Performance regression tests
+
+**Total effort estimate**: 36+ hours (phased approach recommended)
+
+**Benefits**:
+- Catch bugs before deployment
+- Confidence in refactoring
+- Prevent breaking changes
+- Faster development cycles
+- Documentation through tests
+- Reduced manual testing burden
+
+**Challenges specific to this project**:
+- Mac dev environment vs Pi production
+- Multiple independent services to test
+- Real-time features (SSE) harder to test
+- Database dependencies (PostgreSQL, Redis)
+
+**Recommended starting point**:
+1. Add tests to smoke-test as reference
+2. GitHub Actions for build validation only
+3. Gradually add tests to other apps
+4. Expand to integration tests when needed
