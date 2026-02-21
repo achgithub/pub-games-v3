@@ -3,6 +3,15 @@ import './App.css';
 
 const API_BASE = window.location.origin;
 
+// Available roles in the system
+const AVAILABLE_ROLES = [
+  { id: 'setup_admin', label: 'Setup Admin', color: '#9C27B0' },
+  { id: 'game_admin', label: 'Game Admin', color: '#2196F3' },
+  { id: 'super_user', label: 'Super User', color: '#FF9800' },
+  { id: 'game_manager', label: 'Game Manager', color: '#4CAF50' },
+  { id: 'quiz_master', label: 'Quiz Master', color: '#E91E63' },
+];
+
 interface User {
   email: string;
   name: string;
@@ -19,6 +28,33 @@ interface AppRecord {
   requiredRoles: string[];
   displayOrder: number;
   description: string;
+}
+
+interface RoleChipsProps {
+  userRoles: string[];
+  onToggleRole: (role: string) => void;
+  disabled: boolean;
+}
+
+function RoleChips({ userRoles, onToggleRole, disabled }: RoleChipsProps) {
+  return (
+    <div className="role-chips">
+      {AVAILABLE_ROLES.map(role => {
+        const isActive = userRoles.includes(role.id);
+        return (
+          <button
+            key={role.id}
+            className={`role-chip ${isActive ? 'active' : 'inactive'}`}
+            onClick={() => onToggleRole(role.id)}
+            disabled={disabled}
+            title={isActive ? `Remove ${role.label}` : `Add ${role.label}`}
+          >
+            {isActive ? '✓' : '+'} {role.label}
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 function App() {
@@ -173,146 +209,179 @@ function App() {
 
   if (!token) {
     return (
-      <div className="App">
-        <div className="container">
-          <h1>⚠️ Access Required</h1>
-          <p>This app must be opened through the Activity Hub with proper authentication.</p>
+      <div className="ah-container ah-container--narrow" style={{ paddingTop: 40 }}>
+        <div className="ah-card">
+          <h2 style={{ marginBottom: 12 }}>⚙️ Setup Admin</h2>
+          <p className="ah-meta">
+            This app must be opened through the Activity Hub with proper authentication.
+          </p>
+          <button
+            className="ah-btn-primary"
+            onClick={() => {
+              window.location.href = `http://${window.location.hostname}:3001`;
+            }}
+            style={{ marginTop: 20 }}
+          >
+            Go to Lobby
+          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="App">
-      <header>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <h1>⚙️ Setup Admin</h1>
+    <div className="ah-container ah-container--wide" style={{ paddingTop: 20 }}>
+      {/* Header */}
+      <div className="ah-card" style={{ marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+          <h2 style={{ margin: 0 }}>⚙️ Setup Admin</h2>
           <button
             className="ah-lobby-btn"
-            onClick={() => { window.location.href = `http://${window.location.hostname}:3001`; }}
+            onClick={() => {
+              window.location.href = `http://${window.location.hostname}:3001`;
+            }}
           >
             ← Lobby
           </button>
         </div>
-        <div className="tabs">
+
+        {/* Tabs */}
+        <div className="ah-tabs">
           <button
-            className={activeTab === 'users' ? 'active' : ''}
+            className={`ah-tab ${activeTab === 'users' ? 'active' : ''}`}
             onClick={() => setActiveTab('users')}
           >
             👥 Users
           </button>
           <button
-            className={activeTab === 'apps' ? 'active' : ''}
+            className={`ah-tab ${activeTab === 'apps' ? 'active' : ''}`}
             onClick={() => setActiveTab('apps')}
           >
             📱 Apps
           </button>
         </div>
-      </header>
+      </div>
 
+      {/* Read-only notice */}
       {readOnly && (
-        <div className="read-only-notice">
+        <div className="ah-banner ah-banner--warning">
           ℹ️ Read-Only Mode: You have super_user access but cannot modify settings. Full setup_admin role required for changes.
         </div>
       )}
 
-      <main>
-        {loading ? (
-          <div className="loading">Loading...</div>
-        ) : activeTab === 'users' ? (
-          <div className="users-section">
-            <h2>User Management</h2>
-            <table>
-              <thead>
-                <tr>
-                  <th>Email</th>
-                  <th>Name</th>
-                  <th>Setup Admin</th>
-                  <th>Game Admin</th>
-                  <th>Super User</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map(user => (
-                  <tr key={user.email}>
-                    <td>{user.email}</td>
-                    <td>{user.name}</td>
-                    <td>
-                      <input
-                        type="checkbox"
-                        checked={user.roles.includes('setup_admin')}
-                        onChange={() => toggleUserRole(user.email, 'setup_admin', user.roles)}
+      {/* Content */}
+      {loading ? (
+        <div className="ah-card">
+          <p className="ah-meta">Loading...</p>
+        </div>
+      ) : activeTab === 'users' ? (
+        <div className="ah-card">
+          <h3 className="ah-section-title">User Management</h3>
+          <table className="setup-admin-table">
+            <thead>
+              <tr>
+                <th>Email</th>
+                <th>Name</th>
+                <th>Roles</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map(user => (
+                <tr key={user.email}>
+                  <td>{user.email}</td>
+                  <td>{user.name}</td>
+                  <td>
+                    {user.roles.length === 0 ? (
+                      <span className="ah-meta">No roles assigned</span>
+                    ) : (
+                      <RoleChips
+                        userRoles={user.roles}
+                        onToggleRole={(role) => toggleUserRole(user.email, role, user.roles)}
                         disabled={readOnly}
                       />
-                    </td>
-                    <td>
-                      <input
-                        type="checkbox"
-                        checked={user.roles.includes('game_admin')}
-                        onChange={() => toggleUserRole(user.email, 'game_admin', user.roles)}
+                    )}
+                    {readOnly === false && user.roles.length === 0 && (
+                      <RoleChips
+                        userRoles={user.roles}
+                        onToggleRole={(role) => toggleUserRole(user.email, role, user.roles)}
                         disabled={readOnly}
                       />
-                    </td>
-                    <td>
-                      <input
-                        type="checkbox"
-                        checked={user.roles.includes('super_user')}
-                        onChange={() => toggleUserRole(user.email, 'super_user', user.roles)}
-                        disabled={readOnly}
-                      />
-                    </td>
-                    <td>
-                      {currentUserRoles.includes('super_user') && (
-                        <button
-                          className="impersonate-button"
-                          onClick={() => handleImpersonate(user.email)}
-                        >
-                          👤 Impersonate
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="apps-section">
-            <h2>App Registry</h2>
-            <table>
-              <thead>
-                <tr>
-                  <th>Icon</th>
-                  <th>Name</th>
-                  <th>Enabled</th>
-                  <th>Roles Required</th>
-                  <th>Order</th>
-                </tr>
-              </thead>
-              <tbody>
-                {apps.map(app => (
-                  <tr key={app.id}>
-                    <td className="icon">{app.icon}</td>
-                    <td>{app.name}</td>
-                    <td>
+                    )}
+                  </td>
+                  <td>
+                    {currentUserRoles.includes('super_user') && (
                       <button
-                        className={app.enabled ? 'enabled' : 'disabled'}
-                        onClick={() => toggleApp(app.id, app.enabled)}
-                        disabled={readOnly}
+                        className="ah-btn-outline"
+                        onClick={() => handleImpersonate(user.email)}
+                        style={{ fontSize: 13 }}
                       >
-                        {app.enabled ? '✓ Enabled' : '✗ Disabled'}
+                        👤 Impersonate
                       </button>
-                    </td>
-                    <td>{app.requiredRoles.length > 0 ? app.requiredRoles.join(', ') : 'Public'}</td>
-                    <td>{app.displayOrder}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </main>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="ah-card">
+          <h3 className="ah-section-title">App Registry</h3>
+          <table className="setup-admin-table">
+            <thead>
+              <tr>
+                <th>Icon</th>
+                <th>Name</th>
+                <th>Enabled</th>
+                <th>Roles Required</th>
+                <th>Order</th>
+              </tr>
+            </thead>
+            <tbody>
+              {apps.map(app => (
+                <tr key={app.id}>
+                  <td className="icon">{app.icon}</td>
+                  <td>{app.name}</td>
+                  <td>
+                    <button
+                      className={app.enabled ? 'ah-btn-primary' : 'ah-btn-outline'}
+                      onClick={() => toggleApp(app.id, app.enabled)}
+                      disabled={readOnly}
+                      style={{ fontSize: 13 }}
+                    >
+                      {app.enabled ? '✓ Enabled' : 'Disabled'}
+                    </button>
+                  </td>
+                  <td>
+                    {app.requiredRoles.length > 0 ? (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                        {app.requiredRoles.map(role => (
+                          <span
+                            key={role}
+                            style={{
+                              padding: '2px 8px',
+                              borderRadius: 8,
+                              background: '#E3F2FD',
+                              color: '#1976D2',
+                              fontSize: 12,
+                            }}
+                          >
+                            {role}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="ah-meta">Public</span>
+                    )}
+                  </td>
+                  <td>{app.displayOrder}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
