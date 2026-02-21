@@ -21,7 +21,7 @@ func main() {
 
 	// Initialize app database
 	var err error
-	db, err = database.InitDatabase("leaderboard_db")
+	db, err = database.InitDatabase("leaderboard")
 	if err != nil {
 		log.Fatal("Failed to connect to app database:", err)
 	}

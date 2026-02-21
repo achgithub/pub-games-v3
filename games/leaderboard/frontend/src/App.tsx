@@ -48,9 +48,12 @@ function App() {
   // Parse URL parameters
   const params = new URLSearchParams(window.location.search);
   const filterGame = params.get('game'); // "dots", "tic-tac-toe", or null
-  const userId = params.get('userId');
-  const userName = params.get('userName');
-  const token = params.get('token');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const userId = params.get('userId'); // Future: for "My Stats" view
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const userName = params.get('userName'); // Future: for personalization
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const token = params.get('token'); // Future: for authenticated features
 
   const [view, setView] = useState<'standings' | 'recent'>('standings');
   const [gameTypes, setGameTypes] = useState<string[]>([]);
@@ -95,7 +98,7 @@ function App() {
         console.error('Failed to load game types:', err);
         setLoading(false);
       });
-  }, [filterGame]);
+  }, [filterGame, selectedGame]);
 
   // Load standings when game type changes
   useEffect(() => {
