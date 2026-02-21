@@ -265,6 +265,10 @@ function App() {
       setSelectedPlayers([]);
       setShowCreateGame(false);
       fetchGames();
+    } else {
+      const errorText = await response.text();
+      console.error('Failed to create game:', response.status, errorText);
+      alert(`Failed to create game: ${errorText}`);
     }
   };
 

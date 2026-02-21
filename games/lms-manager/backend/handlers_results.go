@@ -301,7 +301,12 @@ func HandleGetReport(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Game not found", http.StatusNotFound)
 		return
 	}
-	game.WinnerNames = winnerNames
+	// Ensure winnerNames is never null (use empty array instead)
+	if winnerNames == nil {
+		game.WinnerNames = []string{}
+	} else {
+		game.WinnerNames = winnerNames
+	}
 
 	// Get all rounds
 	roundRows, err := db.Query(`

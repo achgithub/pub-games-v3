@@ -286,7 +286,12 @@ func HandleGetGames(w http.ResponseWriter, r *http.Request) {
 		if err := rows.Scan(&g.ID, &g.ManagerEmail, &g.GameName, &g.Status, &winnerNames, &g.CreatedAt); err != nil {
 			continue
 		}
-		g.WinnerNames = winnerNames
+		// Ensure winnerNames is never null (use empty array instead)
+		if winnerNames == nil {
+			g.WinnerNames = []string{}
+		} else {
+			g.WinnerNames = winnerNames
+		}
 		games = append(games, g)
 	}
 
