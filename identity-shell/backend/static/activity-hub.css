@@ -17,7 +17,7 @@ body {
                'Helvetica Neue', Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #F5F5F4;  /* warm stone-100 */
+  background-color: #FAFAFA;  /* matches lobby */
   color: #1C1917;              /* stone-900 */
   line-height: 1.5;
 }
@@ -47,11 +47,42 @@ input:focus, textarea:focus, select:focus {
 /* ── Card ────────────────────────────────────────────────────── */
 .ah-card {
   background: #ffffff;
-  border: 1px solid #E7E5E4;
-  border-radius: 12px;
-  padding: 16px;
+  border: 1px solid #F0F0F0;
+  border-radius: 8px;
+  padding: 2rem;
   margin-bottom: 12px;
-  box-shadow: 0 1px 3px 0 rgba(0,0,0,0.07), 0 1px 2px -1px rgba(0,0,0,0.07);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+/* ── App Header Bar ──────────────────────────────────────────── */
+.ah-app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 2rem;
+  background: #ffffff;
+  border-bottom: 1px solid #F0F0F0;
+  margin-bottom: 0;
+}
+
+.ah-app-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.ah-app-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1C1917;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.ah-app-header-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
 /* ── Banners ──────────────────────────────────────────────────── */
@@ -244,23 +275,22 @@ input:focus, textarea:focus, select:focus {
 
 /* ── Lobby button ─────────────────────────────────────────────── */
 .ah-lobby-btn {
-  margin-left: auto;
-  padding: 6px 14px;
-  border: 1px solid #D6D3D1;
-  border-radius: 8px;
-  background: #ffffff;
-  color: #78716C;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  background: #1C1917;
+  color: #ffffff;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 0.875rem;
+  font-weight: 500;
   text-decoration: none;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  transition: background 150ms ease, color 150ms ease;
+  transition: background 150ms ease;
 }
 .ah-lobby-btn:hover {
-  background: #F5F5F4;
-  color: #44403C;
+  background: #333;
   text-decoration: none;
 }
 

@@ -120,41 +120,56 @@ function App() {
   // Auth check - after all hooks
   if (!userId || !token) {
     return (
-      <div className="ah-container ah-container--narrow">
-        <div className="ah-card">
-          <h2 className="ah-header-title">🧪 Smoke Test</h2>
-          <p className="ah-meta">
-            Missing authentication. Please access this app through the Activity Hub.
-          </p>
-          <button
-            className="ah-btn-primary"
-            onClick={() => {
-              window.location.href = `http://${window.location.hostname}:3001`;
-            }}
-          >
-            Go to Lobby
-          </button>
+      <>
+        <header className="ah-app-header">
+          <div className="ah-app-header-left">
+            <h1 className="ah-app-title">🧪 Smoke Test</h1>
+          </div>
+        </header>
+        <div className="ah-container ah-container--narrow">
+          <div className="ah-card">
+            <p className="ah-meta">
+              Missing authentication. Please access this app through the Activity Hub.
+            </p>
+            <button
+              className="ah-btn-primary"
+              onClick={() => {
+                window.location.href = `http://${window.location.hostname}:3001`;
+              }}
+            >
+              Go to Lobby
+            </button>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   if (loading) {
     return (
-      <div className="ah-container ah-container--narrow">
-        <div className="ah-card">
-          <p className="ah-meta">Loading...</p>
+      <>
+        <header className="ah-app-header">
+          <div className="ah-app-header-left">
+            <h1 className="ah-app-title">🧪 Smoke Test</h1>
+          </div>
+        </header>
+        <div className="ah-container ah-container--narrow">
+          <div className="ah-card">
+            <p className="ah-meta">Loading...</p>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   return (
-    <div className="ah-container ah-container--narrow">
-      {/* Header */}
-      <div className="ah-card">
-        <div className="ah-header">
-          <h2 className="ah-header-title">🧪 Smoke Test</h2>
+    <>
+      {/* App Header Bar */}
+      <header className="ah-app-header">
+        <div className="ah-app-header-left">
+          <h1 className="ah-app-title">🧪 Smoke Test</h1>
+        </div>
+        <div className="ah-app-header-right">
           <button
             className="ah-lobby-btn"
             onClick={() => {
@@ -164,10 +179,15 @@ function App() {
             ← Lobby
           </button>
         </div>
-        <p className="ah-meta">
-          Welcome, {userName}! This app demonstrates the full Activity Hub stack.
-        </p>
-      </div>
+      </header>
+
+      <div className="ah-container ah-container--narrow">
+        {/* Welcome Card */}
+        <div className="ah-card">
+          <p className="ah-meta">
+            Welcome, {userName}! This app demonstrates the full Activity Hub stack.
+          </p>
+        </div>
 
       {/* Counter Card */}
       <div className="ah-card">
@@ -208,21 +228,22 @@ function App() {
         )}
       </div>
 
-      {/* Tech Stack Info */}
-      <div className="ah-card">
-        <h3 className="ah-section-title">Tech Stack</h3>
-        <ul className="tech-stack-list">
-          <li><strong>Frontend:</strong> React + TypeScript</li>
-          <li><strong>CSS:</strong> Shared Activity Hub CSS (loaded dynamically)</li>
-          <li><strong>Backend:</strong> Go with activity-hub-common library</li>
-          <li><strong>Auth:</strong> JWT tokens from identity-shell</li>
-          <li><strong>Real-time:</strong> Server-Sent Events (SSE)</li>
-          <li><strong>Ephemeral state:</strong> Redis (counter)</li>
-          <li><strong>Persistent data:</strong> PostgreSQL (activity log)</li>
-          <li><strong>Pub/Sub:</strong> Redis channels for SSE broadcast</li>
-        </ul>
+        {/* Tech Stack Info */}
+        <div className="ah-card">
+          <h3 className="ah-section-title">Tech Stack</h3>
+          <ul className="tech-stack-list">
+            <li><strong>Frontend:</strong> React + TypeScript</li>
+            <li><strong>CSS:</strong> Shared Activity Hub CSS (loaded dynamically)</li>
+            <li><strong>Backend:</strong> Go with activity-hub-common library</li>
+            <li><strong>Auth:</strong> JWT tokens from identity-shell</li>
+            <li><strong>Real-time:</strong> Server-Sent Events (SSE)</li>
+            <li><strong>Ephemeral state:</strong> Redis (counter)</li>
+            <li><strong>Persistent data:</strong> PostgreSQL (activity log)</li>
+            <li><strong>Pub/Sub:</strong> Redis channels for SSE broadcast</li>
+          </ul>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
