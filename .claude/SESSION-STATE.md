@@ -631,10 +631,16 @@ Game Admin App (Port 5070)  ← NEW
 - Mobile-test: rebuild frontend + re-seed if not done yet
 
 **Future options:**
-1. Quiz system — plan exists at `.claude/plans/radiant-sparking-kettle.md` for media clips, deduplication, and CSV import
-2. Add more game modules to game-admin as new games are built
-3. SSL/TLS when needed
-4. SSE reconnection on user change (would fix impersonation presence delay)
+1. **Font size settings** — User-adjustable font scale (accessibility)
+   - Add `font_scale` to `user_app_preferences` (0.85/1.00/1.15)
+   - Settings modal control in identity-shell
+   - Pass via URL param or preferences API to apps
+   - Apply via CSS custom properties: `--font-scale`
+   - ~1-2 hours to implement across all apps
+2. Quiz system — plan exists at `.claude/plans/radiant-sparking-kettle.md` for media clips, deduplication, and CSV import
+3. Add more game modules to game-admin as new games are built
+4. SSL/TLS when needed
+5. SSE reconnection on user change (would fix impersonation presence delay)
 
 ## Notes
 - LMS uses NO Redis/SSE — deadline-based HTTP polling only

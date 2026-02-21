@@ -411,3 +411,52 @@ pub-games-v3/
 3. Push when ready (user manually pushes)
 4. Pull on Pi: `cd ~/pub-games-v3 && git pull`
 5. Build/test on Pi (Go, npm, PostgreSQL run here)
+
+## Future Requirements
+
+### User Font Size Settings (Accessibility)
+
+**Goal**: Allow users to adjust font size across all apps (Small/Medium/Large)
+
+**Implementation approach:**
+1. **Database**: Add `font_scale DECIMAL(3,2) DEFAULT 1.00` to `user_app_preferences` table
+   - Values: 0.85 (small), 1.00 (medium), 1.15 (large)
+
+2. **Identity Shell**: Add font size selector to Settings modal
+   ```tsx
+   <select value={fontSize}>
+     <option value="0.85">Small</option>
+     <option value="1.00">Medium</option>
+     <option value="1.15">Large</option>
+   </select>
+   ```
+
+3. **Delivery to Apps**: Pass via URL parameter
+   - Identity shell already passes `userId`, `userName`, `token`
+   - Add `fontSize` to query string: `?fontSize=1.15`
+
+4. **Application in Apps**: Use CSS custom properties
+   - Update `activity-hub.css` to use `--font-scale` variable
+   - Each app reads `fontSize` from URL and sets:
+     ```tsx
+     const fontSize = params.get('fontSize') || '1.0';
+     document.documentElement.style.setProperty('--font-scale', fontSize);
+     ```
+
+5. **CSS Pattern**:
+   ```css
+   :root {
+     --font-scale: 1.0;
+   }
+   .ah-meta { font-size: calc(14px * var(--font-scale)); }
+   .ah-btn-primary { font-size: calc(15px * var(--font-scale)); }
+   /* etc. */
+   ```
+
+**Effort estimate**: 1-2 hours to implement across all apps
+
+**Benefits**:
+- Accessibility compliance
+- Better user experience for varying eyesight
+- Platform-wide consistency
+- No per-app rebuilds needed (CSS updates only)
