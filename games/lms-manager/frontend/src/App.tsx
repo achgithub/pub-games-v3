@@ -309,14 +309,21 @@ function App() {
   // Report mode view
   if (isReportMode && gameReport) {
     return (
-      <div className="ah-container ah-container--narrow">
-        <div className="ah-card">
-          <div className="report-header">
-            <div className="report-title">{gameReport.gameName}</div>
-            <div className="report-meta">
-              Status: <strong>{gameReport.status}</strong>
-            </div>
+      <>
+        <header className="ah-app-header">
+          <div className="ah-app-header-left">
+            <h1 className="ah-app-title">🎯 LMS Report</h1>
           </div>
+        </header>
+
+        <div className="ah-container ah-container--narrow">
+          <div className="ah-card">
+            <div className="report-header">
+              <div className="report-title">{gameReport.gameName}</div>
+              <div className="report-meta">
+                Status: <strong>{gameReport.status}</strong>
+              </div>
+            </div>
 
           {gameReport.winnerNames.length > 0 && (
             <div className="winners-section">
@@ -366,15 +373,31 @@ function App() {
           ))}
         </div>
       </div>
+    </>
     );
   }
 
   // Main manager interface
   return (
-    <div className="ah-container ah-container--narrow">
-      <div className="ah-card">
-        <h1>🎯 LMS Manager</h1>
-        <p className="ah-meta">Manage Last Man Standing games</p>
+    <>
+      <header className="ah-app-header">
+        <div className="ah-app-header-left">
+          <h1 className="ah-app-title">🎯 LMS Manager</h1>
+        </div>
+        <div className="ah-app-header-right">
+          <button
+            className="ah-lobby-btn"
+            onClick={() => window.location.href = `http://${window.location.hostname}:3001`}
+          >
+            ← Lobby
+          </button>
+        </div>
+      </header>
+
+      <div className="ah-container ah-container--narrow">
+        <div className="ah-card">
+          <p className="ah-meta">Manage Last Man Standing games</p>
+        </div>
 
         <div className="ah-tabs">
           <button
@@ -700,7 +723,7 @@ function App() {
           </div>
         )}
       </div>
-    </div>
+    </>
   );
 }
 
