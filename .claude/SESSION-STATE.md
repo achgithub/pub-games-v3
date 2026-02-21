@@ -637,10 +637,16 @@ Game Admin App (Port 5070)  ← NEW
    - Pass via URL param or preferences API to apps
    - Apply via CSS custom properties: `--font-scale`
    - ~1-2 hours to implement across all apps
-2. Quiz system — plan exists at `.claude/plans/radiant-sparking-kettle.md` for media clips, deduplication, and CSV import
-3. Add more game modules to game-admin as new games are built
-4. SSL/TLS when needed
-5. SSE reconnection on user change (would fix impersonation presence delay)
+2. **Mobile test - faster timeouts** — Tests currently hang too long on failure
+   - Add AbortController timeouts to fetch calls (5s)
+   - SSE connection timeout (10s)
+   - Image/audio load timeouts (8s/5s)
+   - Clearer failure detection for poor network conditions
+   - ~30 minutes to implement
+3. Quiz system — plan exists at `.claude/plans/radiant-sparking-kettle.md` for media clips, deduplication, and CSV import
+4. Add more game modules to game-admin as new games are built
+5. SSL/TLS when needed
+6. SSE reconnection on user change (would fix impersonation presence delay)
 
 ## Notes
 - LMS uses NO Redis/SSE — deadline-based HTTP polling only

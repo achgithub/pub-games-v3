@@ -460,3 +460,65 @@ pub-games-v3/
 - Better user experience for varying eyesight
 - Platform-wide consistency
 - No per-app rebuilds needed (CSS updates only)
+
+### Mobile Test - Faster Timeout Handling
+
+**Issue**: Mobile test steps currently take too long to timeout and fail when network/services are down
+
+**Goal**: Reduce timeout duration so failures are detected quickly
+
+**Current behavior**:
+- Tests may hang indefinitely or take 30+ seconds to fail
+- Poor user experience when something is wrong
+- Unclear whether test is running or stuck
+
+**Required changes**:
+
+1. **HTTP requests**: Add timeout to fetch calls
+   ```tsx
+   const controller = new AbortController();
+   const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+   const response = await fetch('/api/ping', {
+     signal: controller.signal
+   });
+   clearTimeout(timeoutId);
+   ```
+
+2. **SSE connection**: Add connection timeout
+   ```tsx
+   const eventSource = new EventSource('/api/test-sse');
+   const timeout = setTimeout(() => {
+     if (messagesReceived === 0) {
+       eventSource.close();
+       setStepStatus('fail');
+     }
+   }, 10000); // 10 seconds for SSE to connect and send first message
+   ```
+
+3. **Image loading**: Already has timeout via Image.onload, but ensure it's reasonable
+   ```tsx
+   const timeout = setTimeout(() => {
+     img.src = ''; // Cancel load
+     setStepStatus('fail');
+   }, 8000); // 8 seconds for image
+   ```
+
+4. **Audio playback**: Add timeout for play() promise
+   ```tsx
+   const playPromise = audio.play();
+   const timeout = setTimeout(() => {
+     audio.pause();
+     setStepStatus('fail');
+   }, 5000);
+   ```
+
+**Recommended timeouts**:
+- HTTP ping: 5 seconds
+- SSE connection: 10 seconds (needs time for handshake)
+- Image load: 8 seconds
+- Audio playback: 5 seconds
+
+**Implementation location**: `games/mobile-test/frontend/src/App.tsx`
+
+**Effort estimate**: 30 minutes
