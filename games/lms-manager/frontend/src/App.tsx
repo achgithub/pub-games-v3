@@ -95,6 +95,7 @@ function App() {
   const [picks, setPicks] = useState<Pick[]>([]);
   const [roundTeams, setRoundTeams] = useState<TeamResult[]>([]);
   const [selectedPlayerForPick, setSelectedPlayerForPick] = useState<string>('');
+  const [selectedTeamForPick, setSelectedTeamForPick] = useState<string>('');
   const [availableTeams, setAvailableTeams] = useState<string[]>([]);
   const [availablePlayers, setAvailablePlayers] = useState<string[]>([]);
 
@@ -126,6 +127,7 @@ function App() {
       fetchRoundTeams(selectedRoundId);
       fetchAvailablePlayers(selectedRoundId);
       setSelectedPlayerForPick('');
+      setSelectedTeamForPick('');
       setAvailableTeams([]);
     }
   }, [selectedRoundId]);
@@ -326,6 +328,7 @@ function App() {
 
   const createPick = async (playerNickname: string, teamName: string) => {
     if (!selectedRoundId) return;
+    console.log('Creating pick:', { playerNickname, teamName, roundId: selectedRoundId });
     const response = await fetch(`/api/rounds/${selectedRoundId}/picks`, {
       method: 'POST',
       headers: {
@@ -336,8 +339,12 @@ function App() {
     });
     if (response.ok) {
       fetchPicks(selectedRoundId);
-      fetchAvailableTeams(selectedRoundId);
+      fetchRoundTeams(selectedRoundId);
       fetchAvailablePlayers(selectedRoundId);
+    } else {
+      const errorText = await response.text();
+      console.error('Failed to create pick:', response.status, errorText);
+      alert(`Failed to create pick: ${errorText}`);
     }
   };
 
@@ -771,7 +778,8 @@ function App() {
                             </select>
                             <select
                               className="ah-select"
-                              id="pick-team"
+                              value={selectedTeamForPick}
+                              onChange={e => setSelectedTeamForPick(e.target.value)}
                               disabled={!selectedPlayerForPick}
                             >
                               <option value="">Select team</option>
@@ -782,15 +790,17 @@ function App() {
                             <button
                               className="ah-btn-primary"
                               onClick={() => {
-                                const teamSelect = document.getElementById('pick-team') as HTMLSelectElement;
-                                if (selectedPlayerForPick && teamSelect.value) {
-                                  createPick(selectedPlayerForPick, teamSelect.value);
+                                console.log('Add Pick clicked:', { player: selectedPlayerForPick, team: selectedTeamForPick });
+                                if (selectedPlayerForPick && selectedTeamForPick) {
+                                  createPick(selectedPlayerForPick, selectedTeamForPick);
                                   setSelectedPlayerForPick('');
-                                  teamSelect.value = '';
+                                  setSelectedTeamForPick('');
                                   setAvailableTeams([]);
                                   if (selectedRoundId) {
                                     fetchAvailablePlayers(selectedRoundId);
                                   }
+                                } else {
+                                  console.log('Missing values:', { player: selectedPlayerForPick, team: selectedTeamForPick });
                                 }
                               }}
                             >
