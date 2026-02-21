@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -70,6 +71,141 @@ func HandleSetPickResult(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]bool{"success": true})
+}
+
+// HandleGetRoundTeams - GET /api/rounds/{roundId}/teams
+// Returns all unique teams picked in a round with their result status
+func HandleGetRoundTeams(w http.ResponseWriter, r *http.Request) {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	vars := mux.Vars(r)
+	roundID, err := strconv.Atoi(vars["roundId"])
+	if err != nil {
+		http.Error(w, "Invalid round ID", http.StatusBadRequest)
+		return
+	}
+
+	// Verify ownership
+	var managerEmail string
+	err = db.QueryRow(`
+		SELECT g.manager_email
+		FROM managed_rounds r
+		JOIN managed_games g ON r.game_id = g.id
+		WHERE r.id = $1
+	`, roundID).Scan(&managerEmail)
+	if err != nil || managerEmail != user.Email {
+		http.Error(w, "Round not found", http.StatusNotFound)
+		return
+	}
+
+	// Get distinct teams with their results and player count
+	rows, err := db.Query(`
+		SELECT
+			team_name,
+			COUNT(*) as player_count,
+			MAX(result) as result
+		FROM managed_picks
+		WHERE round_id = $1
+		GROUP BY team_name
+		ORDER BY team_name
+	`, roundID)
+	if err != nil {
+		log.Printf("Failed to query round teams: %v", err)
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	type TeamResult struct {
+		TeamName    string  `json:"teamName"`
+		PlayerCount int     `json:"playerCount"`
+		Result      *string `json:"result"` // null, "win", or "lose"
+	}
+
+	teams := []TeamResult{}
+	for rows.Next() {
+		var t TeamResult
+		var result sql.NullString
+		if err := rows.Scan(&t.TeamName, &t.PlayerCount, &result); err != nil {
+			continue
+		}
+		if result.Valid {
+			t.Result = &result.String
+		}
+		teams = append(teams, t)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(teams)
+}
+
+// HandleSetTeamResult - PUT /api/rounds/{roundId}/teams/{teamName}/result
+// Sets result for ALL picks of a specific team in a round
+func HandleSetTeamResult(w http.ResponseWriter, r *http.Request) {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	vars := mux.Vars(r)
+	roundID, err := strconv.Atoi(vars["roundId"])
+	if err != nil {
+		http.Error(w, "Invalid round ID", http.StatusBadRequest)
+		return
+	}
+	teamName := vars["teamName"]
+
+	var req struct {
+		Result string `json:"result"` // "win" or "lose"
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.Result != "win" && req.Result != "lose" {
+		http.Error(w, "result must be 'win' or 'lose'", http.StatusBadRequest)
+		return
+	}
+
+	// Verify ownership
+	var managerEmail string
+	var gameID int
+	err = db.QueryRow(`
+		SELECT g.manager_email, r.game_id
+		FROM managed_rounds r
+		JOIN managed_games g ON r.game_id = g.id
+		WHERE r.id = $1
+	`, roundID).Scan(&managerEmail, &gameID)
+	if err != nil || managerEmail != user.Email {
+		http.Error(w, "Round not found", http.StatusNotFound)
+		return
+	}
+
+	// Update ALL picks for this team in this round
+	result, err := db.Exec(`
+		UPDATE managed_picks
+		SET result = $1
+		WHERE round_id = $2 AND team_name = $3
+	`, req.Result, roundID, teamName)
+
+	if err != nil {
+		log.Printf("Failed to set team result: %v", err)
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success":      true,
+		"rowsAffected": rowsAffected,
+	})
 }
 
 // HandleCloseRound - POST /api/rounds/{roundId}/close
@@ -416,7 +552,8 @@ func HandleGetReport(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(report)
 }
 
-// HandleGetAvailableTeams - GET /api/rounds/{roundId}/available-teams
+// HandleGetAvailableTeams - GET /api/rounds/{roundId}/available-teams?player=PlayerName
+// Returns teams available for a specific player (excludes teams they've already used in this game)
 func HandleGetAvailableTeams(w http.ResponseWriter, r *http.Request) {
 	_, ok := authlib.GetUserFromContext(r.Context())
 	if !ok {
@@ -431,17 +568,50 @@ func HandleGetAvailableTeams(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get game teams minus already used teams
+	playerNickname := r.URL.Query().Get("player")
+	if playerNickname == "" {
+		// If no player specified, return all game teams
+		rows, err := db.Query(`
+			SELECT t.team_name
+			FROM managed_game_teams t
+			JOIN managed_rounds r ON t.game_id = r.game_id
+			WHERE r.id = $1
+			ORDER BY t.team_name
+		`, roundID)
+		if err != nil {
+			log.Printf("Failed to query available teams: %v", err)
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+		defer rows.Close()
+
+		teams := []string{}
+		for rows.Next() {
+			var teamName string
+			if err := rows.Scan(&teamName); err == nil {
+				teams = append(teams, teamName)
+			}
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(teams)
+		return
+	}
+
+	// Get game teams minus teams THIS PLAYER has already picked in ANY round
 	rows, err := db.Query(`
 		SELECT t.team_name
 		FROM managed_game_teams t
 		JOIN managed_rounds r ON t.game_id = r.game_id
 		WHERE r.id = $1
 		AND t.team_name NOT IN (
-			SELECT team_name FROM managed_picks WHERE game_id = r.game_id
+			SELECT team_name
+			FROM managed_picks
+			WHERE game_id = r.game_id
+			AND player_nickname = $2
 		)
 		ORDER BY t.team_name
-	`, roundID)
+	`, roundID, playerNickname)
 	if err != nil {
 		log.Printf("Failed to query available teams: %v", err)
 		http.Error(w, "Database error", http.StatusInternalServerError)

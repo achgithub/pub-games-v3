@@ -82,6 +82,10 @@ func main() {
 	api.HandleFunc("/picks/{id}", HandleDeletePick).Methods("DELETE")
 	api.HandleFunc("/picks/{id}/result", HandleSetPickResult).Methods("PUT")
 
+	// Team results (set result for all picks of a team in a round)
+	api.HandleFunc("/rounds/{roundId}/teams", HandleGetRoundTeams).Methods("GET")
+	api.HandleFunc("/rounds/{roundId}/teams/{teamName}/result", HandleSetTeamResult).Methods("PUT")
+
 	// Helper endpoints
 	api.HandleFunc("/rounds/{roundId}/available-teams", HandleGetAvailableTeams).Methods("GET")
 	api.HandleFunc("/rounds/{roundId}/available-players", HandleGetAvailablePlayers).Methods("GET")

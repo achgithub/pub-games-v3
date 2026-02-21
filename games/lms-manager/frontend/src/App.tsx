@@ -33,6 +33,12 @@ interface Pick {
   result: string | null;
 }
 
+interface TeamResult {
+  teamName: string;
+  playerCount: number;
+  result: string | null;
+}
+
 interface TeamSummary {
   teamName: string;
   count: number;
@@ -87,6 +93,8 @@ function App() {
   const [rounds, setRounds] = useState<Round[]>([]);
   const [selectedRoundId, setSelectedRoundId] = useState<number | null>(null);
   const [picks, setPicks] = useState<Pick[]>([]);
+  const [roundTeams, setRoundTeams] = useState<TeamResult[]>([]);
+  const [selectedPlayerForPick, setSelectedPlayerForPick] = useState<string>('');
   const [availableTeams, setAvailableTeams] = useState<string[]>([]);
   const [availablePlayers, setAvailablePlayers] = useState<string[]>([]);
 
@@ -115,10 +123,19 @@ function App() {
   useEffect(() => {
     if (selectedRoundId) {
       fetchPicks(selectedRoundId);
-      fetchAvailableTeams(selectedRoundId);
+      fetchRoundTeams(selectedRoundId);
       fetchAvailablePlayers(selectedRoundId);
+      setSelectedPlayerForPick('');
+      setAvailableTeams([]);
     }
   }, [selectedRoundId]);
+
+  // Select all teams by default when creating game
+  useEffect(() => {
+    if (showCreateGame && teams.length > 0) {
+      setSelectedTeams(teams.map(t => t.teamName));
+    }
+  }, [showCreateGame, teams]);
 
   // API calls
   const fetchTeams = async () => {
@@ -166,8 +183,20 @@ function App() {
     }
   };
 
-  const fetchAvailableTeams = async (roundId: number) => {
-    const response = await fetch(`/api/rounds/${roundId}/available-teams`, {
+  const fetchRoundTeams = async (roundId: number) => {
+    const response = await fetch(`/api/rounds/${roundId}/teams`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (response.ok) {
+      setRoundTeams(await response.json());
+    }
+  };
+
+  const fetchAvailableTeams = async (roundId: number, playerNickname?: string) => {
+    const url = playerNickname
+      ? `/api/rounds/${roundId}/available-teams?player=${encodeURIComponent(playerNickname)}`
+      : `/api/rounds/${roundId}/available-teams`;
+    const response = await fetch(url, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (response.ok) {
@@ -323,6 +352,21 @@ function App() {
     });
     if (response.ok) {
       fetchPicks(selectedRoundId!);
+    }
+  };
+
+  const setTeamResult = async (roundId: number, teamName: string, result: 'win' | 'lose') => {
+    const response = await fetch(`/api/rounds/${roundId}/teams/${encodeURIComponent(teamName)}/result`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ result }),
+    });
+    if (response.ok) {
+      fetchRoundTeams(roundId);
+      fetchPicks(roundId);
     }
   };
 
@@ -712,10 +756,15 @@ function App() {
                           <div className="form-row">
                             <select
                               className="ah-select"
-                              id="pick-player"
-                              defaultValue=""
+                              value={selectedPlayerForPick}
+                              onChange={e => {
+                                setSelectedPlayerForPick(e.target.value);
+                                if (e.target.value && selectedRoundId) {
+                                  fetchAvailableTeams(selectedRoundId, e.target.value);
+                                }
+                              }}
                             >
-                              <option value="" disabled>Select player</option>
+                              <option value="">Select player</option>
                               {availablePlayers.map(p => (
                                 <option key={p} value={p}>{p}</option>
                               ))}
@@ -723,9 +772,9 @@ function App() {
                             <select
                               className="ah-select"
                               id="pick-team"
-                              defaultValue=""
+                              disabled={!selectedPlayerForPick}
                             >
-                              <option value="" disabled>Select team</option>
+                              <option value="">Select team</option>
                               {availableTeams.map(t => (
                                 <option key={t} value={t}>{t}</option>
                               ))}
@@ -733,12 +782,15 @@ function App() {
                             <button
                               className="ah-btn-primary"
                               onClick={() => {
-                                const playerSelect = document.getElementById('pick-player') as HTMLSelectElement;
                                 const teamSelect = document.getElementById('pick-team') as HTMLSelectElement;
-                                if (playerSelect.value && teamSelect.value) {
-                                  createPick(playerSelect.value, teamSelect.value);
-                                  playerSelect.value = '';
+                                if (selectedPlayerForPick && teamSelect.value) {
+                                  createPick(selectedPlayerForPick, teamSelect.value);
+                                  setSelectedPlayerForPick('');
                                   teamSelect.value = '';
+                                  setAvailableTeams([]);
+                                  if (selectedRoundId) {
+                                    fetchAvailablePlayers(selectedRoundId);
+                                  }
                                 }
                               }}
                             >
@@ -748,7 +800,57 @@ function App() {
                         </div>
                       )}
 
-                      <h4>Picks</h4>
+                      <h4>Team Results</h4>
+                      {roundTeams.length === 0 ? (
+                        <div className="list-empty">No picks in this round yet</div>
+                      ) : (
+                        <table className="pick-table">
+                          <thead>
+                            <tr>
+                              <th>Team</th>
+                              <th>Players</th>
+                              <th>Result</th>
+                              <th>Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {roundTeams.map(team => (
+                              <tr key={team.teamName}>
+                                <td><strong>{team.teamName}</strong></td>
+                                <td>{team.playerCount} player{team.playerCount !== 1 ? 's' : ''}</td>
+                                <td>
+                                  {team.result && (
+                                    <span className={`result-indicator ${team.result}`}>
+                                      {team.result}
+                                    </span>
+                                  )}
+                                </td>
+                                <td>
+                                  {!team.result && (
+                                    <>
+                                      <button
+                                        className="ah-btn-outline"
+                                        onClick={() => setTeamResult(selectedRoundId!, team.teamName, 'win')}
+                                        style={{ marginRight: '4px' }}
+                                      >
+                                        Win
+                                      </button>
+                                      <button
+                                        className="ah-btn-outline"
+                                        onClick={() => setTeamResult(selectedRoundId!, team.teamName, 'lose')}
+                                      >
+                                        Draw/Lose
+                                      </button>
+                                    </>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+
+                      <h4 style={{ marginTop: '24px' }}>Picks</h4>
                       {picks.length === 0 ? (
                         <div className="list-empty">No picks yet</div>
                       ) : (
@@ -758,7 +860,6 @@ function App() {
                               <th>Player</th>
                               <th>Team</th>
                               <th>Result</th>
-                              <th>Actions</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -771,25 +872,6 @@ function App() {
                                     <span className={`result-indicator ${pick.result}`}>
                                       {pick.result}
                                     </span>
-                                  )}
-                                </td>
-                                <td>
-                                  {!pick.result && (
-                                    <>
-                                      <button
-                                        className="ah-btn-outline"
-                                        onClick={() => setPickResult(pick.id, 'win')}
-                                        style={{ marginRight: '4px' }}
-                                      >
-                                        Win
-                                      </button>
-                                      <button
-                                        className="ah-btn-outline"
-                                        onClick={() => setPickResult(pick.id, 'lose')}
-                                      >
-                                        Lose
-                                      </button>
-                                    </>
                                   )}
                                 </td>
                               </tr>
