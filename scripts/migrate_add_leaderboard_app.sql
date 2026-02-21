@@ -1,37 +1,21 @@
 -- Register leaderboard app in applications table
 -- Run on Pi: psql -U activityhub -h localhost -p 5555 -d activity_hub -f scripts/migrate_add_leaderboard_app.sql
 
--- Check if leaderboard already exists
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM applications WHERE slug = 'leaderboard') THEN
-        INSERT INTO applications (
-            name,
-            slug,
-            port,
-            description,
-            category,
-            icon,
-            enabled,
-            display_order,
-            required_roles,
-            guest_accessible,
-            realtime_support
-        ) VALUES (
-            'Leaderboard',
-            'leaderboard',
-            5030,
-            'View standings and recent games across all Activity Hub games',
-            'utility',
-            '🏆',
-            true,
-            60,
-            '{}',
-            true,
-            'none'
-        );
-        RAISE NOTICE 'Leaderboard app registered successfully';
-    ELSE
-        RAISE NOTICE 'Leaderboard app already exists';
-    END IF;
-END $$;
+INSERT INTO applications (id, name, icon, type, description, category, url, backend_port, realtime, required_roles, enabled, display_order, guest_accessible)
+VALUES
+  ('leaderboard', 'Leaderboard', '🏆', 'iframe',
+   'View standings and recent games across all Activity Hub games',
+   'utility',
+   'http://{host}:5030', 5030, 'none',
+   '{}', true, 60, true)
+
+ON CONFLICT (id) DO UPDATE SET
+  name           = EXCLUDED.name,
+  icon           = EXCLUDED.icon,
+  description    = EXCLUDED.description,
+  category       = EXCLUDED.category,
+  backend_port   = EXCLUDED.backend_port,
+  realtime       = EXCLUDED.realtime,
+  required_roles = EXCLUDED.required_roles,
+  display_order  = EXCLUDED.display_order,
+  guest_accessible = EXCLUDED.guest_accessible;
