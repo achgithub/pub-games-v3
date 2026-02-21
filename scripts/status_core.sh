@@ -43,6 +43,7 @@ check_port 5080 "Quiz Master"
 check_port 5081 "Quiz Display"
 check_port 4061 "Mobile Test"
 check_port 5010 "Smoke Test"
+check_port 5030 "Leaderboard"
 
 echo ""
 echo "Database Status:"
