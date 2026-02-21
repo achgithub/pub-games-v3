@@ -59,7 +59,7 @@ input:focus, textarea:focus, select:focus {
   border-radius: 8px;
   padding: 10px 16px;
   margin-bottom: 12px;
-  font-size: 13px;
+  font-size: 14px;
 }
 .ah-banner--error   { background: #FEF2F2; border: 1px solid #FECACA; color: #991B1B; cursor: pointer; }
 .ah-banner--success { background: #F0FDF4; border: 1px solid #BBF7D0; color: #166534; }
@@ -68,15 +68,15 @@ input:focus, textarea:focus, select:focus {
 
 /* ── Typography ───────────────────────────────────────────────── */
 .ah-section-title {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: #78716C;
   margin: 0 0 12px;
 }
-.ah-meta  { color: #78716C; font-size: 13px; margin: 4px 0; }
-.ah-label { font-size: 13px; color: #78716C; margin-right: 4px; }
+.ah-meta  { color: #78716C; font-size: 14px; margin: 4px 0; }
+.ah-label { font-size: 14px; color: #78716C; margin-right: 4px; }
 
 /* ── Tabs ─────────────────────────────────────────────────────── */
 .ah-tabs {
@@ -90,7 +90,7 @@ input:focus, textarea:focus, select:focus {
   border-bottom: 2px solid transparent;
   background: none;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 500;
   color: #78716C;
   margin-bottom: -1px;
@@ -112,7 +112,7 @@ input:focus, textarea:focus, select:focus {
   background: #2196F3;
   color: #ffffff;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   white-space: nowrap;
   transition: background 150ms ease, transform 150ms ease, box-shadow 150ms ease;
@@ -147,7 +147,7 @@ input:focus, textarea:focus, select:focus {
   background: #ffffff;
   color: #1976D2;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   white-space: nowrap;
   transition: background 150ms ease, border-color 150ms ease;
@@ -173,7 +173,7 @@ input:focus, textarea:focus, select:focus {
   background: #ffffff;
   color: #DC2626;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   white-space: nowrap;
   transition: background 150ms ease, border-color 150ms ease;
@@ -194,7 +194,7 @@ input:focus, textarea:focus, select:focus {
   background: #ffffff;
   color: #78716C;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 14px;
   transition: background 150ms ease, color 150ms ease;
 }
 .ah-btn-back:hover { background: #F5F5F4; color: #44403C; }
@@ -204,7 +204,7 @@ input:focus, textarea:focus, select:focus {
   padding: 8px 12px;
   border: 1px solid #D6D3D1;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 15px;
   font-family: inherit;
   color: #1C1917;
   background: #ffffff;
@@ -218,7 +218,7 @@ input:focus, textarea:focus, select:focus {
   padding: 7px 12px;
   border: 1px solid #D6D3D1;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 15px;
   font-family: inherit;
   background: #ffffff;
   color: #1C1917;
@@ -236,7 +236,7 @@ input:focus, textarea:focus, select:focus {
   flex-wrap: wrap;
 }
 .ah-header-title {
-  font-size: 20px;
+  font-size: 21px;
   font-weight: 700;
   margin: 0;
   color: #1C1917;
@@ -251,7 +251,7 @@ input:focus, textarea:focus, select:focus {
   background: #ffffff;
   color: #78716C;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 14px;
   text-decoration: none;
   display: inline-flex;
   align-items: center;
@@ -275,7 +275,7 @@ input:focus, textarea:focus, select:focus {
   display: flex;
   padding: 10px 16px;
   background: #FAFAF9;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -300,5 +300,5 @@ input:focus, textarea:focus, select:focus {
   .ah-container,
   .ah-container--wide,
   .ah-container--narrow { padding: 10px; }
-  .ah-tab { padding: 8px 12px; font-size: 13px; }
+  .ah-tab { padding: 8px 12px; font-size: 14px; }
 }
