@@ -788,3 +788,218 @@ psql -U activityhub -h localhost -p 5555 -d postgres \
 2. GitHub Actions for build validation only
 3. Gradually add tests to other apps
 4. Expand to integration tests when needed
+
+### Managed Game Modes (Sweepstakes & LMS)
+
+**Goal**: Create administrator-managed versions of Sweepstakes and Last Man Standing that don't require player participation
+
+**Current behavior**:
+- **Sweepstakes**: Players pick blind box entries, admin manages competitions
+- **LMS**: Players join games and make weekly team picks, admin manages rounds/results
+- Both require active player engagement
+
+**New requirement**: "Managed" modes where admin maintains everything without players
+
+**Use cases**:
+- Office sweepstakes where admin draws on behalf of participants
+- LMS where admin tracks picks manually (e.g., pub quiz format)
+- Private games where participation is tracked offline
+- Historical record keeping
+
+#### Implementation Approach
+
+**1. New Role**: `game_manager`
+
+```sql
+-- Add to activity_hub.users roles array
+UPDATE users SET roles = array_append(roles, 'game_manager')
+WHERE email = 'manager@example.com';
+```
+
+**Role comparison**:
+- `game_admin`: Technical setup (create games, upload fixtures, set results)
+- `game_manager`: Operational management (make picks for players, assign entries, manual tracking)
+- Can have both roles, or `game_manager` only for non-technical admins
+
+**2. New Apps/Modes**
+
+**Option A - Separate Apps** (Recommended):
+```
+sweepstakes-managed (Port 4032)
+last-man-standing-managed (Port 4022)
+```
+- Dedicated apps with `game_manager` role requirement
+- Different UI optimized for admin workflow
+- Shares database with player versions
+- Cleaner separation of concerns
+
+**Option B - Toggle in Existing Apps**:
+- Add "Managed Mode" toggle in game-admin
+- Different view when managing on behalf of players
+- More compact but could become cluttered
+
+**3. Sweepstakes Managed Features**
+
+**Admin capabilities**:
+- View all available entries for a competition
+- Assign entries to participants (without them picking)
+- Bulk import assignments from CSV
+- Manual draw assignment (random or specified)
+- Override/swap entries after assignment
+- Export current assignments
+- Track which entries are taken vs available
+
+**UI design**:
+```
+Sweepstakes Manager
+├── Competitions (list/select)
+├── Assignments Tab
+│   ├── Participant list with assigned entries
+│   ├── Quick assign (random available entry)
+│   ├── Manual assign (select from dropdown)
+│   └── Bulk actions (CSV import, clear all)
+└── Available Pool
+    ├── Show unassigned entries
+    └── Entry search/filter
+```
+
+**Database changes**:
+```sql
+-- Add managed_by column to track admin-assigned picks
+ALTER TABLE draws ADD COLUMN managed_by VARCHAR(255);
+-- NULL = player picked, email = admin assigned
+
+-- New table for bulk operations tracking
+CREATE TABLE assignment_batches (
+  id SERIAL PRIMARY KEY,
+  competition_id INTEGER REFERENCES competitions(id),
+  manager_email VARCHAR(255),
+  assigned_count INTEGER,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+**4. LMS Managed Features**
+
+**Admin capabilities**:
+- View all active players in a game
+- Make team picks on behalf of players
+- Bulk pick assignment (CSV: player, round, team)
+- Override/change picks before round closes
+- Mark players as inactive (auto-byes)
+- Manual elimination (e.g., late submission)
+- Export picks for record keeping
+
+**UI design**:
+```
+LMS Manager
+├── Games (list/select)
+├── Current Round
+│   ├── Player list with pick status
+│   ├── Quick pick (for players who haven't picked)
+│   ├── Bulk import (CSV)
+│   └── Override existing picks
+├── Round History
+│   ├── View all picks per round
+│   └── Edit past picks (with audit trail)
+└── Player Management
+    ├── Add/remove players
+    ├── Mark inactive
+    └── View pick history
+```
+
+**Database changes**:
+```sql
+-- Add managed_by column
+ALTER TABLE predictions ADD COLUMN managed_by VARCHAR(255);
+-- NULL = player picked, email = admin assigned
+
+-- New table for manager actions audit
+CREATE TABLE manager_actions (
+  id SERIAL PRIMARY KEY,
+  game_id INTEGER REFERENCES games(id),
+  round_id INTEGER REFERENCES rounds(id),
+  manager_email VARCHAR(255),
+  player_email VARCHAR(255),
+  action VARCHAR(50), -- 'assign_pick', 'override_pick', 'eliminate', 'mark_inactive'
+  details JSONB,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+**5. Common Features (Both Games)**
+
+**Audit trail**:
+- Log all admin actions (who, what, when)
+- Visible in manager UI
+- Cannot be deleted (append-only)
+
+**Permissions**:
+- `game_manager` role required
+- Read-only mode if user only has `super_user`
+- `game_admin` can access but separate permissions
+
+**API endpoints pattern**:
+```
+POST /api/sweepstakes/manage/{competitionId}/assign
+POST /api/sweepstakes/manage/{competitionId}/bulk-assign
+GET  /api/sweepstakes/manage/{competitionId}/assignments
+
+POST /api/lms/manage/{gameId}/pick
+POST /api/lms/manage/{gameId}/bulk-picks
+GET  /api/lms/manage/{gameId}/picks/{roundId}
+```
+
+**6. Implementation Effort**
+
+**Phase 1 - Sweepstakes Managed** (12 hours):
+- [ ] Create new role `game_manager`
+- [ ] Database migrations (managed_by columns, audit tables)
+- [ ] New backend endpoints for assignment operations
+- [ ] Manager UI (React app)
+- [ ] CSV import/export functionality
+- [ ] Basic audit logging
+
+**Phase 2 - LMS Managed** (12 hours):
+- [ ] Database migrations
+- [ ] Manager endpoints
+- [ ] Manager UI
+- [ ] Bulk pick operations
+- [ ] Player inactive status handling
+
+**Phase 3 - Polish** (4 hours):
+- [ ] Comprehensive audit trail UI
+- [ ] Advanced filtering/search
+- [ ] Undo/rollback capability
+- [ ] Manager activity reports
+
+**Total effort**: ~28 hours
+
+**7. Benefits**
+
+- Enable offline/manual game management
+- Support non-technical game managers
+- Flexibility for different participation models
+- Complete audit trail for transparency
+- Maintain all historical data in same database
+- Can transition games between player-run and managed modes
+
+**8. Migration Path**
+
+Existing games can switch to managed mode:
+```sql
+-- Mark entire game as managed
+UPDATE games SET managed_mode = TRUE WHERE id = X;
+
+-- Or mark individual rounds as managed
+UPDATE rounds SET managed_mode = TRUE WHERE id = Y;
+```
+
+Players can still view their assignments/picks (read-only) even in managed mode.
+
+**9. Open Questions**
+
+- Should managed games appear in player apps at all? (Read-only view vs hidden)
+- Can a game switch between managed/player modes mid-season?
+- Should managers be able to make picks while round is "open" for players? (hybrid mode)
+- Email notifications when admin assigns on behalf of player?

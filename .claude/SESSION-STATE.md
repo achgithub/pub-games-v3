@@ -651,10 +651,21 @@ Game Admin App (Port 5070)  ← NEW
    - Benefits: catch bugs early, confidence in refactoring, faster development
    - Start with smoke-test as reference, expand gradually
    - Total effort: ~36+ hours (phased approach)
-4. Quiz system — plan exists at `.claude/plans/radiant-sparking-kettle.md` for media clips, deduplication, and CSV import
-5. Add more game modules to game-admin as new games are built
-6. SSL/TLS when needed
-7. SSE reconnection on user change (would fix impersonation presence delay)
+4. **Managed game modes (Sweepstakes & LMS)** — Admin maintains games without player participation
+   - New `game_manager` role for operational management
+   - Separate managed apps or toggle mode in existing apps
+   - Admin assigns entries/picks on behalf of participants
+   - Bulk operations (CSV import/export)
+   - Complete audit trail for all manager actions
+   - Use cases: offline games, manual tracking, private games
+   - Phase 1: Sweepstakes Managed (~12 hours)
+   - Phase 2: LMS Managed (~12 hours)
+   - Phase 3: Polish and audit UI (~4 hours)
+   - Total effort: ~28 hours
+5. Quiz system — plan exists at `.claude/plans/radiant-sparking-kettle.md` for media clips, deduplication, and CSV import
+6. Add more game modules to game-admin as new games are built
+7. SSL/TLS when needed
+8. SSE reconnection on user change (would fix impersonation presence delay)
 
 ## Notes
 - LMS uses NO Redis/SSE — deadline-based HTTP polling only
