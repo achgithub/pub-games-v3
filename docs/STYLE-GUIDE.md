@@ -8,6 +8,16 @@ Reference implementation: `games/smoke-test/`
 2. **Minimal custom CSS** - Only add app-specific styles when necessary
 3. **No inline styles** - Use CSS classes for maintainability
 4. **Consistent patterns** - Follow smoke-test as the reference
+5. **Visual alignment with lobby** - Apps should feel integrated with the lobby experience
+
+## Key Visual Consistency
+
+All apps now match lobby styling:
+- **Header bar**: Full-width white bar with app title (left) and lobby button (right)
+- **Background**: `#FAFAFA` (matches lobby)
+- **Cards**: 8px border-radius, `#F0F0F0` borders (matches lobby sections)
+- **Layout**: Header bar at top, content in centered container below
+- **Buttons**: Dark lobby button style matches lobby's logout button
 
 ## Loading Shared CSS
 
@@ -31,29 +41,49 @@ root.render(<App />);
 
 ## Base App.css
 
-Every app should have minimal base CSS in `App.css`:
+Every app should have minimal `App.css` with **only app-specific styles**:
 
 ```css
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-  background: #F5F5F4;
-  color: #1C1917;
+/* App-specific utilities */
+.full-width {
+  width: 100%;
 }
 
-* {
-  box-sizing: border-box;
+/* Counter display (example from smoke-test) */
+.counter-display {
+  text-align: center;
+  margin-bottom: 16px;
 }
 
-/* Add app-specific styles below */
+/* Only add styles specific to your app */
 ```
+
+**Do NOT include:**
+- Body styles (background, font, color) - handled by shared CSS
+- Box-sizing reset - handled by shared CSS
+- Any styles that could be shared across apps
+
+**Only add:**
+- App-specific component styles
+- Utility classes needed only for your app
+- Game-specific layouts (boards, scores, etc.)
 
 ## Available Activity Hub Classes
 
 ### Layout
 
 ```tsx
-// Containers (centered, with padding)
+// App Header Bar (full-width, at top of page)
+<header className="ah-app-header">
+  <div className="ah-app-header-left">
+    <h1 className="ah-app-title">App Title</h1>
+  </div>
+  <div className="ah-app-header-right">
+    {/* Buttons, controls, etc. */}
+  </div>
+</header>
+
+// Containers (centered, with padding - goes BELOW header)
 <div className="ah-container">           {/* max-width: 900px */}
 <div className="ah-container--wide">     {/* max-width: 1200px */}
 <div className="ah-container--narrow">   {/* max-width: 600px */}
@@ -64,19 +94,43 @@ body {
 </div>
 ```
 
-### Header
+### App Header Bar (Standard Pattern)
+
+**All apps should use this header bar pattern** - matches lobby styling:
 
 ```tsx
-<div className="ah-card">
-  <div className="ah-header">
-    <h2 className="ah-header-title">🎮 App Name</h2>
-    <button className="ah-lobby-btn" onClick={goToLobby}>
-      ← Lobby
-    </button>
+<>
+  {/* App Header Bar (full-width, matches lobby) */}
+  <header className="ah-app-header">
+    <div className="ah-app-header-left">
+      <h1 className="ah-app-title">🎮 App Name</h1>
+    </div>
+    <div className="ah-app-header-right">
+      <button
+        className="ah-lobby-btn"
+        onClick={() => window.location.href = `http://${window.location.hostname}:3001`}
+      >
+        ← Lobby
+      </button>
+    </div>
+  </header>
+
+  {/* Content in centered container */}
+  <div className="ah-container ah-container--narrow">
+    <div className="ah-card">
+      <p className="ah-meta">Welcome, {userName}!</p>
+      {/* App content here */}
+    </div>
   </div>
-  <p className="ah-meta">Welcome, {userName}!</p>
-</div>
+</>
 ```
+
+**Key points:**
+- Header bar is full-width (outside container)
+- White background with bottom border
+- App title on left, lobby button right-justified
+- Content goes in centered `.ah-container` below header
+- Apply to all states: normal, loading, error
 
 ### Typography
 
@@ -188,20 +242,26 @@ const [activeTab, setActiveTab] = useState('tab1');
 ```tsx
 if (!userId || !token) {
   return (
-    <div className="ah-container ah-container--narrow">
-      <div className="ah-card">
-        <h2 className="ah-header-title">🎮 App Name</h2>
-        <p className="ah-meta">
-          Missing authentication. Please access this app through the Activity Hub.
-        </p>
-        <button
-          className="ah-btn-primary"
-          onClick={() => window.location.href = `http://${window.location.hostname}:3001`}
-        >
-          Go to Lobby
-        </button>
+    <>
+      <header className="ah-app-header">
+        <div className="ah-app-header-left">
+          <h1 className="ah-app-title">🎮 App Name</h1>
+        </div>
+      </header>
+      <div className="ah-container ah-container--narrow">
+        <div className="ah-card">
+          <p className="ah-meta">
+            Missing authentication. Please access this app through the Activity Hub.
+          </p>
+          <button
+            className="ah-btn-primary"
+            onClick={() => window.location.href = `http://${window.location.hostname}:3001`}
+          >
+            Go to Lobby
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 ```
@@ -211,30 +271,20 @@ if (!userId || !token) {
 ```tsx
 if (loading) {
   return (
-    <div className="ah-container ah-container--narrow">
-      <div className="ah-card">
-        <p className="ah-meta">Loading...</p>
+    <>
+      <header className="ah-app-header">
+        <div className="ah-app-header-left">
+          <h1 className="ah-app-title">🎮 App Name</h1>
+        </div>
+      </header>
+      <div className="ah-container ah-container--narrow">
+        <div className="ah-card">
+          <p className="ah-meta">Loading...</p>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
-```
-
-### App Header with Lobby Button
-
-```tsx
-<div className="ah-card">
-  <div className="ah-header">
-    <h2 className="ah-header-title">🎮 App Name</h2>
-    <button
-      className="ah-lobby-btn"
-      onClick={() => window.location.href = `http://${window.location.hostname}:3001`}
-    >
-      ← Lobby
-    </button>
-  </div>
-  <p className="ah-meta">Descriptive subtitle or welcome message</p>
-</div>
 ```
 
 ## When to Add Custom CSS
@@ -253,7 +303,7 @@ Only add custom CSS in `App.css` when:
   width: 100%;
 }
 
-/* Counter display */
+/* Counter display - app-specific component */
 .counter-display {
   text-align: center;
   margin-bottom: 16px;
@@ -265,6 +315,20 @@ Only add custom CSS in `App.css` when:
   color: #2196F3;
   line-height: 1;
   margin-bottom: 8px;
+}
+
+/* Activity log - app-specific component */
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.activity-item {
+  padding: 8px 12px;
+  background: #F5F5F5;
+  border-radius: 6px;
+  font-size: 14px;
 }
 ```
 
@@ -291,17 +355,19 @@ Use these colors from the Activity Hub design system:
 
 ```css
 /* Primary */
---blue-500: #2196F3;
---blue-600: #1976D2;
+--blue-500: #2196F3;  /* Primary buttons, accents */
+--blue-600: #1976D2;  /* Primary hover */
 
 /* Neutral */
---stone-50: #FAFAF9;
---stone-100: #F5F5F4;
---stone-200: #E7E5E4;
---stone-300: #D6D3D1;
---stone-400: #A8A29E;
---stone-500: #78716C;
---stone-900: #1C1917;
+--background: #FAFAFA;     /* Body background (matches lobby) */
+--card-white: #FFFFFF;     /* Card backgrounds */
+--border-light: #F0F0F0;   /* Card borders, dividers */
+--gray-200: #E0E0E0;       /* Secondary borders */
+--gray-400: #999;          /* Secondary text */
+--gray-500: #78716C;       /* Meta text */
+--gray-600: #666;          /* Body text */
+--gray-900: #1C1917;       /* Headings, dark text */
+--gray-dark: #333;         /* Hover states */
 
 /* Success */
 --green-50: #F0FDF4;
@@ -376,14 +442,19 @@ After updating an app's styles:
 When updating an existing app to follow this guide:
 
 - [ ] Add shared CSS loading in `index.tsx`
+- [ ] Add `.ah-app-header` bar at top (outside container)
+- [ ] Use `.ah-app-title` for app name in header
+- [ ] Add `.ah-lobby-btn` in header right section
+- [ ] Wrap content in `.ah-container` (below header)
 - [ ] Replace `<div style={{...}}>` with Activity Hub classes
-- [ ] Use `.ah-header` and `.ah-header-title` for app headers
 - [ ] Replace custom button styles with `.ah-btn-*` classes
 - [ ] Use `.ah-card` for content sections
 - [ ] Use `.ah-section-title` for section headers
 - [ ] Use `.ah-meta` for secondary text
+- [ ] Remove body/box-sizing styles from `App.css` (now in shared CSS)
 - [ ] Move any remaining necessary styles to `App.css`
 - [ ] Remove unused custom CSS
+- [ ] Apply header pattern to all states (normal, auth error, loading)
 - [ ] Test on mobile width
 
 ## Reference Files
