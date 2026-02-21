@@ -396,10 +396,11 @@ function App() {
 
       <div className="ah-container ah-container--narrow">
         <div className="ah-card">
-          <p className="ah-meta">Manage Last Man Standing games</p>
+          <p className="ah-meta">Manage Last Man Standing games - create teams, players, and track eliminations</p>
         </div>
 
-        <div className="ah-tabs">
+        <div className="ah-card">
+          <div className="ah-tabs">
           <button
             className={`ah-tab ${activeTab === 'teams' ? 'active' : ''}`}
             onClick={() => setActiveTab('teams')}
@@ -722,6 +723,7 @@ function App() {
             </div>
           </div>
         )}
+        </div>
       </div>
     </>
   );
