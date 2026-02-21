@@ -1003,3 +1003,141 @@ Players can still view their assignments/picks (read-only) even in managed mode.
 - Can a game switch between managed/player modes mid-season?
 - Should managers be able to make picks while round is "open" for players? (hybrid mode)
 - Email notifications when admin assigns on behalf of player?
+
+---
+
+### Future Game Ideas
+
+**Hangman** (2-player, real-time)
+- Classic word-guessing game
+- One player picks word, other player guesses
+- SSE + HTTP pattern (same as tic-tac-toe/dots)
+- Letter selection UI
+- Visual hangman progression
+- Word categories/difficulty options
+- Estimated effort: 8-12 hours
+
+**Shut the Box** (solo or multiplayer)
+- Classic dice game
+- Roll dice, flip down numbered tiles (1-9)
+- Goal: shut all tiles or achieve lowest score
+- Simple UI with satisfying tile flip animation
+- Estimated effort: 6-10 hours
+
+**Battleships** (2-player, turn-based)
+- Classic grid guessing game
+- Place ships on hidden grid
+- Take turns firing at opponent's grid
+- SSE + HTTP pattern (same as tic-tac-toe)
+- Classic 10x10 grid
+- Estimated effort: 12-16 hours
+
+---
+
+### Infrastructure Improvements
+
+**Challenge System Enhancements:**
+- Challenge rejection handling - notify challenger when challenge is declined
+- Offline user handling - pre-filter or grey out offline users in challenge list
+- Challenge history - view past challenges, win/loss records
+
+**Authentication & User Management:**
+- Proper user registration (currently demo-token only)
+  - Signup flow with email validation
+  - Password requirements and strength indicator
+  - User profile management (display name, avatar)
+- Session management improvements
+  - Session expiration
+  - "Remember me" functionality
+  - Logout all devices
+- OAuth/SSO integration (Google, Discord, GitHub)
+
+**Mobile & UI:**
+- Mobile web UI optimization
+  - Touch-friendly challenge buttons
+  - Responsive lobby layout
+  - Mobile toast positioning
+  - Swipe gestures for challenge management
+- Accessibility improvements
+  - Keyboard navigation for challenges
+  - Screen reader support
+  - ARIA labels for interactive elements
+  - Focus management
+
+**Security & Deployment:**
+- SSL/HTTPS support
+  - Secure connections for all services
+  - Let's Encrypt certificate automation
+  - Reverse proxy configuration (nginx/caddy)
+- Error recovery improvements
+  - Resume game state after disconnect
+  - Offline queue for actions
+  - Better handling of network transitions
+- Performance optimization
+  - Redis connection pooling
+  - Database query optimization
+  - Frontend bundle size reduction
+  - Lazy loading for games
+
+**Federation (Long-term):**
+- Central Hub Service
+  - Cloud-hosted central hub for multiple pubs
+  - Cross-pub game challenges and leaderboards
+  - Content distribution (quiz packs, sweepstake templates, fixtures)
+  - Pi instances connect as clients
+  - Pubs still work offline for local play
+  - Subscription/licensing model potential
+
+**Native Mobile Apps:**
+- iOS and Android App Exploration
+  - Lightweight native apps (React Native or Capacitor)
+  - Online-only architecture (no offline functionality)
+  - Resource downloads for native look and feel
+  - Native UI components where beneficial
+  - Deep linking to games and challenges
+  - Push notifications for challenges
+  - Code sharing strategy with web version
+
+---
+
+### Utility Apps
+
+**Flip a Coin** (simple utility)
+- Static app, no real-time needed
+- Simple heads/tails result with animation
+- History of recent flips (optional)
+- Estimated effort: 2-3 hours
+
+**Killer Draw** (pub game manager)
+- Static app, single player manages game
+- Enter player names
+- Randomize button assigns numbers/targets
+- Configurable lives per player
+- Track eliminations during game
+- Option to replicate to display screen
+- Estimated effort: 6-8 hours
+
+**Darts Scorer** (split input/display architecture)
+- All possible scores on one screen (1-20, doubles, triples, bull, outer bull)
+- Tap-to-score during live game
+- Tracks remaining score per player
+- Checkout suggestions when score is reachable
+- Common game modes (501, 301, etc.)
+- **Split architecture:**
+  - Mobile app for input (players tap scores)
+  - Display screen for output (pub TV shows live score)
+- SSE to sync input app with display
+- Multi-player support (2-4 players)
+- Estimated effort: 16-20 hours
+
+**Friend System:**
+- Add/remove friends
+- Friends list in lobby
+- Quick challenge friends button
+- Friend activity tracking
+
+**User Customization:**
+- User status customization (Online, Away, Do Not Disturb)
+- Custom status messages
+- Show "in game" with game name
+- Avatar/profile pictures
