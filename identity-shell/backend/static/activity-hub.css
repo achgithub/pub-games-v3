@@ -69,6 +69,7 @@ input:focus, textarea:focus, select:focus {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  flex: 1;
 }
 
 .ah-app-title {
@@ -83,6 +84,7 @@ input:focus, textarea:focus, select:focus {
   display: flex;
   align-items: center;
   gap: 1rem;
+  margin-left: auto;
 }
 
 /* ── Banners ──────────────────────────────────────────────────── */
