@@ -87,7 +87,7 @@ const Shell: React.FC<ShellProps> = ({ user, onLogout, onEndImpersonation }) => 
       <header className="shell-header">
         <div className="shell-header-left">
           <button className="logo-button" onClick={() => navigate('/lobby')}>
-            <span className="logo-text">PubGames</span>
+            <span className="logo-text">Activity Hub</span>
           </button>
         </div>
 
