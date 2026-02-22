@@ -713,6 +713,39 @@ function App() {
     }
   };
 
+  const handleDeleteGame = async () => {
+    if (!gameDetail || !token || !selectedGameId) return;
+
+    if (!window.confirm(`Are you sure you want to delete "${gameDetail.game.name}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/api/games/${selectedGameId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.ok || res.status === 204) {
+        alert('Game deleted successfully');
+        // Refresh games list
+        const gamesRes = await fetch(`${API_BASE}/api/games`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const gamesData = await gamesRes.json();
+        setGames(gamesData.games || []);
+        // Go back to games list
+        handleBackToGamesList();
+      } else {
+        const error = await res.text();
+        alert(`Failed to delete game: ${error}`);
+      }
+    } catch (err) {
+      console.error('Failed to delete game:', err);
+      alert('Failed to delete game');
+    }
+  };
+
   // Edit tab handlers
   const handleSelectEditGame = async (gameId: number) => {
     if (!token) return;
@@ -1176,9 +1209,14 @@ function App() {
           <div>
             {/* Header */}
             <div className="ah-card">
-              <button className="ah-btn-outline" onClick={handleBackToGamesList}>
-                ← Back to Games
-              </button>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <button className="ah-btn-outline" onClick={handleBackToGamesList}>
+                  ← Back to Games
+                </button>
+                <button className="ah-btn-danger" onClick={handleDeleteGame}>
+                  Delete Game
+                </button>
+              </div>
               <div style={{ marginTop: '1rem' }}>
                 <h3 className="ah-section-title">{gameDetail.game.name}</h3>
                 <p className="ah-meta">

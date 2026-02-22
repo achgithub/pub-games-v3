@@ -61,6 +61,7 @@ func main() {
 	r.Handle("/api/games", authMiddleware(http.HandlerFunc(HandleListGames))).Methods("GET")
 	r.Handle("/api/games", authMiddleware(http.HandlerFunc(HandleCreateGame))).Methods("POST")
 	r.Handle("/api/games/{id}", authMiddleware(http.HandlerFunc(HandleGetGame))).Methods("GET")
+	r.Handle("/api/games/{id}", authMiddleware(http.HandlerFunc(HandleDeleteGame))).Methods("DELETE")
 	r.Handle("/api/games/{id}/advance", authMiddleware(http.HandlerFunc(HandleAdvanceRound))).Methods("POST")
 	r.Handle("/api/games/{id}/used-teams", authMiddleware(http.HandlerFunc(HandleGetUsedTeams))).Methods("GET")
 	r.Handle("/api/games/{id}/participants", authMiddleware(http.HandlerFunc(HandleAddParticipants))).Methods("POST")

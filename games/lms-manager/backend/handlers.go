@@ -718,6 +718,46 @@ func HandleGetGame(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func HandleDeleteGame(w http.ResponseWriter, r *http.Request) {
+	managerEmail, ok := getManagerEmail(r)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	vars := mux.Vars(r)
+	gameID, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		http.Error(w, "Invalid game ID", http.StatusBadRequest)
+		return
+	}
+
+	// Verify ownership
+	var exists bool
+	err = db.QueryRow(`
+		SELECT EXISTS(SELECT 1 FROM managed_games WHERE id = $1 AND manager_email = $2)
+	`, gameID, managerEmail).Scan(&exists)
+	if err != nil {
+		log.Printf("Failed to verify game ownership: %v", err)
+		http.Error(w, "Failed to verify game", http.StatusInternalServerError)
+		return
+	}
+	if !exists {
+		http.Error(w, "Game not found", http.StatusNotFound)
+		return
+	}
+
+	// Delete game (cascades will handle related data)
+	_, err = db.Exec(`DELETE FROM managed_games WHERE id = $1`, gameID)
+	if err != nil {
+		log.Printf("Failed to delete game: %v", err)
+		http.Error(w, "Failed to delete game", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // ============================================
 // ROUND & PICK ENDPOINTS
 // ============================================
