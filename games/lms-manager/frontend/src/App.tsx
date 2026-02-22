@@ -86,7 +86,7 @@ interface GameDetail {
 }
 
 function App() {
-  const { userId, userName, token } = useQueryParams();
+  const { userId, token } = useQueryParams();
   const [activeTab, setActiveTab] = useState<'setup' | 'games'>('setup');
   const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
 
@@ -176,12 +176,12 @@ function App() {
         setGameDetail(data);
 
         // Fetch teams for the game's group if not already loaded
-        if (data.game.groupId && !groupTeams[data.game.groupId]) {
+        if (data.game.groupId) {
           const teamsRes = await fetch(`${API_BASE}/api/groups/${data.game.groupId}/teams`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           const teamsData = await teamsRes.json();
-          setGroupTeams({ ...groupTeams, [data.game.groupId]: teamsData.teams || [] });
+          setGroupTeams((prev) => ({ ...prev, [data.game.groupId]: teamsData.teams || [] }));
         }
 
         // If there are rounds, fetch picks for the latest round
@@ -275,7 +275,6 @@ function App() {
       });
 
       if (res.ok) {
-        const data = await res.json();
         // Refresh groups list
         const groupsRes = await fetch(`${API_BASE}/api/groups`, {
           headers: { Authorization: `Bearer ${token}` },
