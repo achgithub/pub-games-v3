@@ -27,7 +27,6 @@ interface Team {
   id: number;
   groupId: number;
   name: string;
-  rank: number;
   createdAt: string;
 }
 
@@ -51,7 +50,6 @@ function App() {
   const [newGroupName, setNewGroupName] = useState('');
   const [newPlayerName, setNewPlayerName] = useState('');
   const [newTeamName, setNewTeamName] = useState('');
-  const [newTeamRank, setNewTeamRank] = useState(999);
 
   const [loading, setLoading] = useState(true);
 
@@ -213,7 +211,7 @@ function App() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ name: newTeamName, rank: newTeamRank }),
+        body: JSON.stringify({ name: newTeamName }),
       });
 
       if (res.ok) {
@@ -224,7 +222,6 @@ function App() {
         const teamsData = await teamsRes.json();
         setGroupTeams({ ...groupTeams, [groupId]: teamsData.teams || [] });
         setNewTeamName('');
-        setNewTeamRank(999);
       }
     } catch (err) {
       console.error('Failed to create team:', err);
@@ -395,14 +392,6 @@ function App() {
                               e.key === 'Enter' && handleCreateTeam(group.id)
                             }
                           />
-                          <input
-                            type="number"
-                            className="ah-input"
-                            placeholder="Rank"
-                            value={newTeamRank}
-                            onChange={(e) => setNewTeamRank(parseInt(e.target.value) || 999)}
-                            style={{ width: '100px' }}
-                          />
                           <button
                             className="ah-btn-primary"
                             onClick={() => handleCreateTeam(group.id)}
@@ -413,12 +402,7 @@ function App() {
 
                         {groupTeams[group.id]?.map((team) => (
                           <div key={team.id} className="team-item">
-                            <div>
-                              <strong>{team.name}</strong>
-                              <span className="ah-meta" style={{ marginLeft: '1rem' }}>
-                                Rank: {team.rank}
-                              </span>
-                            </div>
+                            <strong>{team.name}</strong>
                             <button
                               className="btn-danger-small"
                               onClick={() => handleDeleteTeam(team.id, group.id)}

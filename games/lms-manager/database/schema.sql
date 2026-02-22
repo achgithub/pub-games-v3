@@ -21,12 +21,11 @@ CREATE TABLE managed_groups (
 );
 
 -- Teams belong to a group
--- Rank is used for auto-allocation (lower = stronger, picked first when auto-assigning)
+-- Auto-allocation uses alphabetical order by team name
 CREATE TABLE managed_teams (
   id SERIAL PRIMARY KEY,
   group_id INTEGER NOT NULL REFERENCES managed_groups(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
-  rank INTEGER DEFAULT 999,
   created_at TIMESTAMP DEFAULT NOW()
 );
 

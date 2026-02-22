@@ -15,7 +15,6 @@ type Team struct {
 	ID        int       `json:"id"`
 	GroupID   int       `json:"groupId"`
 	Name      string    `json:"name"`
-	Rank      int       `json:"rank"` // for auto-allocation (lower = stronger)
 	CreatedAt time.Time `json:"createdAt"`
 }
 
@@ -77,12 +76,10 @@ type CreateGroupRequest struct {
 
 type CreateTeamRequest struct {
 	Name string `json:"name"`
-	Rank int    `json:"rank"`
 }
 
 type UpdateTeamRequest struct {
 	Name string `json:"name"`
-	Rank int    `json:"rank"`
 }
 
 type CreatePlayerRequest struct {

@@ -188,10 +188,10 @@ func HandleListTeams(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rows, err := db.Query(`
-		SELECT id, group_id, name, rank, created_at
+		SELECT id, group_id, name, created_at
 		FROM managed_teams
 		WHERE group_id = $1
-		ORDER BY rank ASC, name ASC
+		ORDER BY name ASC
 	`, groupID)
 	if err != nil {
 		log.Printf("Failed to query teams: %v", err)
@@ -203,7 +203,7 @@ func HandleListTeams(w http.ResponseWriter, r *http.Request) {
 	teams := []Team{}
 	for rows.Next() {
 		var t Team
-		if err := rows.Scan(&t.ID, &t.GroupID, &t.Name, &t.Rank, &t.CreatedAt); err != nil {
+		if err := rows.Scan(&t.ID, &t.GroupID, &t.Name, &t.CreatedAt); err != nil {
 			log.Printf("Failed to scan team: %v", err)
 			continue
 		}
@@ -250,16 +250,12 @@ func HandleCreateTeam(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Rank == 0 {
-		req.Rank = 999 // default rank
-	}
-
 	var teamID int
 	err = db.QueryRow(`
-		INSERT INTO managed_teams (group_id, name, rank)
-		VALUES ($1, $2, $3)
+		INSERT INTO managed_teams (group_id, name)
+		VALUES ($1, $2)
 		RETURNING id
-	`, groupID, req.Name, req.Rank).Scan(&teamID)
+	`, groupID, req.Name).Scan(&teamID)
 	if err != nil {
 		log.Printf("Failed to create team: %v", err)
 		http.Error(w, "Failed to create team", http.StatusInternalServerError)
@@ -296,10 +292,10 @@ func HandleUpdateTeam(w http.ResponseWriter, r *http.Request) {
 	// Verify team belongs to manager's group
 	result, err := db.Exec(`
 		UPDATE managed_teams
-		SET name = $1, rank = $2
-		WHERE id = $3
-		AND group_id IN (SELECT id FROM managed_groups WHERE manager_email = $4)
-	`, req.Name, req.Rank, teamID, managerEmail)
+		SET name = $1
+		WHERE id = $2
+		AND group_id IN (SELECT id FROM managed_groups WHERE manager_email = $3)
+	`, req.Name, teamID, managerEmail)
 	if err != nil {
 		log.Printf("Failed to update team: %v", err)
 		http.Error(w, "Failed to update team", http.StatusInternalServerError)
