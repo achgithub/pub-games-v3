@@ -717,3 +717,348 @@ func HandleGetGame(w http.ResponseWriter, r *http.Request) {
 		"rounds":       rounds,
 	})
 }
+
+// ============================================
+// ROUND & PICK ENDPOINTS
+// ============================================
+
+// HandleGetRoundPicks returns all picks for a specific round
+func HandleGetRoundPicks(w http.ResponseWriter, r *http.Request) {
+	managerEmail, ok := getManagerEmail(r)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	vars := mux.Vars(r)
+	roundID, err := strconv.Atoi(vars["roundId"])
+	if err != nil {
+		http.Error(w, "Invalid round ID", http.StatusBadRequest)
+		return
+	}
+
+	// Verify round belongs to manager's game
+	var count int
+	err = db.QueryRow(`
+		SELECT COUNT(*)
+		FROM managed_rounds r
+		JOIN managed_games g ON g.id = r.game_id
+		WHERE r.id = $1 AND g.manager_email = $2
+	`, roundID, managerEmail).Scan(&count)
+	if err != nil || count == 0 {
+		http.Error(w, "Round not found", http.StatusNotFound)
+		return
+	}
+
+	// Get picks with team names
+	rows, err := db.Query(`
+		SELECT
+			p.id, p.game_id, p.round_id, p.player_name, p.team_id, p.result, p.auto_assigned, p.created_at,
+			COALESCE(t.name, '') as team_name
+		FROM managed_picks p
+		LEFT JOIN managed_teams t ON t.id = p.team_id
+		WHERE p.round_id = $1
+		ORDER BY p.player_name ASC
+	`, roundID)
+	if err != nil {
+		log.Printf("Failed to query picks: %v", err)
+		http.Error(w, "Failed to fetch picks", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	picks := []PickWithTeamName{}
+	for rows.Next() {
+		var p PickWithTeamName
+		var teamID sql.NullInt64
+		var result sql.NullString
+		if err := rows.Scan(
+			&p.ID, &p.GameID, &p.RoundID, &p.PlayerName, &teamID, &result, &p.AutoAssigned, &p.CreatedAt,
+			&p.TeamName,
+		); err != nil {
+			log.Printf("Failed to scan pick: %v", err)
+			continue
+		}
+		if teamID.Valid {
+			val := int(teamID.Int64)
+			p.TeamID = &val
+		}
+		if result.Valid {
+			p.Result = &result.String
+		}
+		picks = append(picks, p)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"picks": picks,
+	})
+}
+
+// HandleSavePicks creates or updates picks for a round
+func HandleSavePicks(w http.ResponseWriter, r *http.Request) {
+	managerEmail, ok := getManagerEmail(r)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	vars := mux.Vars(r)
+	roundID, err := strconv.Atoi(vars["roundId"])
+	if err != nil {
+		http.Error(w, "Invalid round ID", http.StatusBadRequest)
+		return
+	}
+
+	// Verify round belongs to manager's game and is open
+	var gameID int
+	var roundStatus string
+	err = db.QueryRow(`
+		SELECT r.game_id, r.status
+		FROM managed_rounds r
+		JOIN managed_games g ON g.id = r.game_id
+		WHERE r.id = $1 AND g.manager_email = $2
+	`, roundID, managerEmail).Scan(&gameID, &roundStatus)
+	if err == sql.ErrNoRows {
+		http.Error(w, "Round not found", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		log.Printf("Failed to query round: %v", err)
+		http.Error(w, "Failed to verify round", http.StatusInternalServerError)
+		return
+	}
+
+	if roundStatus != "open" {
+		http.Error(w, "Round is closed", http.StatusBadRequest)
+		return
+	}
+
+	var req SavePicksRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	// Save picks
+	tx, err := db.Begin()
+	if err != nil {
+		log.Printf("Failed to begin transaction: %v", err)
+		http.Error(w, "Failed to save picks", http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	for _, pick := range req.Picks {
+		_, err = tx.Exec(`
+			INSERT INTO managed_picks (game_id, round_id, player_name, team_id, auto_assigned)
+			VALUES ($1, $2, $3, $4, FALSE)
+			ON CONFLICT (game_id, round_id, player_name)
+			DO UPDATE SET team_id = EXCLUDED.team_id, auto_assigned = EXCLUDED.auto_assigned
+		`, gameID, roundID, pick.PlayerName, pick.TeamID)
+		if err != nil {
+			log.Printf("Failed to save pick: %v", err)
+			http.Error(w, "Failed to save picks", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if err = tx.Commit(); err != nil {
+		log.Printf("Failed to commit transaction: %v", err)
+		http.Error(w, "Failed to save picks", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// HandleSaveResults saves results and processes eliminations
+func HandleSaveResults(w http.ResponseWriter, r *http.Request) {
+	managerEmail, ok := getManagerEmail(r)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	vars := mux.Vars(r)
+	roundID, err := strconv.Atoi(vars["roundId"])
+	if err != nil {
+		http.Error(w, "Invalid round ID", http.StatusBadRequest)
+		return
+	}
+
+	// Verify round belongs to manager's game
+	var gameID int
+	var roundNumber int
+	err = db.QueryRow(`
+		SELECT r.game_id, r.round_number
+		FROM managed_rounds r
+		JOIN managed_games g ON g.id = r.game_id
+		WHERE r.id = $1 AND g.manager_email = $2
+	`, roundID, managerEmail).Scan(&gameID, &roundNumber)
+	if err == sql.ErrNoRows {
+		http.Error(w, "Round not found", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		log.Printf("Failed to query round: %v", err)
+		http.Error(w, "Failed to verify round", http.StatusInternalServerError)
+		return
+	}
+
+	var req SaveResultsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	// Save results and eliminate players
+	tx, err := db.Begin()
+	if err != nil {
+		log.Printf("Failed to begin transaction: %v", err)
+		http.Error(w, "Failed to save results", http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	for _, result := range req.Results {
+		// Update pick result
+		_, err = tx.Exec(`
+			UPDATE managed_picks
+			SET result = $1
+			WHERE id = $2
+		`, result.Result, result.PickID)
+		if err != nil {
+			log.Printf("Failed to update pick result: %v", err)
+			http.Error(w, "Failed to save results", http.StatusInternalServerError)
+			return
+		}
+
+		// If loss or draw, eliminate player
+		if result.Result == "loss" || result.Result == "draw" {
+			var playerName string
+			err = tx.QueryRow(`SELECT player_name FROM managed_picks WHERE id = $1`, result.PickID).Scan(&playerName)
+			if err != nil {
+				log.Printf("Failed to get player name: %v", err)
+				http.Error(w, "Failed to process elimination", http.StatusInternalServerError)
+				return
+			}
+
+			_, err = tx.Exec(`
+				UPDATE managed_participants
+				SET is_active = FALSE, eliminated_in_round = $1
+				WHERE game_id = $2 AND player_name = $3
+			`, roundNumber, gameID, playerName)
+			if err != nil {
+				log.Printf("Failed to eliminate player: %v", err)
+				http.Error(w, "Failed to process elimination", http.StatusInternalServerError)
+				return
+			}
+		}
+	}
+
+	// Close the round
+	_, err = tx.Exec(`UPDATE managed_rounds SET status = 'closed' WHERE id = $1`, roundID)
+	if err != nil {
+		log.Printf("Failed to close round: %v", err)
+		http.Error(w, "Failed to close round", http.StatusInternalServerError)
+		return
+	}
+
+	if err = tx.Commit(); err != nil {
+		log.Printf("Failed to commit transaction: %v", err)
+		http.Error(w, "Failed to save results", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// HandleAdvanceRound creates the next round for active players
+func HandleAdvanceRound(w http.ResponseWriter, r *http.Request) {
+	managerEmail, ok := getManagerEmail(r)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	vars := mux.Vars(r)
+	gameID, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		http.Error(w, "Invalid game ID", http.StatusBadRequest)
+		return
+	}
+
+	// Verify game belongs to manager
+	var count int
+	err = db.QueryRow(`SELECT COUNT(*) FROM managed_games WHERE id = $1 AND manager_email = $2`, gameID, managerEmail).Scan(&count)
+	if err != nil || count == 0 {
+		http.Error(w, "Game not found", http.StatusNotFound)
+		return
+	}
+
+	// Get current round number
+	var currentRound int
+	err = db.QueryRow(`SELECT COALESCE(MAX(round_number), 0) FROM managed_rounds WHERE game_id = $1`, gameID).Scan(&currentRound)
+	if err != nil {
+		log.Printf("Failed to get current round: %v", err)
+		http.Error(w, "Failed to advance round", http.StatusInternalServerError)
+		return
+	}
+
+	// Check how many active players remain
+	var activeCount int
+	err = db.QueryRow(`SELECT COUNT(*) FROM managed_participants WHERE game_id = $1 AND is_active = TRUE`, gameID).Scan(&activeCount)
+	if err != nil {
+		log.Printf("Failed to count active players: %v", err)
+		http.Error(w, "Failed to advance round", http.StatusInternalServerError)
+		return
+	}
+
+	if activeCount == 0 {
+		http.Error(w, "No active players remaining", http.StatusBadRequest)
+		return
+	}
+
+	if activeCount == 1 {
+		// Game over - declare winner
+		var winnerName string
+		err = db.QueryRow(`SELECT player_name FROM managed_participants WHERE game_id = $1 AND is_active = TRUE`, gameID).Scan(&winnerName)
+		if err != nil {
+			log.Printf("Failed to get winner: %v", err)
+			http.Error(w, "Failed to complete game", http.StatusInternalServerError)
+			return
+		}
+
+		_, err = db.Exec(`UPDATE managed_games SET status = 'completed', winner_name = $1 WHERE id = $2`, winnerName, gameID)
+		if err != nil {
+			log.Printf("Failed to complete game: %v", err)
+			http.Error(w, "Failed to complete game", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":     "completed",
+			"winnerName": winnerName,
+		})
+		return
+	}
+
+	// Create next round
+	nextRound := currentRound + 1
+	_, err = db.Exec(`
+		INSERT INTO managed_rounds (game_id, round_number, status)
+		VALUES ($1, $2, 'open')
+	`, gameID, nextRound)
+	if err != nil {
+		log.Printf("Failed to create next round: %v", err)
+		http.Error(w, "Failed to advance round", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"roundNumber": nextRound,
+	})
+}

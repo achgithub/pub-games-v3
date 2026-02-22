@@ -172,3 +172,93 @@
   background: #E5E7EB;
   color: #374151;
 }
+
+/* Game Detail View */
+.participants-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.5rem;
+}
+
+.participant-badge {
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.participant-active {
+  background: #D1FAE5;
+  color: #065F46;
+}
+
+.participant-eliminated {
+  background: #FEE2E2;
+  color: #991B1B;
+  opacity: 0.7;
+}
+
+.elimination-round {
+  font-size: 0.75rem;
+  background: #991B1B;
+  color: white;
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+}
+
+.picks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.pick-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: #FAFAF9;
+  border: 1px solid #E7E5E4;
+  border-radius: 6px;
+  gap: 1rem;
+}
+
+.pick-row select {
+  min-width: 200px;
+}
+
+.result-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.result-win {
+  background: #D1FAE5;
+  color: #065F46;
+}
+
+.result-loss {
+  background: #FEE2E2;
+  color: #991B1B;
+}
+
+.result-draw {
+  background: #FED7AA;
+  color: #9A3412;
+}
+
+.result-postponed {
+  background: #DBEAFE;
+  color: #1E3A8A;
+}
+
+.result-none {
+  background: #E5E7EB;
+  color: #6B7280;
+}

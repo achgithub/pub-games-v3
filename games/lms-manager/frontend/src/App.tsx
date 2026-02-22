@@ -50,6 +50,41 @@ interface Game {
   currentRound: number;
 }
 
+interface Participant {
+  id: number;
+  gameId: number;
+  playerName: string;
+  isActive: boolean;
+  eliminatedInRound?: number;
+  createdAt: string;
+}
+
+interface Round {
+  id: number;
+  gameId: number;
+  roundNumber: number;
+  status: string;
+  createdAt: string;
+}
+
+interface Pick {
+  id: number;
+  gameId: number;
+  roundId: number;
+  playerName: string;
+  teamId?: number;
+  teamName?: string;
+  result?: string;
+  autoAssigned: boolean;
+  createdAt: string;
+}
+
+interface GameDetail {
+  game: Game;
+  participants: Participant[];
+  rounds: Round[];
+}
+
 function App() {
   const { userId, userName, token } = useQueryParams();
   const [activeTab, setActiveTab] = useState<'setup' | 'games'>('setup');
@@ -70,6 +105,12 @@ function App() {
   const [newGameName, setNewGameName] = useState('');
   const [selectedGroupId, setSelectedGroupId] = useState<number>(0);
   const [selectedPlayerNames, setSelectedPlayerNames] = useState<string[]>([]);
+
+  // Game detail state
+  const [gameDetail, setGameDetail] = useState<GameDetail | null>(null);
+  const [picks, setPicks] = useState<Pick[]>([]);
+  const [pickAssignments, setPickAssignments] = useState<Record<string, number>>({});
+  const [pickResults, setPickResults] = useState<Record<number, string>>({});
 
   const [loading, setLoading] = useState(true);
 
@@ -121,6 +162,58 @@ function App() {
 
     fetchGames();
   }, [token, activeTab]);
+
+  // Fetch game details when a game is selected
+  useEffect(() => {
+    if (!token || !selectedGameId) return;
+
+    const fetchGameDetail = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/games/${selectedGameId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        setGameDetail(data);
+
+        // Fetch teams for the game's group if not already loaded
+        if (data.game.groupId && !groupTeams[data.game.groupId]) {
+          const teamsRes = await fetch(`${API_BASE}/api/groups/${data.game.groupId}/teams`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const teamsData = await teamsRes.json();
+          setGroupTeams({ ...groupTeams, [data.game.groupId]: teamsData.teams || [] });
+        }
+
+        // If there are rounds, fetch picks for the latest round
+        if (data.rounds && data.rounds.length > 0) {
+          const latestRound = data.rounds[data.rounds.length - 1];
+          const picksRes = await fetch(`${API_BASE}/api/rounds/${latestRound.id}/picks`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const picksData = await picksRes.json();
+          setPicks(picksData.picks || []);
+
+          // Initialize pick assignments and results from existing picks
+          const assignments: Record<string, number> = {};
+          const results: Record<number, string> = {};
+          (picksData.picks || []).forEach((pick: Pick) => {
+            if (pick.teamId) {
+              assignments[pick.playerName] = pick.teamId;
+            }
+            if (pick.result) {
+              results[pick.id] = pick.result;
+            }
+          });
+          setPickAssignments(assignments);
+          setPickResults(results);
+        }
+      } catch (err) {
+        console.error('Failed to fetch game detail:', err);
+      }
+    };
+
+    fetchGameDetail();
+  }, [token, selectedGameId]);
 
   // Auth check
   if (!userId || !token) {
@@ -401,6 +494,156 @@ function App() {
 
   const handleBackToGamesList = () => {
     setSelectedGameId(null);
+    setGameDetail(null);
+    setPicks([]);
+    setPickAssignments({});
+    setPickResults({});
+  };
+
+  // Game detail handlers
+  const handleSavePicks = async () => {
+    if (!gameDetail || !token) return;
+
+    const latestRound = gameDetail.rounds[gameDetail.rounds.length - 1];
+    if (!latestRound) return;
+
+    // Build picks array from assignments
+    const picksToSave = Object.entries(pickAssignments).map(([playerName, teamId]) => ({
+      playerName,
+      teamId,
+    }));
+
+    if (picksToSave.length === 0) {
+      alert('No picks to save');
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/api/rounds/${latestRound.id}/picks`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ picks: picksToSave }),
+      });
+
+      if (res.ok || res.status === 204) {
+        // Refresh picks
+        const picksRes = await fetch(`${API_BASE}/api/rounds/${latestRound.id}/picks`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const picksData = await picksRes.json();
+        setPicks(picksData.picks || []);
+        alert('Picks saved successfully');
+      } else {
+        const error = await res.text();
+        alert(`Failed to save picks: ${error}`);
+      }
+    } catch (err) {
+      console.error('Failed to save picks:', err);
+      alert('Failed to save picks');
+    }
+  };
+
+  const handleSaveResults = async () => {
+    if (!gameDetail || !token) return;
+
+    const latestRound = gameDetail.rounds[gameDetail.rounds.length - 1];
+    if (!latestRound) return;
+
+    // Build results array
+    const resultsToSave = Object.entries(pickResults).map(([pickId, result]) => ({
+      pickId: Number(pickId),
+      result,
+    }));
+
+    if (resultsToSave.length === 0) {
+      alert('No results to save');
+      return;
+    }
+
+    // Check that all picks have results
+    const allPicksHaveResults = picks.every((pick) => pickResults[pick.id]);
+    if (!allPicksHaveResults) {
+      if (!confirm('Not all picks have results. Continue anyway?')) {
+        return;
+      }
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/api/rounds/${latestRound.id}/results`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ results: resultsToSave }),
+      });
+
+      if (res.ok || res.status === 204) {
+        alert('Results saved and round closed');
+        // Refresh game detail
+        const gameRes = await fetch(`${API_BASE}/api/games/${selectedGameId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const gameData = await gameRes.json();
+        setGameDetail(gameData);
+      } else {
+        const error = await res.text();
+        alert(`Failed to save results: ${error}`);
+      }
+    } catch (err) {
+      console.error('Failed to save results:', err);
+      alert('Failed to save results');
+    }
+  };
+
+  const handleAdvanceRound = async () => {
+    if (!gameDetail || !token) return;
+
+    if (!confirm('Advance to next round?')) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/api/games/${selectedGameId}/advance`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.status === 'completed') {
+          alert(`Game complete! Winner: ${data.winnerName}`);
+        } else {
+          alert(`Advanced to Round ${data.roundNumber}`);
+        }
+
+        // Refresh game detail
+        const gameRes = await fetch(`${API_BASE}/api/games/${selectedGameId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const gameData = await gameRes.json();
+        setGameDetail(gameData);
+
+        // Fetch picks for new round
+        if (gameData.rounds && gameData.rounds.length > 0) {
+          const latestRound = gameData.rounds[gameData.rounds.length - 1];
+          const picksRes = await fetch(`${API_BASE}/api/rounds/${latestRound.id}/picks`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const picksData = await picksRes.json();
+          setPicks(picksData.picks || []);
+          setPickAssignments({});
+          setPickResults({});
+        }
+      } else {
+        const error = await res.text();
+        alert(`Failed to advance round: ${error}`);
+      }
+    } catch (err) {
+      console.error('Failed to advance round:', err);
+      alert('Failed to advance round');
+    }
   };
 
   return (
@@ -688,18 +931,203 @@ function App() {
           </div>
         )}
 
-        {/* Game Detail View - Placeholder */}
-        {activeTab === 'games' && selectedGameId && (
-          <div className="ah-card">
-            <button className="ah-btn-outline" onClick={handleBackToGamesList}>
-              ← Back to Games
-            </button>
-            <h3 className="ah-section-title" style={{ marginTop: '1rem' }}>
-              Game Detail
-            </h3>
-            <p className="ah-meta">
-              Round management coming soon... (Game ID: {selectedGameId})
-            </p>
+        {/* Game Detail View */}
+        {activeTab === 'games' && selectedGameId && gameDetail && (
+          <div>
+            {/* Header */}
+            <div className="ah-card">
+              <button className="ah-btn-outline" onClick={handleBackToGamesList}>
+                ← Back to Games
+              </button>
+              <div style={{ marginTop: '1rem' }}>
+                <h3 className="ah-section-title">{gameDetail.game.name}</h3>
+                <p className="ah-meta">
+                  {gameDetail.game.groupName} •{' '}
+                  <span
+                    className={`game-status ${
+                      gameDetail.game.status === 'active' ? 'status-active' : 'status-completed'
+                    }`}
+                  >
+                    {gameDetail.game.status}
+                  </span>
+                </p>
+                {gameDetail.game.status === 'completed' && gameDetail.game.winnerName && (
+                  <p style={{ marginTop: '0.5rem', fontSize: '1.125rem', fontWeight: 600 }}>
+                    Winner: {gameDetail.game.winnerName} 🏆
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Participants */}
+            <div className="ah-card">
+              <h3 className="ah-section-title">Participants</h3>
+              <div className="participants-grid">
+                {gameDetail.participants.map((participant) => (
+                  <div
+                    key={participant.id}
+                    className={`participant-badge ${
+                      participant.isActive ? 'participant-active' : 'participant-eliminated'
+                    }`}
+                  >
+                    <span>{participant.playerName}</span>
+                    {!participant.isActive && participant.eliminatedInRound && (
+                      <span className="elimination-round">R{participant.eliminatedInRound}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Current Round Management */}
+            {gameDetail.game.status === 'active' &&
+              gameDetail.rounds &&
+              gameDetail.rounds.length > 0 && (
+                <div>
+                  {(() => {
+                    const currentRound = gameDetail.rounds[gameDetail.rounds.length - 1];
+                    const activePlayers = gameDetail.participants.filter((p) => p.isActive);
+
+                    return (
+                      <div className="ah-card">
+                        <div className="setup-section-header">
+                          <h3 className="ah-section-title">
+                            Round {currentRound.roundNumber} -{' '}
+                            {currentRound.status === 'open' ? 'Open' : 'Closed'}
+                          </h3>
+                          {currentRound.status === 'closed' && (
+                            <button className="ah-btn-primary" onClick={handleAdvanceRound}>
+                              Next Round →
+                            </button>
+                          )}
+                        </div>
+
+                        {currentRound.status === 'open' && (
+                          <div>
+                            <p className="ah-meta" style={{ marginBottom: '1rem' }}>
+                              Assign teams to active players:
+                            </p>
+
+                            {/* Team assignment for each active player */}
+                            <div className="picks-list">
+                              {activePlayers.map((participant) => {
+                                const existingPick = picks.find(
+                                  (p) => p.playerName === participant.playerName
+                                );
+                                return (
+                                  <div key={participant.id} className="pick-row">
+                                    <strong>{participant.playerName}</strong>
+                                    <select
+                                      className="ah-select"
+                                      value={
+                                        pickAssignments[participant.playerName] ||
+                                        existingPick?.teamId ||
+                                        ''
+                                      }
+                                      onChange={(e) =>
+                                        setPickAssignments({
+                                          ...pickAssignments,
+                                          [participant.playerName]: Number(e.target.value),
+                                        })
+                                      }
+                                    >
+                                      <option value="">Select Team</option>
+                                      {groupTeams[gameDetail.game.groupId]?.map((team) => (
+                                        <option key={team.id} value={team.id}>
+                                          {team.name}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                );
+                              })}
+                            </div>
+
+                            <button
+                              className="ah-btn-primary"
+                              onClick={handleSavePicks}
+                              style={{ marginTop: '1rem' }}
+                            >
+                              Save Picks
+                            </button>
+
+                            {/* Results Entry */}
+                            {picks.length > 0 && (
+                              <div style={{ marginTop: '2rem' }}>
+                                <h4 className="ah-section-title">Enter Results</h4>
+                                <p className="ah-meta" style={{ marginBottom: '1rem' }}>
+                                  Select outcome for each pick:
+                                </p>
+
+                                <div className="picks-list">
+                                  {picks.map((pick) => (
+                                    <div key={pick.id} className="pick-row">
+                                      <div>
+                                        <strong>{pick.playerName}</strong>
+                                        <p className="ah-meta">{pick.teamName || 'No team'}</p>
+                                      </div>
+                                      <select
+                                        className="ah-select"
+                                        value={pickResults[pick.id] || pick.result || ''}
+                                        onChange={(e) =>
+                                          setPickResults({
+                                            ...pickResults,
+                                            [pick.id]: e.target.value,
+                                          })
+                                        }
+                                      >
+                                        <option value="">Select Result</option>
+                                        <option value="win">Win (Survive)</option>
+                                        <option value="loss">Loss (Eliminated)</option>
+                                        <option value="draw">Draw (Eliminated)</option>
+                                        <option value="postponed">Postponed (Survive)</option>
+                                      </select>
+                                    </div>
+                                  ))}
+                                </div>
+
+                                <button
+                                  className="ah-btn-primary"
+                                  onClick={handleSaveResults}
+                                  style={{ marginTop: '1rem' }}
+                                >
+                                  Save Results & Close Round
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Closed round - show results */}
+                        {currentRound.status === 'closed' && (
+                          <div>
+                            <p className="ah-meta" style={{ marginBottom: '1rem' }}>
+                              Round complete. Click "Next Round" to continue.
+                            </p>
+                            {picks.length > 0 && (
+                              <div className="picks-list">
+                                {picks.map((pick) => (
+                                  <div key={pick.id} className="pick-row">
+                                    <div>
+                                      <strong>{pick.playerName}</strong>
+                                      <p className="ah-meta">{pick.teamName || 'No team'}</p>
+                                    </div>
+                                    <span
+                                      className={`result-badge result-${pick.result || 'none'}`}
+                                    >
+                                      {pick.result || 'No result'}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
           </div>
         )}
       </div>
