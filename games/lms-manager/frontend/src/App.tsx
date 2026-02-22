@@ -622,7 +622,7 @@ function App() {
       });
 
       if (res.ok) {
-        const data = await res.json();
+        await res.json();
         // Single notification - no double confirm
 
         // Refresh game detail
