@@ -88,7 +88,7 @@ interface GameDetail {
 
 function App() {
   const { userId, token } = useQueryParams();
-  const [activeTab, setActiveTab] = useState<'setup' | 'games'>('setup');
+  const [activeTab, setActiveTab] = useState<'setup' | 'games' | 'edit'>('setup');
   const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
 
   // Setup tab state
@@ -116,6 +116,14 @@ function App() {
   const [usedTeams, setUsedTeams] = useState<Record<string, number[]>>({});
   const [showAddPlayers, setShowAddPlayers] = useState(false);
   const [playersToAdd, setPlayersToAdd] = useState<string[]>([]);
+
+  // Edit tab state
+  const [editGameId, setEditGameId] = useState<number | null>(null);
+  const [editGameDetail, setEditGameDetail] = useState<GameDetail | null>(null);
+  const [editExpandedRound, setEditExpandedRound] = useState<number | null>(null);
+  const [editPicks, setEditPicks] = useState<Record<number, Pick[]>>({});
+  const [editPickAssignments, setEditPickAssignments] = useState<Record<number, Record<string, number>>>({});
+  const [editPickResults, setEditPickResults] = useState<Record<number, Record<number, string>>>({});
 
   const [loading, setLoading] = useState(true);
 
@@ -548,6 +556,14 @@ function App() {
         });
         const picksData = await picksRes.json();
         setPicks(picksData.picks || []);
+
+        // Refresh used teams to prevent reuse
+        const usedTeamsRes = await fetch(`${API_BASE}/api/games/${selectedGameId}/used-teams`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const usedTeamsData = await usedTeamsRes.json();
+        setUsedTeams(usedTeamsData.usedTeams || {});
+
         alert('Picks saved successfully');
       } else {
         const error = await res.text();
@@ -697,37 +713,149 @@ function App() {
     }
   };
 
-  const handleReopenRound = async (roundId: number) => {
-    if (!window.confirm('Reopen this round? This will restore eliminated players and clear results.')) return;
+  // Edit tab handlers
+  const handleSelectEditGame = async (gameId: number) => {
+    if (!token) return;
+    setEditGameId(gameId);
+    setEditExpandedRound(null);
+    setEditPicks({});
+    setEditPickAssignments({});
+    setEditPickResults({});
 
     try {
-      const res = await fetch(`${API_BASE}/api/rounds/${roundId}/reopen`, {
-        method: 'POST',
+      const res = await fetch(`${API_BASE}/api/games/${gameId}`, {
         headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      setEditGameDetail(data);
+    } catch (err) {
+      console.error('Failed to fetch edit game detail:', err);
+    }
+  };
+
+  const handleExpandEditRound = async (roundId: number) => {
+    if (!token || !editGameDetail) return;
+
+    if (editExpandedRound === roundId) {
+      setEditExpandedRound(null);
+      return;
+    }
+
+    setEditExpandedRound(roundId);
+
+    try {
+      const res = await fetch(`${API_BASE}/api/rounds/${roundId}/picks`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      setEditPicks((prev) => ({ ...prev, [roundId]: data.picks || [] }));
+
+      // Initialize assignments and results from existing picks
+      const assignments: Record<string, number> = {};
+      const results: Record<number, string> = {};
+      (data.picks || []).forEach((pick: Pick) => {
+        if (pick.teamId) {
+          assignments[pick.playerName] = pick.teamId;
+        }
+        if (pick.result) {
+          results[pick.id] = pick.result;
+        }
+      });
+      setEditPickAssignments((prev) => ({ ...prev, [roundId]: assignments }));
+      setEditPickResults((prev) => ({ ...prev, [roundId]: results }));
+    } catch (err) {
+      console.error('Failed to fetch edit picks:', err);
+    }
+  };
+
+  const handleSaveEditPicks = async (roundId: number) => {
+    if (!editGameDetail || !token) return;
+
+    const assignments = editPickAssignments[roundId] || {};
+    const picksToSave = Object.entries(assignments).map(([playerName, teamId]) => ({
+      playerName,
+      teamId,
+    }));
+
+    if (picksToSave.length === 0) {
+      alert('No picks to save');
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/api/rounds/${roundId}/picks`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ picks: picksToSave }),
       });
 
       if (res.ok || res.status === 204) {
-        // Refresh game detail
-        const gameRes = await fetch(`${API_BASE}/api/games/${selectedGameId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const gameData = await gameRes.json();
-        setGameDetail(gameData);
-
-        // Refresh picks
+        // Refresh picks for this round
         const picksRes = await fetch(`${API_BASE}/api/rounds/${roundId}/picks`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const picksData = await picksRes.json();
-        setPicks(picksData.picks || []);
-        setPickResults({});
+        setEditPicks((prev) => ({ ...prev, [roundId]: picksData.picks || [] }));
+        alert('Picks updated successfully');
       } else {
         const error = await res.text();
-        alert(`Failed to reopen round: ${error}`);
+        alert(`Failed to update picks: ${error}`);
       }
     } catch (err) {
-      console.error('Failed to reopen round:', err);
-      alert('Failed to reopen round');
+      console.error('Failed to save edit picks:', err);
+      alert('Failed to update picks');
+    }
+  };
+
+  const handleSaveEditResults = async (roundId: number) => {
+    if (!editGameDetail || !token) return;
+
+    const results = editPickResults[roundId] || {};
+    const resultsToSave = Object.entries(results).map(([pickId, result]) => ({
+      pickId: parseInt(pickId),
+      result,
+    }));
+
+    if (resultsToSave.length === 0) {
+      alert('No results to save');
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/api/rounds/${roundId}/results`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ results: resultsToSave }),
+      });
+
+      if (res.ok || res.status === 204) {
+        // Refresh game detail to update participants status
+        const gameRes = await fetch(`${API_BASE}/api/games/${editGameId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const gameData = await gameRes.json();
+        setEditGameDetail(gameData);
+
+        // Refresh picks for this round
+        const picksRes = await fetch(`${API_BASE}/api/rounds/${roundId}/picks`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const picksData = await picksRes.json();
+        setEditPicks((prev) => ({ ...prev, [roundId]: picksData.picks || [] }));
+        alert('Results updated successfully');
+      } else {
+        const error = await res.text();
+        alert(`Failed to update results: ${error}`);
+      }
+    } catch (err) {
+      console.error('Failed to save edit results:', err);
+      alert('Failed to update results');
     }
   };
 
@@ -763,6 +891,12 @@ function App() {
             onClick={() => setActiveTab('games')}
           >
             Games
+          </button>
+          <button
+            className={`ah-tab ${activeTab === 'edit' ? 'active' : ''}`}
+            onClick={() => setActiveTab('edit')}
+          >
+            Edit
           </button>
         </div>
 
@@ -1295,18 +1429,9 @@ function App() {
                         {/* Closed round - show results */}
                         {currentRound.status === 'closed' && (
                           <div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                              <p className="ah-meta">
-                                Round complete. Click "Next Round" to continue.
-                              </p>
-                              <button
-                                className="ah-btn-outline"
-                                onClick={() => handleReopenRound(currentRound.id)}
-                                style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
-                              >
-                                Reopen Round
-                              </button>
-                            </div>
+                            <p className="ah-meta" style={{ marginBottom: '1rem' }}>
+                              Round complete. Click "Next Round" to continue or use the Edit tab to make changes.
+                            </p>
                             {picks.length > 0 && (
                               <div className="picks-list">
                                 {picks.map((pick) => (
@@ -1331,6 +1456,244 @@ function App() {
                   })()}
                 </div>
               )}
+          </div>
+        )}
+
+        {/* Edit Tab */}
+        {activeTab === 'edit' && (
+          <div>
+            <div className="ah-card">
+              <h3 className="ah-section-title">Edit Game Data</h3>
+              <p className="ah-meta">Select a game to edit picks and results for any round</p>
+
+              <div style={{ marginTop: '1rem' }}>
+                <label className="ah-meta" style={{ display: 'block', marginBottom: '0.5rem' }}>
+                  Select Game
+                </label>
+                <select
+                  className="ah-select"
+                  value={editGameId || ''}
+                  onChange={(e) => handleSelectEditGame(parseInt(e.target.value))}
+                  style={{ width: '100%', maxWidth: '400px' }}
+                >
+                  <option value="">-- Choose a game --</option>
+                  {games.map((game) => (
+                    <option key={game.id} value={game.id}>
+                      {game.name} ({game.groupName}) - Round {game.currentRound}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {editGameDetail && (
+              <div className="ah-card" style={{ marginTop: '1rem' }}>
+                <h3 className="ah-section-title">{editGameDetail.game.name}</h3>
+                <p className="ah-meta">{editGameDetail.game.groupName}</p>
+
+                <div style={{ marginTop: '1.5rem' }}>
+                  <h4 style={{ marginBottom: '1rem' }}>Rounds</h4>
+                  {editGameDetail.rounds.length === 0 && (
+                    <p className="ah-meta">No rounds yet</p>
+                  )}
+
+                  {editGameDetail.rounds.map((round) => (
+                    <div key={round.id} className="ah-card" style={{ marginBottom: '1rem' }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          cursor: 'pointer',
+                        }}
+                        onClick={() => handleExpandEditRound(round.id)}
+                      >
+                        <div>
+                          <strong>Round {round.roundNumber}</strong>
+                          <span
+                            className={`game-status status-${round.status === 'open' ? 'active' : 'completed'}`}
+                            style={{ marginLeft: '1rem' }}
+                          >
+                            {round.status}
+                          </span>
+                        </div>
+                        <span>{editExpandedRound === round.id ? '▼' : '▶'}</span>
+                      </div>
+
+                      {editExpandedRound === round.id && (
+                        <div style={{ marginTop: '1.5rem' }}>
+                          {/* Edit Picks Section */}
+                          <div style={{ marginBottom: '2rem' }}>
+                            <h5 style={{ marginBottom: '1rem' }}>Edit Picks</h5>
+                            {editGameDetail.participants
+                              .filter((p) => p.isActive || p.eliminatedInRound === round.roundNumber)
+                              .map((participant) => {
+                                const currentPick = (editPicks[round.id] || []).find(
+                                  (p) => p.playerName === participant.playerName
+                                );
+                                return (
+                                  <div key={participant.playerName} className="pick-row">
+                                    <strong>{participant.playerName}</strong>
+                                    <select
+                                      className="ah-select"
+                                      value={
+                                        editPickAssignments[round.id]?.[participant.playerName] ||
+                                        currentPick?.teamId ||
+                                        ''
+                                      }
+                                      onChange={(e) => {
+                                        const teamId = parseInt(e.target.value);
+                                        setEditPickAssignments((prev) => ({
+                                          ...prev,
+                                          [round.id]: {
+                                            ...(prev[round.id] || {}),
+                                            [participant.playerName]: teamId,
+                                          },
+                                        }));
+                                      }}
+                                    >
+                                      <option value="">-- Select team --</option>
+                                      {groupTeams[editGameDetail.game.groupId]?.map((team) => (
+                                        <option key={team.id} value={team.id}>
+                                          {team.name}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                );
+                              })}
+                            <button
+                              className="ah-btn-primary"
+                              onClick={() => handleSaveEditPicks(round.id)}
+                              style={{ marginTop: '1rem' }}
+                            >
+                              Save Picks
+                            </button>
+                          </div>
+
+                          {/* Edit Results Section */}
+                          {(editPicks[round.id] || []).some((p) => p.teamId) && (
+                            <div>
+                              <h5 style={{ marginBottom: '1rem' }}>Edit Results</h5>
+                              <div className="team-results-list">
+                                {(() => {
+                                  const teamGroups: Record<string, Pick[]> = {};
+                                  (editPicks[round.id] || []).forEach((pick) => {
+                                    const teamKey = pick.teamName || 'No team';
+                                    if (!teamGroups[teamKey]) teamGroups[teamKey] = [];
+                                    teamGroups[teamKey].push(pick);
+                                  });
+
+                                  return Object.entries(teamGroups).map(([teamName, teamPicks]) => {
+                                    const firstPick = teamPicks[0];
+                                    const currentResult =
+                                      editPickResults[round.id]?.[firstPick.id] || firstPick.result || '';
+
+                                    return (
+                                      <div key={teamName} className="team-result-row">
+                                        <div>
+                                          <strong>{teamName}</strong>
+                                          <p className="ah-meta">
+                                            {teamPicks.map((p) => p.playerName).join(', ')}
+                                          </p>
+                                        </div>
+                                        <div className="result-buttons">
+                                          <button
+                                            className={`result-btn result-btn-win ${
+                                              currentResult === 'win' ? 'active' : ''
+                                            }`}
+                                            onClick={() => {
+                                              teamPicks.forEach((pick) => {
+                                                setEditPickResults((prev) => ({
+                                                  ...prev,
+                                                  [round.id]: {
+                                                    ...(prev[round.id] || {}),
+                                                    [pick.id]: 'win',
+                                                  },
+                                                }));
+                                              });
+                                            }}
+                                          >
+                                            Win
+                                          </button>
+                                          <button
+                                            className={`result-btn result-btn-draw ${
+                                              currentResult === 'draw' ? 'active' : ''
+                                            }`}
+                                            onClick={() => {
+                                              teamPicks.forEach((pick) => {
+                                                setEditPickResults((prev) => ({
+                                                  ...prev,
+                                                  [round.id]: {
+                                                    ...(prev[round.id] || {}),
+                                                    [pick.id]: 'draw',
+                                                  },
+                                                }));
+                                              });
+                                            }}
+                                          >
+                                            Draw
+                                          </button>
+                                          <button
+                                            className={`result-btn result-btn-loss ${
+                                              currentResult === 'loss' ? 'active' : ''
+                                            }`}
+                                            onClick={() => {
+                                              teamPicks.forEach((pick) => {
+                                                setEditPickResults((prev) => ({
+                                                  ...prev,
+                                                  [round.id]: {
+                                                    ...(prev[round.id] || {}),
+                                                    [pick.id]: 'loss',
+                                                  },
+                                                }));
+                                              });
+                                            }}
+                                          >
+                                            Loss
+                                          </button>
+                                          <button
+                                            className={`result-btn ${
+                                              editGameDetail.game.postponeAsWin
+                                                ? 'result-btn-win'
+                                                : 'result-btn-loss'
+                                            } ${currentResult === 'postponed' ? 'active' : ''}`}
+                                            onClick={() => {
+                                              teamPicks.forEach((pick) => {
+                                                setEditPickResults((prev) => ({
+                                                  ...prev,
+                                                  [round.id]: {
+                                                    ...(prev[round.id] || {}),
+                                                    [pick.id]: 'postponed',
+                                                  },
+                                                }));
+                                              });
+                                            }}
+                                          >
+                                            Postponed
+                                          </button>
+                                        </div>
+                                      </div>
+                                    );
+                                  });
+                                })()}
+                              </div>
+                              <button
+                                className="ah-btn-primary"
+                                onClick={() => handleSaveEditResults(round.id)}
+                                style={{ marginTop: '1rem' }}
+                              >
+                                Save Results
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
