@@ -57,7 +57,11 @@ func main() {
 	r.Handle("/api/players", authMiddleware(http.HandlerFunc(HandleCreatePlayer))).Methods("POST")
 	r.Handle("/api/players/{id}", authMiddleware(http.HandlerFunc(HandleDeletePlayer))).Methods("DELETE")
 
-	// TODO: Game endpoints (will add in next phase)
+	// Game endpoints
+	r.Handle("/api/games", authMiddleware(http.HandlerFunc(HandleListGames))).Methods("GET")
+	r.Handle("/api/games", authMiddleware(http.HandlerFunc(HandleCreateGame))).Methods("POST")
+	r.Handle("/api/games/{id}", authMiddleware(http.HandlerFunc(HandleGetGame))).Methods("GET")
+
 	// TODO: Round/Pick endpoints (will add in later phases)
 
 	// Serve static files (React build output)

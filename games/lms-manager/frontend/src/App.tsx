@@ -37,9 +37,23 @@ interface Player {
   createdAt: string;
 }
 
+interface Game {
+  id: number;
+  managerEmail: string;
+  name: string;
+  groupId: number;
+  status: string;
+  winnerName?: string;
+  createdAt: string;
+  groupName: string;
+  participantCount: number;
+  currentRound: number;
+}
+
 function App() {
   const { userId, userName, token } = useQueryParams();
   const [activeTab, setActiveTab] = useState<'setup' | 'games'>('setup');
+  const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
 
   // Setup tab state
   const [groups, setGroups] = useState<Group[]>([]);
@@ -50,6 +64,12 @@ function App() {
   const [newGroupName, setNewGroupName] = useState('');
   const [newPlayerName, setNewPlayerName] = useState('');
   const [newTeamName, setNewTeamName] = useState('');
+
+  // Games tab state
+  const [games, setGames] = useState<Game[]>([]);
+  const [newGameName, setNewGameName] = useState('');
+  const [selectedGroupId, setSelectedGroupId] = useState<number>(0);
+  const [selectedPlayerNames, setSelectedPlayerNames] = useState<string[]>([]);
 
   const [loading, setLoading] = useState(true);
 
@@ -82,6 +102,25 @@ function App() {
 
     fetchData();
   }, [token]);
+
+  // Fetch games when Games tab is active
+  useEffect(() => {
+    if (!token || activeTab !== 'games') return;
+
+    const fetchGames = async () => {
+      try {
+        const gamesRes = await fetch(`${API_BASE}/api/games`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const gamesData = await gamesRes.json();
+        setGames(gamesData.games || []);
+      } catch (err) {
+        console.error('Failed to fetch games:', err);
+      }
+    };
+
+    fetchGames();
+  }, [token, activeTab]);
 
   // Auth check
   if (!userId || !token) {
@@ -295,6 +334,75 @@ function App() {
     }
   };
 
+  // Game handlers
+  const handleTogglePlayerSelection = (playerName: string) => {
+    if (selectedPlayerNames.includes(playerName)) {
+      setSelectedPlayerNames(selectedPlayerNames.filter((n) => n !== playerName));
+    } else {
+      setSelectedPlayerNames([...selectedPlayerNames, playerName]);
+    }
+  };
+
+  const handleCreateGame = async () => {
+    if (!newGameName.trim()) {
+      alert('Please enter a game name');
+      return;
+    }
+
+    if (selectedGroupId === 0) {
+      alert('Please select a group');
+      return;
+    }
+
+    if (selectedPlayerNames.length === 0) {
+      alert('Please select at least one player');
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/api/games`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: newGameName,
+          groupId: selectedGroupId,
+          playerNames: selectedPlayerNames,
+        }),
+      });
+
+      if (res.ok) {
+        // Refresh games list
+        const gamesRes = await fetch(`${API_BASE}/api/games`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const gamesData = await gamesRes.json();
+        setGames(gamesData.games || []);
+
+        // Reset form
+        setNewGameName('');
+        setSelectedGroupId(0);
+        setSelectedPlayerNames([]);
+      } else {
+        const error = await res.text();
+        alert(`Failed to create game: ${error}`);
+      }
+    } catch (err) {
+      console.error('Failed to create game:', err);
+      alert('Failed to create game');
+    }
+  };
+
+  const handleViewGame = (gameId: number) => {
+    setSelectedGameId(gameId);
+  };
+
+  const handleBackToGamesList = () => {
+    setSelectedGameId(null);
+  };
+
   return (
     <>
       <header className="ah-app-header">
@@ -463,11 +571,135 @@ function App() {
           </div>
         )}
 
-        {/* Games Tab - Placeholder */}
-        {activeTab === 'games' && (
+        {/* Games Tab */}
+        {activeTab === 'games' && !selectedGameId && (
+          <div>
+            {/* Create Game Section */}
+            <div className="ah-card setup-section">
+              <div className="setup-section-header">
+                <h3 className="ah-section-title">Create New Game</h3>
+              </div>
+
+              {groups.length === 0 && (
+                <p className="ah-meta">
+                  No groups available. Please create a group in the Setup tab first.
+                </p>
+              )}
+
+              {players.length === 0 && (
+                <p className="ah-meta">
+                  No players available. Please add players in the Setup tab first.
+                </p>
+              )}
+
+              {groups.length > 0 && players.length > 0 && (
+                <div>
+                  <div className="inline-form">
+                    <input
+                      type="text"
+                      className="ah-input"
+                      placeholder="Game name (e.g., Spring 2026 LMS)"
+                      value={newGameName}
+                      onChange={(e) => setNewGameName(e.target.value)}
+                    />
+                    <select
+                      className="ah-select"
+                      value={selectedGroupId}
+                      onChange={(e) => setSelectedGroupId(Number(e.target.value))}
+                    >
+                      <option value={0}>Select Group</option>
+                      {groups.map((group) => (
+                        <option key={group.id} value={group.id}>
+                          {group.name} ({group.teamCount} teams)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div style={{ marginTop: '1rem' }}>
+                    <p className="ah-meta" style={{ marginBottom: '0.5rem' }}>
+                      Select Players ({selectedPlayerNames.length} selected):
+                    </p>
+                    <div className="player-selection-grid">
+                      {players.map((player) => (
+                        <label key={player.id} className="player-checkbox-label">
+                          <input
+                            type="checkbox"
+                            checked={selectedPlayerNames.includes(player.name)}
+                            onChange={() => handleTogglePlayerSelection(player.name)}
+                          />
+                          <span>{player.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button
+                    className="ah-btn-primary"
+                    onClick={handleCreateGame}
+                    style={{ marginTop: '1rem' }}
+                  >
+                    Create Game
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Games List Section */}
+            <div className="ah-card setup-section">
+              <div className="setup-section-header">
+                <h3 className="ah-section-title">Active Games</h3>
+              </div>
+
+              {games.length === 0 && (
+                <p className="ah-meta">No games yet. Create one above to get started.</p>
+              )}
+
+              <div className="games-list">
+                {games.map((game) => (
+                  <div
+                    key={game.id}
+                    className="game-item"
+                    onClick={() => handleViewGame(game.id)}
+                  >
+                    <div className="game-item-main">
+                      <div>
+                        <strong>{game.name}</strong>
+                        <p className="ah-meta">
+                          {game.groupName} • {game.participantCount} players • Round{' '}
+                          {game.currentRound}
+                        </p>
+                      </div>
+                      <span
+                        className={`game-status ${
+                          game.status === 'active' ? 'status-active' : 'status-completed'
+                        }`}
+                      >
+                        {game.status}
+                      </span>
+                    </div>
+                    {game.status === 'completed' && game.winnerName && (
+                      <p className="ah-meta">Winner: {game.winnerName}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Game Detail View - Placeholder */}
+        {activeTab === 'games' && selectedGameId && (
           <div className="ah-card">
-            <h3 className="ah-section-title">Games</h3>
-            <p className="ah-meta">Game management coming soon...</p>
+            <button className="ah-btn-outline" onClick={handleBackToGamesList}>
+              ← Back to Games
+            </button>
+            <h3 className="ah-section-title" style={{ marginTop: '1rem' }}>
+              Game Detail
+            </h3>
+            <p className="ah-meta">
+              Round management coming soon... (Game ID: {selectedGameId})
+            </p>
           </div>
         )}
       </div>

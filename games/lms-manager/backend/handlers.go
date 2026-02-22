@@ -458,3 +458,262 @@ func HandleDeletePlayer(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusNoContent)
 }
+
+// ============================================
+// GAME ENDPOINTS
+// ============================================
+
+// HandleListGames returns all games for the manager
+func HandleListGames(w http.ResponseWriter, r *http.Request) {
+	managerEmail, ok := getManagerEmail(r)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	rows, err := db.Query(`
+		SELECT
+			g.id, g.manager_email, g.name, g.group_id, g.status, g.winner_name, g.created_at,
+			gr.name as group_name,
+			COALESCE(COUNT(DISTINCT p.id), 0) as participant_count,
+			COALESCE(MAX(r.round_number), 0) as current_round
+		FROM managed_games g
+		LEFT JOIN managed_groups gr ON gr.id = g.group_id
+		LEFT JOIN managed_participants p ON p.game_id = g.id
+		LEFT JOIN managed_rounds r ON r.game_id = g.id
+		WHERE g.manager_email = $1
+		GROUP BY g.id, gr.name
+		ORDER BY g.created_at DESC
+	`, managerEmail)
+	if err != nil {
+		log.Printf("Failed to query games: %v", err)
+		http.Error(w, "Failed to fetch games", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	games := []GameWithDetails{}
+	for rows.Next() {
+		var gwd GameWithDetails
+		var winnerName sql.NullString
+		if err := rows.Scan(
+			&gwd.ID, &gwd.ManagerEmail, &gwd.Name, &gwd.GroupID, &gwd.Status, &winnerName, &gwd.CreatedAt,
+			&gwd.GroupName, &gwd.ParticipantCount, &gwd.CurrentRound,
+		); err != nil {
+			log.Printf("Failed to scan game: %v", err)
+			continue
+		}
+		if winnerName.Valid {
+			gwd.WinnerName = &winnerName.String
+		}
+		games = append(games, gwd)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"games": games,
+	})
+}
+
+// HandleCreateGame creates a new game with selected players
+func HandleCreateGame(w http.ResponseWriter, r *http.Request) {
+	managerEmail, ok := getManagerEmail(r)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var req CreateGameRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	if req.Name == "" {
+		http.Error(w, "Game name required", http.StatusBadRequest)
+		return
+	}
+
+	if req.GroupID == 0 {
+		http.Error(w, "Group ID required", http.StatusBadRequest)
+		return
+	}
+
+	if len(req.PlayerNames) == 0 {
+		http.Error(w, "At least one player required", http.StatusBadRequest)
+		return
+	}
+
+	// Verify group belongs to manager
+	var count int
+	err := db.QueryRow(`SELECT COUNT(*) FROM managed_groups WHERE id = $1 AND manager_email = $2`, req.GroupID, managerEmail).Scan(&count)
+	if err != nil || count == 0 {
+		http.Error(w, "Group not found", http.StatusNotFound)
+		return
+	}
+
+	// Start transaction
+	tx, err := db.Begin()
+	if err != nil {
+		log.Printf("Failed to begin transaction: %v", err)
+		http.Error(w, "Failed to create game", http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	// Create game
+	var gameID int
+	err = tx.QueryRow(`
+		INSERT INTO managed_games (manager_email, name, group_id, status)
+		VALUES ($1, $2, $3, 'active')
+		RETURNING id
+	`, managerEmail, req.Name, req.GroupID).Scan(&gameID)
+	if err != nil {
+		log.Printf("Failed to create game: %v", err)
+		http.Error(w, "Failed to create game", http.StatusInternalServerError)
+		return
+	}
+
+	// Add participants
+	for _, playerName := range req.PlayerNames {
+		_, err = tx.Exec(`
+			INSERT INTO managed_participants (game_id, player_name, is_active)
+			VALUES ($1, $2, TRUE)
+		`, gameID, playerName)
+		if err != nil {
+			log.Printf("Failed to add participant: %v", err)
+			http.Error(w, "Failed to add participants", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// Create round 1
+	_, err = tx.Exec(`
+		INSERT INTO managed_rounds (game_id, round_number, status)
+		VALUES ($1, 1, 'open')
+	`, gameID)
+	if err != nil {
+		log.Printf("Failed to create initial round: %v", err)
+		http.Error(w, "Failed to create initial round", http.StatusInternalServerError)
+		return
+	}
+
+	if err = tx.Commit(); err != nil {
+		log.Printf("Failed to commit transaction: %v", err)
+		http.Error(w, "Failed to create game", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"id": gameID,
+	})
+}
+
+// HandleGetGame returns game details with participants and rounds
+func HandleGetGame(w http.ResponseWriter, r *http.Request) {
+	managerEmail, ok := getManagerEmail(r)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	vars := mux.Vars(r)
+	gameID, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		http.Error(w, "Invalid game ID", http.StatusBadRequest)
+		return
+	}
+
+	// Get game details
+	var game GameWithDetails
+	var winnerName sql.NullString
+	err = db.QueryRow(`
+		SELECT
+			g.id, g.manager_email, g.name, g.group_id, g.status, g.winner_name, g.created_at,
+			gr.name as group_name,
+			COALESCE(COUNT(DISTINCT p.id), 0) as participant_count,
+			COALESCE(MAX(r.round_number), 0) as current_round
+		FROM managed_games g
+		LEFT JOIN managed_groups gr ON gr.id = g.group_id
+		LEFT JOIN managed_participants p ON p.game_id = g.id
+		LEFT JOIN managed_rounds r ON r.game_id = g.id
+		WHERE g.id = $1 AND g.manager_email = $2
+		GROUP BY g.id, gr.name
+	`, gameID, managerEmail).Scan(
+		&game.ID, &game.ManagerEmail, &game.Name, &game.GroupID, &game.Status, &winnerName, &game.CreatedAt,
+		&game.GroupName, &game.ParticipantCount, &game.CurrentRound,
+	)
+	if err == sql.ErrNoRows {
+		http.Error(w, "Game not found", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		log.Printf("Failed to fetch game: %v", err)
+		http.Error(w, "Failed to fetch game", http.StatusInternalServerError)
+		return
+	}
+	if winnerName.Valid {
+		game.WinnerName = &winnerName.String
+	}
+
+	// Get participants
+	participantRows, err := db.Query(`
+		SELECT id, game_id, player_name, is_active, eliminated_in_round, created_at
+		FROM managed_participants
+		WHERE game_id = $1
+		ORDER BY player_name ASC
+	`, gameID)
+	if err != nil {
+		log.Printf("Failed to query participants: %v", err)
+		http.Error(w, "Failed to fetch participants", http.StatusInternalServerError)
+		return
+	}
+	defer participantRows.Close()
+
+	participants := []Participant{}
+	for participantRows.Next() {
+		var p Participant
+		var eliminatedInRound sql.NullInt64
+		if err := participantRows.Scan(&p.ID, &p.GameID, &p.PlayerName, &p.IsActive, &eliminatedInRound, &p.CreatedAt); err != nil {
+			log.Printf("Failed to scan participant: %v", err)
+			continue
+		}
+		if eliminatedInRound.Valid {
+			val := int(eliminatedInRound.Int64)
+			p.EliminatedInRound = &val
+		}
+		participants = append(participants, p)
+	}
+
+	// Get rounds
+	roundRows, err := db.Query(`
+		SELECT id, game_id, round_number, status, created_at
+		FROM managed_rounds
+		WHERE game_id = $1
+		ORDER BY round_number ASC
+	`, gameID)
+	if err != nil {
+		log.Printf("Failed to query rounds: %v", err)
+		http.Error(w, "Failed to fetch rounds", http.StatusInternalServerError)
+		return
+	}
+	defer roundRows.Close()
+
+	rounds := []Round{}
+	for roundRows.Next() {
+		var r Round
+		if err := roundRows.Scan(&r.ID, &r.GameID, &r.RoundNumber, &r.Status, &r.CreatedAt); err != nil {
+			log.Printf("Failed to scan round: %v", err)
+			continue
+		}
+		rounds = append(rounds, r)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"game":         game,
+		"participants": participants,
+		"rounds":       rounds,
+	})
+}
