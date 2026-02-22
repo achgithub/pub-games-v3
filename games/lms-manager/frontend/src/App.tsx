@@ -290,7 +290,7 @@ function App() {
   };
 
   const handleDeleteGroup = async (groupId: number) => {
-    if (!confirm('Delete this group? This will also delete all its teams.')) return;
+    if (!window.confirm('Delete this group? This will also delete all its teams.')) return;
 
     try {
       const res = await fetch(`${API_BASE}/api/groups/${groupId}`, {
@@ -361,7 +361,7 @@ function App() {
   };
 
   const handleDeleteTeam = async (teamId: number, groupId: number) => {
-    if (!confirm('Delete this team?')) return;
+    if (!window.confirm('Delete this team?')) return;
 
     try {
       const res = await fetch(`${API_BASE}/api/teams/${teamId}`, {
@@ -411,7 +411,7 @@ function App() {
   };
 
   const handleDeletePlayer = async (playerId: number) => {
-    if (!confirm('Delete this player?')) return;
+    if (!window.confirm('Delete this player?')) return;
 
     try {
       const res = await fetch(`${API_BASE}/api/players/${playerId}`, {
@@ -566,7 +566,7 @@ function App() {
     // Check that all picks have results
     const allPicksHaveResults = picks.every((pick) => pickResults[pick.id]);
     if (!allPicksHaveResults) {
-      if (!confirm('Not all picks have results. Continue anyway?')) {
+      if (!window.confirm('Not all picks have results. Continue anyway?')) {
         return;
       }
     }
@@ -602,7 +602,7 @@ function App() {
   const handleAdvanceRound = async () => {
     if (!gameDetail || !token) return;
 
-    if (!confirm('Advance to next round?')) return;
+    if (!window.confirm('Advance to next round?')) return;
 
     try {
       const res = await fetch(`${API_BASE}/api/games/${selectedGameId}/advance`, {
