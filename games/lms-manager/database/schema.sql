@@ -41,6 +41,7 @@ CREATE TABLE managed_players (
 
 -- Games reference a group and have assigned participants
 -- All data scoped to manager_email
+-- postpone_as_win: if true, postponed matches count as wins; if false, as losses
 CREATE TABLE managed_games (
   id SERIAL PRIMARY KEY,
   manager_email TEXT NOT NULL,
@@ -48,6 +49,7 @@ CREATE TABLE managed_games (
   group_id INTEGER REFERENCES managed_groups(id),
   status TEXT DEFAULT 'active', -- 'active', 'completed'
   winner_name TEXT,
+  postpone_as_win BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMP DEFAULT NOW()
 );
 

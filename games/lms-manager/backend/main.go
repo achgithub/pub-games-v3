@@ -62,11 +62,14 @@ func main() {
 	r.Handle("/api/games", authMiddleware(http.HandlerFunc(HandleCreateGame))).Methods("POST")
 	r.Handle("/api/games/{id}", authMiddleware(http.HandlerFunc(HandleGetGame))).Methods("GET")
 	r.Handle("/api/games/{id}/advance", authMiddleware(http.HandlerFunc(HandleAdvanceRound))).Methods("POST")
+	r.Handle("/api/games/{id}/used-teams", authMiddleware(http.HandlerFunc(HandleGetUsedTeams))).Methods("GET")
+	r.Handle("/api/games/{id}/participants", authMiddleware(http.HandlerFunc(HandleAddParticipants))).Methods("POST")
 
 	// Round/Pick endpoints
 	r.Handle("/api/rounds/{roundId}/picks", authMiddleware(http.HandlerFunc(HandleGetRoundPicks))).Methods("GET")
 	r.Handle("/api/rounds/{roundId}/picks", authMiddleware(http.HandlerFunc(HandleSavePicks))).Methods("POST")
 	r.Handle("/api/rounds/{roundId}/results", authMiddleware(http.HandlerFunc(HandleSaveResults))).Methods("POST")
+	r.Handle("/api/rounds/{roundId}/reopen", authMiddleware(http.HandlerFunc(HandleReopenRound))).Methods("POST")
 
 	// Serve static files (React build output)
 	staticDir := "./static"

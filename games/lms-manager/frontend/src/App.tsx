@@ -44,6 +44,7 @@ interface Game {
   groupId: number;
   status: string;
   winnerName?: string;
+  postponeAsWin: boolean;
   createdAt: string;
   groupName: string;
   participantCount: number;
@@ -105,12 +106,16 @@ function App() {
   const [newGameName, setNewGameName] = useState('');
   const [selectedGroupId, setSelectedGroupId] = useState<number>(0);
   const [selectedPlayerNames, setSelectedPlayerNames] = useState<string[]>([]);
+  const [postponeAsWin, setPostponeAsWin] = useState<boolean>(true);
 
   // Game detail state
   const [gameDetail, setGameDetail] = useState<GameDetail | null>(null);
   const [picks, setPicks] = useState<Pick[]>([]);
   const [pickAssignments, setPickAssignments] = useState<Record<string, number>>({});
   const [pickResults, setPickResults] = useState<Record<number, string>>({});
+  const [usedTeams, setUsedTeams] = useState<Record<string, number[]>>({});
+  const [showAddPlayers, setShowAddPlayers] = useState(false);
+  const [playersToAdd, setPlayersToAdd] = useState<string[]>([]);
 
   const [loading, setLoading] = useState(true);
 
@@ -183,6 +188,13 @@ function App() {
           const teamsData = await teamsRes.json();
           setGroupTeams((prev) => ({ ...prev, [data.game.groupId]: teamsData.teams || [] }));
         }
+
+        // Fetch used teams for this game
+        const usedTeamsRes = await fetch(`${API_BASE}/api/games/${selectedGameId}/used-teams`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const usedTeamsData = await usedTeamsRes.json();
+        setUsedTeams(usedTeamsData.usedTeams || {});
 
         // If there are rounds, fetch picks for the latest round
         if (data.rounds && data.rounds.length > 0) {
@@ -462,6 +474,7 @@ function App() {
           name: newGameName,
           groupId: selectedGroupId,
           playerNames: selectedPlayerNames,
+          postponeAsWin: postponeAsWin,
         }),
       });
 
@@ -477,6 +490,7 @@ function App() {
         setNewGameName('');
         setSelectedGroupId(0);
         setSelectedPlayerNames([]);
+        setPostponeAsWin(true);
       } else {
         const error = await res.text();
         alert(`Failed to create game: ${error}`);
@@ -601,8 +615,6 @@ function App() {
   const handleAdvanceRound = async () => {
     if (!gameDetail || !token) return;
 
-    if (!window.confirm('Advance to next round?')) return;
-
     try {
       const res = await fetch(`${API_BASE}/api/games/${selectedGameId}/advance`, {
         method: 'POST',
@@ -611,11 +623,7 @@ function App() {
 
       if (res.ok) {
         const data = await res.json();
-        if (data.status === 'completed') {
-          alert(`Game complete! Winner: ${data.winnerName}`);
-        } else {
-          alert(`Advanced to Round ${data.roundNumber}`);
-        }
+        // Single notification - no double confirm
 
         // Refresh game detail
         const gameRes = await fetch(`${API_BASE}/api/games/${selectedGameId}`, {
@@ -642,6 +650,84 @@ function App() {
     } catch (err) {
       console.error('Failed to advance round:', err);
       alert('Failed to advance round');
+    }
+  };
+
+  const handleSelectAll = () => {
+    setSelectedPlayerNames(players.map((p) => p.name));
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedPlayerNames([]);
+  };
+
+  const handleAddPlayersToGame = async () => {
+    if (!gameDetail || !token) return;
+    if (playersToAdd.length === 0) {
+      alert('Please select at least one player to add');
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/api/games/${selectedGameId}/participants`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ playerNames: playersToAdd }),
+      });
+
+      if (res.ok || res.status === 204) {
+        // Refresh game detail
+        const gameRes = await fetch(`${API_BASE}/api/games/${selectedGameId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const gameData = await gameRes.json();
+        setGameDetail(gameData);
+        setShowAddPlayers(false);
+        setPlayersToAdd([]);
+      } else {
+        const error = await res.text();
+        alert(`Failed to add players: ${error}`);
+      }
+    } catch (err) {
+      console.error('Failed to add players:', err);
+      alert('Failed to add players');
+    }
+  };
+
+  const handleReopenRound = async (roundId: number) => {
+    if (!window.confirm('Reopen this round? This will restore eliminated players and clear results.')) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/api/rounds/${roundId}/reopen`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.ok || res.status === 204) {
+        // Refresh game detail
+        const gameRes = await fetch(`${API_BASE}/api/games/${selectedGameId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const gameData = await gameRes.json();
+        setGameDetail(gameData);
+
+        // Refresh picks
+        const picksRes = await fetch(`${API_BASE}/api/rounds/${roundId}/picks`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const picksData = await picksRes.json();
+        setPicks(picksData.picks || []);
+        setPickResults({});
+      } else {
+        const error = await res.text();
+        alert(`Failed to reopen round: ${error}`);
+      }
+    } catch (err) {
+      console.error('Failed to reopen round:', err);
+      alert('Failed to reopen round');
     }
   };
 
@@ -859,9 +945,19 @@ function App() {
                   </div>
 
                   <div style={{ marginTop: '1rem' }}>
-                    <p className="ah-meta" style={{ marginBottom: '0.5rem' }}>
-                      Select Players ({selectedPlayerNames.length} selected):
-                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <p className="ah-meta">
+                        Select Players ({selectedPlayerNames.length} selected):
+                      </p>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button className="ah-btn-outline" onClick={handleSelectAll} style={{ padding: '0.25rem 0.75rem', fontSize: '0.875rem' }}>
+                          Select All
+                        </button>
+                        <button className="ah-btn-outline" onClick={handleDeselectAll} style={{ padding: '0.25rem 0.75rem', fontSize: '0.875rem' }}>
+                          Deselect All
+                        </button>
+                      </div>
+                    </div>
                     <div className="player-selection-grid">
                       {players.map((player) => (
                         <label key={player.id} className="player-checkbox-label">
@@ -874,6 +970,17 @@ function App() {
                         </label>
                       ))}
                     </div>
+                  </div>
+
+                  <div style={{ marginTop: '1rem' }}>
+                    <label className="postpone-checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={postponeAsWin}
+                        onChange={(e) => setPostponeAsWin(e.target.checked)}
+                      />
+                      <span>Postponed matches count as WIN (uncheck for LOSS)</span>
+                    </label>
                   </div>
 
                   <button
@@ -960,7 +1067,50 @@ function App() {
 
             {/* Participants */}
             <div className="ah-card">
-              <h3 className="ah-section-title">Participants</h3>
+              <div className="setup-section-header">
+                <h3 className="ah-section-title">Participants</h3>
+                {gameDetail.game.status === 'active' && (
+                  <button
+                    className="ah-btn-outline"
+                    onClick={() => setShowAddPlayers(!showAddPlayers)}
+                    style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
+                  >
+                    {showAddPlayers ? 'Cancel' : '+ Add Players'}
+                  </button>
+                )}
+              </div>
+
+              {showAddPlayers && (
+                <div style={{ marginBottom: '1rem', padding: '1rem', background: '#FAFAF9', borderRadius: '8px' }}>
+                  <p className="ah-meta" style={{ marginBottom: '0.5rem' }}>Select players to add:</p>
+                  <div className="player-selection-grid" style={{ maxHeight: '200px' }}>
+                    {players.filter(p => !gameDetail.participants.some(part => part.playerName === p.name)).map((player) => (
+                      <label key={player.id} className="player-checkbox-label">
+                        <input
+                          type="checkbox"
+                          checked={playersToAdd.includes(player.name)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setPlayersToAdd([...playersToAdd, player.name]);
+                            } else {
+                              setPlayersToAdd(playersToAdd.filter(n => n !== player.name));
+                            }
+                          }}
+                        />
+                        <span>{player.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <button
+                    className="ah-btn-primary"
+                    onClick={handleAddPlayersToGame}
+                    style={{ marginTop: '0.5rem' }}
+                  >
+                    Add Selected Players
+                  </button>
+                </div>
+              )}
+
               <div className="participants-grid">
                 {gameDetail.participants.map((participant) => (
                   <div
@@ -1031,11 +1181,19 @@ function App() {
                                       }
                                     >
                                       <option value="">Select Team</option>
-                                      {groupTeams[gameDetail.game.groupId]?.map((team) => (
-                                        <option key={team.id} value={team.id}>
-                                          {team.name}
-                                        </option>
-                                      ))}
+                                      {groupTeams[gameDetail.game.groupId]?.map((team) => {
+                                        const alreadyUsed = usedTeams[participant.playerName]?.includes(team.id);
+                                        return (
+                                          <option
+                                            key={team.id}
+                                            value={team.id}
+                                            disabled={alreadyUsed}
+                                            style={alreadyUsed ? { color: '#999', textDecoration: 'line-through' } : {}}
+                                          >
+                                            {team.name}{alreadyUsed ? ' (used)' : ''}
+                                          </option>
+                                        );
+                                      })}
                                     </select>
                                   </div>
                                 );
@@ -1050,39 +1208,76 @@ function App() {
                               Save Picks
                             </button>
 
-                            {/* Results Entry */}
+                            {/* Results Entry - Team-based */}
                             {picks.length > 0 && (
                               <div style={{ marginTop: '2rem' }}>
-                                <h4 className="ah-section-title">Enter Results</h4>
+                                <h4 className="ah-section-title">Enter Results (by Team)</h4>
                                 <p className="ah-meta" style={{ marginBottom: '1rem' }}>
-                                  Select outcome for each pick:
+                                  Click result for each team. All players who picked that team will get the same result.
                                 </p>
 
-                                <div className="picks-list">
-                                  {picks.map((pick) => (
-                                    <div key={pick.id} className="pick-row">
-                                      <div>
-                                        <strong>{pick.playerName}</strong>
-                                        <p className="ah-meta">{pick.teamName || 'No team'}</p>
-                                      </div>
-                                      <select
-                                        className="ah-select"
-                                        value={pickResults[pick.id] || pick.result || ''}
-                                        onChange={(e) =>
-                                          setPickResults({
-                                            ...pickResults,
-                                            [pick.id]: e.target.value,
-                                          })
-                                        }
-                                      >
-                                        <option value="">Select Result</option>
-                                        <option value="win">Win (Survive)</option>
-                                        <option value="loss">Loss (Eliminated)</option>
-                                        <option value="draw">Draw (Eliminated)</option>
-                                        <option value="postponed">Postponed (Survive)</option>
-                                      </select>
-                                    </div>
-                                  ))}
+                                <div className="team-results-list">
+                                  {(() => {
+                                    // Group picks by team
+                                    const teamGroups: Record<string, Pick[]> = {};
+                                    picks.forEach(pick => {
+                                      const teamKey = pick.teamName || 'No team';
+                                      if (!teamGroups[teamKey]) {
+                                        teamGroups[teamKey] = [];
+                                      }
+                                      teamGroups[teamKey].push(pick);
+                                    });
+
+                                    return Object.entries(teamGroups).map(([teamName, teamPicks]) => {
+                                      // Get current result for this team (they should all be the same)
+                                      const currentResult = teamPicks[0].result || pickResults[teamPicks[0].id];
+
+                                      const setTeamResult = (result: string) => {
+                                        const newResults = { ...pickResults };
+                                        teamPicks.forEach(pick => {
+                                          newResults[pick.id] = result;
+                                        });
+                                        setPickResults(newResults);
+                                      };
+
+                                      return (
+                                        <div key={teamName} className="team-result-row">
+                                          <div>
+                                            <strong style={{ fontSize: '1.125rem' }}>{teamName}</strong>
+                                            <p className="ah-meta">
+                                              {teamPicks.map(p => p.playerName).join(', ')}
+                                            </p>
+                                          </div>
+                                          <div className="result-buttons">
+                                            <button
+                                              className={`result-btn result-btn-win ${currentResult === 'win' ? 'active' : ''}`}
+                                              onClick={() => setTeamResult('win')}
+                                            >
+                                              Win
+                                            </button>
+                                            <button
+                                              className={`result-btn result-btn-loss ${currentResult === 'loss' ? 'active' : ''}`}
+                                              onClick={() => setTeamResult('loss')}
+                                            >
+                                              Loss
+                                            </button>
+                                            <button
+                                              className={`result-btn result-btn-draw ${currentResult === 'draw' ? 'active' : ''}`}
+                                              onClick={() => setTeamResult('draw')}
+                                            >
+                                              Draw
+                                            </button>
+                                            <button
+                                              className={`result-btn ${gameDetail.game.postponeAsWin ? 'result-btn-win' : 'result-btn-loss'} ${currentResult === 'postponed' ? 'active' : ''}`}
+                                              onClick={() => setTeamResult('postponed')}
+                                            >
+                                              Postponed
+                                            </button>
+                                          </div>
+                                        </div>
+                                      );
+                                    });
+                                  })()}
                                 </div>
 
                                 <button
@@ -1100,9 +1295,18 @@ function App() {
                         {/* Closed round - show results */}
                         {currentRound.status === 'closed' && (
                           <div>
-                            <p className="ah-meta" style={{ marginBottom: '1rem' }}>
-                              Round complete. Click "Next Round" to continue.
-                            </p>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                              <p className="ah-meta">
+                                Round complete. Click "Next Round" to continue.
+                              </p>
+                              <button
+                                className="ah-btn-outline"
+                                onClick={() => handleReopenRound(currentRound.id)}
+                                style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
+                              >
+                                Reopen Round
+                              </button>
+                            </div>
                             {picks.length > 0 && (
                               <div className="picks-list">
                                 {picks.map((pick) => (
