@@ -1065,6 +1065,13 @@ Players can still view their assignments/picks (read-only) even in managed mode.
   - Focus management
 
 **Security & Deployment:**
+- PostgreSQL security review
+  - Review password strength ("pubgames" is weak)
+  - Consider per-app database users with limited permissions
+  - Review SSL/TLS configuration (currently sslmode=disable)
+  - Audit connection string security (currently in code/env vars)
+  - Consider row-level security policies
+  - Review backup strategy
 - SSL/HTTPS support
   - Secure connections for all services
   - Let's Encrypt certificate automation
