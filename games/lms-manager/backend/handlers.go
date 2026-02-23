@@ -1956,16 +1956,25 @@ func HandleGetReport(w http.ResponseWriter, r *http.Request) {
 		rounds = append(rounds, report)
 	}
 
+	// Get starting player count
+	var startingPlayers int
+	db.QueryRow(`
+		SELECT COUNT(*)
+		FROM managed_participants
+		WHERE game_id = $1
+	`, gameID).Scan(&startingPlayers)
+
 	// Build response
 	response := map[string]interface{}{
 		"game": map[string]interface{}{
-			"name":          gameName,
-			"status":        gameStatus,
-			"winnerName":    winnerName.String,
-			"postponeAsWin": postponeAsWin,
-			"winnerMode":    winnerMode,
-			"rolloverMode":  rolloverMode,
-			"maxWinners":    maxWinners,
+			"name":            gameName,
+			"status":          gameStatus,
+			"winnerName":      winnerName.String,
+			"postponeAsWin":   postponeAsWin,
+			"winnerMode":      winnerMode,
+			"rolloverMode":    rolloverMode,
+			"maxWinners":      maxWinners,
+			"startingPlayers": startingPlayers,
 		},
 		"rounds": rounds,
 	}

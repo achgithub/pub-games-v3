@@ -293,6 +293,13 @@ function App() {
 
   // Report view bypass auth (public access for displays)
   if (reportView === 'report' && reportGameId > 0) {
+    const refreshReport = () => {
+      fetch(`${API_BASE}/api/report/${reportGameId}`)
+        .then(res => res.json())
+        .then(data => setReportData(data))
+        .catch(err => console.error('Failed to refresh report:', err));
+    };
+
     return (
       <>
         <header className="ah-app-header">
@@ -306,8 +313,14 @@ function App() {
               <p className="ah-meta">Loading report...</p>
             ) : (
               <>
-                <h2>{reportData.game.name}</h2>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <h2>{reportData.game.name}</h2>
+                  <button className="ah-btn-outline" onClick={refreshReport}>
+                    🔄 Refresh
+                  </button>
+                </div>
                 <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                  <p><strong>Starting Players:</strong> {reportData.game.startingPlayers}</p>
                   <p><strong>Status:</strong> {reportData.game.status}</p>
                   {reportData.game.winnerName && <p><strong>Winner:</strong> {reportData.game.winnerName}</p>}
                   <p><strong>Postponed =</strong> {reportData.game.postponeAsWin ? 'Win' : 'Loss'}</p>
@@ -365,26 +378,24 @@ function App() {
                                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.5rem' }}>
                                     {Object.entries(round.teamResults)
                                       .sort(([a]: any, [b]: any) => a.localeCompare(b))
-                                      .map(([team, result]: any) => (
-                                        <div
-                                          key={team}
-                                          style={{
-                                            padding: '0.5rem',
-                                            borderRadius: '4px',
-                                            fontWeight: 600,
-                                            background: result === 'win' ? '#D1FAE5' :
-                                                       result === 'loss' ? '#FEE2E2' :
-                                                       result === 'draw' ? '#FED7AA' :
-                                                       result === 'postponed' ? '#DBEAFE' : '#E5E7EB',
-                                            color: result === 'win' ? '#065F46' :
-                                                   result === 'loss' ? '#991B1B' :
-                                                   result === 'draw' ? '#9A3412' :
-                                                   result === 'postponed' ? '#1E3A8A' : '#6B7280'
-                                          }}
-                                        >
-                                          {team} - {result.toUpperCase()}
-                                        </div>
-                                      ))}
+                                      .map(([team, result]: any) => {
+                                        // Green = progress (win, postponed-as-win), Red = eliminated (loss, draw, postponed-as-loss)
+                                        const isProgress = result === 'win' || (result === 'postponed' && reportData.game.postponeAsWin);
+                                        return (
+                                          <div
+                                            key={team}
+                                            style={{
+                                              padding: '0.5rem',
+                                              borderRadius: '4px',
+                                              fontWeight: 600,
+                                              background: isProgress ? '#D1FAE5' : '#FEE2E2',
+                                              color: isProgress ? '#065F46' : '#991B1B'
+                                            }}
+                                          >
+                                            {team} - {result.toUpperCase()}
+                                          </div>
+                                        );
+                                      })}
                                   </div>
                                 </div>
                               )}
@@ -1927,9 +1938,22 @@ function App() {
               <div style={{ marginTop: '1rem' }}>
                 {/* Game Header */}
                 <div className="ah-card">
-                  <h2 style={{ marginBottom: '0.5rem' }}>{reportData.game.name}</h2>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <h2>{reportData.game.name}</h2>
+                    <button
+                      className="ah-btn-outline"
+                      onClick={() => {
+                        fetch(`${API_BASE}/api/report/${reportGameId}`)
+                          .then(res => res.json())
+                          .then(data => setReportData(data))
+                          .catch(err => console.error('Failed to refresh report:', err));
+                      }}
+                    >
+                      🔄 Refresh
+                    </button>
+                  </div>
                   <p className="ah-meta">
-                    Status: {reportData.game.status}
+                    Starting Players: {reportData.game.startingPlayers} | Status: {reportData.game.status}
                     {reportData.game.winnerName && ` | Winner: ${reportData.game.winnerName}`}
                   </p>
                 </div>
@@ -1977,26 +2001,24 @@ function App() {
                                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.5rem' }}>
                                     {Object.entries(round.teamResults)
                                       .sort(([a]: any, [b]: any) => a.localeCompare(b))
-                                      .map(([team, result]: any) => (
-                                        <div
-                                          key={team}
-                                          style={{
-                                            padding: '0.5rem',
-                                            borderRadius: '4px',
-                                            fontWeight: 600,
-                                            background: result === 'win' ? '#D1FAE5' :
-                                                       result === 'loss' ? '#FEE2E2' :
-                                                       result === 'draw' ? '#FED7AA' :
-                                                       result === 'postponed' ? '#DBEAFE' : '#E5E7EB',
-                                            color: result === 'win' ? '#065F46' :
-                                                   result === 'loss' ? '#991B1B' :
-                                                   result === 'draw' ? '#9A3412' :
-                                                   result === 'postponed' ? '#1E3A8A' : '#6B7280'
-                                          }}
-                                        >
-                                          {team} - {result.toUpperCase()}
-                                        </div>
-                                      ))}
+                                      .map(([team, result]: any) => {
+                                        // Green = progress (win, postponed-as-win), Red = eliminated (loss, draw, postponed-as-loss)
+                                        const isProgress = result === 'win' || (result === 'postponed' && reportData.game.postponeAsWin);
+                                        return (
+                                          <div
+                                            key={team}
+                                            style={{
+                                              padding: '0.5rem',
+                                              borderRadius: '4px',
+                                              fontWeight: 600,
+                                              background: isProgress ? '#D1FAE5' : '#FEE2E2',
+                                              color: isProgress ? '#065F46' : '#991B1B'
+                                            }}
+                                          >
+                                            {team} - {result.toUpperCase()}
+                                          </div>
+                                        );
+                                      })}
                                   </div>
                                 </div>
                               )}
