@@ -63,7 +63,7 @@ func HandleListGroups(w http.ResponseWriter, r *http.Request) {
 		FROM managed_groups g
 		LEFT JOIN managed_teams t ON t.group_id = g.id
 		WHERE g.manager_email = $1
-		GROUP BY g.id
+		GROUP BY g.id, g.manager_email, g.name, g.created_at
 		ORDER BY g.created_at DESC
 	`, managerEmail)
 	if err != nil {

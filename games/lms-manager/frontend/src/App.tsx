@@ -124,6 +124,10 @@ function App() {
   const [playersToAdd, setPlayersToAdd] = useState<string[]>([]);
   const [picksFinalized, setPicksFinalized] = useState(false);
 
+  // Team filter state
+  const [teamSearchText, setTeamSearchText] = useState<string>('');
+  const [showUnassignedOnly, setShowUnassignedOnly] = useState<boolean>(false);
+
   const [loading, setLoading] = useState(true);
 
   // Fetch initial data
@@ -1240,6 +1244,12 @@ function App() {
                     {gameDetail.game.status}
                   </span>
                 </p>
+                <div style={{ marginTop: '0.75rem', fontSize: '0.875rem', color: '#78716C' }}>
+                  <strong>Configuration:</strong>{' '}
+                  {gameDetail.game.postponeAsWin ? 'Postpone=Win' : 'Postpone=Loss'} •{' '}
+                  {gameDetail.game.winnerMode === 'single' ? '1 Winner' : `Multiple Winners (max ${gameDetail.game.maxWinners})`} •{' '}
+                  {gameDetail.game.rolloverMode === 'round' ? 'Rollover Round' : 'Rollover Game'}
+                </div>
                 {gameDetail.game.status === 'completed' && gameDetail.game.winnerName && (
                   <p style={{ marginTop: '0.5rem', fontSize: '1.125rem', fontWeight: 600 }}>
                     Winner: {gameDetail.game.winnerName} 🏆
@@ -1340,12 +1350,56 @@ function App() {
                               Assign teams to active players:
                             </p>
 
+                            {/* Team filters */}
+                            <div style={{ marginBottom: '1rem', padding: '1rem', background: '#FAFAF9', borderRadius: '8px' }}>
+                              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                                <div style={{ flex: '1 1 300px' }}>
+                                  <input
+                                    type="text"
+                                    placeholder="Search teams (e.g., 'And' for Anderson, Anderton...)"
+                                    value={teamSearchText}
+                                    onChange={(e) => setTeamSearchText(e.target.value)}
+                                    className="ah-input"
+                                    style={{ width: '100%' }}
+                                  />
+                                </div>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap' }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={showUnassignedOnly}
+                                    onChange={(e) => setShowUnassignedOnly(e.target.checked)}
+                                  />
+                                  <span>Show unassigned only</span>
+                                </label>
+                              </div>
+                            </div>
+
                             {/* Team assignment for each active player */}
                             <div className="picks-list">
                               {activePlayers.map((participant) => {
                                 const existingPick = picks.find(
                                   (p) => p.playerName === participant.playerName
                                 );
+
+                                // Filter teams based on search text and unassigned filter
+                                const filteredTeams = groupTeams[gameDetail.game.groupId]?.filter((team) => {
+                                  const alreadyUsed = usedTeams[participant.playerName]?.includes(team.id);
+                                  const currentlyAssigned = pickAssignments[participant.playerName] === team.id || existingPick?.teamId === team.id;
+                                  const isAssignedToAnyone = Object.values(pickAssignments).includes(team.id) ||
+                                    picks.some(p => p.teamId === team.id);
+
+                                  // Text search filter (case insensitive)
+                                  const matchesSearch = !teamSearchText ||
+                                    team.name.toLowerCase().includes(teamSearchText.toLowerCase());
+
+                                  // Unassigned filter
+                                  const matchesUnassigned = !showUnassignedOnly ||
+                                    (!alreadyUsed && !isAssignedToAnyone) ||
+                                    currentlyAssigned;
+
+                                  return matchesSearch && matchesUnassigned;
+                                }) || [];
+
                                 return (
                                   <div key={participant.id} className="pick-row">
                                     <strong>{participant.playerName}</strong>
@@ -1364,7 +1418,7 @@ function App() {
                                       }
                                     >
                                       <option value="">Select Team</option>
-                                      {groupTeams[gameDetail.game.groupId]?.map((team) => {
+                                      {filteredTeams.map((team) => {
                                         const alreadyUsed = usedTeams[participant.playerName]?.includes(team.id);
                                         return (
                                           <option
