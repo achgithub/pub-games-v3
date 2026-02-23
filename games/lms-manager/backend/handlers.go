@@ -869,10 +869,8 @@ func HandleSavePicks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if roundStatus != "open" {
-		http.Error(w, "Round is closed", http.StatusBadRequest)
-		return
-	}
+	// Allow saving picks to any round (including closed) for Edit tab corrections
+	// Manager is trusted to make corrections at any time
 
 	var req SavePicksRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -1070,8 +1068,65 @@ func HandleAdvanceRound(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if activeCount == 0 {
-		http.Error(w, "No active players remaining", http.StatusBadRequest)
-		return
+		// All remaining players were eliminated - check declare_multiple_winners setting
+		if declareMultipleWinners {
+			// Find all players eliminated in the most recent round (they tied)
+			rows, err := db.Query(`
+				SELECT player_name
+				FROM managed_participants
+				WHERE game_id = $1 AND eliminated_in_round = $2
+				ORDER BY player_name
+			`, gameID, currentRound)
+			if err != nil {
+				log.Printf("Failed to get tied winners: %v", err)
+				http.Error(w, "Failed to complete game", http.StatusInternalServerError)
+				return
+			}
+			defer rows.Close()
+
+			winners := []string{}
+			for rows.Next() {
+				var name string
+				if err := rows.Scan(&name); err != nil {
+					log.Printf("Failed to scan winner: %v", err)
+					continue
+				}
+				winners = append(winners, name)
+			}
+
+			if len(winners) == 0 {
+				http.Error(w, "No players remaining", http.StatusBadRequest)
+				return
+			}
+
+			// Join names with commas
+			winnerNames := ""
+			for i, name := range winners {
+				if i > 0 {
+					winnerNames += ", "
+				}
+				winnerNames += name
+			}
+
+			_, err = db.Exec(`UPDATE managed_games SET status = 'completed', winner_name = $1 WHERE id = $2`, winnerNames, gameID)
+			if err != nil {
+				log.Printf("Failed to complete game: %v", err)
+				http.Error(w, "Failed to complete game", http.StatusInternalServerError)
+				return
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"status":          "completed",
+				"winnerName":      winnerNames,
+				"multipleWinners": true,
+			})
+			return
+		} else {
+			// Rollover not possible - no one left
+			http.Error(w, "All players eliminated - cannot continue. Enable 'Declare multiple winners' setting to tie remaining players.", http.StatusBadRequest)
+			return
+		}
 	}
 
 	if activeCount == 1 {
@@ -1099,53 +1154,7 @@ func HandleAdvanceRound(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Multiple players remain - check if we should declare them all winners
-	if declareMultipleWinners {
-		// Get all active player names
-		rows, err := db.Query(`SELECT player_name FROM managed_participants WHERE game_id = $1 AND is_active = TRUE ORDER BY player_name`, gameID)
-		if err != nil {
-			log.Printf("Failed to get winners: %v", err)
-			http.Error(w, "Failed to complete game", http.StatusInternalServerError)
-			return
-		}
-		defer rows.Close()
-
-		winners := []string{}
-		for rows.Next() {
-			var name string
-			if err := rows.Scan(&name); err != nil {
-				log.Printf("Failed to scan winner: %v", err)
-				continue
-			}
-			winners = append(winners, name)
-		}
-
-		// Join names with commas for winner_name field
-		winnerNames := ""
-		for i, name := range winners {
-			if i > 0 {
-				winnerNames += ", "
-			}
-			winnerNames += name
-		}
-
-		_, err = db.Exec(`UPDATE managed_games SET status = 'completed', winner_name = $1 WHERE id = $2`, winnerNames, gameID)
-		if err != nil {
-			log.Printf("Failed to complete game: %v", err)
-			http.Error(w, "Failed to complete game", http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status":     "completed",
-			"winnerName": winnerNames,
-			"multipleWinners": true,
-		})
-		return
-	}
-
-	// Rollover to next round (declare_multiple_winners is false)
+	// Multiple active players remain - always create next round
 	nextRound := currentRound + 1
 	_, err = db.Exec(`
 		INSERT INTO managed_rounds (game_id, round_number, status)
