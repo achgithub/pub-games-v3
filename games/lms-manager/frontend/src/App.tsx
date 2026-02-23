@@ -291,6 +291,117 @@ function App() {
     fetchGameDetail();
   }, [token, selectedGameId]);
 
+  // Report view bypass auth (public access for displays)
+  if (reportView === 'report' && reportGameId > 0) {
+    return (
+      <>
+        <header className="ah-app-header">
+          <div className="ah-app-header-left">
+            <h1 className="ah-app-title">🎯 LMS Manager - Report</h1>
+          </div>
+        </header>
+        <div className="ah-container ah-container--wide">
+          <div className="ah-card">
+            {!reportData ? (
+              <p className="ah-meta">Loading report...</p>
+            ) : (
+              <>
+                <h2>{reportData.game.name}</h2>
+                <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                  <p><strong>Status:</strong> {reportData.game.status}</p>
+                  {reportData.game.winnerName && <p><strong>Winner:</strong> {reportData.game.winnerName}</p>}
+                  <p><strong>Postponed =</strong> {reportData.game.postponeAsWin ? 'Win' : 'Loss'}</p>
+                </div>
+
+                {reportData.rounds && reportData.rounds.length > 0 && (
+                  <>
+                    <h3 style={{ marginTop: '2rem', marginBottom: '1rem' }}>
+                      {reportRound === 'all' ? 'All Rounds' : `Round ${reportRound}`}
+                    </h3>
+                    {reportData.rounds
+                      .filter((r: any) => reportRound === 'all' || r.roundNumber.toString() === reportRound)
+                      .map((round: any) => (
+                        <div key={round.roundNumber} style={{ marginBottom: '2rem', padding: '1rem', background: '#FAFAF9', borderRadius: '8px' }}>
+                          <h4>Round {round.roundNumber} - {round.status.toUpperCase()}</h4>
+
+                          {round.status === 'open' && (
+                            <div style={{ marginTop: '1rem' }}>
+                              <p><strong>Active Players:</strong> {round.activePlayers}</p>
+                              {round.teamPicks && Object.keys(round.teamPicks).length > 0 && (
+                                <div style={{ marginTop: '1rem' }}>
+                                  <p style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Team Picks:</p>
+                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.5rem' }}>
+                                    {Object.entries(round.teamPicks)
+                                      .sort(([, a]: any, [, b]: any) => b - a)
+                                      .map(([team, count]: any) => (
+                                        <div
+                                          key={team}
+                                          style={{
+                                            padding: '0.5rem',
+                                            background: '#FFF',
+                                            border: '1px solid #E7E5E4',
+                                            borderRadius: '4px',
+                                            fontWeight: 600
+                                          }}
+                                        >
+                                          {team}: {count}
+                                        </div>
+                                      ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {round.status === 'closed' && (
+                            <div style={{ marginTop: '1rem' }}>
+                              <div style={{ display: 'flex', gap: '2rem', marginBottom: '1rem' }}>
+                                <p><strong>Eliminated:</strong> {round.eliminatedCount} players</p>
+                                <p><strong>Through to Round {round.roundNumber + 1}:</strong> {round.throughCount} players</p>
+                              </div>
+                              {round.teamResults && Object.keys(round.teamResults).length > 0 && (
+                                <div>
+                                  <p style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Team Results:</p>
+                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.5rem' }}>
+                                    {Object.entries(round.teamResults)
+                                      .sort(([a]: any, [b]: any) => a.localeCompare(b))
+                                      .map(([team, result]: any) => (
+                                        <div
+                                          key={team}
+                                          style={{
+                                            padding: '0.5rem',
+                                            borderRadius: '4px',
+                                            fontWeight: 600,
+                                            background: result === 'win' ? '#D1FAE5' :
+                                                       result === 'loss' ? '#FEE2E2' :
+                                                       result === 'draw' ? '#FED7AA' :
+                                                       result === 'postponed' ? '#DBEAFE' : '#E5E7EB',
+                                            color: result === 'win' ? '#065F46' :
+                                                   result === 'loss' ? '#991B1B' :
+                                                   result === 'draw' ? '#9A3412' :
+                                                   result === 'postponed' ? '#1E3A8A' : '#6B7280'
+                                          }}
+                                        >
+                                          {team} - {result.toUpperCase()}
+                                        </div>
+                                      ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      </>
+    );
+  }
+
   // Auth check
   if (!userId || !token) {
     return (
@@ -1875,10 +1986,12 @@ function App() {
                                             fontWeight: 600,
                                             background: result === 'win' ? '#D1FAE5' :
                                                        result === 'loss' ? '#FEE2E2' :
-                                                       result === 'draw' ? '#FED7AA' : '#DBEAFE',
+                                                       result === 'draw' ? '#FED7AA' :
+                                                       result === 'postponed' ? '#DBEAFE' : '#E5E7EB',
                                             color: result === 'win' ? '#065F46' :
                                                    result === 'loss' ? '#991B1B' :
-                                                   result === 'draw' ? '#9A3412' : '#1E3A8A'
+                                                   result === 'draw' ? '#9A3412' :
+                                                   result === 'postponed' ? '#1E3A8A' : '#6B7280'
                                           }}
                                         >
                                           {team} - {result.toUpperCase()}
