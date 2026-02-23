@@ -185,10 +185,14 @@ function App() {
     const params = new URLSearchParams(window.location.search);
     const view = params.get('view');
     const gameId = params.get('gameId');
+    const round = params.get('round');
 
     if (view === 'report' && gameId) {
       setReportView('report');
       setReportGameId(parseInt(gameId));
+      if (round) {
+        setReportRound(round); // 'all' or specific round number
+      }
       setActiveTab('reports');
     }
   }, []);
