@@ -473,7 +473,7 @@ func HandleListGames(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := db.Query(`
 		SELECT
-			g.id, g.manager_email, g.name, g.group_id, g.status, g.winner_name, g.postpone_as_win, g.created_at,
+			g.id, g.manager_email, g.name, g.group_id, g.status, g.winner_name, g.postpone_as_win, g.declare_multiple_winners, g.created_at,
 			gr.name as group_name,
 			COALESCE(COUNT(DISTINCT p.id), 0) as participant_count,
 			COALESCE(MAX(r.round_number), 0) as current_round
@@ -497,7 +497,7 @@ func HandleListGames(w http.ResponseWriter, r *http.Request) {
 		var gwd GameWithDetails
 		var winnerName sql.NullString
 		if err := rows.Scan(
-			&gwd.ID, &gwd.ManagerEmail, &gwd.Name, &gwd.GroupID, &gwd.Status, &winnerName, &gwd.PostponeAsWin, &gwd.CreatedAt,
+			&gwd.ID, &gwd.ManagerEmail, &gwd.Name, &gwd.GroupID, &gwd.Status, &winnerName, &gwd.PostponeAsWin, &gwd.DeclareMultipleWinners, &gwd.CreatedAt,
 			&gwd.GroupName, &gwd.ParticipantCount, &gwd.CurrentRound,
 		); err != nil {
 			log.Printf("Failed to scan game: %v", err)
@@ -564,10 +564,10 @@ func HandleCreateGame(w http.ResponseWriter, r *http.Request) {
 	// Create game
 	var gameID int
 	err = tx.QueryRow(`
-		INSERT INTO managed_games (manager_email, name, group_id, status, postpone_as_win)
-		VALUES ($1, $2, $3, 'active', $4)
+		INSERT INTO managed_games (manager_email, name, group_id, status, postpone_as_win, declare_multiple_winners)
+		VALUES ($1, $2, $3, 'active', $4, $5)
 		RETURNING id
-	`, managerEmail, req.Name, req.GroupID, req.PostponeAsWin).Scan(&gameID)
+	`, managerEmail, req.Name, req.GroupID, req.PostponeAsWin, req.DeclareMultipleWinners).Scan(&gameID)
 	if err != nil {
 		log.Printf("Failed to create game: %v", err)
 		http.Error(w, "Failed to create game", http.StatusInternalServerError)
@@ -630,7 +630,7 @@ func HandleGetGame(w http.ResponseWriter, r *http.Request) {
 	var winnerName sql.NullString
 	err = db.QueryRow(`
 		SELECT
-			g.id, g.manager_email, g.name, g.group_id, g.status, g.winner_name, g.postpone_as_win, g.created_at,
+			g.id, g.manager_email, g.name, g.group_id, g.status, g.winner_name, g.postpone_as_win, g.declare_multiple_winners, g.created_at,
 			gr.name as group_name,
 			COALESCE(COUNT(DISTINCT p.id), 0) as participant_count,
 			COALESCE(MAX(r.round_number), 0) as current_round
@@ -641,7 +641,7 @@ func HandleGetGame(w http.ResponseWriter, r *http.Request) {
 		WHERE g.id = $1 AND g.manager_email = $2
 		GROUP BY g.id, gr.name
 	`, gameID, managerEmail).Scan(
-		&game.ID, &game.ManagerEmail, &game.Name, &game.GroupID, &game.Status, &winnerName, &game.PostponeAsWin, &game.CreatedAt,
+		&game.ID, &game.ManagerEmail, &game.Name, &game.GroupID, &game.Status, &winnerName, &game.PostponeAsWin, &game.DeclareMultipleWinners, &game.CreatedAt,
 		&game.GroupName, &game.ParticipantCount, &game.CurrentRound,
 	)
 	if err == sql.ErrNoRows {
@@ -1038,11 +1038,16 @@ func HandleAdvanceRound(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify game belongs to manager
-	var count int
-	err = db.QueryRow(`SELECT COUNT(*) FROM managed_games WHERE id = $1 AND manager_email = $2`, gameID, managerEmail).Scan(&count)
-	if err != nil || count == 0 {
+	// Verify game belongs to manager and get settings
+	var declareMultipleWinners bool
+	err = db.QueryRow(`SELECT declare_multiple_winners FROM managed_games WHERE id = $1 AND manager_email = $2`, gameID, managerEmail).Scan(&declareMultipleWinners)
+	if err == sql.ErrNoRows {
 		http.Error(w, "Game not found", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		log.Printf("Failed to get game: %v", err)
+		http.Error(w, "Failed to advance round", http.StatusInternalServerError)
 		return
 	}
 
@@ -1070,7 +1075,7 @@ func HandleAdvanceRound(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if activeCount == 1 {
-		// Game over - declare winner
+		// Game over - single winner
 		var winnerName string
 		err = db.QueryRow(`SELECT player_name FROM managed_participants WHERE game_id = $1 AND is_active = TRUE`, gameID).Scan(&winnerName)
 		if err != nil {
@@ -1094,7 +1099,53 @@ func HandleAdvanceRound(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create next round
+	// Multiple players remain - check if we should declare them all winners
+	if declareMultipleWinners {
+		// Get all active player names
+		rows, err := db.Query(`SELECT player_name FROM managed_participants WHERE game_id = $1 AND is_active = TRUE ORDER BY player_name`, gameID)
+		if err != nil {
+			log.Printf("Failed to get winners: %v", err)
+			http.Error(w, "Failed to complete game", http.StatusInternalServerError)
+			return
+		}
+		defer rows.Close()
+
+		winners := []string{}
+		for rows.Next() {
+			var name string
+			if err := rows.Scan(&name); err != nil {
+				log.Printf("Failed to scan winner: %v", err)
+				continue
+			}
+			winners = append(winners, name)
+		}
+
+		// Join names with commas for winner_name field
+		winnerNames := ""
+		for i, name := range winners {
+			if i > 0 {
+				winnerNames += ", "
+			}
+			winnerNames += name
+		}
+
+		_, err = db.Exec(`UPDATE managed_games SET status = 'completed', winner_name = $1 WHERE id = $2`, winnerNames, gameID)
+		if err != nil {
+			log.Printf("Failed to complete game: %v", err)
+			http.Error(w, "Failed to complete game", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":     "completed",
+			"winnerName": winnerNames,
+			"multipleWinners": true,
+		})
+		return
+	}
+
+	// Rollover to next round (declare_multiple_winners is false)
 	nextRound := currentRound + 1
 	_, err = db.Exec(`
 		INSERT INTO managed_rounds (game_id, round_number, status)
@@ -1323,6 +1374,143 @@ func HandleReopenRound(w http.ResponseWriter, r *http.Request) {
 	if err = tx.Commit(); err != nil {
 		log.Printf("Failed to commit transaction: %v", err)
 		http.Error(w, "Failed to reopen round", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// HandleRecalculateEliminations recalculates all eliminations for a game from scratch
+func HandleRecalculateEliminations(w http.ResponseWriter, r *http.Request) {
+	managerEmail, ok := getManagerEmail(r)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	vars := mux.Vars(r)
+	gameID, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		http.Error(w, "Invalid game ID", http.StatusBadRequest)
+		return
+	}
+
+	// Verify ownership and get postpone setting
+	var postponeAsWin bool
+	err = db.QueryRow(`SELECT postpone_as_win FROM managed_games WHERE id = $1 AND manager_email = $2`, gameID, managerEmail).Scan(&postponeAsWin)
+	if err == sql.ErrNoRows {
+		http.Error(w, "Game not found", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		log.Printf("Failed to get game: %v", err)
+		http.Error(w, "Failed to recalculate eliminations", http.StatusInternalServerError)
+		return
+	}
+
+	// Start transaction
+	tx, err := db.Begin()
+	if err != nil {
+		log.Printf("Failed to begin transaction: %v", err)
+		http.Error(w, "Failed to recalculate eliminations", http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	// Reset all participants to active
+	_, err = tx.Exec(`
+		UPDATE managed_participants
+		SET is_active = TRUE, eliminated_in_round = NULL
+		WHERE game_id = $1
+	`, gameID)
+	if err != nil {
+		log.Printf("Failed to reset participants: %v", err)
+		http.Error(w, "Failed to recalculate eliminations", http.StatusInternalServerError)
+		return
+	}
+
+	// Get all closed rounds in order
+	rows, err := tx.Query(`
+		SELECT id, round_number
+		FROM managed_rounds
+		WHERE game_id = $1 AND status = 'closed'
+		ORDER BY round_number ASC
+	`, gameID)
+	if err != nil {
+		log.Printf("Failed to query rounds: %v", err)
+		http.Error(w, "Failed to recalculate eliminations", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	type RoundInfo struct {
+		ID           int
+		RoundNumber  int
+	}
+	rounds := []RoundInfo{}
+	for rows.Next() {
+		var r RoundInfo
+		if err := rows.Scan(&r.ID, &r.RoundNumber); err != nil {
+			log.Printf("Failed to scan round: %v", err)
+			continue
+		}
+		rounds = append(rounds, r)
+	}
+
+	// Process each closed round
+	for _, round := range rounds {
+		// Get all picks with results for this round
+		pickRows, err := tx.Query(`
+			SELECT id, player_name, result
+			FROM managed_picks
+			WHERE round_id = $1 AND result IS NOT NULL
+		`, round.ID)
+		if err != nil {
+			log.Printf("Failed to query picks: %v", err)
+			continue
+		}
+
+		type PickResult struct {
+			ID         int
+			PlayerName string
+			Result     string
+		}
+		pickResults := []PickResult{}
+		for pickRows.Next() {
+			var pr PickResult
+			if err := pickRows.Scan(&pr.ID, &pr.PlayerName, &pr.Result); err != nil {
+				log.Printf("Failed to scan pick: %v", err)
+				continue
+			}
+			pickResults = append(pickResults, pr)
+		}
+		pickRows.Close()
+
+		// Apply elimination logic for each pick
+		for _, pr := range pickResults {
+			shouldEliminate := false
+			if pr.Result == "loss" || pr.Result == "draw" {
+				shouldEliminate = true
+			} else if pr.Result == "postponed" && !postponeAsWin {
+				shouldEliminate = true
+			}
+
+			if shouldEliminate {
+				_, err = tx.Exec(`
+					UPDATE managed_participants
+					SET is_active = FALSE, eliminated_in_round = $1
+					WHERE game_id = $2 AND player_name = $3
+				`, round.RoundNumber, gameID, pr.PlayerName)
+				if err != nil {
+					log.Printf("Failed to eliminate player: %v", err)
+				}
+			}
+		}
+	}
+
+	if err = tx.Commit(); err != nil {
+		log.Printf("Failed to commit transaction: %v", err)
+		http.Error(w, "Failed to recalculate eliminations", http.StatusInternalServerError)
 		return
 	}
 

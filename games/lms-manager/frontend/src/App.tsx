@@ -45,6 +45,7 @@ interface Game {
   status: string;
   winnerName?: string;
   postponeAsWin: boolean;
+  declareMultipleWinners: boolean;
   createdAt: string;
   groupName: string;
   participantCount: number;
@@ -107,6 +108,7 @@ function App() {
   const [selectedGroupId, setSelectedGroupId] = useState<number>(0);
   const [selectedPlayerNames, setSelectedPlayerNames] = useState<string[]>([]);
   const [postponeAsWin, setPostponeAsWin] = useState<boolean>(true);
+  const [declareMultipleWinners, setDeclareMultipleWinners] = useState<boolean>(true);
 
   // Game detail state
   const [gameDetail, setGameDetail] = useState<GameDetail | null>(null);
@@ -483,6 +485,7 @@ function App() {
           groupId: selectedGroupId,
           playerNames: selectedPlayerNames,
           postponeAsWin: postponeAsWin,
+          declareMultipleWinners: declareMultipleWinners,
         }),
       });
 
@@ -499,6 +502,7 @@ function App() {
         setSelectedGroupId(0);
         setSelectedPlayerNames([]);
         setPostponeAsWin(true);
+        setDeclareMultipleWinners(true);
       } else {
         const error = await res.text();
         alert(`Failed to create game: ${error}`);
@@ -761,6 +765,13 @@ function App() {
       });
       const data = await res.json();
       setEditGameDetail(data);
+
+      // Fetch teams for this game's group
+      const teamsRes = await fetch(`${API_BASE}/api/groups/${data.game.groupId}/teams`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const teamsData = await teamsRes.json();
+      setGroupTeams((prev) => ({ ...prev, [data.game.groupId]: teamsData.teams || [] }));
     } catch (err) {
       console.error('Failed to fetch edit game detail:', err);
     }
@@ -868,6 +879,12 @@ function App() {
       });
 
       if (res.ok || res.status === 204) {
+        // Recalculate all eliminations from scratch
+        await fetch(`${API_BASE}/api/games/${editGameId}/recalculate-eliminations`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
         // Refresh game detail to update participants status
         const gameRes = await fetch(`${API_BASE}/api/games/${editGameId}`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -1147,6 +1164,17 @@ function App() {
                         onChange={(e) => setPostponeAsWin(e.target.checked)}
                       />
                       <span>Postponed matches count as WIN (uncheck for LOSS)</span>
+                    </label>
+                  </div>
+
+                  <div style={{ marginTop: '0.5rem' }}>
+                    <label className="postpone-checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={declareMultipleWinners}
+                        onChange={(e) => setDeclareMultipleWinners(e.target.checked)}
+                      />
+                      <span>Declare multiple winners if tied (uncheck to rollover to next round)</span>
                     </label>
                   </div>
 

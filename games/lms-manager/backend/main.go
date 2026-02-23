@@ -65,6 +65,7 @@ func main() {
 	r.Handle("/api/games/{id}/advance", authMiddleware(http.HandlerFunc(HandleAdvanceRound))).Methods("POST")
 	r.Handle("/api/games/{id}/used-teams", authMiddleware(http.HandlerFunc(HandleGetUsedTeams))).Methods("GET")
 	r.Handle("/api/games/{id}/participants", authMiddleware(http.HandlerFunc(HandleAddParticipants))).Methods("POST")
+	r.Handle("/api/games/{id}/recalculate-eliminations", authMiddleware(http.HandlerFunc(HandleRecalculateEliminations))).Methods("POST")
 
 	// Round/Pick endpoints
 	r.Handle("/api/rounds/{roundId}/picks", authMiddleware(http.HandlerFunc(HandleGetRoundPicks))).Methods("GET")
