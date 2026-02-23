@@ -77,17 +77,29 @@
   gap: 0.5rem;
   margin-top: 0.5rem;
   flex-wrap: wrap;
+  width: 100%;
 }
 
 .inline-form input,
 .inline-form select {
-  flex: 1 1 200px;
-  min-width: 0;
+  flex: 1 1 250px;
+  min-width: 150px;
 }
 
 .inline-form button {
-  flex-shrink: 0;
+  flex: 0 0 auto;
   white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .inline-form input,
+  .inline-form select {
+    flex: 1 1 100%;
+  }
+
+  .inline-form button {
+    flex: 1 1 100%;
+  }
 }
 
 .btn-danger-small {
