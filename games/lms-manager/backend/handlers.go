@@ -1388,3 +1388,206 @@ func HandleReopenRound(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusNoContent)
 }
+
+// HandleFinalizePicks validates all picks exist, auto-assigns if needed
+func HandleFinalizePicks(w http.ResponseWriter, r *http.Request) {
+	managerEmail, ok := getManagerEmail(r)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	vars := mux.Vars(r)
+	roundID, err := strconv.Atoi(vars["roundId"])
+	if err != nil {
+		http.Error(w, "Invalid round ID", http.StatusBadRequest)
+		return
+	}
+
+	// Verify round belongs to manager's game and is open
+	var gameID int
+	var groupID int
+	err = db.QueryRow(`
+		SELECT r.game_id, g.group_id
+		FROM managed_rounds r
+		JOIN managed_games g ON g.id = r.game_id
+		WHERE r.id = $1 AND g.manager_email = $2 AND r.status = 'open'
+	`, roundID, managerEmail).Scan(&gameID, &groupID)
+	if err == sql.ErrNoRows {
+		http.Error(w, "Round not found or already closed", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		log.Printf("Failed to query round: %v", err)
+		http.Error(w, "Failed to verify round", http.StatusInternalServerError)
+		return
+	}
+
+	// Get all active participants
+	participantRows, err := db.Query(`
+		SELECT player_name
+		FROM managed_participants
+		WHERE game_id = $1 AND is_active = TRUE
+		ORDER BY player_name
+	`, gameID)
+	if err != nil {
+		log.Printf("Failed to query participants: %v", err)
+		http.Error(w, "Failed to get participants", http.StatusInternalServerError)
+		return
+	}
+	defer participantRows.Close()
+
+	participants := []string{}
+	for participantRows.Next() {
+		var name string
+		if err := participantRows.Scan(&name); err != nil {
+			log.Printf("Failed to scan participant: %v", err)
+			continue
+		}
+		participants = append(participants, name)
+	}
+
+	// Get existing picks for this round
+	pickRows, err := db.Query(`
+		SELECT player_name, team_id
+		FROM managed_picks
+		WHERE round_id = $1 AND team_id IS NOT NULL
+	`, roundID)
+	if err != nil {
+		log.Printf("Failed to query picks: %v", err)
+		http.Error(w, "Failed to get picks", http.StatusInternalServerError)
+		return
+	}
+	defer pickRows.Close()
+
+	picksMap := make(map[string]int)
+	for pickRows.Next() {
+		var playerName string
+		var teamID int
+		if err := pickRows.Scan(&playerName, &teamID); err != nil {
+			log.Printf("Failed to scan pick: %v", err)
+			continue
+		}
+		picksMap[playerName] = teamID
+	}
+
+	// Find players missing picks
+	missingPlayers := []string{}
+	for _, player := range participants {
+		if _, hasPick := picksMap[player]; !hasPick {
+			missingPlayers = append(missingPlayers, player)
+		}
+	}
+
+	// If there are missing picks, auto-assign them
+	if len(missingPlayers) > 0 {
+		// Get all teams for this group (alphabetically)
+		teamRows, err := db.Query(`
+			SELECT id
+			FROM managed_teams
+			WHERE group_id = $1
+			ORDER BY name ASC
+		`, groupID)
+		if err != nil {
+			log.Printf("Failed to query teams: %v", err)
+			http.Error(w, "Failed to get teams", http.StatusInternalServerError)
+			return
+		}
+		defer teamRows.Close()
+
+		allTeams := []int{}
+		for teamRows.Next() {
+			var teamID int
+			if err := teamRows.Scan(&teamID); err != nil {
+				log.Printf("Failed to scan team: %v", err)
+				continue
+			}
+			allTeams = append(allTeams, teamID)
+		}
+
+		// Get used teams (from closed rounds only)
+		usedTeamsRows, err := db.Query(`
+			SELECT p.player_name, p.team_id
+			FROM managed_picks p
+			JOIN managed_rounds r ON r.id = p.round_id
+			WHERE p.game_id = $1 AND p.team_id IS NOT NULL AND r.status = 'closed'
+		`, gameID)
+		if err != nil {
+			log.Printf("Failed to query used teams: %v", err)
+			http.Error(w, "Failed to get used teams", http.StatusInternalServerError)
+			return
+		}
+		defer usedTeamsRows.Close()
+
+		usedTeamsMap := make(map[string]map[int]bool)
+		for usedTeamsRows.Next() {
+			var playerName string
+			var teamID int
+			if err := usedTeamsRows.Scan(&playerName, &teamID); err != nil {
+				log.Printf("Failed to scan used team: %v", err)
+				continue
+			}
+			if usedTeamsMap[playerName] == nil {
+				usedTeamsMap[playerName] = make(map[int]bool)
+			}
+			usedTeamsMap[playerName][teamID] = true
+		}
+
+		// Auto-assign for each missing player
+		tx, err := db.Begin()
+		if err != nil {
+			log.Printf("Failed to begin transaction: %v", err)
+			http.Error(w, "Failed to finalize picks", http.StatusInternalServerError)
+			return
+		}
+		defer tx.Rollback()
+
+		for _, player := range missingPlayers {
+			// Find first available team for this player
+			var assignedTeam int
+			for _, teamID := range allTeams {
+				if usedTeamsMap[player] == nil || !usedTeamsMap[player][teamID] {
+					assignedTeam = teamID
+					break
+				}
+			}
+
+			if assignedTeam == 0 {
+				// No available teams
+				http.Error(w, "No available teams for auto-assignment", http.StatusBadRequest)
+				return
+			}
+
+			// Insert auto-assigned pick
+			_, err = tx.Exec(`
+				INSERT INTO managed_picks (game_id, round_id, player_name, team_id, auto_assigned)
+				VALUES ($1, $2, $3, $4, TRUE)
+				ON CONFLICT (game_id, round_id, player_name)
+				DO UPDATE SET team_id = EXCLUDED.team_id, auto_assigned = EXCLUDED.auto_assigned
+			`, gameID, roundID, player, assignedTeam)
+			if err != nil {
+				log.Printf("Failed to auto-assign pick: %v", err)
+				http.Error(w, "Failed to auto-assign picks", http.StatusInternalServerError)
+				return
+			}
+
+			// Mark as used for next player in this round
+			if usedTeamsMap[player] == nil {
+				usedTeamsMap[player] = make(map[int]bool)
+			}
+			usedTeamsMap[player][assignedTeam] = true
+		}
+
+		if err = tx.Commit(); err != nil {
+			log.Printf("Failed to commit transaction: %v", err)
+			http.Error(w, "Failed to finalize picks", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"missingCount": len(missingPlayers),
+		"autoAssigned": missingPlayers,
+	})
+}

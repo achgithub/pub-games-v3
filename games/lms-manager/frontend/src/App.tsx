@@ -118,6 +118,7 @@ function App() {
   const [usedTeams, setUsedTeams] = useState<Record<string, number[]>>({});
   const [showAddPlayers, setShowAddPlayers] = useState(false);
   const [playersToAdd, setPlayersToAdd] = useState<string[]>([]);
+  const [picksFinalized, setPicksFinalized] = useState(false);
 
   const [loading, setLoading] = useState(true);
 
@@ -507,6 +508,7 @@ function App() {
 
   const handleViewGame = (gameId: number) => {
     setSelectedGameId(gameId);
+    setPicksFinalized(false);
   };
 
   const handleBackToGamesList = () => {
@@ -515,6 +517,7 @@ function App() {
     setPicks([]);
     setPickAssignments({});
     setPickResults({});
+    setPicksFinalized(false);
   };
 
   // Game detail handlers
@@ -561,6 +564,56 @@ function App() {
     } catch (err) {
       console.error('Failed to save picks:', err);
       alert('Failed to save picks');
+    }
+  };
+
+  const handleFinalizePicks = async () => {
+    if (!gameDetail || !token) return;
+
+    const latestRound = gameDetail.rounds[gameDetail.rounds.length - 1];
+    if (!latestRound) return;
+
+    // Count active players and existing picks
+    const activeParticipants = gameDetail.participants.filter((p) => p.isActive);
+    const playersWithPicks = picks.filter((p) => p.teamId).length;
+    const missingCount = activeParticipants.length - playersWithPicks;
+
+    if (missingCount > 0) {
+      const confirmed = window.confirm(
+        `${missingCount} player${missingCount > 1 ? 's have' : ' has'} no pick assigned. Auto-assign next available team alphabetically?`
+      );
+      if (!confirmed) return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/api/rounds/${latestRound.id}/finalize-picks`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+
+        // Refresh picks
+        const picksRes = await fetch(`${API_BASE}/api/rounds/${latestRound.id}/picks`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const picksData = await picksRes.json();
+        setPicks(picksData.picks || []);
+        setPicksFinalized(true);
+
+        if (data.missingCount > 0) {
+          alert(`Picks finalized! Auto-assigned ${data.missingCount} player${data.missingCount > 1 ? 's' : ''}.`);
+        } else {
+          alert('All picks confirmed! Ready for results entry.');
+        }
+      } else {
+        const error = await res.text();
+        alert(`Failed to finalize picks: ${error}`);
+      }
+    } catch (err) {
+      console.error('Failed to finalize picks:', err);
+      alert('Failed to finalize picks');
     }
   };
 
@@ -654,6 +707,7 @@ function App() {
           setPicks(picksData.picks || []);
           setPickAssignments({});
           setPickResults({});
+          setPicksFinalized(false); // Reset for new round
         }
       } else {
         const error = await res.text();
@@ -1228,16 +1282,25 @@ function App() {
                               })}
                             </div>
 
-                            <button
-                              className="ah-btn-primary"
-                              onClick={handleSavePicks}
-                              style={{ marginTop: '1rem' }}
-                            >
-                              Save Picks
-                            </button>
+                            <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
+                              <button
+                                className="ah-btn-outline"
+                                onClick={handleSavePicks}
+                              >
+                                Save Picks
+                              </button>
+                              {!picksFinalized && (
+                                <button
+                                  className="ah-btn-primary"
+                                  onClick={handleFinalizePicks}
+                                >
+                                  Finalize Picks
+                                </button>
+                              )}
+                            </div>
 
-                            {/* Results Entry - Team-based */}
-                            {picks.length > 0 && (
+                            {/* Results Entry - Team-based (only after finalize) */}
+                            {picksFinalized && picks.length > 0 && (
                               <div style={{ marginTop: '2rem' }}>
                                 <h4 className="ah-section-title">Enter Results (by Team)</h4>
                                 <p className="ah-meta" style={{ marginBottom: '1rem' }}>
