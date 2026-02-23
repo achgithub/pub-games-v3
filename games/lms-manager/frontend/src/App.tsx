@@ -132,7 +132,17 @@ function App() {
   const [gameCreationPlayerSearch, setGameCreationPlayerSearch] = useState<string>('');
   const [showSelectedPlayersOnly, setShowSelectedPlayersOnly] = useState<boolean>(false);
 
+  // Card collapse state
+  const [collapsedCards, setCollapsedCards] = useState<Record<string, boolean>>({});
+
   const [loading, setLoading] = useState(true);
+
+  const toggleCard = (cardName: string) => {
+    setCollapsedCards({
+      ...collapsedCards,
+      [cardName]: !collapsedCards[cardName],
+    });
+  };
 
   // Fetch initial data
   useEffect(() => {
@@ -1352,18 +1362,26 @@ function App() {
 
             {/* Participants */}
             <div className="ah-card">
-              <div className="setup-section-header">
-                <h3 className="ah-section-title">Participants</h3>
-                {gameDetail.game.status === 'active' && (
+              <div className="setup-section-header" style={{ cursor: 'pointer' }} onClick={() => toggleCard('participants')}>
+                <h3 className="ah-section-title">
+                  {collapsedCards['participants'] ? '▶' : '▼'} Participants ({gameDetail.participants.length})
+                </h3>
+                {gameDetail.game.status === 'active' && !collapsedCards['participants'] && (
                   <button
                     className="ah-btn-outline"
-                    onClick={() => setShowAddPlayers(!showAddPlayers)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowAddPlayers(!showAddPlayers);
+                    }}
                     style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
                   >
                     {showAddPlayers ? 'Cancel' : '+ Add Players'}
                   </button>
                 )}
               </div>
+
+              {!collapsedCards['participants'] && (
+              <>
 
               {showAddPlayers && (
                 <div style={{ marginBottom: '1rem', padding: '1rem', background: '#FAFAF9', borderRadius: '8px' }}>
@@ -1411,6 +1429,8 @@ function App() {
                   </div>
                 ))}
               </div>
+              </>
+              )}
             </div>
 
             {/* Current Round Management */}
@@ -1424,18 +1444,20 @@ function App() {
 
                     return (
                       <div className="ah-card">
-                        <div className="setup-section-header">
+                        <div className="setup-section-header" style={{ cursor: 'pointer' }} onClick={() => toggleCard('round')}>
                           <h3 className="ah-section-title">
-                            Round {currentRound.roundNumber} -{' '}
+                            {collapsedCards['round'] ? '▶' : '▼'} Round {currentRound.roundNumber} -{' '}
                             {currentRound.status === 'open' ? 'Open' : 'Closed'}
                           </h3>
-                          {currentRound.status === 'closed' && (
-                            <button className="ah-btn-primary" onClick={handleAdvanceRound}>
+                          {currentRound.status === 'closed' && !collapsedCards['round'] && (
+                            <button className="ah-btn-primary" onClick={(e) => { e.stopPropagation(); handleAdvanceRound(); }}>
                               Next Round →
                             </button>
                           )}
                         </div>
 
+                        {!collapsedCards['round'] && (
+                        <>
                         {currentRound.status === 'open' && (
                           <div>
                             <p className="ah-meta" style={{ marginBottom: '1rem' }}>
@@ -1656,6 +1678,8 @@ function App() {
                               </div>
                             )}
                           </div>
+                        )}
+                        </>
                         )}
                       </div>
                     );
