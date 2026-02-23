@@ -473,7 +473,7 @@ func HandleListGames(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := db.Query(`
 		SELECT
-			g.id, g.manager_email, g.name, g.group_id, g.status, g.winner_name, g.postpone_as_win, g.declare_multiple_winners, g.created_at,
+			g.id, g.manager_email, g.name, g.group_id, g.status, g.winner_name, g.postpone_as_win, g.winner_mode, g.rollover_mode, g.max_winners, g.created_at,
 			gr.name as group_name,
 			COALESCE(COUNT(DISTINCT p.id), 0) as participant_count,
 			COALESCE(MAX(r.round_number), 0) as current_round
@@ -497,7 +497,7 @@ func HandleListGames(w http.ResponseWriter, r *http.Request) {
 		var gwd GameWithDetails
 		var winnerName sql.NullString
 		if err := rows.Scan(
-			&gwd.ID, &gwd.ManagerEmail, &gwd.Name, &gwd.GroupID, &gwd.Status, &winnerName, &gwd.PostponeAsWin, &gwd.DeclareMultipleWinners, &gwd.CreatedAt,
+			&gwd.ID, &gwd.ManagerEmail, &gwd.Name, &gwd.GroupID, &gwd.Status, &winnerName, &gwd.PostponeAsWin, &gwd.WinnerMode, &gwd.RolloverMode, &gwd.MaxWinners, &gwd.CreatedAt,
 			&gwd.GroupName, &gwd.ParticipantCount, &gwd.CurrentRound,
 		); err != nil {
 			log.Printf("Failed to scan game: %v", err)
@@ -564,10 +564,10 @@ func HandleCreateGame(w http.ResponseWriter, r *http.Request) {
 	// Create game
 	var gameID int
 	err = tx.QueryRow(`
-		INSERT INTO managed_games (manager_email, name, group_id, status, postpone_as_win, declare_multiple_winners)
-		VALUES ($1, $2, $3, 'active', $4, $5)
+		INSERT INTO managed_games (manager_email, name, group_id, status, postpone_as_win, winner_mode, rollover_mode, max_winners)
+		VALUES ($1, $2, $3, 'active', $4, $5, $6, $7)
 		RETURNING id
-	`, managerEmail, req.Name, req.GroupID, req.PostponeAsWin, req.DeclareMultipleWinners).Scan(&gameID)
+	`, managerEmail, req.Name, req.GroupID, req.PostponeAsWin, req.WinnerMode, req.RolloverMode, req.MaxWinners).Scan(&gameID)
 	if err != nil {
 		log.Printf("Failed to create game: %v", err)
 		http.Error(w, "Failed to create game", http.StatusInternalServerError)
@@ -630,7 +630,7 @@ func HandleGetGame(w http.ResponseWriter, r *http.Request) {
 	var winnerName sql.NullString
 	err = db.QueryRow(`
 		SELECT
-			g.id, g.manager_email, g.name, g.group_id, g.status, g.winner_name, g.postpone_as_win, g.declare_multiple_winners, g.created_at,
+			g.id, g.manager_email, g.name, g.group_id, g.status, g.winner_name, g.postpone_as_win, g.winner_mode, g.rollover_mode, g.max_winners, g.created_at,
 			gr.name as group_name,
 			COALESCE(COUNT(DISTINCT p.id), 0) as participant_count,
 			COALESCE(MAX(r.round_number), 0) as current_round
@@ -641,7 +641,7 @@ func HandleGetGame(w http.ResponseWriter, r *http.Request) {
 		WHERE g.id = $1 AND g.manager_email = $2
 		GROUP BY g.id, gr.name
 	`, gameID, managerEmail).Scan(
-		&game.ID, &game.ManagerEmail, &game.Name, &game.GroupID, &game.Status, &winnerName, &game.PostponeAsWin, &game.DeclareMultipleWinners, &game.CreatedAt,
+		&game.ID, &game.ManagerEmail, &game.Name, &game.GroupID, &game.Status, &winnerName, &game.PostponeAsWin, &game.WinnerMode, &game.RolloverMode, &game.MaxWinners, &game.CreatedAt,
 		&game.GroupName, &game.ParticipantCount, &game.CurrentRound,
 	)
 	if err == sql.ErrNoRows {
@@ -1037,8 +1037,13 @@ func HandleAdvanceRound(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify game belongs to manager and get settings
-	var declareMultipleWinners bool
-	err = db.QueryRow(`SELECT declare_multiple_winners FROM managed_games WHERE id = $1 AND manager_email = $2`, gameID, managerEmail).Scan(&declareMultipleWinners)
+	var winnerMode, rolloverMode string
+	var maxWinners int
+	err = db.QueryRow(`
+		SELECT winner_mode, rollover_mode, max_winners
+		FROM managed_games
+		WHERE id = $1 AND manager_email = $2
+	`, gameID, managerEmail).Scan(&winnerMode, &rolloverMode, &maxWinners)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Game not found", http.StatusNotFound)
 		return
@@ -1067,18 +1072,126 @@ func HandleAdvanceRound(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if activeCount == 0 {
-		// All remaining players were eliminated - check declare_multiple_winners setting
-		if declareMultipleWinners {
-			// Find all players eliminated in the most recent round (they tied)
+	// SCENARIO HANDLING
+	// 4 combinations: (single/multiple) × (round/game)
+
+	if winnerMode == "single" {
+		// ======== SINGLE WINNER MODE ========
+		if activeCount == 1 {
+			// Exactly 1 player remains - declare winner
+			var winnerName string
+			err = db.QueryRow(`SELECT player_name FROM managed_participants WHERE game_id = $1 AND is_active = TRUE`, gameID).Scan(&winnerName)
+			if err != nil {
+				log.Printf("Failed to get winner: %v", err)
+				http.Error(w, "Failed to complete game", http.StatusInternalServerError)
+				return
+			}
+
+			_, err = db.Exec(`UPDATE managed_games SET status = 'completed', winner_name = $1 WHERE id = $2`, winnerName, gameID)
+			if err != nil {
+				log.Printf("Failed to complete game: %v", err)
+				http.Error(w, "Failed to complete game", http.StatusInternalServerError)
+				return
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"status":     "completed",
+				"winnerName": winnerName,
+			})
+			return
+		}
+
+		if activeCount == 0 {
+			// All players eliminated - apply rollover
+			if rolloverMode == "round" {
+				// Rollover round: Un-eliminate current round only
+				_, err = db.Exec(`
+					UPDATE managed_participants
+					SET is_active = TRUE, eliminated_in_round = NULL
+					WHERE game_id = $1 AND eliminated_in_round = $2
+				`, gameID, currentRound)
+				if err != nil {
+					log.Printf("Failed to un-eliminate players: %v", err)
+					http.Error(w, "Failed to rollover round", http.StatusInternalServerError)
+					return
+				}
+				// Fall through to create next round
+			} else {
+				// Rollover game: Reset entire game
+				tx, err := db.Begin()
+				if err != nil {
+					log.Printf("Failed to begin transaction: %v", err)
+					http.Error(w, "Failed to rollover game", http.StatusInternalServerError)
+					return
+				}
+				defer tx.Rollback()
+
+				// Reset all participants to active
+				_, err = tx.Exec(`
+					UPDATE managed_participants
+					SET is_active = TRUE, eliminated_in_round = NULL
+					WHERE game_id = $1
+				`, gameID)
+				if err != nil {
+					log.Printf("Failed to reset participants: %v", err)
+					http.Error(w, "Failed to rollover game", http.StatusInternalServerError)
+					return
+				}
+
+				// Delete all rounds and picks
+				_, err = tx.Exec(`DELETE FROM managed_picks WHERE game_id = $1`, gameID)
+				if err != nil {
+					log.Printf("Failed to delete picks: %v", err)
+					http.Error(w, "Failed to rollover game", http.StatusInternalServerError)
+					return
+				}
+
+				_, err = tx.Exec(`DELETE FROM managed_rounds WHERE game_id = $1`, gameID)
+				if err != nil {
+					log.Printf("Failed to delete rounds: %v", err)
+					http.Error(w, "Failed to rollover game", http.StatusInternalServerError)
+					return
+				}
+
+				// Create round 1
+				_, err = tx.Exec(`
+					INSERT INTO managed_rounds (game_id, round_number, status)
+					VALUES ($1, 1, 'open')
+				`, gameID)
+				if err != nil {
+					log.Printf("Failed to create round 1: %v", err)
+					http.Error(w, "Failed to rollover game", http.StatusInternalServerError)
+					return
+				}
+
+				if err = tx.Commit(); err != nil {
+					log.Printf("Failed to commit rollover: %v", err)
+					http.Error(w, "Failed to rollover game", http.StatusInternalServerError)
+					return
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(map[string]interface{}{
+					"roundNumber": 1,
+					"rollover":    "game",
+				})
+				return
+			}
+		}
+	} else {
+		// ======== MULTIPLE WINNERS MODE ========
+		// Check if we should declare winners (activeCount > 0 and <= maxWinners, or activeCount == 0 and eliminated <= maxWinners)
+		if activeCount > 0 && activeCount <= maxWinners {
+			// Remaining active players are winners
 			rows, err := db.Query(`
 				SELECT player_name
 				FROM managed_participants
-				WHERE game_id = $1 AND eliminated_in_round = $2
+				WHERE game_id = $1 AND is_active = TRUE
 				ORDER BY player_name
-			`, gameID, currentRound)
+			`, gameID)
 			if err != nil {
-				log.Printf("Failed to get tied winners: %v", err)
+				log.Printf("Failed to get winners: %v", err)
 				http.Error(w, "Failed to complete game", http.StatusInternalServerError)
 				return
 			}
@@ -1094,12 +1207,6 @@ func HandleAdvanceRound(w http.ResponseWriter, r *http.Request) {
 				winners = append(winners, name)
 			}
 
-			if len(winners) == 0 {
-				http.Error(w, "No players remaining", http.StatusBadRequest)
-				return
-			}
-
-			// Join names with commas
 			winnerNames := ""
 			for i, name := range winners {
 				if i > 0 {
@@ -1122,49 +1229,151 @@ func HandleAdvanceRound(w http.ResponseWriter, r *http.Request) {
 				"multipleWinners": true,
 			})
 			return
-		} else {
-			// Rollover mode: Un-eliminate everyone who was eliminated in this round and continue
-			_, err = db.Exec(`
-				UPDATE managed_participants
-				SET is_active = TRUE, eliminated_in_round = NULL
+		}
+
+		if activeCount == 0 {
+			// All eliminated - check if eliminated count <= maxWinners
+			var eliminatedCount int
+			err = db.QueryRow(`
+				SELECT COUNT(*)
+				FROM managed_participants
 				WHERE game_id = $1 AND eliminated_in_round = $2
-			`, gameID, currentRound)
+			`, gameID, currentRound).Scan(&eliminatedCount)
 			if err != nil {
-				log.Printf("Failed to un-eliminate players: %v", err)
-				http.Error(w, "Failed to rollover round", http.StatusInternalServerError)
+				log.Printf("Failed to count eliminated: %v", err)
+				http.Error(w, "Failed to advance round", http.StatusInternalServerError)
 				return
 			}
 
-			// Continue to create next round (fall through to normal flow below)
+			if eliminatedCount <= maxWinners {
+				// Declare all eliminated as winners
+				rows, err := db.Query(`
+					SELECT player_name
+					FROM managed_participants
+					WHERE game_id = $1 AND eliminated_in_round = $2
+					ORDER BY player_name
+				`, gameID, currentRound)
+				if err != nil {
+					log.Printf("Failed to get winners: %v", err)
+					http.Error(w, "Failed to complete game", http.StatusInternalServerError)
+					return
+				}
+				defer rows.Close()
+
+				winners := []string{}
+				for rows.Next() {
+					var name string
+					if err := rows.Scan(&name); err != nil {
+						log.Printf("Failed to scan winner: %v", err)
+						continue
+					}
+					winners = append(winners, name)
+				}
+
+				winnerNames := ""
+				for i, name := range winners {
+					if i > 0 {
+						winnerNames += ", "
+					}
+					winnerNames += name
+				}
+
+				_, err = db.Exec(`UPDATE managed_games SET status = 'completed', winner_name = $1 WHERE id = $2`, winnerNames, gameID)
+				if err != nil {
+					log.Printf("Failed to complete game: %v", err)
+					http.Error(w, "Failed to complete game", http.StatusInternalServerError)
+					return
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(map[string]interface{}{
+					"status":          "completed",
+					"winnerName":      winnerNames,
+					"multipleWinners": true,
+				})
+				return
+			} else {
+				// Too many eliminated - apply rollover
+				if rolloverMode == "round" {
+					// Rollover round: Un-eliminate current round only
+					_, err = db.Exec(`
+						UPDATE managed_participants
+						SET is_active = TRUE, eliminated_in_round = NULL
+						WHERE game_id = $1 AND eliminated_in_round = $2
+					`, gameID, currentRound)
+					if err != nil {
+						log.Printf("Failed to un-eliminate players: %v", err)
+						http.Error(w, "Failed to rollover round", http.StatusInternalServerError)
+						return
+					}
+					// Fall through to create next round
+				} else {
+					// Rollover game: Reset entire game
+					tx, err := db.Begin()
+					if err != nil {
+						log.Printf("Failed to begin transaction: %v", err)
+						http.Error(w, "Failed to rollover game", http.StatusInternalServerError)
+						return
+					}
+					defer tx.Rollback()
+
+					// Reset all participants to active
+					_, err = tx.Exec(`
+						UPDATE managed_participants
+						SET is_active = TRUE, eliminated_in_round = NULL
+						WHERE game_id = $1
+					`, gameID)
+					if err != nil {
+						log.Printf("Failed to reset participants: %v", err)
+						http.Error(w, "Failed to rollover game", http.StatusInternalServerError)
+						return
+					}
+
+					// Delete all rounds and picks
+					_, err = tx.Exec(`DELETE FROM managed_picks WHERE game_id = $1`, gameID)
+					if err != nil {
+						log.Printf("Failed to delete picks: %v", err)
+						http.Error(w, "Failed to rollover game", http.StatusInternalServerError)
+						return
+					}
+
+					_, err = tx.Exec(`DELETE FROM managed_rounds WHERE game_id = $1`, gameID)
+					if err != nil {
+						log.Printf("Failed to delete rounds: %v", err)
+						http.Error(w, "Failed to rollover game", http.StatusInternalServerError)
+						return
+					}
+
+					// Create round 1
+					_, err = tx.Exec(`
+						INSERT INTO managed_rounds (game_id, round_number, status)
+						VALUES ($1, 1, 'open')
+					`, gameID)
+					if err != nil {
+						log.Printf("Failed to create round 1: %v", err)
+						http.Error(w, "Failed to rollover game", http.StatusInternalServerError)
+						return
+					}
+
+					if err = tx.Commit(); err != nil {
+						log.Printf("Failed to commit rollover: %v", err)
+						http.Error(w, "Failed to rollover game", http.StatusInternalServerError)
+						return
+					}
+
+					w.Header().Set("Content-Type", "application/json")
+					json.NewEncoder(w).Encode(map[string]interface{}{
+						"roundNumber": 1,
+						"rollover":    "game",
+					})
+					return
+				}
+			}
 		}
 	}
 
-	if activeCount == 1 {
-		// Game over - single winner
-		var winnerName string
-		err = db.QueryRow(`SELECT player_name FROM managed_participants WHERE game_id = $1 AND is_active = TRUE`, gameID).Scan(&winnerName)
-		if err != nil {
-			log.Printf("Failed to get winner: %v", err)
-			http.Error(w, "Failed to complete game", http.StatusInternalServerError)
-			return
-		}
-
-		_, err = db.Exec(`UPDATE managed_games SET status = 'completed', winner_name = $1 WHERE id = $2`, winnerName, gameID)
-		if err != nil {
-			log.Printf("Failed to complete game: %v", err)
-			http.Error(w, "Failed to complete game", http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status":     "completed",
-			"winnerName": winnerName,
-		})
-		return
-	}
-
-	// Multiple active players remain - always create next round
+	// Normal flow: Multiple active players remain (> maxWinners or single mode with > 1 active)
+	// Create next round
 	nextRound := currentRound + 1
 	_, err = db.Exec(`
 		INSERT INTO managed_rounds (game_id, round_number, status)

@@ -45,7 +45,9 @@ interface Game {
   status: string;
   winnerName?: string;
   postponeAsWin: boolean;
-  declareMultipleWinners: boolean;
+  winnerMode: string; // 'single', 'multiple'
+  rolloverMode: string; // 'round', 'game'
+  maxWinners: number;
   createdAt: string;
   groupName: string;
   participantCount: number;
@@ -108,7 +110,9 @@ function App() {
   const [selectedGroupId, setSelectedGroupId] = useState<number>(0);
   const [selectedPlayerNames, setSelectedPlayerNames] = useState<string[]>([]);
   const [postponeAsWin, setPostponeAsWin] = useState<boolean>(true);
-  const [declareMultipleWinners, setDeclareMultipleWinners] = useState<boolean>(true);
+  const [winnerMode, setWinnerMode] = useState<string>('single');
+  const [rolloverMode, setRolloverMode] = useState<string>('round');
+  const [maxWinners, setMaxWinners] = useState<number>(4);
 
   // Game detail state
   const [gameDetail, setGameDetail] = useState<GameDetail | null>(null);
@@ -478,7 +482,9 @@ function App() {
           groupId: selectedGroupId,
           playerNames: selectedPlayerNames,
           postponeAsWin: postponeAsWin,
-          declareMultipleWinners: declareMultipleWinners,
+          winnerMode: winnerMode,
+          rolloverMode: rolloverMode,
+          maxWinners: maxWinners,
         }),
       });
 
@@ -1084,15 +1090,73 @@ function App() {
                     </label>
                   </div>
 
-                  <div style={{ marginTop: '0.5rem' }}>
-                    <label className="postpone-checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={declareMultipleWinners}
-                        onChange={(e) => setDeclareMultipleWinners(e.target.checked)}
-                      />
-                      <span>Declare multiple winners if tied (uncheck to rollover to next round)</span>
-                    </label>
+                  <div style={{ marginTop: '1rem' }}>
+                    <strong>Winner Mode:</strong>
+                    <div style={{ marginTop: '0.5rem', marginLeft: '1rem' }}>
+                      <label style={{ display: 'block', marginBottom: '0.25rem' }}>
+                        <input
+                          type="radio"
+                          name="winnerMode"
+                          value="single"
+                          checked={winnerMode === 'single'}
+                          onChange={(e) => setWinnerMode(e.target.value)}
+                        />
+                        <span style={{ marginLeft: '0.5rem' }}>1 winner only (default)</span>
+                      </label>
+                      <label style={{ display: 'block' }}>
+                        <input
+                          type="radio"
+                          name="winnerMode"
+                          value="multiple"
+                          checked={winnerMode === 'multiple'}
+                          onChange={(e) => setWinnerMode(e.target.value)}
+                        />
+                        <span style={{ marginLeft: '0.5rem' }}>Multiple winners allowed</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {winnerMode === 'multiple' && (
+                    <div style={{ marginTop: '0.5rem', marginLeft: '1rem' }}>
+                      <label>
+                        <strong>Max Winners:</strong>{' '}
+                        <input
+                          type="number"
+                          min="2"
+                          max="100"
+                          value={maxWinners}
+                          onChange={(e) => setMaxWinners(parseInt(e.target.value) || 4)}
+                          style={{ width: '80px', marginLeft: '0.5rem' }}
+                          className="ah-input"
+                        />
+                      </label>
+                    </div>
+                  )}
+
+                  <div style={{ marginTop: '1rem' }}>
+                    <strong>Rollover Mode:</strong>
+                    <div style={{ marginTop: '0.5rem', marginLeft: '1rem' }}>
+                      <label style={{ display: 'block', marginBottom: '0.25rem' }}>
+                        <input
+                          type="radio"
+                          name="rolloverMode"
+                          value="round"
+                          checked={rolloverMode === 'round'}
+                          onChange={(e) => setRolloverMode(e.target.value)}
+                        />
+                        <span style={{ marginLeft: '0.5rem' }}>Rollover round (default)</span>
+                      </label>
+                      <label style={{ display: 'block' }}>
+                        <input
+                          type="radio"
+                          name="rolloverMode"
+                          value="game"
+                          checked={rolloverMode === 'game'}
+                          onChange={(e) => setRolloverMode(e.target.value)}
+                        />
+                        <span style={{ marginLeft: '0.5rem' }}>Rollover game</span>
+                      </label>
+                    </div>
                   </div>
 
                   <button

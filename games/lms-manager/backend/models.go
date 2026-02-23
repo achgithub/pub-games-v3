@@ -28,15 +28,17 @@ type Player struct {
 
 // Game references a group and has assigned participants
 type Game struct {
-	ID                     int       `json:"id"`
-	ManagerEmail           string    `json:"managerEmail"`
-	Name                   string    `json:"name"`
-	GroupID                int       `json:"groupId"`
-	Status                 string    `json:"status"` // 'active', 'completed'
-	WinnerName             *string   `json:"winnerName,omitempty"`
-	PostponeAsWin          bool      `json:"postponeAsWin"`
-	DeclareMultipleWinners bool      `json:"declareMultipleWinners"`
-	CreatedAt              time.Time `json:"createdAt"`
+	ID            int       `json:"id"`
+	ManagerEmail  string    `json:"managerEmail"`
+	Name          string    `json:"name"`
+	GroupID       int       `json:"groupId"`
+	Status        string    `json:"status"` // 'active', 'completed'
+	WinnerName    *string   `json:"winnerName,omitempty"`
+	PostponeAsWin bool      `json:"postponeAsWin"`
+	WinnerMode    string    `json:"winnerMode"`    // 'single', 'multiple'
+	RolloverMode  string    `json:"rolloverMode"`  // 'round', 'game'
+	MaxWinners    int       `json:"maxWinners"`
+	CreatedAt     time.Time `json:"createdAt"`
 }
 
 // Participant in a game
@@ -89,11 +91,13 @@ type CreatePlayerRequest struct {
 }
 
 type CreateGameRequest struct {
-	Name                   string   `json:"name"`
-	GroupID                int      `json:"groupId"`
-	PlayerNames            []string `json:"playerNames"`
-	PostponeAsWin          bool     `json:"postponeAsWin"`
-	DeclareMultipleWinners bool     `json:"declareMultipleWinners"`
+	Name          string   `json:"name"`
+	GroupID       int      `json:"groupId"`
+	PlayerNames   []string `json:"playerNames"`
+	PostponeAsWin bool     `json:"postponeAsWin"`
+	WinnerMode    string   `json:"winnerMode"`    // 'single', 'multiple'
+	RolloverMode  string   `json:"rolloverMode"`  // 'round', 'game'
+	MaxWinners    int      `json:"maxWinners"`
 }
 
 type SavePicksRequest struct {
