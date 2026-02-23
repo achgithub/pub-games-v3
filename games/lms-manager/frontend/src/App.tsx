@@ -1790,8 +1790,8 @@ function App() {
                                     });
 
                                     return Object.entries(teamGroups).map(([teamName, teamPicks]) => {
-                                      // Get current result for this team (they should all be the same)
-                                      const currentResult = teamPicks[0].result || pickResults[teamPicks[0].id];
+                                      // Get current result for this team (prioritize local state over saved)
+                                      const currentResult = pickResults[teamPicks[0].id] || teamPicks[0].result;
 
                                       const setTeamResult = (result: string) => {
                                         const newResults = { ...pickResults };
