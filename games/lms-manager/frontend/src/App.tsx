@@ -91,8 +91,14 @@ interface GameDetail {
 
 function App() {
   const { userId, token } = useQueryParams();
-  const [activeTab, setActiveTab] = useState<'setup' | 'games'>('setup');
+  const [activeTab, setActiveTab] = useState<'setup' | 'games' | 'reports'>('setup');
   const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
+
+  // Report state
+  const [reportView, setReportView] = useState<string>(''); // 'report' from URL
+  const [reportGameId, setReportGameId] = useState<number>(0);
+  const [reportRound, setReportRound] = useState<string>('all'); // 'all' or round number
+  const [reportData, setReportData] = useState<any>(null);
 
   // Setup tab state
   const [groups, setGroups] = useState<Group[]>([]);
@@ -174,9 +180,42 @@ function App() {
     fetchData();
   }, [token]);
 
-  // Fetch games when Games tab is active
+  // Check for report view mode from URL
   useEffect(() => {
-    if (!token || activeTab !== 'games') return;
+    const params = new URLSearchParams(window.location.search);
+    const view = params.get('view');
+    const gameId = params.get('gameId');
+
+    if (view === 'report' && gameId) {
+      setReportView('report');
+      setReportGameId(parseInt(gameId));
+      setActiveTab('reports');
+    }
+  }, []);
+
+  // Fetch report data when game is selected
+  useEffect(() => {
+    if (reportGameId === 0) {
+      setReportData(null);
+      return;
+    }
+
+    const fetchReport = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/report/${reportGameId}`);
+        const data = await res.json();
+        setReportData(data);
+      } catch (err) {
+        console.error('Failed to fetch report:', err);
+      }
+    };
+
+    fetchReport();
+  }, [reportGameId]);
+
+  // Fetch games when Games or Reports tab is active
+  useEffect(() => {
+    if (!token || (activeTab !== 'games' && activeTab !== 'reports')) return;
 
     const fetchGames = async () => {
       try {
@@ -946,6 +985,12 @@ function App() {
           >
             Games
           </button>
+          <button
+            className={`ah-tab ${activeTab === 'reports' ? 'active' : ''}`}
+            onClick={() => setActiveTab('reports')}
+          >
+            Reports
+          </button>
         </div>
 
         {/* Setup Tab */}
@@ -1710,6 +1755,146 @@ function App() {
                   })()}
                 </div>
               )}
+          </div>
+        )}
+
+        {/* Reports Tab */}
+        {activeTab === 'reports' && (
+          <div>
+            <div className="ah-card">
+              <h3 className="ah-section-title">Game Reports</h3>
+
+              {/* Game Selection */}
+              <div style={{ marginTop: '1rem' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem' }}>
+                  <strong>Select Game:</strong>
+                </label>
+                <select
+                  className="ah-select"
+                  value={reportGameId}
+                  onChange={(e) => setReportGameId(parseInt(e.target.value))}
+                  style={{ width: '100%', maxWidth: '400px' }}
+                >
+                  <option value={0}>-- Select a game --</option>
+                  {games.map((game) => (
+                    <option key={game.id} value={game.id}>
+                      {game.name} ({game.status})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Round Selection */}
+              {reportGameId > 0 && (
+                <div style={{ marginTop: '1rem' }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem' }}>
+                    <strong>Select Round:</strong>
+                  </label>
+                  <select
+                    className="ah-select"
+                    value={reportRound}
+                    onChange={(e) => setReportRound(e.target.value)}
+                    style={{ width: '100%', maxWidth: '400px' }}
+                  >
+                    <option value="all">All Rounds</option>
+                    {(() => {
+                      const selectedGame = games.find(g => g.id === reportGameId);
+                      if (!selectedGame) return null;
+                      return Array.from({ length: selectedGame.currentRound }, (_, i) => (
+                        <option key={i + 1} value={i + 1}>
+                          Round {i + 1}
+                        </option>
+                      ));
+                    })()}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {/* Report Display */}
+            {reportGameId > 0 && reportData && (
+              <div style={{ marginTop: '1rem' }}>
+                {/* Game Header */}
+                <div className="ah-card">
+                  <h2 style={{ marginBottom: '0.5rem' }}>{reportData.game.name}</h2>
+                  <p className="ah-meta">
+                    Status: {reportData.game.status}
+                    {reportData.game.winnerName && ` | Winner: ${reportData.game.winnerName}`}
+                  </p>
+                </div>
+
+                {/* Rounds Display */}
+                {reportData.rounds && reportData.rounds.length > 0 && (
+                  <>
+                    {reportData.rounds
+                      .filter((round: any) => reportRound === 'all' || round.roundNumber === parseInt(reportRound))
+                      .map((round: any) => (
+                        <div key={round.roundNumber} className="ah-card" style={{ marginTop: '1rem' }}>
+                          <h3 className="ah-section-title">
+                            Round {round.roundNumber} - {round.status === 'open' ? 'OPEN' : 'CLOSED'}
+                          </h3>
+
+                          {round.status === 'open' && (
+                            <div style={{ marginTop: '1rem' }}>
+                              <p><strong>Active Players:</strong> {round.activePlayers}</p>
+                              {round.teamPicks && Object.keys(round.teamPicks).length > 0 && (
+                                <div style={{ marginTop: '1rem' }}>
+                                  <p style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Team Picks:</p>
+                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.5rem' }}>
+                                    {Object.entries(round.teamPicks)
+                                      .sort(([, a]: any, [, b]: any) => b - a)
+                                      .map(([team, count]: any) => (
+                                        <div key={team} style={{ padding: '0.5rem', background: '#FAFAF9', borderRadius: '4px' }}>
+                                          {team} ({count})
+                                        </div>
+                                      ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {round.status === 'closed' && (
+                            <div style={{ marginTop: '1rem' }}>
+                              <div style={{ display: 'flex', gap: '2rem', marginBottom: '1rem' }}>
+                                <p><strong>Eliminated:</strong> {round.eliminatedCount} players</p>
+                                <p><strong>Through to Round {round.roundNumber + 1}:</strong> {round.throughCount} players</p>
+                              </div>
+                              {round.teamResults && Object.keys(round.teamResults).length > 0 && (
+                                <div>
+                                  <p style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Team Results:</p>
+                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.5rem' }}>
+                                    {Object.entries(round.teamResults)
+                                      .sort(([a]: any, [b]: any) => a.localeCompare(b))
+                                      .map(([team, result]: any) => (
+                                        <div
+                                          key={team}
+                                          style={{
+                                            padding: '0.5rem',
+                                            borderRadius: '4px',
+                                            fontWeight: 600,
+                                            background: result === 'win' ? '#D1FAE5' :
+                                                       result === 'loss' ? '#FEE2E2' :
+                                                       result === 'draw' ? '#FED7AA' : '#DBEAFE',
+                                            color: result === 'win' ? '#065F46' :
+                                                   result === 'loss' ? '#991B1B' :
+                                                   result === 'draw' ? '#9A3412' : '#1E3A8A'
+                                          }}
+                                        >
+                                          {team} - {result.toUpperCase()}
+                                        </div>
+                                      ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                  </>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>

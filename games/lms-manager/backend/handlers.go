@@ -1810,3 +1810,175 @@ func HandleFinalizePicks(w http.ResponseWriter, r *http.Request) {
 		"autoAssigned": missingPlayers,
 	})
 }
+
+// HandleGetReport returns a public report for a game (no auth required)
+// Used by display screens and Reports tab
+func HandleGetReport(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	gameID, err := strconv.Atoi(vars["gameId"])
+	if err != nil {
+		http.Error(w, "Invalid game ID", http.StatusBadRequest)
+		return
+	}
+
+	// Get game info
+	var gameName, gameStatus, winnerMode, rolloverMode string
+	var winnerName sql.NullString
+	var postponeAsWin bool
+	var maxWinners int
+	err = db.QueryRow(`
+		SELECT name, status, winner_name, postpone_as_win, winner_mode, rollover_mode, max_winners
+		FROM managed_games
+		WHERE id = $1
+	`, gameID).Scan(&gameName, &gameStatus, &winnerName, &postponeAsWin, &winnerMode, &rolloverMode, &maxWinners)
+	if err == sql.ErrNoRows {
+		http.Error(w, "Game not found", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		log.Printf("Failed to get game: %v", err)
+		http.Error(w, "Failed to get game", http.StatusInternalServerError)
+		return
+	}
+
+	// Get all rounds for this game
+	roundRows, err := db.Query(`
+		SELECT id, round_number, status
+		FROM managed_rounds
+		WHERE game_id = $1
+		ORDER BY round_number ASC
+	`, gameID)
+	if err != nil {
+		log.Printf("Failed to get rounds: %v", err)
+		http.Error(w, "Failed to get rounds", http.StatusInternalServerError)
+		return
+	}
+	defer roundRows.Close()
+
+	type RoundReport struct {
+		RoundNumber    int                       `json:"roundNumber"`
+		Status         string                    `json:"status"`
+		ActivePlayers  int                       `json:"activePlayers,omitempty"`
+		TeamPicks      map[string]int            `json:"teamPicks,omitempty"`      // Team name -> count (for open rounds)
+		EliminatedCount int                      `json:"eliminatedCount,omitempty"` // For closed rounds
+		ThroughCount    int                      `json:"throughCount,omitempty"`    // For closed rounds
+		TeamResults    map[string]string         `json:"teamResults,omitempty"`     // Team name -> result (for closed rounds)
+	}
+
+	rounds := []RoundReport{}
+
+	for roundRows.Next() {
+		var roundID, roundNumber int
+		var roundStatus string
+		if err := roundRows.Scan(&roundID, &roundNumber, &roundStatus); err != nil {
+			log.Printf("Failed to scan round: %v", err)
+			continue
+		}
+
+		report := RoundReport{
+			RoundNumber: roundNumber,
+			Status:      roundStatus,
+		}
+
+		if roundStatus == "open" {
+			// Count active players at this point
+			var activeCount int
+			db.QueryRow(`
+				SELECT COUNT(*)
+				FROM managed_participants
+				WHERE game_id = $1 AND is_active = TRUE
+			`, gameID).Scan(&activeCount)
+			report.ActivePlayers = activeCount
+
+			// Get team pick counts
+			pickRows, err := db.Query(`
+				SELECT t.name, COUNT(p.id)
+				FROM managed_picks p
+				JOIN managed_teams t ON t.id = p.team_id
+				WHERE p.game_id = $1 AND p.round_id = $2 AND p.team_id IS NOT NULL
+				GROUP BY t.name
+				ORDER BY COUNT(p.id) DESC, t.name
+			`, gameID, roundID)
+			if err == nil {
+				defer pickRows.Close()
+				teamPicks := make(map[string]int)
+				for pickRows.Next() {
+					var teamName string
+					var count int
+					if err := pickRows.Scan(&teamName, &count); err == nil {
+						teamPicks[teamName] = count
+					}
+				}
+				report.TeamPicks = teamPicks
+			}
+		} else {
+			// Round is closed
+			// Count eliminated players in this round
+			var eliminatedCount int
+			db.QueryRow(`
+				SELECT COUNT(*)
+				FROM managed_participants
+				WHERE game_id = $1 AND eliminated_in_round = $2
+			`, gameID, roundNumber).Scan(&eliminatedCount)
+			report.EliminatedCount = eliminatedCount
+
+			// Count players who made it through to next round
+			// (were still active after this round)
+			var throughCount int
+			if roundNumber < len(rounds)+1 { // Not the last round
+				db.QueryRow(`
+					SELECT COUNT(*)
+					FROM managed_participants
+					WHERE game_id = $1 AND (is_active = TRUE OR eliminated_in_round > $2)
+				`, gameID, roundNumber).Scan(&throughCount)
+			} else {
+				// Last round - count active players
+				db.QueryRow(`
+					SELECT COUNT(*)
+					FROM managed_participants
+					WHERE game_id = $1 AND is_active = TRUE
+				`, gameID).Scan(&throughCount)
+			}
+			report.ThroughCount = throughCount
+
+			// Get team results
+			resultRows, err := db.Query(`
+				SELECT DISTINCT t.name, p.result
+				FROM managed_picks p
+				JOIN managed_teams t ON t.id = p.team_id
+				WHERE p.game_id = $1 AND p.round_id = $2 AND p.result IS NOT NULL
+				ORDER BY t.name
+			`, gameID, roundID)
+			if err == nil {
+				defer resultRows.Close()
+				teamResults := make(map[string]string)
+				for resultRows.Next() {
+					var teamName, result string
+					if err := resultRows.Scan(&teamName, &result); err == nil {
+						teamResults[teamName] = result
+					}
+				}
+				report.TeamResults = teamResults
+			}
+		}
+
+		rounds = append(rounds, report)
+	}
+
+	// Build response
+	response := map[string]interface{}{
+		"game": map[string]interface{}{
+			"name":          gameName,
+			"status":        gameStatus,
+			"winnerName":    winnerName.String,
+			"postponeAsWin": postponeAsWin,
+			"winnerMode":    winnerMode,
+			"rolloverMode":  rolloverMode,
+			"maxWinners":    maxWinners,
+		},
+		"rounds": rounds,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
