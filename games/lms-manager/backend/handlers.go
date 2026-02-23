@@ -1123,9 +1123,19 @@ func HandleAdvanceRound(w http.ResponseWriter, r *http.Request) {
 			})
 			return
 		} else {
-			// Rollover not possible - no one left
-			http.Error(w, "All players eliminated - cannot continue. Enable 'Declare multiple winners' setting to tie remaining players.", http.StatusBadRequest)
-			return
+			// Rollover mode: Un-eliminate everyone who was eliminated in this round and continue
+			_, err = db.Exec(`
+				UPDATE managed_participants
+				SET is_active = TRUE, eliminated_in_round = NULL
+				WHERE game_id = $1 AND eliminated_in_round = $2
+			`, gameID, currentRound)
+			if err != nil {
+				log.Printf("Failed to un-eliminate players: %v", err)
+				http.Error(w, "Failed to rollover round", http.StatusInternalServerError)
+				return
+			}
+
+			// Continue to create next round (fall through to normal flow below)
 		}
 	}
 

@@ -573,16 +573,52 @@ function App() {
     const latestRound = gameDetail.rounds[gameDetail.rounds.length - 1];
     if (!latestRound) return;
 
-    // Count active players and existing picks
-    const activeParticipants = gameDetail.participants.filter((p) => p.isActive);
-    const playersWithPicks = picks.filter((p) => p.teamId).length;
-    const missingCount = activeParticipants.length - playersWithPicks;
+    // First, save any pending picks from pickAssignments
+    const picksToSave = Object.entries(pickAssignments).map(([playerName, teamId]) => ({
+      playerName,
+      teamId,
+    }));
 
-    if (missingCount > 0) {
-      const confirmed = window.confirm(
-        `${missingCount} player${missingCount > 1 ? 's have' : ' has'} no pick assigned. Auto-assign next available team alphabetically?`
-      );
-      if (!confirmed) return;
+    if (picksToSave.length > 0) {
+      try {
+        await fetch(`${API_BASE}/api/rounds/${latestRound.id}/picks`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ picks: picksToSave }),
+        });
+      } catch (err) {
+        console.error('Failed to save pending picks:', err);
+        alert('Failed to save pending picks');
+        return;
+      }
+    }
+
+    // Refresh picks to get current state
+    try {
+      const picksRes = await fetch(`${API_BASE}/api/rounds/${latestRound.id}/picks`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const picksData = await picksRes.json();
+      const currentPicks = picksData.picks || [];
+
+      // Count active players and existing picks
+      const activeParticipants = gameDetail.participants.filter((p) => p.isActive);
+      const playersWithPicks = currentPicks.filter((p: Pick) => p.teamId).length;
+      const missingCount = activeParticipants.length - playersWithPicks;
+
+      if (missingCount > 0) {
+        const confirmed = window.confirm(
+          `${missingCount} player${missingCount > 1 ? 's have' : ' has'} no pick assigned. Auto-assign next available team alphabetically?`
+        );
+        if (!confirmed) return;
+      }
+    } catch (err) {
+      console.error('Failed to check picks:', err);
+      alert('Failed to check picks');
+      return;
     }
 
     try {
@@ -796,7 +832,6 @@ function App() {
     }
   };
 
-  // Edit tab handlers
   return (
     <>
       <header className="ah-app-header">
@@ -1387,7 +1422,7 @@ function App() {
                         {currentRound.status === 'closed' && (
                           <div>
                             <p className="ah-meta" style={{ marginBottom: '1rem' }}>
-                              Round complete. Click "Next Round" to continue or use the Edit tab to make changes.
+                              Round complete. Click "Next Round" to continue.
                             </p>
                             {picks.length > 0 && (
                               <div className="picks-list">
