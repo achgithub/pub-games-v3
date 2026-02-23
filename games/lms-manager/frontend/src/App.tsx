@@ -1568,7 +1568,6 @@ function App() {
                                   (p) => p.playerName === participant.playerName
                                 );
                                 const isEliminated = !participant.isActive;
-                                const eliminatedInThisRound = participant.eliminatedInRound === round.roundNumber;
 
                                 return (
                                   <div key={participant.playerName} className="pick-row">
