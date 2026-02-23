@@ -68,10 +68,70 @@ tmux send-keys -t core:smoke-test "cd ~/pub-games-v3/games/smoke-test/backend &&
 tmux new-window -t core -n leaderboard
 tmux send-keys -t core:leaderboard "cd ~/pub-games-v3/games/leaderboard/backend && go run *.go" C-m
 
-echo "Core services started in tmux session 'core'"
+echo "Core services starting in tmux session 'core'..."
+echo "Waiting for services to be ready..."
+echo ""
+
+# Define core services to check [name:port]
+declare -A SERVICES=(
+    ["identity-shell"]="3001"
+    ["setup-admin"]="5020"
+    ["game-admin"]="5070"
+    ["tic-tac-toe"]="4001"
+    ["dots"]="4011"
+    ["last-man-standing"]="4021"
+    ["lms-manager"]="4022"
+    ["sweepstakes"]="4031"
+    ["quiz-player"]="4041"
+    ["quiz-master"]="5080"
+    ["quiz-display"]="5081"
+    ["mobile-test"]="4061"
+    ["smoke-test"]="5010"
+    ["leaderboard"]="5030"
+)
+
+# Wait for services to start (max 30 seconds)
+TIMEOUT=30
+ELAPSED=0
+ALL_READY=0
+
+while [ $ELAPSED -lt $TIMEOUT ]; do
+    READY_COUNT=0
+    for service in "${!SERVICES[@]}"; do
+        port=${SERVICES[$service]}
+        if lsof -i :$port >/dev/null 2>&1; then
+            ((READY_COUNT++))
+        fi
+    done
+
+    if [ $READY_COUNT -eq ${#SERVICES[@]} ]; then
+        ALL_READY=1
+        break
+    fi
+
+    sleep 2
+    ((ELAPSED+=2))
+    echo -ne "\rChecking... ($READY_COUNT/${#SERVICES[@]} ready, ${ELAPSED}s elapsed)"
+done
+
+echo ""
+echo ""
+
+if [ $ALL_READY -eq 1 ]; then
+    echo "✅ All core services ready!"
+else
+    echo "⚠️  Some services not ready after ${TIMEOUT}s:"
+    for service in "${!SERVICES[@]}"; do
+        port=${SERVICES[$service]}
+        if lsof -i :$port >/dev/null 2>&1; then
+            echo "  ✓ $service (port $port)"
+        else
+            echo "  ✗ $service (port $port) - NOT READY"
+        fi
+    done
+fi
+
 echo ""
 echo "Attach with: tmux attach -t core"
 echo "Detach with: Ctrl+B then D"
 echo "Navigate windows: Ctrl+B then N (next) or P (previous)"
-echo ""
-echo "Check status with: ./status_core.sh"
