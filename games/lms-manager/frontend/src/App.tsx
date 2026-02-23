@@ -91,7 +91,7 @@ interface GameDetail {
 
 function App() {
   const { userId, token } = useQueryParams();
-  const [activeTab, setActiveTab] = useState<'setup' | 'games' | 'reports'>('setup');
+  const [activeTab, setActiveTab] = useState<'setup' | 'games' | 'reports'>('games');
   const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
 
   // Report state
@@ -1133,6 +1133,51 @@ function App() {
         {/* Setup Tab */}
         {activeTab === 'setup' && (
           <div>
+            {/* Player Pool Section */}
+            <div className="ah-card setup-section">
+              <div className="setup-section-header" style={{ cursor: 'pointer' }} onClick={() => toggleCard('players')}>
+                <h3 className="ah-section-title">
+                  {collapsedCards['players'] ? '▶' : '▼'} Player Pool ({players.length})
+                </h3>
+              </div>
+
+              {!collapsedCards['players'] && (
+              <>
+              <div className="inline-form">
+                <input
+                  type="text"
+                  className="ah-input"
+                  placeholder="Player name"
+                  value={newPlayerName}
+                  onChange={(e) => setNewPlayerName(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleCreatePlayer()}
+                />
+                <button className="ah-btn-primary" onClick={handleCreatePlayer}>
+                  Add Player
+                </button>
+              </div>
+
+              <div className="player-list" style={{ marginTop: '1rem' }}>
+                {players.length === 0 && (
+                  <p className="ah-meta">No players yet. Add one to get started.</p>
+                )}
+
+                {players.map((player) => (
+                  <div key={player.id} className="player-item">
+                    <strong>{player.name}</strong>
+                    <button
+                      className="btn-danger-small"
+                      onClick={() => handleDeletePlayer(player.id)}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                ))}
+              </div>
+              </>
+              )}
+            </div>
+
             {/* Groups & Teams Section */}
             <div className="ah-card setup-section">
               <div className="setup-section-header" style={{ cursor: 'pointer' }} onClick={() => toggleCard('groups')}>
@@ -1221,51 +1266,6 @@ function App() {
                         )}
                       </div>
                     )}
-                  </div>
-                ))}
-              </div>
-              </>
-              )}
-            </div>
-
-            {/* Player Pool Section */}
-            <div className="ah-card setup-section">
-              <div className="setup-section-header" style={{ cursor: 'pointer' }} onClick={() => toggleCard('players')}>
-                <h3 className="ah-section-title">
-                  {collapsedCards['players'] ? '▶' : '▼'} Player Pool ({players.length})
-                </h3>
-              </div>
-
-              {!collapsedCards['players'] && (
-              <>
-              <div className="inline-form">
-                <input
-                  type="text"
-                  className="ah-input"
-                  placeholder="Player name"
-                  value={newPlayerName}
-                  onChange={(e) => setNewPlayerName(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleCreatePlayer()}
-                />
-                <button className="ah-btn-primary" onClick={handleCreatePlayer}>
-                  Add Player
-                </button>
-              </div>
-
-              <div className="player-list" style={{ marginTop: '1rem' }}>
-                {players.length === 0 && (
-                  <p className="ah-meta">No players yet. Add one to get started.</p>
-                )}
-
-                {players.map((player) => (
-                  <div key={player.id} className="player-item">
-                    <strong>{player.name}</strong>
-                    <button
-                      className="btn-danger-small"
-                      onClick={() => handleDeletePlayer(player.id)}
-                    >
-                      Delete
-                    </button>
                   </div>
                 ))}
               </div>
