@@ -1544,18 +1544,18 @@ function App() {
                             <p className="ah-meta" style={{ marginBottom: '1rem' }}>
                               Round complete. Click "Next Round" to continue.
                             </p>
-                            {picks.length > 0 && (
+                            {picks.filter(p => p.result).length > 0 && (
                               <div className="picks-list">
-                                {picks.map((pick) => (
+                                {picks.filter(p => p.result).map((pick) => (
                                   <div key={pick.id} className="pick-row">
                                     <div>
                                       <strong>{pick.playerName}</strong>
                                       <p className="ah-meta">{pick.teamName || 'No team'}</p>
                                     </div>
                                     <span
-                                      className={`result-badge result-${pick.result || 'none'}`}
+                                      className={`result-badge result-${pick.result}`}
                                     >
-                                      {pick.result || 'No result'}
+                                      {pick.result}
                                     </span>
                                   </div>
                                 ))}
