@@ -936,16 +936,31 @@ function App() {
       }
     }
 
-    // Close the round
-    alert('Round closed');
-    // Refresh game detail
-    const gameRes = await fetch(`${API_BASE}/api/games/${selectedGameId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const gameData = await gameRes.json();
-    setGameDetail(gameData);
-    setPickResults({});
-    setPicksFinalized(false);
+    // Close the round via dedicated endpoint
+    try {
+      const res = await fetch(`${API_BASE}/api/rounds/${latestRound.id}/close`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.ok || res.status === 204) {
+        alert('Round closed');
+        // Refresh game detail
+        const gameRes = await fetch(`${API_BASE}/api/games/${selectedGameId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const gameData = await gameRes.json();
+        setGameDetail(gameData);
+        setPickResults({});
+        setPicksFinalized(false);
+      } else {
+        const error = await res.text();
+        alert(`Failed to close round: ${error}`);
+      }
+    } catch (err) {
+      console.error('Failed to close round:', err);
+      alert('Failed to close round');
+    }
   };
 
   const handleAdvanceRound = async () => {
@@ -1808,7 +1823,7 @@ function App() {
                                               Loss
                                             </button>
                                             <button
-                                              className={`result-btn result-btn-draw ${currentResult === 'draw' ? 'active' : ''}`}
+                                              className={`result-btn result-btn-loss ${currentResult === 'draw' ? 'active' : ''}`}
                                               onClick={() => setTeamResult('draw')}
                                             >
                                               Draw

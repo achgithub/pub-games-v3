@@ -1004,17 +1004,53 @@ func HandleSaveResults(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Close the round
-	_, err = tx.Exec(`UPDATE managed_rounds SET status = 'closed' WHERE id = $1`, roundID)
-	if err != nil {
-		log.Printf("Failed to close round: %v", err)
-		http.Error(w, "Failed to close round", http.StatusInternalServerError)
-		return
-	}
-
 	if err = tx.Commit(); err != nil {
 		log.Printf("Failed to commit transaction: %v", err)
 		http.Error(w, "Failed to save results", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// HandleCloseRound closes the current round
+func HandleCloseRound(w http.ResponseWriter, r *http.Request) {
+	managerEmail, ok := getManagerEmail(r)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	vars := mux.Vars(r)
+	roundID, err := strconv.Atoi(vars["roundId"])
+	if err != nil {
+		http.Error(w, "Invalid round ID", http.StatusBadRequest)
+		return
+	}
+
+	// Verify round belongs to manager's game
+	var gameID int
+	err = db.QueryRow(`
+		SELECT r.game_id
+		FROM managed_rounds r
+		JOIN managed_games g ON g.id = r.game_id
+		WHERE r.id = $1 AND g.manager_email = $2
+	`, roundID, managerEmail).Scan(&gameID)
+	if err == sql.ErrNoRows {
+		http.Error(w, "Round not found", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		log.Printf("Failed to query round: %v", err)
+		http.Error(w, "Failed to verify round", http.StatusInternalServerError)
+		return
+	}
+
+	// Close the round
+	_, err = db.Exec(`UPDATE managed_rounds SET status = 'closed' WHERE id = $1`, roundID)
+	if err != nil {
+		log.Printf("Failed to close round: %v", err)
+		http.Error(w, "Failed to close round", http.StatusInternalServerError)
 		return
 	}
 

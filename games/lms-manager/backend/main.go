@@ -72,6 +72,7 @@ func main() {
 	r.Handle("/api/rounds/{roundId}/picks", authMiddleware(http.HandlerFunc(HandleSavePicks))).Methods("POST")
 	r.Handle("/api/rounds/{roundId}/finalize-picks", authMiddleware(http.HandlerFunc(HandleFinalizePicks))).Methods("POST")
 	r.Handle("/api/rounds/{roundId}/results", authMiddleware(http.HandlerFunc(HandleSaveResults))).Methods("POST")
+	r.Handle("/api/rounds/{roundId}/close", authMiddleware(http.HandlerFunc(HandleCloseRound))).Methods("POST")
 	r.Handle("/api/rounds/{roundId}/reopen", authMiddleware(http.HandlerFunc(HandleReopenRound))).Methods("POST")
 
 	// Serve static files (React build output)
