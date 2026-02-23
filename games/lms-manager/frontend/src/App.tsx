@@ -953,10 +953,14 @@ function App() {
           <div>
             {/* Groups & Teams Section */}
             <div className="ah-card setup-section">
-              <div className="setup-section-header">
-                <h3 className="ah-section-title">Groups & Teams</h3>
+              <div className="setup-section-header" style={{ cursor: 'pointer' }} onClick={() => toggleCard('groups')}>
+                <h3 className="ah-section-title">
+                  {collapsedCards['groups'] ? '▶' : '▼'} Groups & Teams ({groups.length})
+                </h3>
               </div>
 
+              {!collapsedCards['groups'] && (
+              <>
               <div className="inline-form">
                 <input
                   type="text"
@@ -1038,14 +1042,20 @@ function App() {
                   </div>
                 ))}
               </div>
+              </>
+              )}
             </div>
 
             {/* Player Pool Section */}
             <div className="ah-card setup-section">
-              <div className="setup-section-header">
-                <h3 className="ah-section-title">Player Pool</h3>
+              <div className="setup-section-header" style={{ cursor: 'pointer' }} onClick={() => toggleCard('players')}>
+                <h3 className="ah-section-title">
+                  {collapsedCards['players'] ? '▶' : '▼'} Player Pool ({players.length})
+                </h3>
               </div>
 
+              {!collapsedCards['players'] && (
+              <>
               <div className="inline-form">
                 <input
                   type="text"
@@ -1077,6 +1087,8 @@ function App() {
                   </div>
                 ))}
               </div>
+              </>
+              )}
             </div>
           </div>
         )}
