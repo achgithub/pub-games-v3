@@ -1135,12 +1135,13 @@ func HandleGetUsedTeams(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get all picks for this game grouped by player
+	// Get picks from CLOSED rounds only (teams from open rounds can still be changed)
 	rows, err := db.Query(`
-		SELECT player_name, team_id
-		FROM managed_picks
-		WHERE game_id = $1 AND team_id IS NOT NULL
-		ORDER BY player_name, round_id
+		SELECT p.player_name, p.team_id
+		FROM managed_picks p
+		JOIN managed_rounds r ON r.id = p.round_id
+		WHERE p.game_id = $1 AND p.team_id IS NOT NULL AND r.status = 'closed'
+		ORDER BY p.player_name, p.round_id
 	`, gameID)
 	if err != nil {
 		log.Printf("Failed to query used teams: %v", err)

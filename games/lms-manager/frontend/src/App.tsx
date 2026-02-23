@@ -557,13 +557,6 @@ function App() {
         const picksData = await picksRes.json();
         setPicks(picksData.picks || []);
 
-        // Refresh used teams to prevent reuse
-        const usedTeamsRes = await fetch(`${API_BASE}/api/games/${selectedGameId}/used-teams`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const usedTeamsData = await usedTeamsRes.json();
-        setUsedTeams(usedTeamsData.usedTeams || {});
-
         alert('Picks saved successfully');
       } else {
         const error = await res.text();
@@ -647,6 +640,13 @@ function App() {
         });
         const gameData = await gameRes.json();
         setGameDetail(gameData);
+
+        // Refresh used teams (previous round is now closed)
+        const usedTeamsRes = await fetch(`${API_BASE}/api/games/${selectedGameId}/used-teams`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const usedTeamsData = await usedTeamsRes.json();
+        setUsedTeams(usedTeamsData.usedTeams || {});
 
         // Fetch picks for new round
         if (gameData.rounds && gameData.rounds.length > 0) {
