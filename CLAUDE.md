@@ -789,6 +789,111 @@ psql -U activityhub -h localhost -p 5555 -d postgres \
 3. Gradually add tests to other apps
 4. Expand to integration tests when needed
 
+### LMS Manager - Advanced Editor
+
+**Goal**: Allow managers to edit past rounds after they've been closed to correct mistakes
+
+**Current limitation**:
+- Once a round is closed, results are locked
+- Cannot change results if entered incorrectly
+- Cannot un-eliminate players who were eliminated by mistake
+- Cannot edit picks that were saved incorrectly
+- Only option is to delete entire game and start over
+
+**Required features**:
+
+1. **Reopen Closed Rounds**
+   - Add "Reopen Round" button on closed rounds (already exists)
+   - When reopened, round status changes back to 'open'
+   - Previously eliminated players in that round become active again
+   - Manager can edit results and picks
+   - Re-close when corrections are complete
+
+2. **Edit Results After Closing**
+   - View closed round results in edit mode
+   - Change win/loss/draw/postponed for any team
+   - Automatically recalculate eliminations based on new results
+   - Show audit trail of changes (who, what, when)
+
+3. **Edit Player Picks**
+   - View all picks for a round (even after closed)
+   - Change team selections for individual players
+   - Mark picks as manager-modified (for transparency)
+   - Prevent changes that would break game logic (e.g., team already used)
+
+4. **Manual Elimination Override**
+   - Add/remove players from elimination list
+   - Override automatic elimination logic
+   - Useful for special circumstances (late submission, technical issues)
+   - Requires confirmation to prevent accidents
+
+5. **Round History Viewer**
+   - View complete timeline of all changes to a round
+   - Show original values vs current values
+   - Who made the change and when
+   - Export audit log for record keeping
+
+**Implementation approach**:
+
+1. **Database changes**:
+   ```sql
+   -- Add audit table
+   CREATE TABLE managed_round_edits (
+     id SERIAL PRIMARY KEY,
+     round_id INTEGER REFERENCES managed_rounds(id),
+     manager_email TEXT NOT NULL,
+     action TEXT NOT NULL, -- 'reopen', 'edit_result', 'edit_pick', 'manual_eliminate'
+     target_player TEXT,
+     target_team TEXT,
+     old_value TEXT,
+     new_value TEXT,
+     timestamp TIMESTAMP DEFAULT NOW()
+   );
+   ```
+
+2. **Backend endpoints**:
+   ```
+   POST /api/rounds/{roundId}/reopen (already exists)
+   PUT  /api/rounds/{roundId}/results/{pickId}  -- Edit single result
+   PUT  /api/rounds/{roundId}/picks/{pickId}    -- Edit single pick
+   POST /api/rounds/{roundId}/override-elimination  -- Manual elimination
+   GET  /api/rounds/{roundId}/audit  -- Get edit history
+   ```
+
+3. **Frontend UI**:
+   - "Edit Round" button on closed rounds (next to reopen)
+   - Modal or inline editor for results
+   - Confirmation dialogs for destructive changes
+   - Audit log viewer at bottom of round display
+
+4. **Validation rules**:
+   - Cannot edit rounds from completed games
+   - Cannot select teams already used by player in previous rounds
+   - Cannot eliminate all remaining players (must leave at least one)
+   - Changes must maintain game integrity
+
+**Use cases**:
+- Manager enters wrong result (clicked Loss instead of Win)
+- Player appeals elimination due to postponed match handling
+- Technical glitch causes incorrect auto-assignment
+- Late pick submission that should have been accepted
+- Referee decision changed after round closed
+
+**Effort estimate**: 12-16 hours
+
+**Benefits**:
+- Mistakes can be corrected without restarting entire game
+- Increased flexibility for edge cases
+- Better user experience for managers
+- Complete audit trail for transparency
+- Maintains data integrity
+
+**Risks to mitigate**:
+- Ensure changes maintain game integrity (no orphaned data)
+- Prevent cascading eliminations when changing old rounds
+- Clear UI to show which data has been edited vs original
+- Confirmation dialogs to prevent accidental changes
+
 ### Managed Game Modes (Sweepstakes & LMS)
 
 **Goal**: Create administrator-managed versions of Sweepstakes and Last Man Standing that don't require player participation
