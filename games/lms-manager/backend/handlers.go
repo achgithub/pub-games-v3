@@ -1923,22 +1923,13 @@ func HandleGetReport(w http.ResponseWriter, r *http.Request) {
 			report.EliminatedCount = eliminatedCount
 
 			// Count players who made it through to next round
-			// (were still active after this round)
+			// This includes players who were never eliminated OR eliminated in a later round
 			var throughCount int
-			if roundNumber < len(rounds)+1 { // Not the last round
-				db.QueryRow(`
-					SELECT COUNT(*)
-					FROM managed_participants
-					WHERE game_id = $1 AND (is_active = TRUE OR eliminated_in_round > $2)
-				`, gameID, roundNumber).Scan(&throughCount)
-			} else {
-				// Last round - count active players
-				db.QueryRow(`
-					SELECT COUNT(*)
-					FROM managed_participants
-					WHERE game_id = $1 AND is_active = TRUE
-				`, gameID).Scan(&throughCount)
-			}
+			db.QueryRow(`
+				SELECT COUNT(*)
+				FROM managed_participants
+				WHERE game_id = $1 AND (eliminated_in_round IS NULL OR eliminated_in_round > $2)
+			`, gameID, roundNumber).Scan(&throughCount)
 			report.ThroughCount = throughCount
 
 			// Get team results
