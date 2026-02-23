@@ -1098,10 +1098,14 @@ function App() {
           <div>
             {/* Create Game Section */}
             <div className="ah-card setup-section">
-              <div className="setup-section-header">
-                <h3 className="ah-section-title">Create New Game</h3>
+              <div className="setup-section-header" style={{ cursor: 'pointer' }} onClick={() => toggleCard('createGame')}>
+                <h3 className="ah-section-title">
+                  {collapsedCards['createGame'] ? '▶' : '▼'} Create New Game
+                </h3>
               </div>
 
+              {!collapsedCards['createGame'] && (
+              <>
               {groups.length === 0 && (
                 <p className="ah-meta">
                   No groups available. Please create a group in the Setup tab first.
@@ -1288,14 +1292,20 @@ function App() {
                   </button>
                 </div>
               )}
+              </>
+              )}
             </div>
 
             {/* Games List Section */}
             <div className="ah-card setup-section">
-              <div className="setup-section-header">
-                <h3 className="ah-section-title">Active Games</h3>
+              <div className="setup-section-header" style={{ cursor: 'pointer' }} onClick={() => toggleCard('activeGames')}>
+                <h3 className="ah-section-title">
+                  {collapsedCards['activeGames'] ? '▶' : '▼'} Active Games ({games.length})
+                </h3>
               </div>
 
+              {!collapsedCards['activeGames'] && (
+              <>
               {games.length === 0 && (
                 <p className="ah-meta">No games yet. Create one above to get started.</p>
               )}
@@ -1329,6 +1339,8 @@ function App() {
                   </div>
                 ))}
               </div>
+              </>
+              )}
             </div>
           </div>
         )}
