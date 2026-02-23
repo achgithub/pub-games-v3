@@ -1278,6 +1278,53 @@ function App() {
         {/* Games Tab */}
         {activeTab === 'games' && !selectedGameId && (
           <div>
+            {/* Games List Section */}
+            <div className="ah-card setup-section">
+              <div className="setup-section-header" style={{ cursor: 'pointer' }} onClick={() => toggleCard('activeGames')}>
+                <h3 className="ah-section-title">
+                  {collapsedCards['activeGames'] ? '▶' : '▼'} Active Games ({games.length})
+                </h3>
+              </div>
+
+              {!collapsedCards['activeGames'] && (
+              <>
+              {games.length === 0 && (
+                <p className="ah-meta">No games yet. Create one below to get started.</p>
+              )}
+
+              <div className="games-list">
+                {games.map((game) => (
+                  <div
+                    key={game.id}
+                    className="game-item"
+                    onClick={() => handleViewGame(game.id)}
+                  >
+                    <div className="game-item-main">
+                      <div>
+                        <strong>{game.name}</strong>
+                        <p className="ah-meta">
+                          {game.groupName} • {game.participantCount} players • Round{' '}
+                          {game.currentRound}
+                        </p>
+                      </div>
+                      <span
+                        className={`game-status ${
+                          game.status === 'active' ? 'status-active' : 'status-completed'
+                        }`}
+                      >
+                        {game.status}
+                      </span>
+                    </div>
+                    {game.status === 'completed' && game.winnerName && (
+                      <p className="ah-meta">Winner: {game.winnerName}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+              </>
+              )}
+            </div>
+
             {/* Create Game Section */}
             <div className="ah-card setup-section">
               <div className="setup-section-header" style={{ cursor: 'pointer' }} onClick={() => toggleCard('createGame')}>
@@ -1474,53 +1521,6 @@ function App() {
                   </button>
                 </div>
               )}
-              </>
-              )}
-            </div>
-
-            {/* Games List Section */}
-            <div className="ah-card setup-section">
-              <div className="setup-section-header" style={{ cursor: 'pointer' }} onClick={() => toggleCard('activeGames')}>
-                <h3 className="ah-section-title">
-                  {collapsedCards['activeGames'] ? '▶' : '▼'} Active Games ({games.length})
-                </h3>
-              </div>
-
-              {!collapsedCards['activeGames'] && (
-              <>
-              {games.length === 0 && (
-                <p className="ah-meta">No games yet. Create one above to get started.</p>
-              )}
-
-              <div className="games-list">
-                {games.map((game) => (
-                  <div
-                    key={game.id}
-                    className="game-item"
-                    onClick={() => handleViewGame(game.id)}
-                  >
-                    <div className="game-item-main">
-                      <div>
-                        <strong>{game.name}</strong>
-                        <p className="ah-meta">
-                          {game.groupName} • {game.participantCount} players • Round{' '}
-                          {game.currentRound}
-                        </p>
-                      </div>
-                      <span
-                        className={`game-status ${
-                          game.status === 'active' ? 'status-active' : 'status-completed'
-                        }`}
-                      >
-                        {game.status}
-                      </span>
-                    </div>
-                    {game.status === 'completed' && game.winnerName && (
-                      <p className="ah-meta">Winner: {game.winnerName}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
               </>
               )}
             </div>
