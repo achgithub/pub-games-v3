@@ -376,6 +376,13 @@ function App() {
         const teamsData = await teamsRes.json();
         setGroupTeams({ ...groupTeams, [groupId]: teamsData.teams || [] });
         setNewTeamName('');
+
+        // Refresh groups list to update team count
+        const groupsRes = await fetch(`${API_BASE}/api/groups`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const groupsData = await groupsRes.json();
+        setGroups(groupsData.groups || []);
       }
     } catch (err) {
       console.error('Failed to create team:', err);
@@ -398,6 +405,13 @@ function App() {
         });
         const teamsData = await teamsRes.json();
         setGroupTeams({ ...groupTeams, [groupId]: teamsData.teams || [] });
+
+        // Refresh groups list to update team count
+        const groupsRes = await fetch(`${API_BASE}/api/groups`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const groupsData = await groupsRes.json();
+        setGroups(groupsData.groups || []);
       }
     } catch (err) {
       console.error('Failed to delete team:', err);
