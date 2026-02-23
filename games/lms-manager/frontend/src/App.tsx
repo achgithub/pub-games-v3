@@ -501,7 +501,9 @@ function App() {
         setSelectedGroupId(0);
         setSelectedPlayerNames([]);
         setPostponeAsWin(true);
-        setDeclareMultipleWinners(true);
+        setWinnerMode('single');
+        setRolloverMode('round');
+        setMaxWinners(4);
       } else {
         const error = await res.text();
         alert(`Failed to create game: ${error}`);
