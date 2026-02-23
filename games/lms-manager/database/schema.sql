@@ -26,7 +26,8 @@ CREATE TABLE managed_teams (
   id SERIAL PRIMARY KEY,
   group_id INTEGER NOT NULL REFERENCES managed_groups(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
-  created_at TIMESTAMP DEFAULT NOW()
+  created_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(group_id, name)
 );
 
 -- Player pool (reusable across games)
