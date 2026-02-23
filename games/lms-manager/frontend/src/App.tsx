@@ -124,9 +124,13 @@ function App() {
   const [playersToAdd, setPlayersToAdd] = useState<string[]>([]);
   const [picksFinalized, setPicksFinalized] = useState(false);
 
-  // Player filter state
+  // Player filter state (for round picks)
   const [playerSearchText, setPlayerSearchText] = useState<string>('');
   const [showUnassignedPlayersOnly, setShowUnassignedPlayersOnly] = useState<boolean>(false);
+
+  // Player filter state (for game creation)
+  const [gameCreationPlayerSearch, setGameCreationPlayerSearch] = useState<string>('');
+  const [showSelectedPlayersOnly, setShowSelectedPlayersOnly] = useState<boolean>(false);
 
   const [loading, setLoading] = useState(true);
 
@@ -696,14 +700,6 @@ function App() {
       return;
     }
 
-    // Check that all picks have results
-    const allPicksHaveResults = picks.every((pick) => pickResults[pick.id]);
-    if (!allPicksHaveResults) {
-      if (!window.confirm('Not all picks have results. Continue anyway?')) {
-        return;
-      }
-    }
-
     try {
       const res = await fetch(`${API_BASE}/api/rounds/${latestRound.id}/results`, {
         method: 'POST',
@@ -715,13 +711,13 @@ function App() {
       });
 
       if (res.ok || res.status === 204) {
-        alert('Results saved and round closed');
-        // Refresh game detail
-        const gameRes = await fetch(`${API_BASE}/api/games/${selectedGameId}`, {
+        alert('Results saved');
+        // Refresh picks to show updated results
+        const picksRes = await fetch(`${API_BASE}/api/rounds/${latestRound.id}/picks`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        const gameData = await gameRes.json();
-        setGameDetail(gameData);
+        const picksData = await picksRes.json();
+        setPicks(picksData.picks || []);
       } else {
         const error = await res.text();
         alert(`Failed to save results: ${error}`);
@@ -730,6 +726,55 @@ function App() {
       console.error('Failed to save results:', err);
       alert('Failed to save results');
     }
+  };
+
+  const handleCloseRound = async () => {
+    if (!gameDetail || !token) return;
+
+    const latestRound = gameDetail.rounds[gameDetail.rounds.length - 1];
+    if (!latestRound) return;
+
+    // Check that all picks have results
+    const allPicksHaveResults = picks.every((pick) => pickResults[pick.id] || pick.result);
+    if (!allPicksHaveResults) {
+      if (!window.confirm('Not all picks have results. Close round anyway?')) {
+        return;
+      }
+    }
+
+    // Save any pending results first
+    const resultsToSave = Object.entries(pickResults).map(([pickId, result]) => ({
+      pickId: Number(pickId),
+      result,
+    }));
+
+    if (resultsToSave.length > 0) {
+      try {
+        await fetch(`${API_BASE}/api/rounds/${latestRound.id}/results`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ results: resultsToSave }),
+        });
+      } catch (err) {
+        console.error('Failed to save results before closing:', err);
+        alert('Failed to save results');
+        return;
+      }
+    }
+
+    // Close the round
+    alert('Round closed');
+    // Refresh game detail
+    const gameRes = await fetch(`${API_BASE}/api/games/${selectedGameId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const gameData = await gameRes.json();
+    setGameDetail(gameData);
+    setPickResults({});
+    setPicksFinalized(false);
   };
 
   const handleAdvanceRound = async () => {
@@ -1076,7 +1121,7 @@ function App() {
                       <p className="ah-meta">
                         Select Players ({selectedPlayerNames.length} selected):
                       </p>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                         <button className="ah-btn-outline" onClick={handleSelectAll} style={{ padding: '0.25rem 0.75rem', fontSize: '0.875rem' }}>
                           Select All
                         </button>
@@ -1085,8 +1130,41 @@ function App() {
                         </button>
                       </div>
                     </div>
+
+                    {/* Player filters */}
+                    <div style={{ marginBottom: '0.75rem', padding: '0.75rem', background: '#FAFAF9', borderRadius: '8px', border: '1px solid #E7E5E4' }}>
+                      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                        <input
+                          type="text"
+                          placeholder="Search players by name..."
+                          value={gameCreationPlayerSearch}
+                          onChange={(e) => setGameCreationPlayerSearch(e.target.value)}
+                          className="ah-input"
+                          style={{ flex: '1 1 200px', minWidth: 0 }}
+                        />
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap', fontSize: '0.875rem' }}>
+                          <input
+                            type="checkbox"
+                            checked={showSelectedPlayersOnly}
+                            onChange={(e) => setShowSelectedPlayersOnly(e.target.checked)}
+                          />
+                          <span>Selected only</span>
+                        </label>
+                      </div>
+                    </div>
+
                     <div className="player-selection-grid">
-                      {players.map((player) => (
+                      {players.filter((player) => {
+                        // Text search filter
+                        const matchesSearch = !gameCreationPlayerSearch ||
+                          player.name.toLowerCase().includes(gameCreationPlayerSearch.toLowerCase());
+
+                        // Selected filter
+                        const matchesSelected = !showSelectedPlayersOnly ||
+                          selectedPlayerNames.includes(player.name);
+
+                        return matchesSearch && matchesSelected;
+                      }).map((player) => (
                         <label key={player.id} className="player-checkbox-label">
                           <input
                             type="checkbox"
@@ -1535,13 +1613,20 @@ function App() {
                                   })()}
                                 </div>
 
-                                <button
-                                  className="ah-btn-primary"
-                                  onClick={handleSaveResults}
-                                  style={{ marginTop: '1rem' }}
-                                >
-                                  Save Results & Close Round
-                                </button>
+                                <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                  <button
+                                    className="ah-btn-outline"
+                                    onClick={handleSaveResults}
+                                  >
+                                    Save Results
+                                  </button>
+                                  <button
+                                    className="ah-btn-primary"
+                                    onClick={handleCloseRound}
+                                  >
+                                    Close Round
+                                  </button>
+                                </div>
                               </div>
                             )}
                           </div>
