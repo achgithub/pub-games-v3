@@ -1563,15 +1563,31 @@ function App() {
                           {/* Edit Picks Section */}
                           <div style={{ marginBottom: '2rem' }}>
                             <h5 style={{ marginBottom: '1rem' }}>Edit Picks</h5>
-                            {editGameDetail.participants
-                              .filter((p) => p.isActive || p.eliminatedInRound === round.roundNumber)
-                              .map((participant) => {
+                            {editGameDetail.participants.map((participant) => {
                                 const currentPick = (editPicks[round.id] || []).find(
                                   (p) => p.playerName === participant.playerName
                                 );
+                                const isEliminated = !participant.isActive;
+                                const eliminatedInThisRound = participant.eliminatedInRound === round.roundNumber;
+
                                 return (
                                   <div key={participant.playerName} className="pick-row">
-                                    <strong>{participant.playerName}</strong>
+                                    <div>
+                                      <strong>{participant.playerName}</strong>
+                                      {isEliminated && (
+                                        <span
+                                          className="ah-meta"
+                                          style={{ marginLeft: '0.5rem', color: '#991B1B' }}
+                                        >
+                                          (Eliminated R{participant.eliminatedInRound})
+                                        </span>
+                                      )}
+                                      {!currentPick?.teamId && (
+                                        <p className="ah-meta" style={{ margin: 0, fontSize: '0.75rem' }}>
+                                          No prediction
+                                        </p>
+                                      )}
+                                    </div>
                                     <select
                                       className="ah-select"
                                       value={
