@@ -7,7 +7,7 @@ VALUES (
   'iframe',
   'admin',
   'Manage sweepstakes for horse races, greyhounds, athletics, and more',
-  'http://localhost:4032',
+  'http://{host}:4032',
   4032,
   'none',
   1,
