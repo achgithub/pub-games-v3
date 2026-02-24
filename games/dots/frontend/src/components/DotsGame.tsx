@@ -307,26 +307,28 @@ const DotsGame: React.FC<DotsGameProps> = ({ gameId, user, token }) => {
   const gameEnded = game.status === 'completed';
 
   return (
-    <div className="app">
-      <div className="header">
-        <h1>Dots & Boxes</h1>
+    <div className="dots-container">
+      {/* Score header - combines header and score in compact layout */}
+      <div className="dots-header">
+        <div className="dots-scores">
+          <div className={`dots-score ${isPlayer1 ? 'active' : ''}`}>
+            {myName}: {isPlayer1 ? game.player1Score : game.player2Score}
+          </div>
+          <div className="dots-divider">vs</div>
+          <div className={`dots-score ${!isPlayer1 ? 'active' : ''}`}>
+            {opponentName}: {isPlayer1 ? game.player2Score : game.player1Score}
+          </div>
+        </div>
       </div>
 
-      <div className="score">
-        <div className={`player ${isPlayer1 ? 'active' : ''}`}>
-          {myName}: {isPlayer1 ? game.player1Score : game.player2Score}
-        </div>
-        <div className={`player ${!isPlayer1 ? 'active' : ''}`}>
-          {opponentName}: {isPlayer1 ? game.player2Score : game.player1Score}
-        </div>
+      <div className="game-board-wrapper">
+        <DotsGrid
+          game={game}
+          playerNum={playerNum}
+          isMyTurn={isMyTurn()}
+          makeMove={makeMove}
+        />
       </div>
-
-      <DotsGrid
-        game={game}
-        playerNum={playerNum}
-        isMyTurn={isMyTurn()}
-        makeMove={makeMove}
-      />
 
       <div className="below-grid">
         {!gameEnded && (
