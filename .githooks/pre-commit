@@ -81,6 +81,22 @@ if [ ! -z "$JS_FILES" ]; then
     ERRORS=$((ERRORS + 1))
 fi
 
+# Check 5: SQL migrations must use {host} placeholder, not localhost
+echo ""
+echo "Checking SQL migrations for localhost..."
+SQL_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E 'scripts/.*\.sql$' || true)
+for FILE in $SQL_FILES; do
+    # Check for localhost in URL values (not in comments)
+    LOCALHOST_URLS=$(grep -E "http://localhost:[0-9]+" "$FILE" 2>/dev/null | grep -v '^[[:space:]]*--' || true)
+    if [ ! -z "$LOCALHOST_URLS" ]; then
+        echo -e "${RED}❌ ERROR: $FILE contains localhost in URLs${NC}"
+        echo "$LOCALHOST_URLS"
+        echo -e "${YELLOW}   Use {host} placeholder instead: http://{host}:PORT${NC}"
+        echo -e "${YELLOW}   Identity shell will replace {host} with actual hostname${NC}"
+        ERRORS=$((ERRORS + 1))
+    fi
+done
+
 # Summary
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
