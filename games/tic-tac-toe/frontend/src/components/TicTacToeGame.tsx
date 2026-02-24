@@ -203,7 +203,7 @@ const TicTacToeGame: React.FC<TicTacToeGameProps> = ({ gameId, user, token }) =>
         {/* Claim Win button */}
         {opponentDisconnected && claimWinAvailable && !gameEnded && (
           <div>
-            <button className="ah-btn-primary" onClick={claimWin} style={{ background: 'linear-gradient(135deg, #28a745, #20c997)' }}>
+            <button className="ah-btn-primary" onClick={claimWin}>
               Claim Win
             </button>
           </div>
@@ -214,7 +214,7 @@ const TicTacToeGame: React.FC<TicTacToeGameProps> = ({ gameId, user, token }) =>
         {/* Game actions */}
         {!gameEnded && connected && ready && (
           <div>
-            <button className="ah-btn-outline" onClick={handleForfeitClick} style={{ borderColor: '#dee2e6', color: '#6c757d' }}>
+            <button className="ah-btn-outline" onClick={handleForfeitClick}>
               Leave Game
             </button>
           </div>
