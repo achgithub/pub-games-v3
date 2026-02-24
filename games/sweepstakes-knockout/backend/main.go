@@ -29,7 +29,7 @@ func main() {
 	defer identityDB.Close()
 
 	// Connect to app database
-	appDB, err = database.InitDatabase("sweepstakes_knockout_db")
+	appDB, err = database.InitDatabaseByName("sweepstakes_knockout_db")
 	if err != nil {
 		log.Fatalf("Failed to connect to app database: %v", err)
 	}
