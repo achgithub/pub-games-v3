@@ -1339,19 +1339,34 @@ Players can still view their assignments/picks (read-only) even in managed mode.
 
 **Bingo** (multi-player, pub-hosted)
 - Classic UK 90-ball bingo (1-90, three rows of five numbers per card)
-- Split architecture: caller app + player cards + TV display (similar to quiz)
-  - **bingo-caller** (Port 5090): Host/caller interface — start game, call numbers, mark claims
-  - **bingo-display** (Port 5091): TV display showing called numbers, current ball, patterns needed
-  - **bingo-player** (Port 4071): Mobile card view — auto-daubs called numbers, claim buttons
-- SSE for real-time number calls pushed from caller → player cards and display
-- Redis tracks active game state (called numbers, current ball, claims)
-- PostgreSQL stores game history, cards issued, winners
-- Cards generated server-side with unique random grids, assigned per userId
-- Claim types: One Line, Two Lines, Full House
-- Auto-validation on server — claim checked against called numbers before confirming winner
-- Optional: multiple simultaneous cards per player
-- Roles: `game_admin` or `quiz_master` to host; any authenticated user to play
-- Estimated effort: 16-20 hours
+
+- **Legal note (Gambling Act 2005, Section 4):** Players using their own phones over WiFi
+  almost certainly constitutes "remote gambling" under the broad statutory definition
+  ("any other kind of electronic or other technology for facilitating communication"). The
+  Gambling Commission has explicitly stated that providing software to customers on their own
+  devices — even on premises — does not fall within the ancillary bingo licence scope.
+  **Chosen approach: physical printed cards only.** No player-facing app. This keeps the
+  system clearly outside remote gambling regulation. Pub exempt gaming limits still apply:
+  max £5 stake / £70 prize per game, £2,000 weekly threshold before "high turnover" rules.
+
+- **Architecture: two apps only (caller + display)**
+  - **bingo-caller** (Port 5090): Host/caller interface — generate/print cards, run game, validate claims
+  - **bingo-display** (Port 5091): TV display showing called numbers, current ball, claim status
+
+- **Bingo card management in game-admin:**
+  - Card generator produces standard UK 90-ball cards (9 columns × 3 rows, 5 numbers per row)
+  - Each card assigned a **strict unique serial number** — stored in PostgreSQL, never reused
+  - Serial number printed prominently on card for caller verification
+  - Cards output as print-friendly HTML — A4 sheet, multiple cards per sheet
+  - Card sets grouped by session — admin can see which serials are in play
+  - Claim validation: caller enters serial number → system confirms card and checks against called numbers
+  - PostgreSQL tracks: serial number, game session, numbers on card, date issued, winner status
+
+- SSE for real-time number calls: caller → display screen only
+- Redis tracks active game state (called numbers, current ball)
+- Claim types: One Line, Two Lines, Full House — caller verifies by entering serial number
+- Roles: `game_admin` or `quiz_master` to host
+- Estimated effort: 14-18 hours
 
 ---
 
