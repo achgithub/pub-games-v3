@@ -133,7 +133,7 @@
   background: #E7E5E4;  /* Light stone background */
   padding: 8px;
   border-radius: 12px;
-  max-width: 324px;  /* 3 cells × 100px + gaps + padding */
+  width: fit-content;  /* Shrink to content size */
   margin: 0 auto;  /* Center the board */
 }
 
