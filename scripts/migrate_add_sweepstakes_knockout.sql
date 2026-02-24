@@ -1,24 +1,32 @@
 -- Register sweepstakes-knockout app in the activity hub
-INSERT INTO applications (name, display_name, url_path, icon, category, description, display_order, is_enabled, required_roles, guest_accessible)
+INSERT INTO applications (name, icon, type, category, description, url, backend_port, realtime, min_players, max_players, required_roles, enabled, display_order, guest_accessible)
 VALUES (
-  'sweepstakes-knockout',
   'Sweepstakes Knockout',
-  '/games/sweepstakes-knockout',
   '🏇',
-  'games',
+  'iframe',
+  'admin',
   'Manage sweepstakes for horse races, greyhounds, athletics, and more',
-  50,
-  true,
+  'http://localhost:4032',
+  4032,
+  false,
+  1,
+  999,
   ARRAY['game_manager'],
+  true,
+  50,
   false
 )
 ON CONFLICT (name) DO UPDATE SET
-  display_name = EXCLUDED.display_name,
-  url_path = EXCLUDED.url_path,
   icon = EXCLUDED.icon,
+  type = EXCLUDED.type,
   category = EXCLUDED.category,
   description = EXCLUDED.description,
-  display_order = EXCLUDED.display_order,
-  is_enabled = EXCLUDED.is_enabled,
+  url = EXCLUDED.url,
+  backend_port = EXCLUDED.backend_port,
+  realtime = EXCLUDED.realtime,
+  min_players = EXCLUDED.min_players,
+  max_players = EXCLUDED.max_players,
   required_roles = EXCLUDED.required_roles,
+  enabled = EXCLUDED.enabled,
+  display_order = EXCLUDED.display_order,
   guest_accessible = EXCLUDED.guest_accessible;
