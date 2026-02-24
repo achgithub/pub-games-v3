@@ -203,6 +203,243 @@
   .ah-table-row:nth-child(even) { background-color: #FAFAF9; }
   .ah-table-row:hover { background-color: #F5F5F4; }
 
+  /* ── Game Boards ─────────────────────────────────────────── */
+  .ah-game-board {
+    @apply grid gap-1 bg-stone-200 p-2 rounded-lg;
+  }
+
+  .ah-game-cell {
+    @apply aspect-square bg-white rounded flex items-center justify-center
+           cursor-pointer hover:bg-stone-50 transition-colors duration-150;
+  }
+
+  .ah-game-cell.disabled {
+    @apply cursor-not-allowed opacity-50;
+  }
+
+  .ah-game-cell.active {
+    @apply ring-2 ring-brand-500;
+  }
+
+  /* Grid size variants */
+  .ah-game-board--3x3 { grid-template-columns: repeat(3, 1fr); }
+  .ah-game-board--4x4 { grid-template-columns: repeat(4, 1fr); }
+  .ah-game-board--5x5 { grid-template-columns: repeat(5, 1fr); }
+  .ah-game-board--6x6 { grid-template-columns: repeat(6, 1fr); }
+
+  .ah-game-board--dots {
+    grid-template-columns: repeat(6, 1fr);
+    gap: 4px;
+  }
+
+  /* ── Loading & Animations ────────────────────────────────── */
+  .ah-spinner {
+    @apply inline-block w-5 h-5 rounded-full
+           border-2 border-stone-300 border-t-brand-500
+           animate-spin;
+  }
+
+  .ah-spinner--large {
+    @apply w-10 h-10 border-4;
+  }
+
+  .ah-spinner--small {
+    @apply w-3 h-3 border;
+  }
+
+  /* Pulse animation for game events */
+  @keyframes ah-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.8; transform: scale(1.05); }
+  }
+
+  .ah-pulse {
+    animation: ah-pulse 0.5s ease-in-out;
+  }
+
+  /* Box complete animation (for dots/boxes game) */
+  @keyframes ah-box-complete {
+    0% { transform: scale(0.95); opacity: 0; }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  .ah-box-complete {
+    animation: ah-box-complete 0.3s ease-out;
+  }
+
+  /* Fade in animation */
+  @keyframes ah-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .ah-fade-in {
+    animation: ah-fade-in 0.2s ease-in;
+  }
+
+  /* Slide down animation */
+  @keyframes ah-slide-down {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .ah-slide-down {
+    animation: ah-slide-down 0.3s ease-out;
+  }
+
+  /* ── Modals & Dialogs ────────────────────────────────────── */
+  .ah-modal-overlay {
+    @apply fixed inset-0 bg-black/50 flex items-center justify-center z-50
+           backdrop-blur-sm;
+  }
+
+  .ah-modal {
+    @apply bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4
+           transform transition-all;
+  }
+
+  .ah-modal--large {
+    @apply max-w-2xl;
+  }
+
+  .ah-modal--small {
+    @apply max-w-sm;
+  }
+
+  .ah-modal-header {
+    @apply flex justify-between items-center mb-4;
+  }
+
+  .ah-modal-title {
+    @apply text-lg font-bold text-stone-900 m-0;
+  }
+
+  .ah-modal-close {
+    @apply text-stone-400 hover:text-stone-600 text-2xl leading-none
+           cursor-pointer transition-colors duration-150;
+  }
+
+  .ah-modal-body {
+    @apply text-stone-700 text-sm leading-relaxed;
+  }
+
+  .ah-modal-footer {
+    @apply flex gap-3 mt-6 justify-end;
+  }
+
+  /* ── Status Indicators ───────────────────────────────────── */
+  .ah-status {
+    @apply inline-flex items-center gap-2 px-3 py-1 rounded-full
+           text-sm font-medium;
+  }
+
+  .ah-status--active {
+    @apply bg-green-100 text-green-700;
+  }
+
+  .ah-status--waiting {
+    @apply bg-amber-100 text-amber-700;
+  }
+
+  .ah-status--disabled {
+    @apply bg-stone-100 text-stone-500;
+  }
+
+  .ah-status--eliminated {
+    @apply bg-red-100 text-red-700;
+  }
+
+  .ah-status--complete {
+    @apply bg-blue-100 text-blue-700;
+  }
+
+  .ah-status--in-progress {
+    @apply bg-brand-100 text-brand-700;
+  }
+
+  /* Player indicators */
+  .ah-player {
+    @apply flex items-center gap-2 px-3 py-2 rounded-lg
+           transition-colors duration-150;
+  }
+
+  .ah-player--current {
+    @apply bg-brand-50 ring-2 ring-brand-500;
+  }
+
+  .ah-player--opponent {
+    @apply bg-stone-100;
+  }
+
+  .ah-player--winner {
+    @apply bg-green-50 ring-2 ring-green-500;
+  }
+
+  .ah-player--loser {
+    @apply bg-red-50;
+  }
+
+  /* Status badges with dots */
+  .ah-status-dot {
+    @apply w-2 h-2 rounded-full;
+  }
+
+  .ah-status-dot--online {
+    @apply bg-green-500;
+  }
+
+  .ah-status-dot--offline {
+    @apply bg-stone-400;
+  }
+
+  .ah-status-dot--away {
+    @apply bg-amber-500;
+  }
+
+  .ah-status-dot--busy {
+    @apply bg-red-500;
+  }
+
+  /* ── Loading States ──────────────────────────────────────── */
+  .ah-loading-container {
+    @apply flex flex-col items-center justify-center gap-3 py-12;
+  }
+
+  .ah-loading-text {
+    @apply text-sm text-stone-500;
+  }
+
+  /* Skeleton loader */
+  @keyframes ah-skeleton-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .ah-skeleton {
+    @apply bg-stone-200 rounded;
+    animation: ah-skeleton-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  .ah-skeleton--text {
+    @apply h-4 w-full mb-2;
+  }
+
+  .ah-skeleton--title {
+    @apply h-6 w-3/4 mb-3;
+  }
+
+  .ah-skeleton--circle {
+    @apply rounded-full;
+    aspect-ratio: 1;
+  }
+
 }
 
 @tailwind utilities;

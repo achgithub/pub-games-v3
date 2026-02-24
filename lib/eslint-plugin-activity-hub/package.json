@@ -1,0 +1,17 @@
+{
+  "name": "eslint-plugin-activity-hub",
+  "version": "1.0.0",
+  "description": "ESLint plugin to enforce Activity Hub styling standards",
+  "main": "index.js",
+  "keywords": [
+    "eslint",
+    "eslintplugin",
+    "activity-hub",
+    "style-enforcement"
+  ],
+  "author": "Activity Hub",
+  "license": "MIT",
+  "peerDependencies": {
+    "eslint": ">=7.0.0"
+  }
+}

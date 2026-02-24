@@ -1,0 +1,124 @@
+# {{APP_NAME}}
+
+## Overview
+
+[Describe your app here]
+
+## Architecture
+
+- **Frontend**: React + TypeScript
+- **Backend**: Go
+- **Database**: PostgreSQL (optional)
+- **Real-time**: SSE + Redis (if needed)
+- **Port**: {{PORT}}
+
+## Development
+
+### On Mac (Code Editing)
+
+Edit files, commit to Git when ready.
+
+### On Pi (Build & Run)
+
+```bash
+# Pull latest code
+cd ~/pub-games-v3
+git pull
+
+# Create database (if needed)
+psql -U activityhub -h localhost -p 5555 -d postgres -c "CREATE DATABASE {{APP_NAME}}_db;"
+psql -U activityhub -h localhost -p 5555 -d {{APP_NAME}}_db -f games/{{APP_NAME}}/database/schema.sql
+
+# Backend dependencies
+cd ~/pub-games-v3/games/{{APP_NAME}}/backend
+go mod tidy
+
+# Build frontend
+cd ~/pub-games-v3/games/{{APP_NAME}}/frontend
+npm install
+npm run build
+cp -r build/* ../backend/static/
+
+# Run backend
+cd ~/pub-games-v3/games/{{APP_NAME}}/backend
+go run *.go
+```
+
+## Registration
+
+Add to `identity-shell/backend/apps.json`:
+
+```json
+{
+  "id": "{{APP_NAME}}",
+  "name": "{{APP_NAME_DISPLAY}}",
+  "description": "[Your description]",
+  "url": "http://{{HOST}}:{{PORT}}",
+  "icon": "🎮",
+  "category": "games",
+  "enabled": true,
+  "requiredRoles": []
+}
+```
+
+Then register in database:
+
+```sql
+INSERT INTO apps (id, name, description, url, icon, category, enabled, required_roles, display_order)
+VALUES (
+  '{{APP_NAME}}',
+  '{{APP_NAME_DISPLAY}}',
+  '[Your description]',
+  'http://{{HOST}}:{{PORT}}',
+  '🎮',
+  'games',
+  true,
+  '{}',
+  (SELECT COALESCE(MAX(display_order), 0) + 1 FROM apps)
+);
+```
+
+## API Endpoints
+
+### `GET /api/config`
+
+Returns app configuration.
+
+### `GET /api/ping`
+
+Health check endpoint.
+
+## URL Parameters (Required)
+
+All Activity Hub apps must read these parameters:
+
+- `userId`: User's email
+- `userName`: User's display name
+- `token`: Authentication token
+- `gameId`: (optional) Game identifier for direct links
+
+## Testing
+
+```bash
+# Test config endpoint
+curl http://localhost:{{PORT}}/api/config
+
+# Test ping
+curl http://localhost:{{PORT}}/api/ping
+```
+
+## Checklist
+
+- [ ] Frontend loads Activity Hub CSS dynamically
+- [ ] App uses `.ah-*` classes for styling
+- [ ] URL parameters are parsed and used
+- [ ] Backend serves both API and static files
+- [ ] Database schema created (if needed)
+- [ ] App registered in apps.json and database
+- [ ] ESLint passes with no warnings
+- [ ] Builds successfully on Pi
+- [ ] Navigation back to shell works
+
+## Notes
+
+[Add any app-specific notes here]

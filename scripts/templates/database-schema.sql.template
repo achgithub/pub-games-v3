@@ -1,0 +1,17 @@
+-- Database schema for {{APP_NAME}}
+
+-- Example table (modify as needed)
+CREATE TABLE IF NOT EXISTS games (
+    id SERIAL PRIMARY KEY,
+    player1_email VARCHAR(255) NOT NULL,
+    player2_email VARCHAR(255),
+    status VARCHAR(50) DEFAULT 'waiting',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_games_player1 ON games(player1_email);
+CREATE INDEX idx_games_player2 ON games(player2_email);
+CREATE INDEX idx_games_status ON games(status);
+
+-- Add more tables as needed for your game

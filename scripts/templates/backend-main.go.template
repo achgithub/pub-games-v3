@@ -1,0 +1,86 @@
+package main
+
+import (
+	"database/sql"
+	"encoding/json"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+
+	"github.com/gorilla/mux"
+	_ "github.com/lib/pq"
+)
+
+var db *sql.DB
+
+type Config struct {
+	AppName string `json:"appName"`
+	Port    int    `json:"port"`
+}
+
+func main() {
+	// Database connection (optional - remove if not needed)
+	dbHost := getEnv("DB_HOST", "localhost")
+	dbPort := getEnv("DB_PORT", "5555")
+	dbUser := getEnv("DB_USER", "activityhub")
+	dbPass := getEnv("DB_PASS", "pubgames")
+	dbName := getEnv("DB_NAME", "{{APP_NAME}}_db")
+
+	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		dbHost, dbPort, dbUser, dbPass, dbName)
+
+	var err error
+	db, err = sql.Open("postgres", connStr)
+	if err != nil {
+		log.Printf("Warning: Database connection failed: %v", err)
+		log.Println("Continuing without database...")
+	} else {
+		defer db.Close()
+		if err = db.Ping(); err != nil {
+			log.Printf("Warning: Database ping failed: %v", err)
+		} else {
+			log.Println("Database connected successfully")
+		}
+	}
+
+	r := mux.NewRouter()
+
+	// API routes
+	r.HandleFunc("/api/config", handleConfig).Methods("GET")
+	r.HandleFunc("/api/ping", handlePing).Methods("GET")
+
+	// Serve static frontend files
+	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./static")))
+
+	port := getEnv("PORT", "{{PORT}}")
+	log.Printf("{{APP_NAME}} server starting on port %s", port)
+	log.Fatal(http.ListenAndServe(":"+port, r))
+}
+
+func handleConfig(w http.ResponseWriter, r *http.Request) {
+	config := Config{
+		AppName: "{{APP_NAME}}",
+		Port:    {{PORT}},
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(config)
+}
+
+func handlePing(w http.ResponseWriter, r *http.Request) {
+	response := map[string]string{
+		"status": "ok",
+		"app":    "{{APP_NAME}}",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+func getEnv(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
+}

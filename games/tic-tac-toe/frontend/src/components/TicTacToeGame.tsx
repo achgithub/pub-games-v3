@@ -39,22 +39,20 @@ const TicTacToeGame: React.FC<TicTacToeGameProps> = ({ gameId, user, token }) =>
   // No gameId provided - show instructions
   if (!gameId) {
     return (
-      <div className="ttt-container">
-        <div className="ttt-message">
-          <h2>Tic-Tac-Toe</h2>
-          <p>Challenge another player from the lobby to start a game!</p>
-          <p className="ttt-hint">Go back to the lobby and click on a player to send a challenge.</p>
-          <div className="ttt-back-to-lobby" style={{ marginTop: 30 }}>
-            <button
-              className="ttt-lobby-btn"
-              onClick={() => {
-                const shellUrl = `http://${window.location.hostname}:3001`;
-                window.location.href = shellUrl;
-              }}
-            >
-              Go to Lobby
-            </button>
-          </div>
+      <div className="ah-container ah-container--narrow" style={{ textAlign: 'center', marginTop: '40px' }}>
+        <h2>Tic-Tac-Toe</h2>
+        <p>Challenge another player from the lobby to start a game!</p>
+        <p className="ah-meta">Go back to the lobby and click on a player to send a challenge.</p>
+        <div style={{ marginTop: 30 }}>
+          <button
+            className="ah-btn-primary"
+            onClick={() => {
+              const shellUrl = `http://${window.location.hostname}:3001`;
+              window.location.href = shellUrl;
+            }}
+          >
+            Go to Lobby
+          </button>
         </div>
       </div>
     );
@@ -76,33 +74,31 @@ const TicTacToeGame: React.FC<TicTacToeGameProps> = ({ gameId, user, token }) =>
     };
 
     return (
-      <div className="ttt-container">
-        <div className="ttt-message">
-          <div className={`ttt-loading ${connectionStatus === 'failed' ? 'ttt-loading-failed' : ''}`}>
-            {getConnectionMessage()}
-          </div>
-          {connectionStatus === 'failed' && (
-            <>
-              <button className="ttt-retry-btn" onClick={retry}>
-                Tap to Retry
-              </button>
-              <div className="ttt-back-to-lobby" style={{ marginTop: 15 }}>
-                <button
-                  className="ttt-leave-btn"
-                  onClick={() => {
-                    const shellUrl = `http://${window.location.hostname}:3001`;
-                    window.location.href = shellUrl;
-                  }}
-                >
-                  Back to Lobby
-                </button>
-              </div>
-            </>
-          )}
-          {error && connectionStatus !== 'failed' && (
-            <div className="ttt-error">{error}</div>
-          )}
+      <div className="ah-container ah-container--narrow" style={{ textAlign: 'center', marginTop: '40px' }}>
+        <div className={connectionStatus === 'failed' ? 'ah-banner ah-banner--error' : ''} style={{ fontSize: '18px', padding: '20px' }}>
+          {getConnectionMessage()}
         </div>
+        {connectionStatus === 'failed' && (
+          <>
+            <button className="ah-btn-primary" onClick={retry} style={{ marginTop: '20px' }}>
+              Tap to Retry
+            </button>
+            <div style={{ marginTop: 15 }}>
+              <button
+                className="ah-btn-outline"
+                onClick={() => {
+                  const shellUrl = `http://${window.location.hostname}:3001`;
+                  window.location.href = shellUrl;
+                }}
+              >
+                Back to Lobby
+              </button>
+            </div>
+          </>
+        )}
+        {error && connectionStatus !== 'failed' && (
+          <div className="ah-banner ah-banner--error" style={{ marginTop: '10px' }}>{error}</div>
+        )}
       </div>
     );
   }
@@ -206,19 +202,19 @@ const TicTacToeGame: React.FC<TicTacToeGameProps> = ({ gameId, user, token }) =>
 
         {/* Claim Win button */}
         {opponentDisconnected && claimWinAvailable && !gameEnded && (
-          <div className="ttt-claim-win">
-            <button className="ttt-claim-win-btn" onClick={claimWin}>
+          <div>
+            <button className="ah-btn-primary" onClick={claimWin} style={{ background: 'linear-gradient(135deg, #28a745, #20c997)' }}>
               Claim Win
             </button>
           </div>
         )}
 
-        {error && <div className="ttt-error">{error}</div>}
+        {error && <div className="ah-banner ah-banner--error">{error}</div>}
 
         {/* Game actions */}
         {!gameEnded && connected && ready && (
-          <div className="ttt-actions">
-            <button className="ttt-leave-btn" onClick={handleForfeitClick}>
+          <div>
+            <button className="ah-btn-outline" onClick={handleForfeitClick} style={{ borderColor: '#dee2e6', color: '#6c757d' }}>
               Leave Game
             </button>
           </div>
@@ -226,9 +222,9 @@ const TicTacToeGame: React.FC<TicTacToeGameProps> = ({ gameId, user, token }) =>
 
         {/* Back to Lobby - shown when game ends */}
         {gameEnded && (
-          <div className="ttt-back-to-lobby">
+          <div>
             <button
-              className="ttt-lobby-btn"
+              className="ah-btn-primary"
               onClick={() => {
                 const shellUrl = `http://${window.location.hostname}:3001`;
                 window.location.href = shellUrl;
@@ -242,15 +238,19 @@ const TicTacToeGame: React.FC<TicTacToeGameProps> = ({ gameId, user, token }) =>
 
       {/* Forfeit confirmation modal */}
       {showForfeitConfirm && (
-        <div className="ttt-modal-overlay" onClick={handleCancelForfeit}>
-          <div className="ttt-modal" onClick={(e) => e.stopPropagation()}>
-            <h3>Leave Game?</h3>
-            <p>If you leave, your opponent wins.</p>
-            <div className="ttt-modal-buttons">
-              <button className="ttt-modal-cancel" onClick={handleCancelForfeit}>
+        <div className="ah-modal-overlay" onClick={handleCancelForfeit}>
+          <div className="ah-modal ah-modal--small" onClick={(e) => e.stopPropagation()}>
+            <div className="ah-modal-header">
+              <h3 className="ah-modal-title">Leave Game?</h3>
+            </div>
+            <div className="ah-modal-body">
+              <p>If you leave, your opponent wins.</p>
+            </div>
+            <div className="ah-modal-footer">
+              <button className="ah-btn-outline" onClick={handleCancelForfeit}>
                 Stay
               </button>
-              <button className="ttt-modal-confirm" onClick={handleConfirmForfeit}>
+              <button className="ah-btn-danger" onClick={handleConfirmForfeit}>
                 Leave
               </button>
             </div>

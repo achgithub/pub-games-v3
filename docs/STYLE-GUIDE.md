@@ -463,9 +463,273 @@ When updating an existing app to follow this guide:
 - **Shared CSS source**: `identity-shell/backend/static/activity-hub.css`
 - **Pattern documentation**: This file
 
+## New Activity Hub Classes (2026)
+
+### Game Board Utilities
+
+For grid-based games (tic-tac-toe, dots, etc.):
+
+```tsx
+// Basic game board
+<div className="ah-game-board ah-game-board--3x3">
+  <div className="ah-game-cell">Cell 1</div>
+  <div className="ah-game-cell">Cell 2</div>
+  <div className="ah-game-cell">Cell 3</div>
+  {/* ... more cells */}
+</div>
+
+// Board variants
+<div className="ah-game-board--3x3">  {/* 3x3 grid */}
+<div className="ah-game-board--4x4">  {/* 4x4 grid */}
+<div className="ah-game-board--5x5">  {/* 5x5 grid */}
+<div className="ah-game-board--6x6">  {/* 6x6 grid */}
+<div className="ah-game-board--dots"> {/* Dots game layout */}
+
+// Cell states
+<div className="ah-game-cell disabled">  {/* Disabled cell */}
+<div className="ah-game-cell active">    {/* Active/selected cell */}
+```
+
+**Example** (Tic-Tac-Toe):
+```tsx
+<div className="ah-game-board ah-game-board--3x3">
+  {board.map((cell, i) => (
+    <button
+      key={i}
+      className={`ah-game-cell ${cell ? 'disabled' : ''} ${myTurn ? 'active' : ''}`}
+      onClick={() => handleClick(i)}
+      disabled={!myTurn || cell}
+    >
+      {cell}
+    </button>
+  ))}
+</div>
+```
+
+### Loading & Animations
+
+```tsx
+// Spinners
+<div className="ah-spinner"></div>                {/* Default size */}
+<div className="ah-spinner ah-spinner--small"></div>  {/* Small */}
+<div className="ah-spinner ah-spinner--large"></div>  {/* Large */}
+
+// Loading container (centered)
+<div className="ah-loading-container">
+  <div className="ah-spinner ah-spinner--large"></div>
+  <p className="ah-loading-text">Loading game...</p>
+</div>
+
+// Skeleton loaders
+<div className="ah-skeleton ah-skeleton--title"></div>
+<div className="ah-skeleton ah-skeleton--text"></div>
+<div className="ah-skeleton ah-skeleton--circle" style={{ width: 40, height: 40 }}></div>
+
+// Animations
+<div className="ah-pulse">Pulsing element</div>
+<div className="ah-fade-in">Fades in</div>
+<div className="ah-slide-down">Slides down</div>
+<div className="ah-box-complete">Box complete (dots game)</div>
+```
+
+### Modals & Dialogs
+
+```tsx
+{showModal && (
+  <div className="ah-modal-overlay" onClick={() => setShowModal(false)}>
+    <div className="ah-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="ah-modal-header">
+        <h3 className="ah-modal-title">Modal Title</h3>
+        <span className="ah-modal-close" onClick={() => setShowModal(false)}>×</span>
+      </div>
+      <div className="ah-modal-body">
+        <p>Modal content goes here.</p>
+      </div>
+      <div className="ah-modal-footer">
+        <button className="ah-btn-outline" onClick={() => setShowModal(false)}>
+          Cancel
+        </button>
+        <button className="ah-btn-primary" onClick={handleConfirm}>
+          Confirm
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+// Modal sizes
+<div className="ah-modal ah-modal--small">   {/* Small modal */}
+<div className="ah-modal ah-modal--large">   {/* Large modal */}
+```
+
+### Status Indicators
+
+```tsx
+// Status badges
+<div className="ah-status ah-status--active">Active</div>
+<div className="ah-status ah-status--waiting">Waiting</div>
+<div className="ah-status ah-status--disabled">Disabled</div>
+<div className="ah-status ah-status--eliminated">Eliminated</div>
+<div className="ah-status ah-status--complete">Complete</div>
+<div className="ah-status ah-status--in-progress">In Progress</div>
+
+// Player indicators (for games)
+<div className="ah-player ah-player--current">
+  <span>You</span>
+  <span>Score: 5</span>
+</div>
+<div className="ah-player ah-player--opponent">
+  <span>Opponent</span>
+  <span>Score: 3</span>
+</div>
+<div className="ah-player ah-player--winner">
+  <span>Winner!</span>
+</div>
+
+// Status dots
+<span className="ah-status-dot ah-status-dot--online"></span>
+<span className="ah-status-dot ah-status-dot--offline"></span>
+<span className="ah-status-dot ah-status-dot--away"></span>
+<span className="ah-status-dot ah-status-dot--busy"></span>
+```
+
+## CSS Class Reference (Complete List)
+
+### Layout
+- `.ah-container` - Default container (max-width: 1024px)
+- `.ah-container--narrow` - Narrow container (max-width: 640px)
+- `.ah-container--wide` - Wide container (max-width: 1280px)
+- `.ah-app-header` - App header bar (full-width)
+- `.ah-app-header-left` - Left section of header
+- `.ah-app-header-right` - Right section of header
+- `.ah-app-title` - App title in header
+- `.ah-header` - Generic header with flex layout
+- `.ah-header-title` - Header title text
+
+### Cards & Sections
+- `.ah-card` - Card component with shadow and border
+- `.ah-section-title` - Section title text (uppercase, small)
+
+### Buttons
+- `.ah-btn-primary` - Primary action button (blue gradient)
+- `.ah-btn-outline` - Secondary outline button
+- `.ah-btn-danger` - Destructive action button (red)
+- `.ah-btn-back` - Back/cancel button
+- `.ah-lobby-btn` - Lobby button (in header)
+
+### Forms
+- `.ah-input` - Text input field
+- `.ah-select` - Select dropdown
+- `.ah-label` - Form label text
+- `.ah-meta` - Helper/meta text (gray, 14px)
+
+### Banners
+- `.ah-banner` - Banner base
+- `.ah-banner--error` - Error banner (red)
+- `.ah-banner--warning` - Warning banner (amber)
+- `.ah-banner--success` - Success banner (green)
+- `.ah-banner--info` - Info banner (blue)
+
+### Tabs
+- `.ah-tabs` - Tab container
+- `.ah-tab` - Individual tab
+- `.ah-tab.active` - Active tab state
+
+### Tables
+- `.ah-table` - Table container
+- `.ah-table-header` - Table header row
+- `.ah-table-row` - Table data row
+
+### Game Elements
+- `.ah-game-board` - Game board base (grid)
+- `.ah-game-board--3x3` - 3x3 grid
+- `.ah-game-board--4x4` - 4x4 grid
+- `.ah-game-board--5x5` - 5x5 grid
+- `.ah-game-board--6x6` - 6x6 grid
+- `.ah-game-board--dots` - Dots game grid
+- `.ah-game-cell` - Game cell/tile
+- `.ah-game-cell.disabled` - Disabled cell
+- `.ah-game-cell.active` - Active/selected cell
+
+### Loading
+- `.ah-spinner` - Loading spinner (default)
+- `.ah-spinner--small` - Small spinner
+- `.ah-spinner--large` - Large spinner
+- `.ah-loading-container` - Centered loading container
+- `.ah-loading-text` - Loading text
+- `.ah-skeleton` - Skeleton loader base
+- `.ah-skeleton--text` - Text skeleton
+- `.ah-skeleton--title` - Title skeleton
+- `.ah-skeleton--circle` - Circle skeleton
+
+### Modals
+- `.ah-modal-overlay` - Modal backdrop
+- `.ah-modal` - Modal container (default size)
+- `.ah-modal--small` - Small modal
+- `.ah-modal--large` - Large modal
+- `.ah-modal-header` - Modal header section
+- `.ah-modal-title` - Modal title
+- `.ah-modal-close` - Close button (×)
+- `.ah-modal-body` - Modal content section
+- `.ah-modal-footer` - Modal action buttons section
+
+### Status
+- `.ah-status` - Status badge base
+- `.ah-status--active` - Active status (green)
+- `.ah-status--waiting` - Waiting status (amber)
+- `.ah-status--disabled` - Disabled status (gray)
+- `.ah-status--eliminated` - Eliminated status (red)
+- `.ah-status--complete` - Complete status (blue)
+- `.ah-status--in-progress` - In progress status (blue)
+- `.ah-player` - Player indicator base
+- `.ah-player--current` - Current player
+- `.ah-player--opponent` - Opponent player
+- `.ah-player--winner` - Winner indicator
+- `.ah-player--loser` - Loser indicator
+- `.ah-status-dot` - Status dot indicator
+- `.ah-status-dot--online` - Online (green)
+- `.ah-status-dot--offline` - Offline (gray)
+- `.ah-status-dot--away` - Away (amber)
+- `.ah-status-dot--busy` - Busy (red)
+
+### Animations
+- `.ah-pulse` - Pulse animation (0.5s)
+- `.ah-box-complete` - Box complete animation (0.3s)
+- `.ah-fade-in` - Fade in animation (0.2s)
+- `.ah-slide-down` - Slide down animation (0.3s)
+
+## Enforcement
+
+As of 2026, Activity Hub has automated enforcement mechanisms:
+
+1. **ESLint Plugin** - Warns about hardcoded colors and suggests Activity Hub classes
+2. **Pre-commit Hooks** - Blocks commits missing shared CSS loading
+3. **App Template Generator** - New apps automatically follow standards
+
+To enable enforcement in your app:
+
+```bash
+# Install ESLint plugin
+cd games/{app}/frontend
+npm install --save-dev file:../../../lib/eslint-plugin-activity-hub
+
+# Add to .eslintrc.js
+{
+  "extends": ["react-app", "plugin:activity-hub/recommended"]
+}
+
+# Run linter
+npm run lint
+```
+
 ## Questions?
 
 When in doubt, check smoke-test. If smoke-test doesn't have the pattern you need, consider:
 1. Can an existing Activity Hub class be used differently?
 2. Should this be added to Activity Hub CSS for all apps?
 3. Or is this truly app-specific and belongs in App.css?
+
+See also:
+- **Migration guide**: `docs/MIGRATION-TO-ACTIVITY-HUB-CSS.md`
+- **Reference app**: `games/smoke-test/`
+- **CSS source**: `lib/activity-hub-common/styles/activity-hub-src.css`

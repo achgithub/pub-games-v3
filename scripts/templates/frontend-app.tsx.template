@@ -1,0 +1,82 @@
+import React, { useEffect, useState } from 'react';
+import './App.css';
+
+interface Config {
+  appName: string;
+  port: number;
+}
+
+function App() {
+  const [userId, setUserId] = useState<string>('');
+  const [userName, setUserName] = useState<string>('');
+  const [token, setToken] = useState<string>('');
+  const [config, setConfig] = useState<Config | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Parse URL parameters (required by Activity Hub)
+    const params = new URLSearchParams(window.location.search);
+    const userIdParam = params.get('userId') || '';
+    const userNameParam = params.get('userName') || '';
+    const tokenParam = params.get('token') || '';
+
+    setUserId(userIdParam);
+    setUserName(userNameParam);
+    setToken(tokenParam);
+
+    // Fetch app configuration
+    fetch('/api/config')
+      .then(res => res.json())
+      .then(data => {
+        setConfig(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Failed to load config:', err);
+        setLoading(false);
+      });
+  }, []);
+
+  const handleBackToShell = () => {
+    window.parent.postMessage({ type: 'navigate', path: '/lobby' }, '*');
+  };
+
+  if (loading) {
+    return (
+      <div className="ah-container ah-container--narrow">
+        <div className="ah-spinner ah-spinner--large"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="ah-container ah-container--narrow">
+      <header className="ah-app-header">
+        <button className="ah-btn-back" onClick={handleBackToShell}>
+          ← Back
+        </button>
+        <h1>{{APP_NAME}}</h1>
+      </header>
+
+      <div className="ah-card">
+        <p>Welcome, {userName || 'Guest'}!</p>
+        <p>User ID: {userId || 'Not provided'}</p>
+        {config && (
+          <p className="ah-meta">
+            Running on port {config.port}
+          </p>
+        )}
+      </div>
+
+      <div className="ah-card">
+        <h2>Getting Started</h2>
+        <p>This is a new Activity Hub app. Start building your game logic here!</p>
+        <button className="ah-btn-primary">
+          Start Game
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default App;

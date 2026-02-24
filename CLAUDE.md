@@ -112,6 +112,124 @@ curl http://localhost:3001/shared/activity-hub.css | head -20
 - ❌ Create app-specific versions of Activity Hub CSS
 - ❌ Use `@import` in CSS files (dynamic script tag only)
 
+## ⚠️ CRITICAL: Automated Enforcement (2026)
+
+**All new apps MUST follow standards. Enforcement is automated.**
+
+### 1. App Template Generator (REQUIRED for new apps)
+
+**Use this instead of manual creation**:
+
+```bash
+./scripts/create-app.sh my-new-game 4099
+```
+
+This automatically creates:
+- ✅ Dynamic CSS loading in `index.tsx`
+- ✅ Activity Hub classes in `App.tsx`
+- ✅ TypeScript configuration
+- ✅ URL parameter parsing
+- ✅ Backend with activity-hub-common
+- ✅ ESLint configuration with Activity Hub rules
+
+**DO NOT create apps manually** - always use the template generator.
+
+### 2. Pre-commit Hooks (INSTALLED)
+
+Hooks are installed in `.git/hooks/pre-commit` and check:
+
+✅ **Dynamic CSS loading** in `index.tsx` files (ERROR - blocks commit)
+✅ **Hardcoded colors** in inline styles (WARNING - allows commit)
+✅ **Excessive inline styles** (WARNING - allows commit)
+✅ **`.js/.jsx` files** in `frontend/src` (ERROR - blocks commit)
+
+If commit blocked:
+```bash
+# Fix the issues, then commit again
+# To bypass (NOT recommended):
+git commit --no-verify
+```
+
+### 3. ESLint Plugin (REQUIRED in all apps)
+
+Install in each app's frontend:
+
+```bash
+cd games/{app}/frontend
+npm install --save-dev file:../../../lib/eslint-plugin-activity-hub
+```
+
+Add to `.eslintrc.js`:
+```javascript
+module.exports = {
+  extends: ['react-app', 'plugin:activity-hub/recommended'],
+};
+```
+
+Run linter:
+```bash
+npm run lint
+```
+
+Rules enforced:
+- `require-shared-css` (ERROR) - Missing Activity Hub CSS loading
+- `no-hardcoded-colors` (WARNING) - Hex/RGB colors in code
+- `prefer-ah-classes` (WARNING) - Suggests Activity Hub classes for common patterns
+
+### 4. Shared CSS Expansion (2026)
+
+New classes added for common game patterns:
+
+**Game Boards**:
+- `.ah-game-board`, `.ah-game-board--3x3`, `.ah-game-board--4x4`
+- `.ah-game-cell`, `.ah-game-cell.disabled`, `.ah-game-cell.active`
+
+**Loading**:
+- `.ah-spinner`, `.ah-spinner--small`, `.ah-spinner--large`
+- `.ah-loading-container`, `.ah-loading-text`
+- `.ah-skeleton`, `.ah-skeleton--text`, `.ah-skeleton--title`
+
+**Modals**:
+- `.ah-modal-overlay`, `.ah-modal`, `.ah-modal--small`, `.ah-modal--large`
+- `.ah-modal-header`, `.ah-modal-title`, `.ah-modal-close`
+- `.ah-modal-body`, `.ah-modal-footer`
+
+**Status Indicators**:
+- `.ah-status`, `.ah-status--active`, `.ah-status--waiting`, etc.
+- `.ah-player`, `.ah-player--current`, `.ah-player--opponent`
+- `.ah-status-dot`, `.ah-status-dot--online`, etc.
+
+**Animations**:
+- `.ah-pulse`, `.ah-fade-in`, `.ah-slide-down`, `.ah-box-complete`
+
+See `docs/STYLE-GUIDE.md` for complete class reference.
+
+### 5. Migration Guide
+
+For existing apps not following standards, see:
+- **Migration documentation**: `docs/MIGRATION-TO-ACTIVITY-HUB-CSS.md`
+- **Example migration**: `games/tic-tac-toe/` (recently migrated)
+- **Reference app**: `games/smoke-test/`
+
+**Apps needing migration** (as of 2026):
+- dots, mobile-test, spoof, quiz-player, quiz-master, quiz-display
+- display-admin, display-runtime, season-scheduler
+
+### 6. Building Shared CSS
+
+After modifying `lib/activity-hub-common/styles/activity-hub-src.css`:
+
+```bash
+# On Pi - rebuild the CSS
+bash ~/pub-games-v3/scripts/build-shared-css.sh
+
+# Commit the updated file
+git add identity-shell/backend/static/activity-hub.css
+git commit -m "Update shared Activity Hub CSS"
+```
+
+The built CSS file MUST be committed to the repository.
+
 ## Quiz System Pi Deployment
 
 Run these steps after `git pull` on the Pi:
@@ -461,7 +579,51 @@ pub-games-v3/
 - Platform-wide consistency
 - No per-app rebuilds needed (CSS updates only)
 
-### Mobile Test - Faster Timeout Handling
+### UI Consistency Audit & Drift Prevention
+
+**Goal**: Ensure visual consistency across all apps and prevent future drift through enforcement mechanisms
+
+**Current Issue**: 10 of 17 apps don't follow modern Activity Hub CSS patterns - using inline styles, custom CSS, or missing shared CSS loading entirely
+
+**Plan**: `.claude/plans/validated-nibbling-salamander.md` (22-26 hours total)
+
+**Approach:**
+1. **Enforcement First** (6-8 hours)
+   - ESLint plugin to catch style violations
+   - App template generator for new apps
+   - Pre-commit hooks to block non-conforming code
+   - No cloud CI/CD (future: on-prem pipeline on Pi)
+
+2. **Expand Shared CSS** (6-8 hours)
+   - Game board/grid utilities
+   - Loading spinners & animations
+   - Modal/dialog components
+   - Status indicators for games
+   - Reduce need for custom CSS per-app
+
+3. **Migrate Apps** (10 hours)
+   - tic-tac-toe, dots: Add shared CSS loading, convert to .ah-* classes
+   - mobile-test: Replace inline styles with classes
+   - spoof: Migrate dark theme to Activity Hub light theme
+   - quiz-player/master/display: Add shared CSS loading
+   - display-admin/runtime: Add shared CSS loading
+
+**Key Decisions:**
+- Spoof dark theme will be migrated to light (consistency over customization)
+- Mobile-test inline styles will be replaced with .ah-* classes
+- Enforcement mechanisms prioritized over migration (prevent new drift first)
+- On-prem CI/CD pipeline deferred to future (no cloud costs)
+
+**Benefits**:
+- Visual consistency across all apps
+- Automated enforcement prevents drift
+- Faster new app creation via template
+- Single source of truth for styling
+- Reduced maintenance burden
+
+**Future Enhancement**: On-prem CI/CD pipeline (Jenkins/Drone/custom) on Pi for automated testing without cloud dependency
+
+### Mobile Test - Faster Timeout Handling ✅ COMPLETED
 
 **Issue**: Mobile test steps currently take too long to timeout and fail when network/services are down
 
