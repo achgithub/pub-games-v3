@@ -53,12 +53,16 @@ function App() {
     setStep('ping', { status: 'running' });
     try {
       const t0 = Date.now();
-      const res = await fetch('/api/ping');
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const res = await fetch('/api/ping', { signal: controller.signal });
+      clearTimeout(timeoutId);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const ms = Date.now() - t0;
       setStep('ping', { status: 'pass', detail: `${ms}ms` });
     } catch (err) {
-      setStep('ping', { status: 'fail', detail: String(err) });
+      const msg = err instanceof Error && err.name === 'AbortError' ? 'Timeout (5s)' : String(err);
+      setStep('ping', { status: 'fail', detail: msg });
       finishEarly();
       return;
     }
@@ -94,16 +98,21 @@ function App() {
     setStep('text', { status: 'running' });
     let content: TestContent | null = null;
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
       const res = await fetch('/api/test-content', {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       content = await res.json();
       loadedContent.current = content;
       if (!content?.text) throw new Error('No test text question seeded');
       setStep('text', { status: 'pass', detail: content.text.text });
     } catch (err) {
-      setStep('text', { status: 'fail', detail: String(err) });
+      const msg = err instanceof Error && err.name === 'AbortError' ? 'Timeout (5s)' : String(err);
+      setStep('text', { status: 'fail', detail: msg });
     }
 
     // ── Step 4: Image loading ──────────────────────────────────────────
@@ -115,10 +124,19 @@ function App() {
       try {
         await new Promise<void>((resolve, reject) => {
           const img = new Image();
-          img.onload = () => resolve();
-          img.onerror = () => reject(new Error('Image failed to load'));
+          const timeoutId = setTimeout(() => {
+            img.src = '';
+            reject(new Error('Timeout (8s)'));
+          }, 8000);
+          img.onload = () => {
+            clearTimeout(timeoutId);
+            resolve();
+          };
+          img.onerror = () => {
+            clearTimeout(timeoutId);
+            reject(new Error('Image failed to load'));
+          };
           img.src = imagePath;
-          setTimeout(() => reject(new Error('Image load timeout')), 10000);
         });
         setStep('image', { status: 'pass', detail: imagePath });
       } catch (err) {
@@ -135,8 +153,19 @@ function App() {
       try {
         await new Promise<void>((resolve, reject) => {
           const audio = new Audio(audioPath);
-          audio.onended = () => resolve();
-          audio.onerror = () => reject(new Error('Audio failed to load'));
+          const timeoutId = setTimeout(() => {
+            audio.pause();
+            audio.src = '';
+            reject(new Error('Timeout (5s)'));
+          }, 5000);
+          audio.onended = () => {
+            clearTimeout(timeoutId);
+            resolve();
+          };
+          audio.onerror = () => {
+            clearTimeout(timeoutId);
+            reject(new Error('Audio failed to load'));
+          };
           const playPromise = audio.play();
           if (playPromise !== undefined) {
             playPromise
@@ -144,17 +173,25 @@ function App() {
                 // Playing — wait for onended
               })
               .catch(() => {
+                clearTimeout(timeoutId);
                 // Autoplay blocked — ask user to tap
                 setAudioNeedsGesture(true);
                 audioTapResolve.current = () => {
                   setAudioNeedsGesture(false);
+                  const retryTimeout = setTimeout(() => {
+                    audio.pause();
+                    audio.src = '';
+                    reject(new Error('Timeout (5s)'));
+                  }, 5000);
                   audio.play()
                     .then(() => { /* wait for onended */ })
-                    .catch(() => reject(new Error('Audio blocked by browser')));
+                    .catch(() => {
+                      clearTimeout(retryTimeout);
+                      reject(new Error('Audio blocked by browser'));
+                    });
                 };
               });
           }
-          setTimeout(() => reject(new Error('Audio timeout')), 15000);
         });
         setStep('audio', { status: 'pass', detail: 'Played successfully' });
       } catch (err) {
