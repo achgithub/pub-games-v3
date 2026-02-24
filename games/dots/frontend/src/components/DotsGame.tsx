@@ -266,13 +266,13 @@ const DotsGame: React.FC<DotsGameProps> = ({ gameId, user, token }) => {
   // No gameId - show friendly challenge prompt
   if (!gameId) {
     return (
-      <div className="ah-container ah-container--narrow" style={{ textAlign: 'center', marginTop: '40px' }}>
+      <div className="ah-container ah-container--narrow text-center mt-10">
         <h2>Dots & Boxes</h2>
         <p>Challenge another player from the lobby to start a game!</p>
-        <p className="ah-meta" style={{ marginTop: '10px' }}>
+        <p className="ah-meta mt-2.5">
           Go back to the lobby and click on a player to send a challenge.
         </p>
-        <button className="ah-btn-primary" onClick={returnToLobby} style={{ marginTop: '20px' }}>
+        <button className="ah-btn-primary mt-5" onClick={returnToLobby}>
           Go to Lobby
         </button>
       </div>
@@ -281,10 +281,10 @@ const DotsGame: React.FC<DotsGameProps> = ({ gameId, user, token }) => {
 
   if (error) {
     return (
-      <div className="ah-container ah-container--narrow" style={{ textAlign: 'center', marginTop: '40px' }}>
+      <div className="ah-container ah-container--narrow text-center mt-10">
         <h2>Error</h2>
         <div className="ah-banner ah-banner--error">{error}</div>
-        <button className="ah-btn-primary" onClick={returnToLobby} style={{ marginTop: '20px' }}>
+        <button className="ah-btn-primary mt-5" onClick={returnToLobby}>
           Return to Lobby
         </button>
       </div>
@@ -346,7 +346,7 @@ const DotsGame: React.FC<DotsGameProps> = ({ gameId, user, token }) => {
         {!opponentConnected && opponentEverConnected && !gameEnded && (
           <div className="ah-banner ah-banner--warning">
             Opponent disconnected. Waiting for reconnection...
-            <button onClick={claimWin} className="ah-btn-primary" style={{ marginLeft: 10 }}>
+            <button onClick={claimWin} className="ah-btn-primary ml-2.5">
               Claim Win
             </button>
           </div>
