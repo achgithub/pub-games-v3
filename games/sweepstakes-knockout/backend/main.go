@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -52,7 +51,8 @@ func main() {
 
 	// Protected routes - require game_manager role
 	api := r.PathPrefix("/api").Subrouter()
-	api.Use(authlib.Middleware(identityDB, []string{"game_manager"}))
+	api.Use(authlib.Middleware(identityDB))
+	api.Use(authlib.RequireRole("game_manager"))
 
 	// Events
 	api.HandleFunc("/events", handleGetEvents).Methods("GET")

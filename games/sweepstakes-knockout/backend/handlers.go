@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -79,7 +78,11 @@ func respondError(w http.ResponseWriter, code int, message string) {
 
 // Event handlers
 func handleGetEvents(w http.ResponseWriter, r *http.Request) {
-	user := authlib.GetUserFromContext(r.Context())
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
+		respondError(w, 401, "Unauthorized")
+		return
+	}
 
 	rows, err := appDB.Query(`
 		SELECT id, name, description, status, manager_email, created_at, updated_at
@@ -109,7 +112,11 @@ func handleGetEvents(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleCreateEvent(w http.ResponseWriter, r *http.Request) {
-	user := authlib.GetUserFromContext(r.Context())
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
+		respondError(w, 401, "Unauthorized")
+		return
+	}
 
 	var req struct {
 		Name        string `json:"name"`
@@ -141,7 +148,11 @@ func handleCreateEvent(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleGetEvent(w http.ResponseWriter, r *http.Request) {
-	user := authlib.GetUserFromContext(r.Context())
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
+		respondError(w, 401, "Unauthorized")
+		return
+	}
 	vars := mux.Vars(r)
 	eventID := vars["id"]
 
@@ -165,7 +176,11 @@ func handleGetEvent(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleUpdateEvent(w http.ResponseWriter, r *http.Request) {
-	user := authlib.GetUserFromContext(r.Context())
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
+		respondError(w, 401, "Unauthorized")
+		return
+	}
 	vars := mux.Vars(r)
 	eventID := vars["id"]
 
@@ -192,7 +207,11 @@ func handleUpdateEvent(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleDeleteEvent(w http.ResponseWriter, r *http.Request) {
-	user := authlib.GetUserFromContext(r.Context())
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
+		respondError(w, 401, "Unauthorized")
+		return
+	}
 	vars := mux.Vars(r)
 	eventID := vars["id"]
 
@@ -543,9 +562,25 @@ func handleGetResults(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleSaveResults(w http.ResponseWriter, r *http.Request) {
-	user := authlib.GetUserFromContext(r.Context())
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
+		respondError(w, 401, "Unauthorized")
+		return
+	}
 	vars := mux.Vars(r)
 	eventID := vars["eventId"]
+
+	// Verify user owns this event
+	var managerEmail string
+	err := appDB.QueryRow(`SELECT manager_email FROM events WHERE id = $1`, eventID).Scan(&managerEmail)
+	if err != nil {
+		respondError(w, 404, "Event not found")
+		return
+	}
+	if managerEmail != user.Email {
+		respondError(w, 403, "Forbidden")
+		return
+	}
 
 	var req struct {
 		Results []struct {
