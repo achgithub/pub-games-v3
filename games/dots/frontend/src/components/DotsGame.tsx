@@ -266,32 +266,36 @@ const DotsGame: React.FC<DotsGameProps> = ({ gameId, user, token }) => {
   // No gameId - show friendly challenge prompt
   if (!gameId) {
     return (
-      <div className="app error">
+      <div className="ah-container ah-container--narrow" style={{ textAlign: 'center', marginTop: '40px' }}>
         <h2>Dots & Boxes</h2>
         <p>Challenge another player from the lobby to start a game!</p>
-        <p style={{ fontSize: '0.9em', color: '#adb5bd', marginTop: '10px' }}>
+        <p className="ah-meta" style={{ marginTop: '10px' }}>
           Go back to the lobby and click on a player to send a challenge.
         </p>
-        <button className="btn-lobby" onClick={returnToLobby}>Go to Lobby</button>
+        <button className="ah-btn-primary" onClick={returnToLobby} style={{ marginTop: '20px' }}>
+          Go to Lobby
+        </button>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="app error">
+      <div className="ah-container ah-container--narrow" style={{ textAlign: 'center', marginTop: '40px' }}>
         <h2>Error</h2>
-        <p>{error}</p>
-        <button className="btn-lobby" onClick={returnToLobby}>Return to Lobby</button>
+        <div className="ah-banner ah-banner--error">{error}</div>
+        <button className="ah-btn-primary" onClick={returnToLobby} style={{ marginTop: '20px' }}>
+          Return to Lobby
+        </button>
       </div>
     );
   }
 
   if (!game) {
     return (
-      <div className="app loading">
-        <h2>Connecting to game...</h2>
-        <p>Please wait</p>
+      <div className="ah-loading-container">
+        <div className="ah-spinner ah-spinner--large"></div>
+        <p className="ah-loading-text">Connecting to game...</p>
       </div>
     );
   }
@@ -331,16 +335,16 @@ const DotsGame: React.FC<DotsGameProps> = ({ gameId, user, token }) => {
           </div>
         )}
 
-        {message && <div className="message">{message}</div>}
+        {message && <div className="ah-banner ah-banner--info">{message}</div>}
 
         {!opponentEverConnected && !gameEnded && (
-          <div className="waiting">Waiting for opponent to connect...</div>
+          <div className="ah-banner ah-banner--warning">Waiting for opponent to connect...</div>
         )}
 
         {!opponentConnected && opponentEverConnected && !gameEnded && (
-          <div className="disconnected-warning">
+          <div className="ah-banner ah-banner--warning">
             Opponent disconnected. Waiting for reconnection...
-            <button onClick={claimWin} style={{ marginLeft: 10 }}>
+            <button onClick={claimWin} className="ah-btn-primary" style={{ marginLeft: 10 }}>
               Claim Win
             </button>
           </div>
@@ -348,10 +352,10 @@ const DotsGame: React.FC<DotsGameProps> = ({ gameId, user, token }) => {
 
         {!gameEnded && (
           <div className="actions">
-            <button onClick={forfeit} className="btn-secondary">
+            <button onClick={forfeit} className="ah-btn-danger">
               Forfeit
             </button>
-            <button onClick={returnToLobby} className="btn-lobby">
+            <button onClick={returnToLobby} className="ah-btn-outline">
               Return to Lobby
             </button>
           </div>
@@ -370,7 +374,7 @@ const DotsGame: React.FC<DotsGameProps> = ({ gameId, user, token }) => {
           <p>
             Final Score: {game.player1Score} - {game.player2Score}
           </p>
-          <button onClick={returnToLobby} className="btn-lobby">
+          <button onClick={returnToLobby} className="ah-btn-primary">
             Return to Lobby
           </button>
         </div>

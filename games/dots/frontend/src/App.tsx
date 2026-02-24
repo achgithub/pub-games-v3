@@ -20,9 +20,9 @@ function App() {
   // Must have userId and token to play
   if (!userId || !token) {
     return (
-      <div style={{ padding: 40, textAlign: 'center' }}>
+      <div className="ah-container ah-container--narrow" style={{ textAlign: 'center', marginTop: '40px' }}>
         <h2>Dots</h2>
-        <p style={{ color: '#666', marginTop: 20 }}>
+        <p className="ah-meta" style={{ marginTop: '20px' }}>
           Missing authentication. Please access this game through the lobby.
         </p>
         <button
@@ -30,17 +30,8 @@ function App() {
             const shellUrl = `http://${window.location.hostname}:3001`;
             window.location.href = shellUrl;
           }}
-          style={{
-            marginTop: 20,
-            background: 'linear-gradient(135deg, #667eea, #764ba2)',
-            color: 'white',
-            border: 'none',
-            padding: '12px 30px',
-            fontSize: 16,
-            fontWeight: 500,
-            borderRadius: 8,
-            cursor: 'pointer',
-          }}
+          className="ah-btn-primary"
+          style={{ marginTop: '20px' }}
         >
           Go to Lobby
         </button>
