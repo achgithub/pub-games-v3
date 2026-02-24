@@ -4,10 +4,34 @@
 - Workflow: Edit on Mac → commit → USER pushes → pull & build on Pi
 - Ports: identity-shell: 3001, tic-tac-toe: 4001, dots: 4011, sweepstakes: 4031, last-man-standing: 4021, quiz-player: 4041, spoof: 4051, mobile-test: 4061, leaderboard: 5030, season-scheduler: 5040, smoke-test: 5010, setup-admin: 5020, display-admin: 5050, display-runtime: 5051, game-admin: 5070, quiz-master: 5080, quiz-display: 5081
 - Reference implementation: `games/smoke-test/` - COPY THIS when creating new apps
-- Active work: Created smoke-test as definitive reference (PostgreSQL + Redis + SSE + shared CSS)
+- Active work: CSS migration - 7 apps migrated to ah-app-header (setup-admin, game-admin, last-man-standing, sweepstakes, leaderboard, tic-tac-toe, dots). Frontends rebuilt on Pi. 4 apps pending (quiz-player, quiz-master, quiz-display, mobile-test)
 - Known issues: SSE presence requires manual refresh after impersonation (acceptable for debugging tool)
 - Build: `cd games/{app}/frontend && npm run build && cp -r build/* ../backend/static/`
 - PostgreSQL: Port 5555, password "pubgames", user "activityhub", database "activity_hub"
+
+## Session State (2026-02-24)
+
+**Completed today:**
+- ✅ Fixed broken shared CSS (Tailwind config: `content: []` → `content: ['./activity-hub-src.css']`)
+- ✅ Added missing `.ah-app-header` classes to activity-hub-src.css
+- ✅ Migrated 7 apps to standardized ah-app-header layout:
+  - setup-admin, game-admin, last-man-standing, sweepstakes, leaderboard, tic-tac-toe, dots
+- ✅ All 7 frontends rebuilt on Pi
+- ✅ Documented built artifacts workflow in CLAUDE.md to prevent future merge conflicts
+
+**Current state:**
+- Shared CSS: 81 classes, properly built and served from identity-shell:3001/shared/
+- 7 apps: Have consistent header (title left, lobby button right), game-specific headers preserved below
+- Changes committed and pushed to GitHub
+- Services running, no restart needed (static file serving)
+
+**Pending work (for next session):**
+- 4 apps still need full migration (don't load shared CSS yet):
+  - quiz-player, quiz-master, quiz-display, mobile-test
+- These need: Add dynamic CSS loading to index.tsx + ah-app-header + convert inline styles to .ah-* classes
+
+**Testing note:**
+Hard refresh (Cmd+Shift+R) or private window needed to see header changes due to browser caching.
 
 ## ⚠️ CRITICAL: Built Artifacts Workflow
 
