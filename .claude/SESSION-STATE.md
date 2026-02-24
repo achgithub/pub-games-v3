@@ -1,8 +1,72 @@
 # Activity Hub Migration - Session State
 
-**Last Updated**: 2026-02-20
-**Current Phase**: Reference implementation created (smoke-test)
-**Status**: Created `games/smoke-test/` as definitive reference with full stack (PostgreSQL + Redis + SSE + shared CSS + TypeScript). This is THE template for new apps.
+**Last Updated**: 2026-02-24
+**Current Phase**: CSS migration - app header standardization
+**Status**: Fixed broken shared CSS and migrated 7 apps to standardized ah-app-header layout. 4 apps pending full migration (quiz system + mobile-test).
+
+## ⚠️ Current Session (2026-02-24)
+
+### Completed Today
+
+**1. Fixed Broken Shared CSS**
+- **Problem**: `identity-shell/backend/static/activity-hub.css` only had 2 lines (animations), all component classes missing
+- **Root cause**: Tailwind config `content: []` with `--minify` flag purged all classes
+- **Fix**: Changed `tailwind.config.js` to `content: ['./activity-hub-src.css']`
+- **Result**: Rebuilt CSS now has 81 classes properly generated
+
+**2. Added Missing App Header Classes**
+- Added `.ah-app-header`, `.ah-app-header-left`, `.ah-app-header-right`, `.ah-app-title` to source CSS
+- These were in old compiled CSS but never added to source file
+- Rebuilt shared CSS successfully
+
+**3. Documented Built Artifacts Workflow**
+- **Problem**: Committing from Pi caused merge conflicts (violated "Mac is lead" principle)
+- **Fix**: Added comprehensive workflow to CLAUDE.md
+- **Pattern**: Mac edits → Pi builds → Mac SCPs file → Mac commits → Pi pulls
+- **Never**: Commit from Pi
+
+**4. Migrated 7 Apps to Standardized Header (ah-app-header)**
+
+Successfully migrated to consistent header layout:
+- ✅ setup-admin
+- ✅ game-admin
+- ✅ last-man-standing
+- ✅ sweepstakes
+- ✅ leaderboard
+- ✅ tic-tac-toe
+- ✅ dots
+
+**Migration pattern:**
+1. Wrap component in `<>...</>` fragment
+2. Add ah-app-header at top (full-width sticky bar)
+3. Title + icon left, "← Lobby" button right
+4. Game-specific headers (scores, rounds) preserved below
+
+**5. Rebuilt All 7 Frontends on Pi**
+- Ran `npm run build && cp -r build/* ../backend/static/` for all 7 apps
+- Changes deployed (hard refresh or private window needed for browser cache)
+
+### Pending Work
+
+**Apps Still Need Full Migration (4 total):**
+- quiz-player (port 4041)
+- quiz-master (port 5080)
+- quiz-display (port 5081)
+- mobile-test (port 4061)
+
+These need:
+1. Add dynamic CSS loading to index.tsx
+2. Add ah-app-header
+3. Convert inline styles to .ah-* classes
+4. Rebuild frontend
+
+**Other Apps (not in migration plan):**
+- spoof, season-scheduler, display-admin, display-runtime, smoke-test, identity-shell
+
+### Testing Note
+Hard refresh (Cmd+Shift+R) or private window required to see changes due to browser caching. No server restarts needed.
+
+---
 
 ## ⚠️ CRITICAL: Reference Implementation
 
@@ -118,14 +182,19 @@ cd ../backend && go run *.go &
    - game-admin (no Redis/SSE, old CSS)
 
 **App status:**
-- ✅ smoke-test: REFERENCE IMPLEMENTATION (created, not deployed yet)
-- ✅ identity-shell: Working
-- ⚠️ tic-tac-toe: Works but needs CSS migration to shared pattern
-- ⚠️ dots: Works but needs CSS migration to shared pattern
-- ⚠️ setup-admin: Loads shared CSS but has custom overrides in App.css - needs migration
-- ❌ last-man-standing: Needs CSS migration
-- ❌ sweepstakes: Needs CSS migration
-- ❌ game-admin: Needs CSS migration
+- ✅ smoke-test: REFERENCE IMPLEMENTATION (deployed)
+- ✅ identity-shell: Working (lobby/shell, serves CSS)
+- ✅ setup-admin: Migrated to ah-app-header (2026-02-24)
+- ✅ game-admin: Migrated to ah-app-header (2026-02-24)
+- ✅ last-man-standing: Migrated to ah-app-header (2026-02-24)
+- ✅ sweepstakes: Migrated to ah-app-header (2026-02-24)
+- ✅ leaderboard: Migrated to ah-app-header (2026-02-24)
+- ✅ tic-tac-toe: Migrated to ah-app-header (2026-02-24)
+- ✅ dots: Migrated to ah-app-header (2026-02-24)
+- ❌ quiz-player: Needs full CSS migration (no shared CSS loading yet)
+- ❌ quiz-master: Needs full CSS migration (no shared CSS loading yet)
+- ❌ quiz-display: Needs full CSS migration (no shared CSS loading yet)
+- ❌ mobile-test: Needs full CSS migration (inline styles, no shared CSS loading)
 
 **To migrate an app to shared CSS:**
 
@@ -158,6 +227,43 @@ curl http://localhost:3001/shared/activity-hub.css | head -20
 - SSE presence requires manual refresh after impersonation (acceptable — debugging tool only)
 
 ## Completed
+
+### CSS Migration - App Header Standardization ✅ (2026-02-24)
+
+**Commits:**
+- `fix: correct Tailwind content config to prevent class purging`
+- `feat: add app header bar component classes to shared CSS`
+- `docs: add critical built artifacts workflow to prevent merge conflicts`
+- `feat: migrate 7 apps to ah-app-header for consistent layout`
+- `docs: update session state - CSS migration progress`
+
+**Fixed broken CSS build:**
+- Tailwind config had `content: []` which purged all component classes with `--minify`
+- Changed to `content: ['./activity-hub-src.css']` to scan source file
+- Rebuilt CSS from 2 lines to 81 classes
+
+**Added missing header classes:**
+- `.ah-app-header`, `.ah-app-header-left`, `.ah-app-header-right`, `.ah-app-title`
+- These existed in old compiled CSS but never in source
+
+**Workflow documentation:**
+- Added "CRITICAL: Built Artifacts Workflow" to CLAUDE.md
+- Mac → Pi → Mac pattern documented with exact commands
+- Prevents merge conflicts from Pi commits
+
+**7 apps migrated:**
+- All now have standardized header: title left, lobby button right
+- Game-specific headers (scores, rounds) preserved below main header
+- Frontends rebuilt on Pi
+
+**Files modified:**
+- `lib/activity-hub-common/styles/tailwind.config.js`
+- `lib/activity-hub-common/styles/activity-hub-src.css`
+- `identity-shell/backend/static/activity-hub.css` (rebuilt)
+- 7 app frontends (setup-admin, game-admin, last-man-standing, sweepstakes, leaderboard, tic-tac-toe, dots)
+
+---
+
 
 ### Identity Shell: Light Theme + Tailwind CSS Infrastructure ✅ (2026-02-19)
 
