@@ -64,9 +64,7 @@ function App() {
   const [horses, setHorses] = useState<Horse[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
   const [positions, setPositions] = useState<WinningPosition[]>([]);
-  const [results, setResults] = useState<Result[]>([]);
   const [report, setReport] = useState<ReportEntry[]>([]);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   // Form states
@@ -77,10 +75,6 @@ function App() {
   const [newPlayerName, setNewPlayerName] = useState('');
   const [newPosition, setNewPosition] = useState('');
   const [resultAssignments, setResultAssignments] = useState<Record<number, string>>({});
-
-  useEffect(() => {
-    fetchEvents();
-  }, []);
 
   const fetchEvents = async () => {
     try {
@@ -93,6 +87,11 @@ function App() {
       console.error('Failed to fetch events:', err);
     }
   };
+
+  useEffect(() => {
+    fetchEvents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleCreateEvent = async () => {
     if (!newEventName.trim()) {
@@ -135,7 +134,6 @@ function App() {
   };
 
   const fetchEventData = async (eventId: number) => {
-    setLoading(true);
     try {
       const [horsesRes, playersRes, positionsRes, resultsRes] = await Promise.all([
         fetch(`${API_BASE}/events/${eventId}/horses`, {
@@ -160,7 +158,6 @@ function App() {
       setHorses(horsesData || []);
       setPlayers(playersData || []);
       setPositions(positionsData || []);
-      setResults(resultsData || []);
 
       // Build result assignments
       const assignments: Record<number, string> = {};
@@ -170,8 +167,6 @@ function App() {
       setResultAssignments(assignments);
     } catch (err) {
       console.error('Failed to fetch event data:', err);
-    } finally {
-      setLoading(false);
     }
   };
 
