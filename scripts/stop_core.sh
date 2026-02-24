@@ -4,7 +4,7 @@
 echo "Stopping core services..."
 
 # Define all ports used by core services
-PORTS=(3001 4001 4011 4021 4022 4031 4041 4051 4061 5010 5020 5030 5040 5070 5080 5081)
+PORTS=(3001 4001 4011 4021 4022 4031 4032 4041 4051 4061 5010 5020 5030 5040 5070 5080 5081)
 
 # Step 1: Kill tmux session if it exists
 if tmux has-session -t core 2>/dev/null; then

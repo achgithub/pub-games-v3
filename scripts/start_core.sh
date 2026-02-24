@@ -1,5 +1,5 @@
 #!/bin/bash
-# Start core services: identity-shell, setup-admin, game-admin, tic-tac-toe, dots, last-man-standing, lms-manager, sweepstakes, quiz-player, quiz-master, quiz-display, mobile-test, smoke-test, leaderboard
+# Start core services: identity-shell, setup-admin, game-admin, tic-tac-toe, dots, last-man-standing, lms-manager, sweepstakes, sweepstakes-knockout, quiz-player, quiz-master, quiz-display, mobile-test, smoke-test, leaderboard
 
 # Check if tmux session exists
 if tmux has-session -t core 2>/dev/null; then
@@ -44,6 +44,10 @@ tmux send-keys -t core:lms-manager "cd ~/pub-games-v3/games/lms-manager/backend 
 tmux new-window -t core -n sweepstakes
 tmux send-keys -t core:sweepstakes "cd ~/pub-games-v3/games/sweepstakes/backend && go run *.go" C-m
 
+# Sweepstakes Knockout (port 4032)
+tmux new-window -t core -n sweepstakes-knockout
+tmux send-keys -t core:sweepstakes-knockout "cd ~/pub-games-v3/games/sweepstakes-knockout/backend && go run *.go" C-m
+
 # Quiz Player (port 4041)
 tmux new-window -t core -n quiz-player
 tmux send-keys -t core:quiz-player "cd ~/pub-games-v3/games/quiz-player/backend && go run *.go" C-m
@@ -82,6 +86,7 @@ declare -A SERVICES=(
     ["last-man-standing"]="4021"
     ["lms-manager"]="4022"
     ["sweepstakes"]="4031"
+    ["sweepstakes-knockout"]="4032"
     ["quiz-player"]="4041"
     ["quiz-master"]="5080"
     ["quiz-display"]="5081"
