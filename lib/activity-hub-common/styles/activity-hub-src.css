@@ -173,6 +173,27 @@
   }
   .ah-btn-back:hover { background-color: #F5F5F4; color: #44403C; }
 
+  /* ── App Header Bar ──────────────────────────────────────── */
+  .ah-app-header {
+    @apply w-full bg-white border-b border-stone-200 px-4 py-3 flex items-center justify-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .ah-app-header-left {
+    @apply flex items-center gap-3;
+  }
+
+  .ah-app-header-right {
+    @apply flex items-center gap-2;
+  }
+
+  .ah-app-title {
+    @apply text-xl font-bold m-0;
+    color: #1C1917;
+  }
+
   /* ── Form elements ───────────────────────────────────────── */
   .ah-input {
     @apply px-3 py-2 rounded-lg text-sm font-sans
