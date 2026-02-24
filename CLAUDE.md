@@ -1337,6 +1337,22 @@ Players can still view their assignments/picks (read-only) even in managed mode.
 - Classic 10x10 grid
 - Estimated effort: 12-16 hours
 
+**Bingo** (multi-player, pub-hosted)
+- Classic UK 90-ball bingo (1-90, three rows of five numbers per card)
+- Split architecture: caller app + player cards + TV display (similar to quiz)
+  - **bingo-caller** (Port 5090): Host/caller interface — start game, call numbers, mark claims
+  - **bingo-display** (Port 5091): TV display showing called numbers, current ball, patterns needed
+  - **bingo-player** (Port 4071): Mobile card view — auto-daubs called numbers, claim buttons
+- SSE for real-time number calls pushed from caller → player cards and display
+- Redis tracks active game state (called numbers, current ball, claims)
+- PostgreSQL stores game history, cards issued, winners
+- Cards generated server-side with unique random grids, assigned per userId
+- Claim types: One Line, Two Lines, Full House
+- Auto-validation on server — claim checked against called numbers before confirming winner
+- Optional: multiple simultaneous cards per player
+- Roles: `game_admin` or `quiz_master` to host; any authenticated user to play
+- Estimated effort: 16-20 hours
+
 ---
 
 ### Infrastructure Improvements
