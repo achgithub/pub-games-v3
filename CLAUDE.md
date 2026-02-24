@@ -9,6 +9,44 @@
 - Build: `cd games/{app}/frontend && npm run build && cp -r build/* ../backend/static/`
 - PostgreSQL: Port 5555, password "pubgames", user "activityhub", database "activity_hub"
 
+## ⚠️ CRITICAL: Built Artifacts Workflow
+
+**Problem:** Shared CSS and frontends must be built on Pi (has npm), but Mac is Git lead.
+
+**CORRECT WORKFLOW (Always follow this):**
+
+1. **Mac:** Edit source file → commit → push
+2. **Pi:** Pull → build artifact (`npm run build`)
+3. **Mac IMMEDIATELY:** SCP built file from Pi → commit → push
+4. **Pi:** Discard local changes → pull committed version
+
+**Example for shared CSS:**
+```bash
+# 1. Mac: Edit lib/activity-hub-common/styles/activity-hub-src.css → commit → push
+
+# 2. Pi: Build
+cd ~/pub-games-v3 && git pull
+cd lib/activity-hub-common/styles && npm run build
+
+# 3. Mac: Get built file and commit IMMEDIATELY
+cd ~/Documents/Projects/pub-games-v3
+scp andrew@192.168.1.29:~/pub-games-v3/identity-shell/backend/static/activity-hub.css identity-shell/backend/static/
+git add identity-shell/backend/static/activity-hub.css
+git commit -m "build: rebuild shared CSS"
+git push
+
+# 4. Pi: Discard local build and pull committed version
+cd ~/pub-games-v3
+git checkout -- identity-shell/backend/static/activity-hub.css
+git pull
+```
+
+**NEVER DO THIS:**
+- ❌ Build on Pi → commit from Pi → push from Pi (breaks "Mac is lead", causes merge conflicts)
+- ❌ Build on Pi and forget to commit from Mac (built file out of sync with source)
+
+**Why this matters:** If Pi commits, it creates divergent branches requiring merges. Mac must always be the single source of commits.
+
 ## ⚠️ CRITICAL: Reference Implementation
 
 **WHEN CREATING A NEW APP, COPY `games/smoke-test/`**
