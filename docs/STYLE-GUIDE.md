@@ -132,6 +132,67 @@ Every app should have minimal `App.css` with **only app-specific styles**:
 - Content goes in centered `.ah-container` below header
 - Apply to all states: normal, loading, error
 
+### Flexbox Utilities
+
+Common flexbox patterns to avoid inline styles:
+
+```tsx
+// Basic flex container
+<div className="ah-flex">
+  <span>Item 1</span>
+  <span>Item 2</span>
+</div>
+
+// Vertically centered items (common for rows with icons + text)
+<div className="ah-flex-center">
+  <Icon />
+  <span>Text</span>
+</div>
+
+// Centered on both axes
+<div className="ah-flex-center-justify">
+  <span>Centered content</span>
+</div>
+
+// Space between (nav bars, headers)
+<div className="ah-flex-between">
+  <span>Left</span>
+  <span>Right</span>
+</div>
+
+// Flex with wrapping
+<div className="ah-flex-wrap">
+  <button>Tag 1</button>
+  <button>Tag 2</button>
+</div>
+
+// Flex column
+<div className="ah-flex-col">
+  <div>Row 1</div>
+  <div>Row 2</div>
+</div>
+
+// Flex column with centered items
+<div className="ah-flex-col-center">
+  <Icon />
+  <p>Text below</p>
+</div>
+```
+
+**Usage in dynamic rendering** (e.g., game grids):
+
+```tsx
+// BEFORE (inline styles - triggers warnings)
+<div style={{ display: 'flex', alignItems: 'center' }}>
+  {cells}
+</div>
+
+// AFTER (shared utility class)
+<div className="ah-flex-center">
+  {cells}
+</div>
+```
+
 ### Typography
 
 ```tsx
@@ -605,6 +666,16 @@ For grid-based games (tic-tac-toe, dots, etc.):
 - `.ah-app-title` - App title in header
 - `.ah-header` - Generic header with flex layout
 - `.ah-header-title` - Header title text
+
+### Flexbox Utilities
+- `.ah-flex` - Basic flex container (`display: flex`)
+- `.ah-flex-center` - Flex with vertically centered items (`display: flex; align-items: center`)
+- `.ah-flex-center-justify` - Flex with centered items (both axes)
+- `.ah-flex-between` - Flex with space-between justification
+- `.ah-flex-wrap` - Flex with flex-wrap enabled
+- `.ah-flex-col` - Flex column layout
+- `.ah-flex-col-center` - Flex column with centered items
+- `.ah-flex-col-center-justify` - Flex column with centered items (both axes)
 
 ### Cards & Sections
 - `.ah-card` - Card component with shadow and border

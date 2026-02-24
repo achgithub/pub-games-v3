@@ -37,6 +37,39 @@
   .ah-container--wide   { @apply max-w-6xl; }
   .ah-container--narrow { @apply max-w-xl; }
 
+  /* ── Flexbox Utilities ───────────────────────────────────── */
+  .ah-flex {
+    @apply flex;
+  }
+
+  .ah-flex-center {
+    @apply flex items-center;
+  }
+
+  .ah-flex-center-justify {
+    @apply flex items-center justify-center;
+  }
+
+  .ah-flex-between {
+    @apply flex items-center justify-between;
+  }
+
+  .ah-flex-wrap {
+    @apply flex flex-wrap;
+  }
+
+  .ah-flex-col {
+    @apply flex flex-col;
+  }
+
+  .ah-flex-col-center {
+    @apply flex flex-col items-center;
+  }
+
+  .ah-flex-col-center-justify {
+    @apply flex flex-col items-center justify-center;
+  }
+
   /* ── Card ────────────────────────────────────────────────── */
   .ah-card {
     @apply bg-white border border-stone-200 rounded-xl p-4 mb-3;

@@ -444,7 +444,7 @@ function DotsGrid({
     }
 
     gridRows.push(
-      <div key={row} style={{ display: 'flex', alignItems: 'center' }}>
+      <div key={row} className="ah-flex-center">
         {cells}
       </div>
     );
@@ -480,7 +480,7 @@ function DotsGrid({
       }
 
       gridRows.push(
-        <div key={`boxrow-${row}`} style={{ display: 'flex', alignItems: 'center' }}>
+        <div key={`boxrow-${row}`} className="ah-flex-center">
           {boxRow}
         </div>
       );
