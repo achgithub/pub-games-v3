@@ -76,76 +76,75 @@
 
 /* Lines */
 .line {
-  position: absolute;
-  background: #cbd5e0;
+  background: #dee2e6;
   cursor: pointer;
-  transition: all 0.2s;
-  z-index: 5;
+  transition: background 0.2s;
+}
+
+.line:hover:not(.drawn) {
+  background: #adb5bd;
 }
 
 .line.horizontal {
-  height: 4px;
-  width: calc(100% - 16px);
-  left: 16px;
-  top: 6px;
+  width: 50px;
+  height: 8px;
+  margin: 4px 0;
 }
 
 .line.vertical {
-  width: 4px;
-  height: calc(100% - 16px);
-  top: 16px;
-  left: 6px;
+  width: 8px;
+  height: 50px;
+  margin: 0 4px;
 }
 
-.line.clickable:hover {
-  background: #a0aec0;
-  transform: scale(1.1);
+.line.drawn {
+  cursor: default;
 }
 
-.line.player1 {
+.line.drawn.player1,
+.line.drawn.p1 {
   background: #dc3545;
 }
 
-.line.player2 {
+.line.drawn.player2,
+.line.drawn.p2 {
   background: #007bff;
 }
 
+.line.clickable:hover {
+  background: #adb5bd;
+  cursor: pointer;
+}
+
 /* Boxes */
-.box-overlay {
-  position: absolute;
-  width: calc(100% - 16px);
-  height: calc(100% - 16px);
-  top: 16px;
-  left: 16px;
+.box {
+  width: 50px;
+  height: 50px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 3em;
-  font-weight: bold;
-  pointer-events: none;
-  z-index: 1;
-  border-radius: 4px;
+  font-size: 1.5em;
+  transition: background 0.3s;
 }
 
-.box-overlay.player1 {
+.box.player1,
+.box.p1 {
   background: rgba(220, 53, 69, 0.3);
-  color: #dc3545;
 }
 
-.box-overlay.player2 {
+.box.player2,
+.box.p2 {
   background: rgba(0, 123, 255, 0.3);
-  color: #007bff;
+}
+
+.box.completed {
+  animation: boxComplete 0.5s ease-out;
 }
 
 /* Box complete animation */
 @keyframes boxComplete {
-  0% { transform: scale(0.8); opacity: 0; }
-  50% { transform: scale(1.1); }
-  100% { transform: scale(1); opacity: 1; }
-}
-
-.box-overlay.completing {
-  animation: boxComplete 0.4s ease-out;
+  0% { transform: scale(1.2); }
+  100% { transform: scale(1); }
 }
 
 /* Turn indicator */
