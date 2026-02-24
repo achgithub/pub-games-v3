@@ -163,9 +163,28 @@ const TicTacToeGame: React.FC<TicTacToeGameProps> = ({ gameId, user, token }) =>
   };
 
   return (
-    <div className="ttt-container">
-      {/* Header with scores */}
-      <div className="ttt-header">
+    <>
+      {/* App Header Bar */}
+      <div className="ah-app-header">
+        <div className="ah-app-header-left">
+          <h1 className="ah-app-title">Tic-Tac-Toe</h1>
+        </div>
+        <div className="ah-app-header-right">
+          <button
+            className="ah-lobby-btn"
+            onClick={() => {
+              const shellUrl = `http://${window.location.hostname}:3001`;
+              window.location.href = shellUrl;
+            }}
+          >
+            ← Lobby
+          </button>
+        </div>
+      </div>
+
+      <div className="ttt-container">
+        {/* Header with scores */}
+        <div className="ttt-header">
         <div className="ttt-player ttt-player-me">
           <span className="ttt-player-symbol">{mySymbol}</span>
           <span className="ttt-player-name">{myName} (You)</span>
@@ -257,7 +276,8 @@ const TicTacToeGame: React.FC<TicTacToeGameProps> = ({ gameId, user, token }) =>
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 };
 

@@ -129,32 +129,38 @@ function App() {
   const isReadOnly = config?.permissionLevel === 'read-only';
 
   return (
-    <div className="ah-container">
-      <div className="ah-header">
-        <h2 className="ah-header-title">Game Admin</h2>
-        {isReadOnly && <span style={s.readOnlyBadge}>Read-only</span>}
-        <button className="ah-lobby-btn" onClick={goToLobby}>← Lobby</button>
+    <>
+      {/* App Header Bar */}
+      <div className="ah-app-header">
+        <div className="ah-app-header-left">
+          <h1 className="ah-app-title">Game Admin</h1>
+          {isReadOnly && <span style={s.readOnlyBadge}>Read-only</span>}
+        </div>
+        <div className="ah-app-header-right">
+          <button className="ah-lobby-btn" onClick={goToLobby}>← Lobby</button>
+        </div>
       </div>
 
-      {/* Module switcher */}
-      <div style={{ display: 'flex', gap: 8, padding: '8px 0', borderBottom: '2px solid #e0e0e0', marginBottom: 8 }}>
-        {(['lms', 'sweepstakes', 'quiz'] as Module[]).map(mod => (
-          <button
-            key={mod}
-            onClick={() => {
-              setActiveModule(mod);
-              setActiveTab(mod === 'lms' ? 'fixtures' : mod === 'sweepstakes' ? 'sw-competitions' : 'quiz-media');
-            }}
-            style={{
-              padding: '6px 18px', borderRadius: 6, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13,
-              backgroundColor: activeModule === mod ? '#1565C0' : '#e0e0e0',
-              color: activeModule === mod ? 'white' : '#333',
-            }}
-          >
-            {mod === 'lms' ? 'Last Man Standing' : mod === 'sweepstakes' ? 'Sweepstakes' : 'Quiz'}
-          </button>
-        ))}
-      </div>
+      <div className="ah-container">
+        {/* Module switcher */}
+        <div style={{ display: 'flex', gap: 8, padding: '8px 0', borderBottom: '2px solid #e0e0e0', marginBottom: 8 }}>
+          {(['lms', 'sweepstakes', 'quiz'] as Module[]).map(mod => (
+            <button
+              key={mod}
+              onClick={() => {
+                setActiveModule(mod);
+                setActiveTab(mod === 'lms' ? 'fixtures' : mod === 'sweepstakes' ? 'sw-competitions' : 'quiz-media');
+              }}
+              style={{
+                padding: '6px 18px', borderRadius: 6, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13,
+                backgroundColor: activeModule === mod ? '#1565C0' : '#e0e0e0',
+                color: activeModule === mod ? 'white' : '#333',
+              }}
+            >
+              {mod === 'lms' ? 'Last Man Standing' : mod === 'sweepstakes' ? 'Sweepstakes' : 'Quiz'}
+            </button>
+          ))}
+        </div>
 
       {/* LMS module */}
       {activeModule === 'lms' && (
@@ -2135,7 +2141,8 @@ function QuizPacksTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isR
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 

@@ -307,9 +307,25 @@ const DotsGame: React.FC<DotsGameProps> = ({ gameId, user, token }) => {
   const gameEnded = game.status === 'completed';
 
   return (
-    <div className="dots-container">
-      {/* Score header - combines header and score in compact layout */}
-      <div className="dots-header">
+    <>
+      {/* App Header Bar */}
+      <div className="ah-app-header">
+        <div className="ah-app-header-left">
+          <h1 className="ah-app-title">Dots & Boxes</h1>
+        </div>
+        <div className="ah-app-header-right">
+          <button
+            className="ah-lobby-btn"
+            onClick={returnToLobby}
+          >
+            ← Lobby
+          </button>
+        </div>
+      </div>
+
+      <div className="dots-container">
+        {/* Score header - combines header and score in compact layout */}
+        <div className="dots-header">
         <div className="dots-scores">
           <div className={`dots-score ${isPlayer1 ? 'active' : ''}`}>
             {myName}: {isPlayer1 ? game.player1Score : game.player2Score}
@@ -381,7 +397,8 @@ const DotsGame: React.FC<DotsGameProps> = ({ gameId, user, token }) => {
           </button>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 };
 

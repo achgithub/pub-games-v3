@@ -242,26 +242,32 @@ function App() {
   }
 
   return (
-    <div className="ah-container ah-container--narrow">
-      {/* Impersonation Banner */}
-      {config?.isImpersonating && (
-        <div className="ah-banner ah-banner--warning">
-          ⚠️ Viewing as <strong>{config.impersonatedEmail}</strong>
-          {' '}(impersonated by {config.impersonatedBy})
+    <>
+      {/* App Header Bar */}
+      <div className="ah-app-header">
+        <div className="ah-app-header-left">
+          <h1 className="ah-app-title">🏆 Last Man Standing</h1>
         </div>
-      )}
-
-      <div className="ah-header">
-        <h2 style={s.title}>🏆 Last Man Standing</h2>
-        <button className="ah-lobby-btn" onClick={goToLobby}>← Lobby</button>
+        <div className="ah-app-header-right">
+          <button className="ah-lobby-btn" onClick={goToLobby}>← Lobby</button>
+        </div>
       </div>
 
-      {error && (
-        <div className="ah-banner ah-banner--error" onClick={() => setError(null)}>
-          {error} — click to dismiss
-        </div>
-      )}
-      <Toast message={successMsg} />
+      <div className="ah-container ah-container--narrow">
+        {/* Impersonation Banner */}
+        {config?.isImpersonating && (
+          <div className="ah-banner ah-banner--warning">
+            ⚠️ Viewing as <strong>{config.impersonatedEmail}</strong>
+            {' '}(impersonated by {config.impersonatedBy})
+          </div>
+        )}
+
+        {error && (
+          <div className="ah-banner ah-banner--error" onClick={() => setError(null)}>
+            {error} — click to dismiss
+          </div>
+        )}
+        <Toast message={successMsg} />
 
       {/* No Game */}
       {game === null && (
@@ -421,7 +427,8 @@ function App() {
           )}
         </>
       )}
-    </div>
+      </div>
+    </>
   );
 }
 

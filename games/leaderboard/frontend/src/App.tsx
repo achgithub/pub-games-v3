@@ -143,14 +143,27 @@ function App() {
   const isFilteredMode = filterGame !== null;
 
   return (
-    <div className="ah-container ah-container--wide">
-      {/* Header */}
-      <div className="leaderboard-header">
-        <h1>{config.app_icon} {isFilteredMode ? `${getGameName(selectedGame)} Leaderboard` : config.app_name}</h1>
+    <>
+      {/* App Header Bar */}
+      <div className="ah-app-header">
+        <div className="ah-app-header-left">
+          <h1 className="ah-app-title">
+            {config.app_icon} {isFilteredMode ? `${getGameName(selectedGame)} Leaderboard` : config.app_name}
+          </h1>
+        </div>
+        <div className="ah-app-header-right">
+          <button
+            className="ah-lobby-btn"
+            onClick={() => { window.location.href = `http://${window.location.hostname}:3001`; }}
+          >
+            ← Lobby
+          </button>
+        </div>
       </div>
 
-      {/* Tabs (only in full mode) */}
-      {!isFilteredMode && (
+      <div className="ah-container ah-container--wide">
+        {/* Tabs (only in full mode) */}
+        {!isFilteredMode && (
         <div className="ah-tabs">
           <button
             className={`ah-tab ${view === 'standings' ? 'active' : ''}`}
@@ -294,7 +307,8 @@ function App() {
           )}
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }
 

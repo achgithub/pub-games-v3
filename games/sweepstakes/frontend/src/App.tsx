@@ -111,22 +111,29 @@ function App() {
   }
 
   return (
-    <div className="ah-container">
-      <div className="ah-header">
-        <h2 className="ah-header-title">Sweepstakes</h2>
-        <button className="ah-lobby-btn" onClick={() => { window.location.href = `http://${window.location.hostname}:3001`; }}>
-          ← Lobby
-        </button>
+    <>
+      {/* App Header Bar */}
+      <div className="ah-app-header">
+        <div className="ah-app-header-left">
+          <h1 className="ah-app-title">Sweepstakes</h1>
+        </div>
+        <div className="ah-app-header-right">
+          <button className="ah-lobby-btn" onClick={() => { window.location.href = `http://${window.location.hostname}:3001`; }}>
+            ← Lobby
+          </button>
+        </div>
       </div>
 
-      {impersonatedBy && (
-        <div className="ah-banner ah-banner--warning">
-          Impersonating <strong>{userName}</strong> (as {impersonatedBy})
-        </div>
-      )}
+      <div className="ah-container">
+        {impersonatedBy && (
+          <div className="ah-banner ah-banner--warning">
+            Impersonating <strong>{userName}</strong> (as {impersonatedBy})
+          </div>
+        )}
 
-      <SweepstakesApp userId={userId} userName={userName} api={api} />
-    </div>
+        <SweepstakesApp userId={userId} userName={userName} api={api} />
+      </div>
+    </>
   );
 }
 

@@ -209,18 +209,17 @@ function App() {
 
   if (!token) {
     return (
-      <div className="ah-container ah-container--narrow" style={{ paddingTop: 40 }}>
+      <div className="ah-container ah-container--narrow text-center mt-10">
         <div className="ah-card">
           <h2 style={{ marginBottom: 12 }}>⚙️ Setup Admin</h2>
           <p className="ah-meta">
             This app must be opened through the Activity Hub with proper authentication.
           </p>
           <button
-            className="ah-btn-primary"
+            className="ah-btn-primary mt-5"
             onClick={() => {
               window.location.href = `http://${window.location.hostname}:3001`;
             }}
-            style={{ marginTop: 20 }}
           >
             Go to Lobby
           </button>
@@ -230,11 +229,13 @@ function App() {
   }
 
   return (
-    <div className="ah-container ah-container--wide" style={{ paddingTop: 20 }}>
-      {/* Header */}
-      <div className="ah-card" style={{ marginBottom: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-          <h2 style={{ margin: 0 }}>⚙️ Setup Admin</h2>
+    <>
+      {/* App Header Bar */}
+      <div className="ah-app-header">
+        <div className="ah-app-header-left">
+          <h1 className="ah-app-title">⚙️ Setup Admin</h1>
+        </div>
+        <div className="ah-app-header-right">
           <button
             className="ah-lobby-btn"
             onClick={() => {
@@ -244,7 +245,9 @@ function App() {
             ← Lobby
           </button>
         </div>
+      </div>
 
+      <div className="ah-container ah-container--wide" style={{ paddingTop: 20 }}>
         {/* Tabs */}
         <div className="ah-tabs">
           <button
@@ -260,7 +263,6 @@ function App() {
             📱 Apps
           </button>
         </div>
-      </div>
 
       {/* Read-only notice */}
       {readOnly && (
@@ -382,7 +384,8 @@ function App() {
           </table>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }
 
