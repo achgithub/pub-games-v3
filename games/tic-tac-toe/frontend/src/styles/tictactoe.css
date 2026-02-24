@@ -130,9 +130,11 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  background: #343a40;
+  background: #E7E5E4;  /* Light stone background */
   padding: 8px;
   border-radius: 12px;
+  max-width: 324px;  /* 3 cells × 100px + gaps + padding */
+  margin: 0 auto;  /* Center the board */
 }
 
 .ttt-row {
