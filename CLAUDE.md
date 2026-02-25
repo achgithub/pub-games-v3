@@ -1,10 +1,37 @@
+## 🚧 INCOMPLETE WORK - Sweepstakes Knockout
+
+**Status**: Backend complete, frontend UI DOES NOT match LMS Manager design
+
+**What's broken**:
+1. **Game creation layout** - Description field presentation is skewed/wrong
+2. **Results dropdowns NOT dynamic** - Should only show unassigned positions (1, 2, 3, last)
+   - Code has `getAvailablePositions()` function but may not be working
+   - As positions are assigned, they should disappear from other dropdowns
+3. **Overall layout mismatch** - Width, spacing, button alignment still different from LMS Manager
+4. **Games tab structure** - Event cards and expansion behavior needs review
+
+**What works**:
+- ✅ Database restructure complete (global player/horse pools)
+- ✅ Backend API all working (Setup/Games/Reports tabs)
+- ✅ Setup tab: Player Pool and Horse Pool cards functional
+
+**Files modified** (2026-02-25):
+- Database: `games/sweepstakes-knockout/database/migrate_to_v2.sql`
+- Backend: `games/sweepstakes-knockout/backend/handlers.go` (completely rewritten)
+- Frontend: `games/sweepstakes-knockout/frontend/src/App.tsx` (completely rewritten)
+- Old files preserved: `handlers_old.go`, `App_old.tsx`
+
+**Resume work**: Compare side-by-side with LMS Manager and fix UI to match exactly
+
+---
+
 ## Session Start - Read This First
 
 - Platform: Pi at [192.168.1.29] (was 192.168.1.45 - IP changed after WiFi crash), Mac for editing
 - Workflow: Edit on Mac → commit → USER pushes → pull & build on Pi
 - Ports: identity-shell: 3001, tic-tac-toe: 4001, dots: 4011, sweepstakes: 4031, last-man-standing: 4021, quiz-player: 4041, spoof: 4051, mobile-test: 4061, leaderboard: 5030, season-scheduler: 5040, smoke-test: 5010, setup-admin: 5020, display-admin: 5050, display-runtime: 5051, game-admin: 5070, quiz-master: 5080, quiz-display: 5081
 - Reference implementation: `games/smoke-test/` - COPY THIS when creating new apps
-- Active work: CSS migration - 7 apps migrated to ah-app-header (setup-admin, game-admin, last-man-standing, sweepstakes, leaderboard, tic-tac-toe, dots). Frontends rebuilt on Pi. 4 apps pending (quiz-player, quiz-master, quiz-display, mobile-test)
+- Active work: **Sweepstakes Knockout restructure INCOMPLETE** - Backend done, frontend UI doesn't match LMS Manager (see below)
 - Known issues: SSE presence requires manual refresh after impersonation (acceptable for debugging tool)
 - Build: `cd games/{app}/frontend && npm run build && cp -r build/* ../backend/static/`
 - PostgreSQL: Port 5555, password "pubgames", user "activityhub", database "activity_hub"
