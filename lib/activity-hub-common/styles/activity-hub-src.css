@@ -533,6 +533,98 @@
     opacity: 0;
   }
 
+  /* ── Common Layout Patterns ──────────────────────────────── */
+
+  /* Inline form (input + button side-by-side) */
+  .ah-inline-form {
+    @apply flex gap-2 mt-2 flex-wrap w-full;
+  }
+  .ah-inline-form input,
+  .ah-inline-form select {
+    flex: 1 1 250px;
+    min-width: 150px;
+  }
+  .ah-inline-form button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+  @media (max-width: 640px) {
+    .ah-inline-form input,
+    .ah-inline-form select,
+    .ah-inline-form button {
+      flex: 1 1 100%;
+    }
+  }
+
+  /* List pattern (flex column) */
+  .ah-list {
+    @apply flex flex-col gap-2 mt-3;
+  }
+
+  /* List item pattern (flex row space-between) */
+  .ah-list-item {
+    @apply flex items-center justify-between p-3 bg-white border border-stone-200 rounded-xl;
+  }
+
+  /* Auto-fill grid pattern */
+  .ah-grid-auto {
+    @apply grid gap-3 mt-3;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  }
+  .ah-grid-auto--narrow {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
+  .ah-grid-auto--wide {
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  }
+
+  /* Detail view header pattern */
+  .ah-detail-header {
+    @apply flex items-center gap-3 mb-5;
+  }
+  .ah-detail-header > *:last-child {
+    margin-left: auto;
+  }
+
+  /* Badge/pill pattern */
+  .ah-badge {
+    @apply inline-block px-3 py-1 rounded-full text-sm font-semibold;
+  }
+  .ah-badge--success {
+    @apply bg-green-100 text-green-800;
+  }
+  .ah-badge--error {
+    @apply bg-red-100 text-red-800;
+  }
+  .ah-badge--warning {
+    @apply bg-amber-100 text-amber-800;
+  }
+  .ah-badge--info {
+    @apply bg-brand-100 text-brand-700;
+  }
+  .ah-badge--neutral {
+    @apply bg-stone-100 text-stone-700;
+  }
+
+  /* Small button variants */
+  .ah-btn-sm {
+    @apply px-3 py-1 text-sm;
+  }
+  .ah-btn-danger-sm {
+    @apply inline-flex items-center justify-center
+           px-3 py-1 rounded-lg
+           bg-white text-red-600 text-sm font-medium
+           cursor-pointer whitespace-nowrap
+           transition-colors duration-150;
+    border: 1px solid #FCA5A5;
+  }
+  .ah-btn-danger-sm:hover:not(:disabled) {
+    background-color: #FEF2F2;
+  }
+  .ah-btn-danger-sm:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
+
 }
 
 @tailwind utilities;
