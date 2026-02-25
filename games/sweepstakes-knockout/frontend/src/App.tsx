@@ -3,6 +3,29 @@ import './App.css';
 
 const API_BASE = '/api';
 
+// Parse query params
+function useQueryParams() {
+  const params = new URLSearchParams(window.location.search);
+  return {
+    token: params.get('token') || '',
+  };
+}
+
+// Types
+interface Player {
+  id: number;
+  managerEmail: string;
+  name: string;
+  createdAt: string;
+}
+
+interface Horse {
+  id: number;
+  managerEmail: string;
+  name: string;
+  createdAt: string;
+}
+
 interface Event {
   id: number;
   name: string;
@@ -11,72 +34,56 @@ interface Event {
   managerEmail: string;
   createdAt: string;
   updatedAt: string;
+  participantCount: number;
 }
 
-interface Horse {
+interface Participant {
   id: number;
   eventId: number;
-  name: string;
-  createdAt: string;
-}
-
-interface Player {
-  id: number;
-  eventId: number;
-  playerEmail: string;
+  playerId: number;
   playerName: string;
   horseId?: number | null;
   horseName?: string | null;
-  createdAt: string;
 }
 
-interface WinningPosition {
+interface Position {
   id: number;
   eventId: number;
   position: string;
-  createdAt: string;
-}
-
-interface Result {
-  id: number;
-  eventId: number;
-  horseId: number;
-  horseName: string;
-  position: string;
-  createdAt: string;
-  updatedAt: string;
 }
 
 interface ReportEntry {
   playerName: string;
-  playerEmail: string;
   horseName: string;
   position: string;
 }
 
 function App() {
-  const params = new URLSearchParams(window.location.search);
-  const token = params.get('token') || '';
+  const { token } = useQueryParams();
+  const [activeTab, setActiveTab] = useState<'setup' | 'games' | 'reports'>('games');
 
-  const [activeTab, setActiveTab] = useState<'events' | 'reports'>('events');
-  const [events, setEvents] = useState<Event[]>([]);
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
-  const [horses, setHorses] = useState<Horse[]>([]);
+  // Setup tab state
   const [players, setPlayers] = useState<Player[]>([]);
-  const [positions, setPositions] = useState<WinningPosition[]>([]);
-  const [report, setReport] = useState<ReportEntry[]>([]);
-  const [error, setError] = useState('');
+  const [horses, setHorses] = useState<Horse[]>([]);
+  const [newPlayerName, setNewPlayerName] = useState('');
+  const [newHorseName, setNewHorseName] = useState('');
 
-  // Form states
+  // Games tab state
+  const [events, setEvents] = useState<Event[]>([]);
   const [newEventName, setNewEventName] = useState('');
   const [newEventDescription, setNewEventDescription] = useState('');
-  const [newHorseName, setNewHorseName] = useState('');
-  const [newPlayerEmail, setNewPlayerEmail] = useState('');
-  const [newPlayerName, setNewPlayerName] = useState('');
+  const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
+  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [positions, setPositions] = useState<Position[]>([]);
   const [newPosition, setNewPosition] = useState('');
+  const [selectedPlayers, setSelectedPlayers] = useState<number[]>([]);
   const [resultAssignments, setResultAssignments] = useState<Record<number, string>>({});
 
-  // Collapse state for cards
+  // Reports tab state
+  const [reportEventId, setReportEventId] = useState<number>(0);
+  const [reportData, setReportData] = useState<ReportEntry[]>([]);
+
+  // Collapse state
   const [collapsedCards, setCollapsedCards] = useState<Record<string, boolean>>({});
 
   const toggleCard = (cardName: string) => {
@@ -86,31 +93,180 @@ function App() {
     });
   };
 
-  const fetchEvents = async () => {
+  // Fetch setup data
+  useEffect(() => {
+    if (!token || activeTab !== 'setup') return;
+
+    const fetchSetupData = async () => {
+      try {
+        const [playersRes, horsesRes] = await Promise.all([
+          fetch(`${API_BASE}/players`, { headers: { Authorization: `Bearer ${token}` } }),
+          fetch(`${API_BASE}/horses`, { headers: { Authorization: `Bearer ${token}` } }),
+        ]);
+        const playersData = await playersRes.json();
+        const horsesData = await horsesRes.json();
+        setPlayers(playersData.players || []);
+        setHorses(horsesData.horses || []);
+      } catch (err) {
+        console.error('Failed to fetch setup data:', err);
+      }
+    };
+
+    fetchSetupData();
+  }, [token, activeTab]);
+
+  // Fetch events
+  useEffect(() => {
+    if (!token || (activeTab !== 'games' && activeTab !== 'reports')) return;
+
+    const fetchEvents = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/events`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        setEvents(data.events || []);
+      } catch (err) {
+        console.error('Failed to fetch events:', err);
+      }
+    };
+
+    fetchEvents();
+  }, [token, activeTab]);
+
+  // Fetch event details when selected
+  useEffect(() => {
+    if (!token || !selectedEventId) return;
+
+    const fetchEventDetail = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/events/${selectedEventId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        setParticipants(data.participants || []);
+        setPositions(data.positions || []);
+
+        // Fetch results
+        const resultsRes = await fetch(`${API_BASE}/events/${selectedEventId}/results`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const resultsData = await resultsRes.json();
+        const assignments: Record<number, string> = {};
+        (resultsData || []).forEach((r: any) => {
+          assignments[r.horseId] = r.position;
+        });
+        setResultAssignments(assignments);
+      } catch (err) {
+        console.error('Failed to fetch event details:', err);
+      }
+    };
+
+    fetchEventDetail();
+  }, [token, selectedEventId]);
+
+  // Fetch report
+  useEffect(() => {
+    if (!token || reportEventId === 0) return;
+
+    const fetchReport = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/events/${reportEventId}/report`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        setReportData(data || []);
+      } catch (err) {
+        console.error('Failed to fetch report:', err);
+      }
+    };
+
+    fetchReport();
+  }, [token, reportEventId]);
+
+  // Setup tab handlers
+  const handleCreatePlayer = async () => {
+    if (!newPlayerName.trim()) return;
+
     try {
-      const res = await fetch(`${API_BASE}/events`, {
+      await fetch(`${API_BASE}/players`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name: newPlayerName }),
+      });
+      setNewPlayerName('');
+      // Refetch players
+      const res = await fetch(`${API_BASE}/players`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-      setEvents(data || []);
+      setPlayers(data.players || []);
     } catch (err) {
-      console.error('Failed to fetch events:', err);
+      console.error('Failed to create player:', err);
     }
   };
 
-  useEffect(() => {
-    fetchEvents();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const handleCreateEvent = async () => {
-    if (!newEventName.trim()) {
-      setError('Event name is required');
-      return;
-    }
+  const handleDeletePlayer = async (id: number) => {
+    if (!window.confirm('Delete this player?')) return;
 
     try {
-      const res = await fetch(`${API_BASE}/events`, {
+      await fetch(`${API_BASE}/players/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setPlayers(players.filter((p) => p.id !== id));
+    } catch (err) {
+      console.error('Failed to delete player:', err);
+    }
+  };
+
+  const handleCreateHorse = async () => {
+    if (!newHorseName.trim()) return;
+
+    try {
+      await fetch(`${API_BASE}/horses`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name: newHorseName }),
+      });
+      setNewHorseName('');
+      // Refetch horses
+      const res = await fetch(`${API_BASE}/horses`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      setHorses(data.horses || []);
+    } catch (err) {
+      console.error('Failed to create horse:', err);
+    }
+  };
+
+  const handleDeleteHorse = async (id: number) => {
+    if (!window.confirm('Delete this horse?')) return;
+
+    try {
+      await fetch(`${API_BASE}/horses/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setHorses(horses.filter((h) => h.id !== id));
+    } catch (err) {
+      console.error('Failed to delete horse:', err);
+    }
+  };
+
+  // Games tab handlers
+  const handleCreateEvent = async () => {
+    if (!newEventName.trim()) return;
+
+    try {
+      await fetch(`${API_BASE}/events`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -121,143 +277,63 @@ function App() {
           description: newEventDescription,
         }),
       });
-
-      if (!res.ok) {
-        const data = await res.json();
-        setError(data.error || 'Failed to create event');
-        return;
-      }
-
       setNewEventName('');
       setNewEventDescription('');
-      setError('');
-      fetchEvents();
-    } catch (err) {
-      setError('Network error');
-    }
-  };
-
-  const handleSelectEvent = async (event: Event) => {
-    setSelectedEvent(event);
-    setView('setup');
-    await fetchEventData(event.id);
-  };
-
-  const fetchEventData = async (eventId: number) => {
-    try {
-      const [horsesRes, playersRes, positionsRes, resultsRes] = await Promise.all([
-        fetch(`${API_BASE}/events/${eventId}/horses`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch(`${API_BASE}/events/${eventId}/players`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch(`${API_BASE}/events/${eventId}/positions`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch(`${API_BASE}/events/${eventId}/results`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-      ]);
-
-      const horsesData = await horsesRes.json();
-      const playersData = await playersRes.json();
-      const positionsData = await positionsRes.json();
-      const resultsData = await resultsRes.json();
-
-      setHorses(horsesData || []);
-      setPlayers(playersData || []);
-      setPositions(positionsData || []);
-
-      // Build result assignments
-      const assignments: Record<number, string> = {};
-      (resultsData || []).forEach((r: Result) => {
-        assignments[r.horseId] = r.position;
+      // Refetch events
+      const res = await fetch(`${API_BASE}/events`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
-      setResultAssignments(assignments);
+      const data = await res.json();
+      setEvents(data.events || []);
     } catch (err) {
-      console.error('Failed to fetch event data:', err);
+      console.error('Failed to create event:', err);
     }
   };
 
-  const handleCreateHorse = async () => {
-    if (!selectedEvent || !newHorseName.trim()) return;
+  const handleDeleteEvent = async (id: number) => {
+    if (!window.confirm('Delete this event?')) return;
 
     try {
-      const res = await fetch(`${API_BASE}/events/${selectedEvent.id}/horses`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ name: newHorseName }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        setError(data.error || 'Failed to add horse');
-        return;
-      }
-
-      setNewHorseName('');
-      setError('');
-      fetchEventData(selectedEvent.id);
-    } catch (err) {
-      setError('Network error');
-    }
-  };
-
-  const handleDeleteHorse = async (horseId: number) => {
-    if (!window.confirm('Delete this horse?')) return;
-
-    try {
-      await fetch(`${API_BASE}/horses/${horseId}`, {
+      await fetch(`${API_BASE}/events/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (selectedEvent) fetchEventData(selectedEvent.id);
+      setEvents(events.filter((e) => e.id !== id));
+      if (selectedEventId === id) {
+        setSelectedEventId(null);
+      }
     } catch (err) {
-      console.error('Failed to delete horse:', err);
+      console.error('Failed to delete event:', err);
     }
   };
 
-  const handleCreatePlayer = async () => {
-    if (!selectedEvent || !newPlayerEmail.trim() || !newPlayerName.trim()) return;
+  const handleAddParticipants = async () => {
+    if (!selectedEventId || selectedPlayers.length === 0) return;
 
     try {
-      const res = await fetch(`${API_BASE}/events/${selectedEvent.id}/players`, {
+      await fetch(`${API_BASE}/events/${selectedEventId}/participants`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          playerEmail: newPlayerEmail,
-          playerName: newPlayerName,
-          horseId: null,
-        }),
+        body: JSON.stringify({ playerIds: selectedPlayers }),
       });
-
-      if (!res.ok) {
-        const data = await res.json();
-        setError(data.error || 'Failed to add player');
-        return;
-      }
-
-      setNewPlayerEmail('');
-      setNewPlayerName('');
-      setError('');
-      fetchEventData(selectedEvent.id);
+      setSelectedPlayers([]);
+      // Refetch event details
+      const res = await fetch(`${API_BASE}/events/${selectedEventId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      setParticipants(data.participants || []);
     } catch (err) {
-      setError('Network error');
+      console.error('Failed to add participants:', err);
     }
   };
 
-  const handleAssignHorse = async (playerId: number, horseId: number | null) => {
-    if (!selectedEvent) return;
-
+  const handleAssignHorse = async (participantId: number, horseId: number | null) => {
     try {
-      await fetch(`${API_BASE}/players/${playerId}`, {
+      await fetch(`${API_BASE}/participants/${participantId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -265,31 +341,38 @@ function App() {
         },
         body: JSON.stringify({ horseId }),
       });
-      fetchEventData(selectedEvent.id);
+      // Refetch event details
+      if (selectedEventId) {
+        const res = await fetch(`${API_BASE}/events/${selectedEventId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        setParticipants(data.participants || []);
+      }
     } catch (err) {
       console.error('Failed to assign horse:', err);
     }
   };
 
-  const handleDeletePlayer = async (playerId: number) => {
-    if (!window.confirm('Delete this player?')) return;
+  const handleRemoveParticipant = async (participantId: number) => {
+    if (!window.confirm('Remove this participant?')) return;
 
     try {
-      await fetch(`${API_BASE}/players/${playerId}`, {
+      await fetch(`${API_BASE}/participants/${participantId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (selectedEvent) fetchEventData(selectedEvent.id);
+      setParticipants(participants.filter((p) => p.id !== participantId));
     } catch (err) {
-      console.error('Failed to delete player:', err);
+      console.error('Failed to remove participant:', err);
     }
   };
 
   const handleCreatePosition = async () => {
-    if (!selectedEvent || !newPosition.trim()) return;
+    if (!selectedEventId || !newPosition.trim()) return;
 
     try {
-      const res = await fetch(`${API_BASE}/events/${selectedEvent.id}/positions`, {
+      await fetch(`${API_BASE}/events/${selectedEventId}/positions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -297,40 +380,36 @@ function App() {
         },
         body: JSON.stringify({ position: newPosition }),
       });
-
-      if (!res.ok) {
-        const data = await res.json();
-        setError(data.error || 'Failed to add position');
-        return;
-      }
-
       setNewPosition('');
-      setError('');
-      fetchEventData(selectedEvent.id);
+      // Refetch event details
+      const res = await fetch(`${API_BASE}/events/${selectedEventId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      setPositions(data.positions || []);
     } catch (err) {
-      setError('Network error');
+      console.error('Failed to create position:', err);
     }
   };
 
-  const handleDeletePosition = async (posId: number) => {
+  const handleDeletePosition = async (positionId: number) => {
     if (!window.confirm('Delete this position?')) return;
 
     try {
-      await fetch(`${API_BASE}/positions/${posId}`, {
+      await fetch(`${API_BASE}/positions/${positionId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (selectedEvent) fetchEventData(selectedEvent.id);
+      setPositions(positions.filter((p) => p.id !== positionId));
     } catch (err) {
       console.error('Failed to delete position:', err);
     }
   };
 
   const handleSaveResults = async () => {
-    if (!selectedEvent) return;
+    if (!selectedEventId) return;
 
-    // Build results array
-    const resultsArray = Object.entries(resultAssignments)
+    const results = Object.entries(resultAssignments)
       .filter(([_, position]) => position)
       .map(([horseId, position]) => ({
         horseId: parseInt(horseId),
@@ -338,53 +417,53 @@ function App() {
       }));
 
     try {
-      const res = await fetch(`${API_BASE}/events/${selectedEvent.id}/results`, {
+      await fetch(`${API_BASE}/events/${selectedEventId}/results`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ results: resultsArray }),
+        body: JSON.stringify({ results }),
       });
-
-      if (!res.ok) {
-        const data = await res.json();
-        setError(data.error || 'Failed to save results');
-        return;
-      }
-
-      setError('');
-      alert('Results saved! Event is now completed.');
-      fetchEventData(selectedEvent.id);
-      fetchEvents(); // Refresh event status
-      setView('report');
-    } catch (err) {
-      setError('Network error');
-    }
-  };
-
-  const handleViewReport = async () => {
-    if (!selectedEvent) return;
-
-    try {
-      const res = await fetch(`${API_BASE}/events/${selectedEvent.id}/report`, {
+      alert('Results saved! Event completed.');
+      // Refetch events to update status
+      const res = await fetch(`${API_BASE}/events`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-      setReport(data || []);
-      setView('report');
+      setEvents(data.events || []);
     } catch (err) {
-      console.error('Failed to fetch report:', err);
+      console.error('Failed to save results:', err);
     }
   };
 
-  const unassignedHorses = horses.filter(
-    (h) => !players.some((p) => p.horseId === h.id)
-  );
+  // Get unassigned horses for a participant dropdown
+  const getAvailableHorses = (currentHorseId?: number | null) => {
+    const assignedHorseIds = participants
+      .filter((p) => p.horseId && p.horseId !== currentHorseId)
+      .map((p) => p.horseId);
+    return horses.filter((h) => !assignedHorseIds.includes(h.id));
+  };
+
+  // Get players not yet in event
+  const getAvailablePlayers = () => {
+    const participantPlayerIds = participants.map((p) => p.playerId);
+    return players.filter((p) => !participantPlayerIds.includes(p.id));
+  };
+
+  // Get available positions for results dropdown
+  const getAvailablePositions = (currentHorseId: number) => {
+    const assignedPositions = Object.entries(resultAssignments)
+      .filter(([horseId, _]) => parseInt(horseId) !== currentHorseId)
+      .map(([_, position]) => position);
+    return positions.filter((pos) => !assignedPositions.includes(pos.position));
+  };
+
+  const selectedEvent = events.find((e) => e.id === selectedEventId);
 
   return (
     <>
-      {/* App Header Bar */}
+      {/* App Header */}
       <div className="ah-app-header">
         <div className="ah-app-header-left">
           <h1 className="ah-app-title">🏇 Sweepstakes Knockout</h1>
@@ -402,168 +481,337 @@ function App() {
       </div>
 
       <div className="ah-container ah-container--wide">
-        {error && <div className="ah-banner ah-banner--error">{error}</div>}
+        {/* Tabs */}
+        <div className="ah-tabs">
+          <button
+            className={`ah-tab ${activeTab === 'setup' ? 'active' : ''}`}
+            onClick={() => setActiveTab('setup')}
+          >
+            Setup
+          </button>
+          <button
+            className={`ah-tab ${activeTab === 'games' ? 'active' : ''}`}
+            onClick={() => setActiveTab('games')}
+          >
+            Games
+          </button>
+          <button
+            className={`ah-tab ${activeTab === 'reports' ? 'active' : ''}`}
+            onClick={() => setActiveTab('reports')}
+          >
+            Reports
+          </button>
+        </div>
 
-        {!selectedEvent && (
-          <>
-            <h2>Events</h2>
+        {/* SETUP TAB */}
+        {activeTab === 'setup' && (
+          <div style={{ marginTop: 20 }}>
+            {/* Player Pool */}
+            <div className="ah-card setup-section" style={{ marginBottom: 20 }}>
+              <div
+                className="setup-section-header"
+                style={{ cursor: 'pointer' }}
+                onClick={() => toggleCard('players')}
+              >
+                <h3 className="ah-section-title">
+                  {collapsedCards['players'] ? '▶' : '▼'} Player Pool ({players.length})
+                </h3>
+              </div>
 
-            <div className="ah-card" style={{ marginBottom: 20 }}>
-              <h3 className="ah-section-title">Create New Event</h3>
-              <input
-                type="text"
-                className="ah-input"
-                placeholder="Event name (e.g., Grand National 2026)"
-                value={newEventName}
-                onChange={(e) => setNewEventName(e.target.value)}
-              />
-              <textarea
-                className="ah-input"
-                placeholder="Description (optional)"
-                value={newEventDescription}
-                onChange={(e) => setNewEventDescription(e.target.value)}
-                style={{ marginTop: 8 }}
-                rows={3}
-              />
-              <button className="ah-btn-primary" onClick={handleCreateEvent} style={{ marginTop: 12 }}>
-                Create Event
-              </button>
+              {!collapsedCards['players'] && (
+                <>
+                  <div className="inline-form">
+                    <input
+                      type="text"
+                      className="ah-input"
+                      placeholder="Player name"
+                      value={newPlayerName}
+                      onChange={(e) => setNewPlayerName(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && handleCreatePlayer()}
+                    />
+                    <button className="ah-btn-primary" onClick={handleCreatePlayer}>
+                      Add Player
+                    </button>
+                  </div>
+
+                  <div className="player-list" style={{ marginTop: '1rem' }}>
+                    {players.length === 0 && (
+                      <p className="ah-meta">No players yet. Add one to get started.</p>
+                    )}
+                    {players.map((player) => (
+                      <div key={player.id} className="player-item">
+                        <strong>{player.name}</strong>
+                        <button
+                          className="btn-danger-small"
+                          onClick={() => handleDeletePlayer(player.id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
 
-            {events.length === 0 && (
-              <div className="ah-banner ah-banner--info">No events yet. Create one above.</div>
-            )}
-
-            {events.map((event) => (
-              <div key={event.id} className="ah-card" style={{ marginBottom: 12, cursor: 'pointer' }} onClick={() => handleSelectEvent(event)}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <h3 style={{ margin: 0 }}>{event.name}</h3>
-                    {event.description && <p style={{ margin: '4px 0 0', color: '#78716C' }}>{event.description}</p>}
-                  </div>
-                  <span className={`ah-status ah-status--${event.status === 'completed' ? 'active' : 'waiting'}`}>
-                    {event.status}
-                  </span>
-                </div>
+            {/* Horse Pool */}
+            <div className="ah-card setup-section">
+              <div
+                className="setup-section-header"
+                style={{ cursor: 'pointer' }}
+                onClick={() => toggleCard('horses')}
+              >
+                <h3 className="ah-section-title">
+                  {collapsedCards['horses'] ? '▶' : '▼'} Horse Pool ({horses.length})
+                </h3>
               </div>
-            ))}
-          </>
+
+              {!collapsedCards['horses'] && (
+                <>
+                  <div className="inline-form">
+                    <input
+                      type="text"
+                      className="ah-input"
+                      placeholder="Horse name"
+                      value={newHorseName}
+                      onChange={(e) => setNewHorseName(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && handleCreateHorse()}
+                    />
+                    <button className="ah-btn-primary" onClick={handleCreateHorse}>
+                      Add Horse
+                    </button>
+                  </div>
+
+                  <div className="player-list" style={{ marginTop: '1rem' }}>
+                    {horses.length === 0 && (
+                      <p className="ah-meta">No horses yet. Add one to get started.</p>
+                    )}
+                    {horses.map((horse) => (
+                      <div key={horse.id} className="player-item">
+                        <strong>{horse.name}</strong>
+                        <button
+                          className="btn-danger-small"
+                          onClick={() => handleDeleteHorse(horse.id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
         )}
 
-        {selectedEvent && (
-          <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-              <button className="ah-btn-back" onClick={() => { setSelectedEvent(null); setView('events'); }}>
-                ← Back to Events
-              </button>
-              <h2 style={{ margin: 0 }}>{selectedEvent.name}</h2>
-              <span className={`ah-status ah-status--${selectedEvent.status === 'completed' ? 'active' : 'waiting'}`}>
-                {selectedEvent.status}
-              </span>
-            </div>
-
-            <div className="ah-tabs">
-              <button className={`ah-tab ${view === 'setup' ? 'active' : ''}`} onClick={() => setView('setup')}>
-                Setup
-              </button>
-              <button className={`ah-tab ${view === 'results' ? 'active' : ''}`} onClick={() => setView('results')}>
-                Results
-              </button>
-              <button className={`ah-tab ${view === 'report' ? 'active' : ''}`} onClick={() => { setView('report'); handleViewReport(); }}>
-                Report
-              </button>
-            </div>
-
-            {view === 'setup' && (
-              <div style={{ marginTop: 20 }}>
-                {/* Horses Card */}
+        {/* GAMES TAB */}
+        {activeTab === 'games' && (
+          <div style={{ marginTop: 20 }}>
+            {!selectedEventId && (
+              <>
+                {/* Create Event Card */}
                 <div className="ah-card setup-section" style={{ marginBottom: 20 }}>
-                  <div className="setup-section-header" style={{ cursor: 'pointer' }} onClick={() => toggleCard('horses')}>
+                  <div
+                    className="setup-section-header"
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => toggleCard('createEvent')}
+                  >
                     <h3 className="ah-section-title">
-                      {collapsedCards['horses'] ? '▶' : '▼'} Horses ({horses.length})
+                      {collapsedCards['createEvent'] ? '▶' : '▼'} Create New Event
                     </h3>
                   </div>
 
-                  {!collapsedCards['horses'] && (
+                  {!collapsedCards['createEvent'] && (
                     <>
                       <input
                         type="text"
                         className="ah-input"
-                        placeholder="Horse name"
-                        value={newHorseName}
-                        onChange={(e) => setNewHorseName(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleCreateHorse()}
+                        placeholder="Event name (e.g., Grand National 2026)"
+                        value={newEventName}
+                        onChange={(e) => setNewEventName(e.target.value)}
                       />
-                      <button className="ah-btn-primary" onClick={handleCreateHorse} style={{ marginTop: 8 }}>
-                        Add Horse
+                      <textarea
+                        className="ah-input"
+                        placeholder="Description (optional)"
+                        value={newEventDescription}
+                        onChange={(e) => setNewEventDescription(e.target.value)}
+                        style={{ marginTop: 8 }}
+                        rows={3}
+                      />
+                      <button
+                        className="ah-btn-primary"
+                        onClick={handleCreateEvent}
+                        style={{ marginTop: 12 }}
+                      >
+                        Create Event
                       </button>
-
-                      <div className="horse-list">
-                        {horses.map((horse) => (
-                          <div key={horse.id} className="horse-item">
-                            <span>{horse.name}</span>
-                            <button className="ah-btn-danger" onClick={() => handleDeleteHorse(horse.id)}>
-                              Delete
-                            </button>
-                          </div>
-                        ))}
-                      </div>
                     </>
                   )}
                 </div>
 
-                {/* Players Card */}
-                <div className="ah-card setup-section" style={{ marginBottom: 20 }}>
-                  <div className="setup-section-header" style={{ cursor: 'pointer' }} onClick={() => toggleCard('players')}>
+                {/* Active Events */}
+                <div className="ah-card setup-section">
+                  <div
+                    className="setup-section-header"
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => toggleCard('activeEvents')}
+                  >
                     <h3 className="ah-section-title">
-                      {collapsedCards['players'] ? '▶' : '▼'} Players ({players.length})
+                      {collapsedCards['activeEvents'] ? '▶' : '▼'} ACTIVE EVENTS ({events.filter(e => e.status !== 'completed').length})
                     </h3>
                   </div>
 
-                  {!collapsedCards['players'] && (
+                  {!collapsedCards['activeEvents'] && (
+                    <div style={{ marginTop: '1rem' }}>
+                      {events.filter(e => e.status !== 'completed').length === 0 && (
+                        <p className="ah-meta">No active events. Create one above.</p>
+                      )}
+                      {events.filter(e => e.status !== 'completed').map((event) => (
+                        <div key={event.id} className="ah-card" style={{ marginBottom: 12, cursor: 'pointer' }} onClick={() => setSelectedEventId(event.id)}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                              <h4 style={{ margin: 0 }}>{event.name}</h4>
+                              {event.description && <p className="ah-meta" style={{ margin: '4px 0 0' }}>{event.description}</p>}
+                              <p className="ah-meta">{event.participantCount} participants</p>
+                            </div>
+                            <span className="ah-status ah-status--waiting">{event.status}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Completed Events */}
+                {events.filter(e => e.status === 'completed').length > 0 && (
+                  <div className="ah-card setup-section" style={{ marginTop: 20 }}>
+                    <div
+                      className="setup-section-header"
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => toggleCard('completedEvents')}
+                    >
+                      <h3 className="ah-section-title">
+                        {collapsedCards['completedEvents'] ? '▶' : '▼'} COMPLETED EVENTS ({events.filter(e => e.status === 'completed').length})
+                      </h3>
+                    </div>
+
+                    {!collapsedCards['completedEvents'] && (
+                      <div style={{ marginTop: '1rem' }}>
+                        {events.filter(e => e.status === 'completed').map((event) => (
+                          <div key={event.id} className="ah-card" style={{ marginBottom: 12, cursor: 'pointer' }} onClick={() => setSelectedEventId(event.id)}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <div>
+                                <h4 style={{ margin: 0 }}>{event.name}</h4>
+                                {event.description && <p className="ah-meta" style={{ margin: '4px 0 0' }}>{event.description}</p>}
+                              </div>
+                              <span className="ah-status ah-status--active">{event.status}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Event Detail View */}
+            {selectedEventId && selectedEvent && (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+                  <button className="ah-btn-back" onClick={() => setSelectedEventId(null)}>
+                    ← Back to Events
+                  </button>
+                  <h2 style={{ margin: 0 }}>{selectedEvent.name}</h2>
+                  <span className={`ah-status ah-status--${selectedEvent.status === 'completed' ? 'active' : 'waiting'}`}>
+                    {selectedEvent.status}
+                  </span>
+                  <button
+                    className="ah-btn-danger"
+                    style={{ marginLeft: 'auto' }}
+                    onClick={() => handleDeleteEvent(selectedEventId)}
+                  >
+                    Delete Event
+                  </button>
+                </div>
+
+                {/* Participants */}
+                <div className="ah-card setup-section" style={{ marginBottom: 20 }}>
+                  <div
+                    className="setup-section-header"
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => toggleCard('participants')}
+                  >
+                    <h3 className="ah-section-title">
+                      {collapsedCards['participants'] ? '▶' : '▼'} Participants ({participants.length})
+                    </h3>
+                  </div>
+
+                  {!collapsedCards['participants'] && (
                     <>
-                      <input
-                        type="email"
-                        className="ah-input"
-                        placeholder="Player email"
-                        value={newPlayerEmail}
-                        onChange={(e) => setNewPlayerEmail(e.target.value)}
-                      />
-                      <input
-                        type="text"
-                        className="ah-input"
-                        placeholder="Player name"
-                        value={newPlayerName}
-                        onChange={(e) => setNewPlayerName(e.target.value)}
-                        style={{ marginTop: 8 }}
-                      />
-                      <button className="ah-btn-primary" onClick={handleCreatePlayer} style={{ marginTop: 8 }}>
-                        Add Player
-                      </button>
+                      <div style={{ marginBottom: '1rem' }}>
+                        <label className="ah-meta">Add Players:</label>
+                        <select
+                          multiple
+                          className="ah-select"
+                          value={selectedPlayers.map(String)}
+                          onChange={(e) => {
+                            const values = Array.from(e.target.selectedOptions).map((opt) => parseInt(opt.value));
+                            setSelectedPlayers(values);
+                          }}
+                          style={{ height: 100 }}
+                        >
+                          {getAvailablePlayers().map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          className="ah-btn-primary"
+                          onClick={handleAddParticipants}
+                          disabled={selectedPlayers.length === 0}
+                          style={{ marginTop: 8 }}
+                        >
+                          Add Selected Players
+                        </button>
+                      </div>
 
                       <div className="player-list">
-                        {players.map((player) => (
-                          <div key={player.id} className="player-item">
-                            <div>
-                              <div><strong>{player.playerName}</strong></div>
-                              <div style={{ fontSize: '14px', color: '#78716C' }}>{player.playerEmail}</div>
+                        {participants.length === 0 && (
+                          <p className="ah-meta">No participants yet. Add players above.</p>
+                        )}
+                        {participants.map((participant) => (
+                          <div key={participant.id} className="player-item">
+                            <div style={{ flex: 1 }}>
+                              <strong>{participant.playerName}</strong>
                               <select
                                 className="ah-select"
-                                value={player.horseId || ''}
-                                onChange={(e) => handleAssignHorse(player.id, e.target.value ? parseInt(e.target.value) : null)}
+                                value={participant.horseId || ''}
+                                onChange={(e) =>
+                                  handleAssignHorse(
+                                    participant.id,
+                                    e.target.value ? parseInt(e.target.value) : null
+                                  )
+                                }
                                 style={{ marginTop: 8, width: '100%' }}
                               >
                                 <option value="">Not assigned</option>
-                                {player.horseId && player.horseName && (
-                                  <option value={player.horseId}>{player.horseName}</option>
+                                {participant.horseId && participant.horseName && (
+                                  <option value={participant.horseId}>{participant.horseName}</option>
                                 )}
-                                {unassignedHorses.map((h) => (
-                                  <option key={h.id} value={h.id}>{h.name}</option>
+                                {getAvailableHorses(participant.horseId).map((h) => (
+                                  <option key={h.id} value={h.id}>
+                                    {h.name}
+                                  </option>
                                 ))}
                               </select>
                             </div>
-                            <button className="ah-btn-danger" onClick={() => handleDeletePlayer(player.id)}>
-                              Delete
+                            <button
+                              className="btn-danger-small"
+                              onClick={() => handleRemoveParticipant(participant.id)}
+                            >
+                              Remove
                             </button>
                           </div>
                         ))}
@@ -572,9 +820,13 @@ function App() {
                   )}
                 </div>
 
-                {/* Winning Positions Card */}
-                <div className="ah-card setup-section">
-                  <div className="setup-section-header" style={{ cursor: 'pointer' }} onClick={() => toggleCard('positions')}>
+                {/* Winning Positions */}
+                <div className="ah-card setup-section" style={{ marginBottom: 20 }}>
+                  <div
+                    className="setup-section-header"
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => toggleCard('positions')}
+                  >
                     <h3 className="ah-section-title">
                       {collapsedCards['positions'] ? '▶' : '▼'} Winning Positions ({positions.length})
                     </h3>
@@ -582,24 +834,33 @@ function App() {
 
                   {!collapsedCards['positions'] && (
                     <>
-                      <p className="ah-meta">Add positions that pay out (e.g., 1, 2, 3, last)</p>
-                      <input
-                        type="text"
-                        className="ah-input"
-                        placeholder="Position (e.g., 1, 2, 3, last)"
-                        value={newPosition}
-                        onChange={(e) => setNewPosition(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleCreatePosition()}
-                      />
-                      <button className="ah-btn-primary" onClick={handleCreatePosition} style={{ marginTop: 8 }}>
-                        Add Position
-                      </button>
+                      <p className="ah-meta">
+                        Add positions that pay out (e.g., 1, 2, 3, last)
+                      </p>
+                      <div className="inline-form">
+                        <input
+                          type="text"
+                          className="ah-input"
+                          placeholder="Position (e.g., 1, 2, 3, last)"
+                          value={newPosition}
+                          onChange={(e) => setNewPosition(e.target.value)}
+                          onKeyPress={(e) => e.key === 'Enter' && handleCreatePosition()}
+                        />
+                        <button className="ah-btn-primary" onClick={handleCreatePosition}>
+                          Add Position
+                        </button>
+                      </div>
 
                       <div className="position-list">
                         {positions.map((pos) => (
                           <div key={pos.id} className="position-item">
-                            <span><strong>{pos.position}</strong></span>
-                            <button className="ah-btn-danger" onClick={() => handleDeletePosition(pos.id)}>
+                            <span>
+                              <strong>{pos.position}</strong>
+                            </span>
+                            <button
+                              className="ah-btn-danger"
+                              onClick={() => handleDeletePosition(pos.id)}
+                            >
                               Delete
                             </button>
                           </div>
@@ -608,83 +869,126 @@ function App() {
                     </>
                   )}
                 </div>
-              </div>
-            )}
 
-            {view === 'results' && (
-              <div style={{ marginTop: 20 }}>
-                <div className="ah-card">
-                  <h3 className="ah-section-title">Assign Positions to Horses</h3>
-                  <p className="ah-meta">
-                    Assign each horse to a finishing position. You must assign all winning positions before saving.
-                  </p>
-
-                  <div className="result-grid">
-                    {horses.map((horse) => {
-                      // Get assigned positions for OTHER horses
-                      const assignedPositions = Object.entries(resultAssignments)
-                        .filter(([horseId, _]) => parseInt(horseId) !== horse.id)
-                        .map(([_, position]) => position);
-
-                      // Available positions = all positions minus those assigned to other horses
-                      const availablePositions = positions.filter(
-                        (pos) => !assignedPositions.includes(pos.position)
-                      );
-
-                      return (
-                        <div key={horse.id} className={`result-card ${resultAssignments[horse.id] ? 'assigned' : ''}`}>
-                          <div style={{ fontWeight: 600, marginBottom: 8 }}>{horse.name}</div>
-                          <select
-                            className="ah-select"
-                            value={resultAssignments[horse.id] || ''}
-                            onChange={(e) => setResultAssignments({ ...resultAssignments, [horse.id]: e.target.value })}
-                            style={{ width: '100%' }}
-                          >
-                            <option value="">Select position</option>
-                            {availablePositions.map((pos) => (
-                              <option key={pos.id} value={pos.position}>{pos.position}</option>
-                            ))}
-                          </select>
-                        </div>
-                      );
-                    })}
+                {/* Results */}
+                <div className="ah-card setup-section">
+                  <div
+                    className="setup-section-header"
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => toggleCard('results')}
+                  >
+                    <h3 className="ah-section-title">
+                      {collapsedCards['results'] ? '▶' : '▼'} Results
+                    </h3>
                   </div>
 
-                  <button className="ah-btn-primary" onClick={handleSaveResults} style={{ marginTop: 20 }}>
-                    Save Results
-                  </button>
+                  {!collapsedCards['results'] && (
+                    <>
+                      <p className="ah-meta">
+                        Assign finishing positions to horses. All winning positions must be assigned.
+                      </p>
+
+                      <div className="result-grid">
+                        {participants
+                          .filter((p) => p.horseId)
+                          .map((participant) => {
+                            const availablePos = getAvailablePositions(participant.horseId!);
+                            return (
+                              <div
+                                key={participant.id}
+                                className={`result-card ${
+                                  resultAssignments[participant.horseId!] ? 'assigned' : ''
+                                }`}
+                              >
+                                <div style={{ fontWeight: 600, marginBottom: 8 }}>
+                                  {participant.horseName}
+                                </div>
+                                <div className="ah-meta" style={{ marginBottom: 8 }}>
+                                  {participant.playerName}
+                                </div>
+                                <select
+                                  className="ah-select"
+                                  value={resultAssignments[participant.horseId!] || ''}
+                                  onChange={(e) =>
+                                    setResultAssignments({
+                                      ...resultAssignments,
+                                      [participant.horseId!]: e.target.value,
+                                    })
+                                  }
+                                  style={{ width: '100%' }}
+                                >
+                                  <option value="">Select position</option>
+                                  {availablePos.map((pos) => (
+                                    <option key={pos.id} value={pos.position}>
+                                      {pos.position}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            );
+                          })}
+                      </div>
+
+                      <button
+                        className="ah-btn-primary"
+                        onClick={handleSaveResults}
+                        style={{ marginTop: 20 }}
+                      >
+                        Save Results & Complete Event
+                      </button>
+                    </>
+                  )}
                 </div>
-              </div>
+              </>
             )}
+          </div>
+        )}
 
-            {view === 'report' && (
-              <div style={{ marginTop: 20 }}>
-                <div className="ah-card">
-                  <h3 className="ah-section-title">Winners</h3>
+        {/* REPORTS TAB */}
+        {activeTab === 'reports' && (
+          <div style={{ marginTop: 20 }}>
+            <div className="ah-card">
+              <h3 className="ah-section-title">Event Report</h3>
 
-                  {report.length === 0 && selectedEvent.status !== 'completed' && (
-                    <div className="ah-banner ah-banner--info">Results not yet saved.</div>
+              <select
+                className="ah-select"
+                value={reportEventId}
+                onChange={(e) => setReportEventId(parseInt(e.target.value))}
+                style={{ width: '100%', marginBottom: 20 }}
+              >
+                <option value={0}>Select an event</option>
+                {events
+                  .filter((e) => e.status === 'completed')
+                  .map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.name}
+                    </option>
+                  ))}
+              </select>
+
+              {reportEventId > 0 && (
+                <>
+                  {reportData.length === 0 && (
+                    <div className="ah-banner ah-banner--info">
+                      No winners (no horses finished in winning positions).
+                    </div>
                   )}
 
-                  {report.length === 0 && selectedEvent.status === 'completed' && (
-                    <div className="ah-banner ah-banner--info">No winners (no horses finished in winning positions).</div>
-                  )}
-
-                  {report.length > 0 && (
+                  {reportData.length > 0 && (
                     <table className="ah-table">
                       <thead>
                         <tr>
                           <th>Player</th>
-                          <th>Email</th>
                           <th>Horse</th>
                           <th>Position</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {report.map((entry, idx) => (
+                        {reportData.map((entry, idx) => (
                           <tr key={idx}>
-                            <td><strong>{entry.playerName}</strong></td>
-                            <td>{entry.playerEmail}</td>
+                            <td>
+                              <strong>{entry.playerName}</strong>
+                            </td>
                             <td>{entry.horseName}</td>
                             <td>
                               <span className="winner-badge">{entry.position}</span>
@@ -694,10 +998,10 @@ function App() {
                       </tbody>
                     </table>
                   )}
-                </div>
-              </div>
-            )}
-          </>
+                </>
+              )}
+            </div>
+          </div>
         )}
       </div>
     </>
