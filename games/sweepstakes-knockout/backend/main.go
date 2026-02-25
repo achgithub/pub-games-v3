@@ -59,10 +59,10 @@ func main() {
 	api.HandleFunc("/players", handleCreatePlayer).Methods("POST")
 	api.HandleFunc("/players/{id}", handleDeletePlayer).Methods("DELETE")
 
-	// Setup tab - Horse pool
-	api.HandleFunc("/horses", handleGetHorses).Methods("GET")
-	api.HandleFunc("/horses", handleCreateHorse).Methods("POST")
-	api.HandleFunc("/horses/{id}", handleDeleteHorse).Methods("DELETE")
+	// Setup tab - Competitor pool
+	api.HandleFunc("/competitors", handleGetCompetitors).Methods("GET")
+	api.HandleFunc("/competitors", handleCreateCompetitor).Methods("POST")
+	api.HandleFunc("/competitors/{id}", handleDeleteCompetitor).Methods("DELETE")
 
 	// Games tab - Events
 	api.HandleFunc("/events", handleGetEvents).Methods("GET")
@@ -72,7 +72,7 @@ func main() {
 
 	// Games tab - Participants
 	api.HandleFunc("/events/{id}/participants", handleAddParticipants).Methods("POST")
-	api.HandleFunc("/participants/{id}", handleAssignHorse).Methods("PUT")
+	api.HandleFunc("/participants/{id}", handleAssignCompetitor).Methods("PUT")
 	api.HandleFunc("/participants/{id}", handleRemoveParticipant).Methods("DELETE")
 
 	// Games tab - Winning Positions

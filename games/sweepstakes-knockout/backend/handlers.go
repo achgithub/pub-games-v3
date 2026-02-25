@@ -118,8 +118,8 @@ func handleDeletePlayer(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// Horse pool handlers
-func handleGetHorses(w http.ResponseWriter, r *http.Request) {
+// Competitor pool handlers
+func handleGetCompetitors(w http.ResponseWriter, r *http.Request) {
 	user, ok := authlib.GetUserFromContext(r.Context())
 	if !ok {
 		respondError(w, 401, "Unauthorized")
@@ -138,26 +138,26 @@ func handleGetHorses(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 
-	type Horse struct {
+	type Competitor struct {
 		ID           int    `json:"id"`
 		ManagerEmail string `json:"managerEmail"`
 		Name         string `json:"name"`
 		CreatedAt    string `json:"createdAt"`
 	}
 
-	horses := []Horse{}
+	competitors := []Competitor{}
 	for rows.Next() {
-		var h Horse
-		if err := rows.Scan(&h.ID, &h.ManagerEmail, &h.Name, &h.CreatedAt); err != nil {
+		var c Competitor
+		if err := rows.Scan(&c.ID, &c.ManagerEmail, &c.Name, &c.CreatedAt); err != nil {
 			continue
 		}
-		horses = append(horses, h)
+		competitors = append(competitors, c)
 	}
 
-	respondJSON(w, map[string]interface{}{"horses": horses})
+	respondJSON(w, map[string]interface{}{"competitors": competitors})
 }
 
-func handleCreateHorse(w http.ResponseWriter, r *http.Request) {
+func handleCreateCompetitor(w http.ResponseWriter, r *http.Request) {
 	user, ok := authlib.GetUserFromContext(r.Context())
 	if !ok {
 		respondError(w, 401, "Unauthorized")
@@ -173,7 +173,7 @@ func handleCreateHorse(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.Name == "" {
-		respondError(w, 400, "Horse name is required")
+		respondError(w, 400, "Competitor name is required")
 		return
 	}
 
@@ -183,7 +183,7 @@ func handleCreateHorse(w http.ResponseWriter, r *http.Request) {
 	`, user.Email, req.Name)
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate") {
-			respondError(w, 400, "Horse already exists")
+			respondError(w, 400, "Competitor already exists")
 			return
 		}
 		respondError(w, 500, "Database error")
@@ -193,7 +193,7 @@ func handleCreateHorse(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 }
 
-func handleDeleteHorse(w http.ResponseWriter, r *http.Request) {
+func handleDeleteCompetitor(w http.ResponseWriter, r *http.Request) {
 	user, ok := authlib.GetUserFromContext(r.Context())
 	if !ok {
 		respondError(w, 401, "Unauthorized")
@@ -201,13 +201,13 @@ func handleDeleteHorse(w http.ResponseWriter, r *http.Request) {
 	}
 
 	vars := mux.Vars(r)
-	horseID := vars["id"]
+	competitorID := vars["id"]
 
 	// Verify ownership
 	var managerEmail string
-	err := appDB.QueryRow(`SELECT manager_email FROM horses WHERE id = $1`, horseID).Scan(&managerEmail)
+	err := appDB.QueryRow(`SELECT manager_email FROM horses WHERE id = $1`, competitorID).Scan(&managerEmail)
 	if err != nil {
-		respondError(w, 404, "Horse not found")
+		respondError(w, 404, "Competitor not found")
 		return
 	}
 	if managerEmail != user.Email {
@@ -215,7 +215,7 @@ func handleDeleteHorse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = appDB.Exec(`DELETE FROM horses WHERE id = $1`, horseID)
+	_, err = appDB.Exec(`DELETE FROM horses WHERE id = $1`, competitorID)
 	if err != nil {
 		respondError(w, 500, "Database error")
 		return
@@ -360,12 +360,12 @@ func handleGetEventDetail(w http.ResponseWriter, r *http.Request) {
 
 	// Get participants
 	type Participant struct {
-		ID         int     `json:"id"`
-		EventID    int     `json:"eventId"`
-		PlayerID   int     `json:"playerId"`
-		PlayerName string  `json:"playerName"`
-		HorseID    *int    `json:"horseId"`
-		HorseName  *string `json:"horseName"`
+		ID            int     `json:"id"`
+		EventID       int     `json:"eventId"`
+		PlayerID      int     `json:"playerId"`
+		PlayerName    string  `json:"playerName"`
+		CompetitorID   *int    `json:"competitorId"`
+		CompetitorName *string `json:"competitorName"`
 	}
 
 	participantRows, err := appDB.Query(`
@@ -386,17 +386,17 @@ func handleGetEventDetail(w http.ResponseWriter, r *http.Request) {
 	participants := []Participant{}
 	for participantRows.Next() {
 		var p Participant
-		var horseID sql.NullInt64
-		var horseName sql.NullString
-		if err := participantRows.Scan(&p.ID, &p.EventID, &p.PlayerID, &p.PlayerName, &horseID, &horseName); err != nil {
+		var competitorID sql.NullInt64
+		var competitorName sql.NullString
+		if err := participantRows.Scan(&p.ID, &p.EventID, &p.PlayerID, &p.PlayerName, &competitorID, &competitorName); err != nil {
 			continue
 		}
-		if horseID.Valid {
-			id := int(horseID.Int64)
-			p.HorseID = &id
+		if competitorID.Valid {
+			id := int(competitorID.Int64)
+			p.CompetitorID = &id
 		}
-		if horseName.Valid {
-			p.HorseName = &horseName.String
+		if competitorName.Valid {
+			p.CompetitorName = &competitorName.String
 		}
 		participants = append(participants, p)
 	}
@@ -482,7 +482,7 @@ func handleAddParticipants(w http.ResponseWriter, r *http.Request) {
 }
 
 // Assign horse to participant
-func handleAssignHorse(w http.ResponseWriter, r *http.Request) {
+func handleAssignCompetitor(w http.ResponseWriter, r *http.Request) {
 	user, ok := authlib.GetUserFromContext(r.Context())
 	if !ok {
 		respondError(w, 401, "Unauthorized")
@@ -493,7 +493,7 @@ func handleAssignHorse(w http.ResponseWriter, r *http.Request) {
 	participantID := vars["id"]
 
 	var req struct {
-		HorseID *int `json:"horseId"`
+		CompetitorID *int `json:"competitorId"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondError(w, 400, "Invalid request")
@@ -517,10 +517,10 @@ func handleAssignHorse(w http.ResponseWriter, r *http.Request) {
 		UPDATE event_participants
 		SET horse_id = $1
 		WHERE id = $2
-	`, req.HorseID, participantID)
+	`, req.CompetitorID, participantID)
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate") {
-			respondError(w, 400, "Horse already assigned in this event")
+			respondError(w, 400, "Competitor already assigned in this event")
 			return
 		}
 		respondError(w, 500, "Database error")
@@ -671,11 +671,11 @@ func handleGetResults(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type Result struct {
-		ID        int    `json:"id"`
-		EventID   int    `json:"eventId"`
-		HorseID   int    `json:"horseId"`
-		HorseName string `json:"horseName"`
-		Position  string `json:"position"`
+		ID             int    `json:"id"`
+		EventID        int    `json:"eventId"`
+		CompetitorID   int    `json:"competitorId"`
+		CompetitorName string `json:"competitorName"`
+		Position       string `json:"position"`
 	}
 
 	rows, err := appDB.Query(`
@@ -694,7 +694,7 @@ func handleGetResults(w http.ResponseWriter, r *http.Request) {
 	results := []Result{}
 	for rows.Next() {
 		var res Result
-		if err := rows.Scan(&res.ID, &res.EventID, &res.HorseID, &res.HorseName, &res.Position); err != nil {
+		if err := rows.Scan(&res.ID, &res.EventID, &res.CompetitorID, &res.CompetitorName, &res.Position); err != nil {
 			continue
 		}
 		results = append(results, res)
@@ -727,8 +727,8 @@ func handleSaveResults(w http.ResponseWriter, r *http.Request) {
 
 	var req struct {
 		Results []struct {
-			HorseID  int    `json:"horseId"`
-			Position string `json:"position"`
+			CompetitorID int    `json:"competitorId"`
+			Position     string `json:"position"`
 		} `json:"results"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -748,7 +748,7 @@ func handleSaveResults(w http.ResponseWriter, r *http.Request) {
 		_, err := appDB.Exec(`
 			INSERT INTO results (event_id, horse_id, position)
 			VALUES ($1, $2, $3)
-		`, eventID, result.HorseID, result.Position)
+		`, eventID, result.CompetitorID, result.Position)
 		if err != nil {
 			respondError(w, 500, "Database error")
 			return
@@ -790,9 +790,9 @@ func handleGetReport(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type ReportEntry struct {
-		PlayerName string `json:"playerName"`
-		HorseName  string `json:"horseName"`
-		Position   string `json:"position"`
+		PlayerName     string `json:"playerName"`
+		CompetitorName string `json:"competitorName"`
+		Position       string `json:"position"`
 	}
 
 	rows, err := appDB.Query(`
@@ -814,7 +814,7 @@ func handleGetReport(w http.ResponseWriter, r *http.Request) {
 	report := []ReportEntry{}
 	for rows.Next() {
 		var entry ReportEntry
-		if err := rows.Scan(&entry.PlayerName, &entry.HorseName, &entry.Position); err != nil {
+		if err := rows.Scan(&entry.PlayerName, &entry.CompetitorName, &entry.Position); err != nil {
 			continue
 		}
 		report = append(report, entry)
