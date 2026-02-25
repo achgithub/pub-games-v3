@@ -508,14 +508,10 @@ function App() {
           <div>
             {/* Player Pool */}
             <div className="ah-card ah-section">
-              <div
-                className="ah-section-header"
-                onClick={() => toggleCard('players')}
-              >
+              <div className="ah-section-header" onClick={() => toggleCard('players')}>
                 <h3 className="ah-section-title">
-                  Player Pool ({players.length})
+                  {collapsedCards['players'] ? '▶' : '▼'} Player Pool ({players.length})
                 </h3>
-                <span className="ah-section-toggle">{collapsedCards['players'] ? '▶' : '▼'}</span>
               </div>
 
               {!collapsedCards['players'] && (
@@ -534,7 +530,7 @@ function App() {
                     </button>
                   </div>
 
-                  <div className="player-list" style={{ marginTop: '1rem' }}>
+                  <div className="player-list">
                     {players.length === 0 && (
                       <p className="ah-meta">No players yet. Add one to get started.</p>
                     )}
@@ -556,14 +552,10 @@ function App() {
 
             {/* Horse Pool */}
             <div className="ah-card ah-section">
-              <div
-                className="ah-section-header"
-                onClick={() => toggleCard('horses')}
-              >
+              <div className="ah-section-header" onClick={() => toggleCard('horses')}>
                 <h3 className="ah-section-title">
-                  Horse Pool ({horses.length})
+                  {collapsedCards['horses'] ? '▶' : '▼'} Horse Pool ({horses.length})
                 </h3>
-                <span className="ah-section-toggle">{collapsedCards['horses'] ? '▶' : '▼'}</span>
               </div>
 
               {!collapsedCards['horses'] && (
@@ -582,7 +574,7 @@ function App() {
                     </button>
                   </div>
 
-                  <div className="player-list" style={{ marginTop: '1rem' }}>
+                  <div className="player-list">
                     {horses.length === 0 && (
                       <p className="ah-meta">No horses yet. Add one to get started.</p>
                     )}
@@ -611,32 +603,26 @@ function App() {
               <>
                 {/* Create Event Card */}
                 <div className="ah-card ah-section">
-                  <div
-                    className="ah-section-header"
-                    onClick={() => toggleCard('createEvent')}
-                  >
+                  <div className="ah-section-header" onClick={() => toggleCard('createEvent')}>
                     <h3 className="ah-section-title">
-                      CREATE NEW EVENT
+                      {collapsedCards['createEvent'] ? '▶' : '▼'} CREATE NEW EVENT
                     </h3>
-                    <span className="ah-section-toggle">{collapsedCards['createEvent'] ? '▶' : '▼'}</span>
                   </div>
 
                   {!collapsedCards['createEvent'] && (
-                    <div>
+                    <div className="event-form">
                       <input
                         type="text"
                         className="ah-input"
                         placeholder="Event name (e.g., Grand National 2026)"
                         value={newEventName}
                         onChange={(e) => setNewEventName(e.target.value)}
-                        style={{ marginBottom: '0.75rem' }}
                       />
                       <textarea
                         className="ah-input"
                         placeholder="Description (optional)"
                         value={newEventDescription}
                         onChange={(e) => setNewEventDescription(e.target.value)}
-                        style={{ marginBottom: '1rem' }}
                         rows={3}
                       />
                       <button
@@ -651,58 +637,52 @@ function App() {
 
                 {/* Active Events */}
                 <div className="ah-card ah-section">
-                  <div
-                    className="ah-section-header"
-                    onClick={() => toggleCard('activeEvents')}
-                  >
+                  <div className="ah-section-header" onClick={() => toggleCard('activeEvents')}>
                     <h3 className="ah-section-title">
-                      ACTIVE EVENTS ({events.filter(e => e.status !== 'completed').length})
+                      {collapsedCards['activeEvents'] ? '▶' : '▼'} ACTIVE EVENTS ({events.filter(e => e.status !== 'completed').length})
                     </h3>
-                    <span className="ah-section-toggle">{collapsedCards['activeEvents'] ? '▶' : '▼'}</span>
                   </div>
 
                   {!collapsedCards['activeEvents'] && (
-                    <div style={{ marginTop: '1rem' }}>
+                    <>
                       {events.filter(e => e.status !== 'completed').length === 0 && (
                         <p className="ah-meta">No active events. Create one above.</p>
                       )}
-                      {events.filter(e => e.status !== 'completed').map((event) => (
-                        <div key={event.id} className="ah-card" style={{ marginBottom: 12, cursor: 'pointer' }} onClick={() => setSelectedEventId(event.id)}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div>
-                              <h4 style={{ margin: 0 }}>{event.name}</h4>
-                              {event.description && <p className="ah-meta" style={{ margin: '4px 0 0' }}>{event.description}</p>}
-                              <p className="ah-meta">{event.participantCount} participants</p>
+                      <div className="events-list">
+                        {events.filter(e => e.status !== 'completed').map((event) => (
+                          <div key={event.id} className="event-item" onClick={() => setSelectedEventId(event.id)}>
+                            <div className="event-item-main">
+                              <div>
+                                <h4 className="event-name">{event.name}</h4>
+                                {event.description && <p className="ah-meta">{event.description}</p>}
+                                <p className="ah-meta">{event.participantCount} participants</p>
+                              </div>
+                              <span className="ah-status ah-status--waiting">{event.status}</span>
                             </div>
-                            <span className="ah-status ah-status--waiting">{event.status}</span>
                           </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    </>
                   )}
                 </div>
 
                 {/* Completed Events */}
                 {events.filter(e => e.status === 'completed').length > 0 && (
-                  <div className="ah-card ah-section" style={{ marginTop: 20 }}>
-                    <div
-                      className="ah-section-header"
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => toggleCard('completedEvents')}
-                    >
+                  <div className="ah-card ah-section">
+                    <div className="ah-section-header" onClick={() => toggleCard('completedEvents')}>
                       <h3 className="ah-section-title">
                         {collapsedCards['completedEvents'] ? '▶' : '▼'} COMPLETED EVENTS ({events.filter(e => e.status === 'completed').length})
                       </h3>
                     </div>
 
                     {!collapsedCards['completedEvents'] && (
-                      <div style={{ marginTop: '1rem' }}>
+                      <div className="events-list">
                         {events.filter(e => e.status === 'completed').map((event) => (
-                          <div key={event.id} className="ah-card" style={{ marginBottom: 12, cursor: 'pointer' }} onClick={() => setSelectedEventId(event.id)}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div key={event.id} className="event-item" onClick={() => setSelectedEventId(event.id)}>
+                            <div className="event-item-main">
                               <div>
-                                <h4 style={{ margin: 0 }}>{event.name}</h4>
-                                {event.description && <p className="ah-meta" style={{ margin: '4px 0 0' }}>{event.description}</p>}
+                                <h4 className="event-name">{event.name}</h4>
+                                {event.description && <p className="ah-meta">{event.description}</p>}
                               </div>
                               <span className="ah-status ah-status--active">{event.status}</span>
                             </div>
@@ -718,17 +698,16 @@ function App() {
             {/* Event Detail View */}
             {selectedEventId && selectedEvent && (
               <>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+                <div className="event-detail-header">
                   <button className="ah-btn-back" onClick={() => setSelectedEventId(null)}>
                     ← Back to Events
                   </button>
-                  <h2 style={{ margin: 0 }}>{selectedEvent.name}</h2>
+                  <h2 className="event-detail-title">{selectedEvent.name}</h2>
                   <span className={`ah-status ah-status--${selectedEvent.status === 'completed' ? 'active' : 'waiting'}`}>
                     {selectedEvent.status}
                   </span>
                   <button
                     className="ah-btn-danger"
-                    style={{ marginLeft: 'auto' }}
                     onClick={() => handleDeleteEvent(selectedEventId)}
                   >
                     Delete Event
@@ -736,12 +715,8 @@ function App() {
                 </div>
 
                 {/* Participants */}
-                <div className="ah-card ah-section" style={{ marginBottom: 20 }}>
-                  <div
-                    className="ah-section-header"
-                    style={{ cursor: 'pointer' }}
-                    onClick={() => toggleCard('participants')}
-                  >
+                <div className="ah-card ah-section">
+                  <div className="ah-section-header" onClick={() => toggleCard('participants')}>
                     <h3 className="ah-section-title">
                       {collapsedCards['participants'] ? '▶' : '▼'} Participants ({participants.length})
                     </h3>
@@ -749,17 +724,16 @@ function App() {
 
                   {!collapsedCards['participants'] && (
                     <>
-                      <div style={{ marginBottom: '1rem' }}>
+                      <div className="add-players-section">
                         <label className="ah-meta">Add Players:</label>
                         <select
                           multiple
-                          className="ah-select"
+                          className="ah-select player-select"
                           value={selectedPlayers.map(String)}
                           onChange={(e) => {
                             const values = Array.from(e.target.selectedOptions).map((opt) => parseInt(opt.value));
                             setSelectedPlayers(values);
                           }}
-                          style={{ height: 100 }}
                         >
                           {getAvailablePlayers().map((p) => (
                             <option key={p.id} value={p.id}>
@@ -771,7 +745,6 @@ function App() {
                           className="ah-btn-primary"
                           onClick={handleAddParticipants}
                           disabled={selectedPlayers.length === 0}
-                          style={{ marginTop: 8 }}
                         >
                           Add Selected Players
                         </button>
@@ -783,7 +756,7 @@ function App() {
                         )}
                         {participants.map((participant) => (
                           <div key={participant.id} className="player-item">
-                            <div style={{ flex: 1 }}>
+                            <div className="participant-info">
                               <strong>{participant.playerName}</strong>
                               <select
                                 className="ah-select"
@@ -794,7 +767,6 @@ function App() {
                                     e.target.value ? parseInt(e.target.value) : null
                                   )
                                 }
-                                style={{ marginTop: 8, width: '100%' }}
                               >
                                 <option value="">Not assigned</option>
                                 {participant.horseId && participant.horseName && (
@@ -821,12 +793,8 @@ function App() {
                 </div>
 
                 {/* Winning Positions */}
-                <div className="ah-card ah-section" style={{ marginBottom: 20 }}>
-                  <div
-                    className="ah-section-header"
-                    style={{ cursor: 'pointer' }}
-                    onClick={() => toggleCard('positions')}
-                  >
+                <div className="ah-card ah-section">
+                  <div className="ah-section-header" onClick={() => toggleCard('positions')}>
                     <h3 className="ah-section-title">
                       {collapsedCards['positions'] ? '▶' : '▼'} Winning Positions ({positions.length})
                     </h3>
@@ -872,11 +840,7 @@ function App() {
 
                 {/* Results */}
                 <div className="ah-card ah-section">
-                  <div
-                    className="ah-section-header"
-                    style={{ cursor: 'pointer' }}
-                    onClick={() => toggleCard('results')}
-                  >
+                  <div className="ah-section-header" onClick={() => toggleCard('results')}>
                     <h3 className="ah-section-title">
                       {collapsedCards['results'] ? '▶' : '▼'} Results
                     </h3>
@@ -900,10 +864,10 @@ function App() {
                                   resultAssignments[participant.horseId!] ? 'assigned' : ''
                                 }`}
                               >
-                                <div style={{ fontWeight: 600, marginBottom: 8 }}>
+                                <div className="result-card-horse">
                                   {participant.horseName}
                                 </div>
-                                <div className="ah-meta" style={{ marginBottom: 8 }}>
+                                <div className="ah-meta">
                                   {participant.playerName}
                                 </div>
                                 <select
@@ -915,7 +879,6 @@ function App() {
                                       [participant.horseId!]: e.target.value,
                                     })
                                   }
-                                  style={{ width: '100%' }}
                                 >
                                   <option value="">Select position</option>
                                   {availablePos.map((pos) => (
@@ -930,9 +893,8 @@ function App() {
                       </div>
 
                       <button
-                        className="ah-btn-primary"
+                        className="ah-btn-primary save-results-btn"
                         onClick={handleSaveResults}
-                        style={{ marginTop: 20 }}
                       >
                         Save Results & Complete Event
                       </button>
@@ -946,61 +908,58 @@ function App() {
 
         {/* REPORTS TAB */}
         {activeTab === 'reports' && (
-          <div style={{ marginTop: 20 }}>
-            <div className="ah-card">
-              <h3 className="ah-section-title">Event Report</h3>
+          <div className="ah-card">
+            <h3 className="ah-section-title">Event Report</h3>
 
-              <select
-                className="ah-select"
-                value={reportEventId}
-                onChange={(e) => setReportEventId(parseInt(e.target.value))}
-                style={{ width: '100%', marginBottom: 20 }}
-              >
-                <option value={0}>Select an event</option>
-                {events
-                  .filter((e) => e.status === 'completed')
-                  .map((e) => (
-                    <option key={e.id} value={e.id}>
-                      {e.name}
-                    </option>
-                  ))}
-              </select>
+            <select
+              className="ah-select report-select"
+              value={reportEventId}
+              onChange={(e) => setReportEventId(parseInt(e.target.value))}
+            >
+              <option value={0}>Select an event</option>
+              {events
+                .filter((e) => e.status === 'completed')
+                .map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.name}
+                  </option>
+                ))}
+            </select>
 
-              {reportEventId > 0 && (
-                <>
-                  {reportData.length === 0 && (
-                    <div className="ah-banner ah-banner--info">
-                      No winners (no horses finished in winning positions).
-                    </div>
-                  )}
+            {reportEventId > 0 && (
+              <>
+                {reportData.length === 0 && (
+                  <div className="ah-banner ah-banner--info">
+                    No winners (no horses finished in winning positions).
+                  </div>
+                )}
 
-                  {reportData.length > 0 && (
-                    <table className="ah-table">
-                      <thead>
-                        <tr>
-                          <th>Player</th>
-                          <th>Horse</th>
-                          <th>Position</th>
+                {reportData.length > 0 && (
+                  <table className="ah-table">
+                    <thead>
+                      <tr>
+                        <th>Player</th>
+                        <th>Horse</th>
+                        <th>Position</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {reportData.map((entry, idx) => (
+                        <tr key={idx}>
+                          <td>
+                            <strong>{entry.playerName}</strong>
+                          </td>
+                          <td>{entry.horseName}</td>
+                          <td>
+                            <span className="winner-badge">{entry.position}</span>
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody>
-                        {reportData.map((entry, idx) => (
-                          <tr key={idx}>
-                            <td>
-                              <strong>{entry.playerName}</strong>
-                            </td>
-                            <td>{entry.horseName}</td>
-                            <td>
-                              <span className="winner-badge">{entry.position}</span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
-                </>
-              )}
-            </div>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </>
+            )}
           </div>
         )}
       </div>

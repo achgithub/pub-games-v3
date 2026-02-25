@@ -40,8 +40,7 @@ body {
   }
 }
 
-/* App-specific styles only - collapsible sections now in shared CSS */
-
+/* Small danger button */
 .btn-danger-small {
   padding: 0.25rem 0.75rem;
   font-size: 0.875rem;
@@ -57,7 +56,61 @@ body {
   background: #FEF2F2;
 }
 
-/* Event-specific styles */
+/* Event form (Create Event) */
+.event-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Event detail header */
+.event-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.event-detail-title {
+  margin: 0;
+}
+
+.event-detail-header .ah-btn-danger {
+  margin-left: auto;
+}
+
+/* Events list */
+.events-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.event-item {
+  padding: 16px;
+  background: white;
+  border: 1px solid #E7E5E4;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.event-item:hover {
+  background: #FAFAF9;
+}
+
+.event-item-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.event-name {
+  margin: 0 0 4px 0;
+}
+
+/* Player/Horse lists */
 .horse-list, .player-list, .position-list {
   display: flex;
   flex-direction: column;
@@ -75,6 +128,30 @@ body {
   border-radius: 8px;
 }
 
+/* Add players section */
+.add-players-section {
+  margin-bottom: 1rem;
+}
+
+.player-select {
+  height: 100px;
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+/* Participant info */
+.participant-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.participant-info select {
+  width: 100%;
+}
+
+/* Result grid */
 .result-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -87,11 +164,32 @@ body {
   background: white;
   border: 1px solid #E7E5E4;
   border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .result-card.assigned {
   border-color: #22C55E;
   background: #F0FDF4;
+}
+
+.result-card-horse {
+  font-weight: 600;
+}
+
+.result-card select {
+  width: 100%;
+}
+
+.save-results-btn {
+  margin-top: 20px;
+}
+
+/* Reports */
+.report-select {
+  width: 100%;
+  margin-bottom: 20px;
 }
 
 .winner-badge {
