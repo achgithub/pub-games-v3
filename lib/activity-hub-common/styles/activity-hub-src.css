@@ -12,8 +12,8 @@
 
   body {
     @apply font-sans antialiased m-0;
-    background-color: #F5F5F4;  /* stone-100 */
-    color: #1C1917;              /* stone-900 */
+    background-color: #FAFAFA;   /* Match Identity Shell */
+    color: #1C1917;
   }
 
   h1, h2, h3, h4 { color: #1C1917; }
@@ -72,13 +72,16 @@
 
   /* ── Card ────────────────────────────────────────────────── */
   .ah-card {
-    @apply bg-white border border-stone-200 rounded-xl p-4 mb-3;
-    box-shadow: 0 1px 3px 0 rgba(0,0,0,0.07), 0 1px 2px -1px rgba(0,0,0,0.07);
+    @apply bg-white p-4 mb-3;
+    border: 1px solid #F0F0F0;
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
   }
 
   /* ── Banners ─────────────────────────────────────────────── */
   .ah-banner {
-    @apply rounded-lg px-4 py-2.5 mb-3 text-sm;
+    @apply px-4 py-2.5 mb-3 text-sm;
+    border-radius: 6px;
   }
   .ah-banner--error   { @apply bg-red-50   border border-red-200   text-red-800   cursor-pointer; }
   .ah-banner--success { @apply bg-green-50 border border-green-200 text-green-800; }
@@ -95,7 +98,8 @@
 
   /* ── Tabs ────────────────────────────────────────────────── */
   .ah-tabs {
-    @apply flex mb-5 border-b border-stone-200;
+    @apply flex mb-5 border-b;
+    border-color: #F0F0F0;
   }
   .ah-tab {
     @apply px-5 py-2.5 border-0 bg-transparent cursor-pointer text-sm font-medium
@@ -112,7 +116,7 @@
   /* ── Buttons ─────────────────────────────────────────────── */
   .ah-btn-primary {
     @apply inline-flex items-center justify-center
-           px-5 py-2.5 rounded-lg border-0
+           px-5 py-2.5 border-0
            bg-brand-500 text-white text-sm font-semibold
            cursor-pointer whitespace-nowrap
            transition-all duration-150
@@ -120,6 +124,7 @@
            active:translate-y-0
            focus-visible:outline focus-visible:outline-2
            focus-visible:outline-offset-2 focus-visible:outline-brand-500;
+    border-radius: 6px;
     box-shadow: 0 1px 3px 0 rgba(33,150,243,0.3);
   }
   .ah-btn-primary:hover:not(:disabled) {
@@ -132,13 +137,14 @@
 
   .ah-btn-outline {
     @apply inline-flex items-center justify-center
-           px-4 py-2 rounded-lg
+           px-4 py-2
            bg-white text-brand-700 text-sm font-medium
            cursor-pointer whitespace-nowrap
            transition-colors duration-150
            focus-visible:outline focus-visible:outline-2
            focus-visible:outline-offset-2 focus-visible:outline-brand-500;
     border: 1px solid #90CAF9;
+    border-radius: 6px;
   }
   .ah-btn-outline:hover:not(:disabled) {
     background-color: #E3F2FD;
@@ -148,13 +154,14 @@
 
   .ah-btn-danger {
     @apply inline-flex items-center justify-center
-           px-4 py-2 rounded-lg
+           px-4 py-2
            bg-white text-red-600 text-sm font-medium
            cursor-pointer whitespace-nowrap
            transition-colors duration-150
            focus-visible:outline focus-visible:outline-2
            focus-visible:outline-offset-2 focus-visible:outline-red-500;
     border: 1px solid #FCA5A5;
+    border-radius: 6px;
   }
   .ah-btn-danger:hover:not(:disabled) {
     background-color: #FEF2F2;
@@ -164,18 +171,20 @@
 
   .ah-btn-back {
     @apply inline-flex items-center justify-center
-           px-3 py-1.5 rounded-lg
+           px-3 py-1.5
            bg-white text-sm
            cursor-pointer whitespace-nowrap
            transition-colors duration-150;
     border: 1px solid #D6D3D1;
+    border-radius: 6px;
     color: #78716C;
   }
   .ah-btn-back:hover { background-color: #F5F5F4; color: #44403C; }
 
   /* ── App Header Bar ──────────────────────────────────────── */
   .ah-app-header {
-    @apply w-full bg-white border-b border-stone-200 px-4 py-3 flex items-center justify-between;
+    @apply w-full bg-white border-b px-4 py-3 flex items-center justify-between;
+    border-color: #F0F0F0;
     position: sticky;
     top: 0;
     z-index: 100;
@@ -196,10 +205,11 @@
 
   /* ── Form elements ───────────────────────────────────────── */
   .ah-input {
-    @apply px-3 py-2 rounded-lg text-sm font-sans
+    @apply px-3 py-2 text-sm font-sans
            transition-colors duration-150
            focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500;
     border: 1px solid #D6D3D1;
+    border-radius: 6px;
     color: #1C1917;
     background: white;
   }
@@ -207,10 +217,11 @@
   .ah-input::placeholder { color: #A8A29E; }
 
   .ah-select {
-    @apply px-3 py-2 rounded-lg text-sm font-sans bg-white cursor-pointer
+    @apply px-3 py-2 text-sm font-sans bg-white cursor-pointer
            transition-colors duration-150
            focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500;
     border: 1px solid #D6D3D1;
+    border-radius: 6px;
     color: #1C1917;
   }
   .ah-select:hover { border-color: #A8A29E; }
@@ -226,10 +237,11 @@
 
   /* ── Lobby button ────────────────────────────────────────── */
   .ah-lobby-btn {
-    @apply ml-auto px-4 py-1.5 rounded-lg bg-white text-sm
+    @apply ml-auto px-4 py-1.5 bg-white text-sm
            no-underline inline-flex items-center
            cursor-pointer transition-colors duration-150;
     border: 1px solid #D6D3D1;
+    border-radius: 6px;
     color: #78716C;
   }
   .ah-lobby-btn:hover {
@@ -240,13 +252,14 @@
 
   /* ── Data table ──────────────────────────────────────────── */
   .ah-table {
-    @apply rounded-xl overflow-hidden bg-white;
-    border: 1px solid #E7E5E4;
+    @apply overflow-hidden bg-white;
+    border: 1px solid #F0F0F0;
+    border-radius: 8px;
   }
   .ah-table-header {
     @apply flex px-4 py-2.5 gap-2 border-b text-xs font-semibold uppercase tracking-wider;
     background-color: #FAFAF9;
-    border-color: #E7E5E4;
+    border-color: #F0F0F0;
     color: #78716C;
   }
   .ah-table-row {
@@ -259,7 +272,8 @@
 
   /* ── Game Boards ─────────────────────────────────────────── */
   .ah-game-board {
-    @apply grid gap-1 bg-stone-200 p-2 rounded-lg;
+    @apply grid gap-1 bg-stone-200 p-2;
+    border-radius: 6px;
   }
 
   .ah-game-cell {
@@ -355,8 +369,9 @@
   }
 
   .ah-modal {
-    @apply bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4
+    @apply bg-white shadow-2xl p-6 max-w-md w-full mx-4
            transform transition-all;
+    border-radius: 8px;
   }
 
   .ah-modal--large {
@@ -420,8 +435,9 @@
 
   /* Player indicators */
   .ah-player {
-    @apply flex items-center gap-2 px-3 py-2 rounded-lg
+    @apply flex items-center gap-2 px-3 py-2
            transition-colors duration-150;
+    border-radius: 6px;
   }
 
   .ah-player--current {
@@ -563,7 +579,9 @@
 
   /* List item pattern (flex row space-between) */
   .ah-list-item {
-    @apply flex items-center justify-between p-3 bg-white border border-stone-200 rounded-xl;
+    @apply flex items-center justify-between p-3 bg-white;
+    border: 1px solid #F0F0F0;
+    border-radius: 8px;
   }
 
   /* Auto-fill grid pattern */
@@ -612,11 +630,12 @@
   }
   .ah-btn-danger-sm {
     @apply inline-flex items-center justify-center
-           px-3 py-1 rounded-lg
+           px-3 py-1
            bg-white text-red-600 text-sm font-medium
            cursor-pointer whitespace-nowrap
            transition-colors duration-150;
     border: 1px solid #FCA5A5;
+    border-radius: 6px;
   }
   .ah-btn-danger-sm:hover:not(:disabled) {
     background-color: #FEF2F2;
