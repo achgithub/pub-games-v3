@@ -5,7 +5,7 @@ Admin-only application for managing content displayed on pub TV screens.
 ## Overview
 
 **Port**: 5050
-**Database**: `display_admin_db` (separate) + `pubgames` (auth)
+**Database**: `display_admin_db` (separate) + `activity_hub` (auth)
 **Type**: Iframe app embedded in identity shell
 **Access**: Admin users only
 
@@ -118,14 +118,14 @@ All require admin authentication except public TV endpoints.
 ## Setup on Pi
 
 ### Prerequisites
-- PostgreSQL 5.5 running on port 5555
+- PostgreSQL 15 running on port 5555
 - Go 1.25+
 - Node.js/npm
-- Admin user in `pubgames.users` table with `is_admin=true`
+- Admin user in `activity_hub.users` table with admin role
 
 ### Database Creation
 ```bash
-psql -U pubgames -h localhost -p 5555 -d postgres -c "CREATE DATABASE display_admin_db;"
+psql -U activityhub -h localhost -p 5555 -d postgres -c "CREATE DATABASE display_admin_db;"
 ```
 
 ### Installation
@@ -155,7 +155,7 @@ go mod download
 go run *.go
 ```
 
-Server starts on port 5050. Access at `http://192.168.1.45:5050`
+Server starts on port 5050. Access at `http://192.168.1.29:5050`
 
 ### Testing
 
@@ -210,7 +210,7 @@ require (
 ## TV Setup Flow (Future)
 
 1. Admin creates display in Display Admin → gets QR code
-2. Open TV browser to `http://192.168.1.45:5051/setup`
+2. Open TV browser to `http://192.168.1.29:5051/setup`
 3. Scan QR code or enter token manually
 4. Token saved to localStorage
 5. Redirect to runtime slideshow
@@ -220,17 +220,17 @@ require (
 
 Environment variables (with defaults):
 - `BACKEND_PORT` - Server port (default: 5050)
-- `RUNTIME_HOST` - Display runtime host (default: 192.168.1.45)
+- `RUNTIME_HOST` - Display runtime host (default: 192.168.1.29)
 - `RUNTIME_PORT` - Display runtime port (default: 5051)
 - `STATIC_DIR` - Frontend build directory (default: ./static)
 
 ## Lessons Learned
 
-- PostgreSQL port is 5555, password is "pubgames" (not "pubgames123")
+- PostgreSQL port is 5555, user is "activityhub", password is "pubgames"
 - Use `sql.NullString` for nullable database columns
 - Go modules require `go.mod` file
 - Test with real admin users from database
-- Two database connections: `pubgames` (auth) + `display_admin_db` (data)
+- Two database connections: `activity_hub` (auth) + `display_admin_db` (data)
 
 ## Next Steps
 

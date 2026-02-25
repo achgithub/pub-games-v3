@@ -80,7 +80,7 @@ go run *.go
 
 On Pi:
 ```bash
-psql -U pubgames -c "CREATE DATABASE dots_db;"
+psql -U activityhub -h localhost -p 5555 -d postgres -c "CREATE DATABASE dots_db;"
 ```
 
 Tables are created automatically on startup.

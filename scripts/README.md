@@ -28,17 +28,18 @@ chmod +x setup_databases.sh
 ```
 
 This script will:
-- Create `pubgames` PostgreSQL database
-- Create `pubgames` PostgreSQL user (password: `pubgames`)
+- Create `activity_hub` PostgreSQL database (main identity database)
+- Create `activityhub` PostgreSQL user (password: `pubgames`)
 - Initialize schema from `schema.sql`
 - Start and enable Redis service
 - Create default users (admin@pubgames.local, test@pubgames.local)
+- Configure PostgreSQL to listen on port 5555
 
 ### 3. Verify Setup
 
 ```bash
 # Test PostgreSQL connection
-PGPASSWORD=pubgames psql -h localhost -U pubgames -d pubgames -c "\dt"
+PGPASSWORD=pubgames psql -h localhost -p 5555 -U activityhub -d activity_hub -c "\dt"
 
 # Test Redis connection
 redis-cli ping
@@ -77,10 +78,13 @@ Services connect using environment variables:
 
 ```bash
 DB_HOST=localhost
-DB_USER=pubgames
+DB_PORT=5555
+DB_USER=activityhub
 DB_PASS=pubgames
-DB_NAME=pubgames
+DB_NAME=activity_hub
 ```
+
+**Note**: Each app also creates its own database (e.g., `last_man_standing_db`, `dots_db`, etc.) but connects to `activity_hub` for user authentication.
 
 See `identity-shell/backend/.env.example` for a template.
 
@@ -110,12 +114,12 @@ VALUES ('user@example.com', 'User Name', '$2a$12$hash...', FALSE);
 
 ```bash
 # Drop and recreate
-sudo -u postgres psql -c "DROP DATABASE pubgames;"
-sudo -u postgres psql -c "CREATE DATABASE pubgames;"
-sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE pubgames TO pubgames;"
+sudo -u postgres psql -p 5555 -c "DROP DATABASE activity_hub;"
+sudo -u postgres psql -p 5555 -c "CREATE DATABASE activity_hub;"
+sudo -u postgres psql -p 5555 -c "GRANT ALL PRIVILEGES ON DATABASE activity_hub TO activityhub;"
 
 # Re-run schema
-PGPASSWORD=pubgames psql -h localhost -U pubgames -d pubgames -f schema.sql
+PGPASSWORD=pubgames psql -h localhost -p 5555 -U activityhub -d activity_hub -f schema.sql
 ```
 
 ## Troubleshooting
@@ -143,7 +147,7 @@ sudo systemctl start redis-server
 ### Permission denied
 
 ```bash
-# Make sure user 'pubgames' has proper permissions
-sudo -u postgres psql -d pubgames -c "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO pubgames;"
-sudo -u postgres psql -d pubgames -c "GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO pubgames;"
+# Make sure user 'activityhub' has proper permissions
+sudo -u postgres psql -p 5555 -d activity_hub -c "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO activityhub;"
+sudo -u postgres psql -p 5555 -d activity_hub -c "GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO activityhub;"
 ```
