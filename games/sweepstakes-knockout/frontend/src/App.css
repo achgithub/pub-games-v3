@@ -1,60 +1,5 @@
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-  background: #F5F5F4;
-  color: #1C1917;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-/* Inline form layout (input + button side-by-side) */
-.inline-form {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-  flex-wrap: wrap;
-  width: 100%;
-}
-
-.inline-form input,
-.inline-form select {
-  flex: 1 1 250px;
-  min-width: 150px;
-}
-
-.inline-form button {
-  flex: 0 0 auto;
-  white-space: nowrap;
-}
-
-@media (max-width: 640px) {
-  .inline-form input,
-  .inline-form select {
-    flex: 1 1 100%;
-  }
-
-  .inline-form button {
-    flex: 1 1 100%;
-  }
-}
-
-/* Small danger button */
-.btn-danger-small {
-  padding: 0.25rem 0.75rem;
-  font-size: 0.875rem;
-  border: 1px solid #FCA5A5;
-  background: #FFF;
-  color: #DC2626;
-  border-radius: 0.75rem;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.btn-danger-small:hover {
-  background: #FEF2F2;
-}
+/* Sweepstakes Knockout - App-specific styles only */
+/* Base styles come from shared activity-hub.css */
 
 /* Event form (Create Event) */
 .event-form {
@@ -63,60 +8,18 @@ body {
   gap: 0.75rem;
 }
 
-/* Event detail header */
-.event-detail-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
+/* Event detail title */
 .event-detail-title {
   margin: 0;
 }
 
-.event-detail-header .ah-btn-danger {
-  margin-left: auto;
-}
-
-/* Events list */
-.events-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-top: 12px;
-}
-
+/* Event item */
 .event-item {
   cursor: pointer;
 }
 
-.event-item-main {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
 .event-name {
   margin: 0 0 4px 0;
-}
-
-/* Player/Horse lists */
-.horse-list, .player-list, .position-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.horse-item, .player-item, .position-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px;
-  background: white;
-  border: 1px solid #E7E5E4;
-  border-radius: 1rem;
 }
 
 /* Add players section */
@@ -142,14 +45,7 @@ body {
   width: 100%;
 }
 
-/* Result grid */
-.result-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 12px;
-  margin-top: 12px;
-}
-
+/* Result card */
 .result-card {
   display: flex;
   flex-direction: column;

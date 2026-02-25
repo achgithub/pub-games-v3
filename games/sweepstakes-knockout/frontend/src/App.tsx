@@ -516,7 +516,7 @@ function App() {
 
               {!collapsedCards['players'] && (
                 <>
-                  <div className="inline-form">
+                  <div className="ah-inline-form">
                     <input
                       type="text"
                       className="ah-input"
@@ -530,15 +530,15 @@ function App() {
                     </button>
                   </div>
 
-                  <div className="player-list">
+                  <div className="ah-list">
                     {players.length === 0 && (
                       <p className="ah-meta">No players yet. Add one to get started.</p>
                     )}
                     {players.map((player) => (
-                      <div key={player.id} className="player-item">
+                      <div key={player.id} className="ah-list-item">
                         <strong>{player.name}</strong>
                         <button
-                          className="btn-danger-small"
+                          className="ah-btn-danger-sm"
                           onClick={() => handleDeletePlayer(player.id)}
                         >
                           Delete
@@ -560,7 +560,7 @@ function App() {
 
               {!collapsedCards['horses'] && (
                 <>
-                  <div className="inline-form">
+                  <div className="ah-inline-form">
                     <input
                       type="text"
                       className="ah-input"
@@ -574,15 +574,15 @@ function App() {
                     </button>
                   </div>
 
-                  <div className="player-list">
+                  <div className="ah-list">
                     {horses.length === 0 && (
                       <p className="ah-meta">No horses yet. Add one to get started.</p>
                     )}
                     {horses.map((horse) => (
-                      <div key={horse.id} className="player-item">
+                      <div key={horse.id} className="ah-list-item">
                         <strong>{horse.name}</strong>
                         <button
-                          className="btn-danger-small"
+                          className="ah-btn-danger-sm"
                           onClick={() => handleDeleteHorse(horse.id)}
                         >
                           Delete
@@ -648,10 +648,10 @@ function App() {
                       {events.filter(e => e.status !== 'completed').length === 0 && (
                         <p className="ah-meta">No active events. Create one above.</p>
                       )}
-                      <div className="events-list">
+                      <div className="ah-list">
                         {events.filter(e => e.status !== 'completed').map((event) => (
                           <div key={event.id} className="ah-card event-item" onClick={() => setSelectedEventId(event.id)}>
-                            <div className="event-item-main">
+                            <div className="ah-flex-between">
                               <div>
                                 <h4 className="event-name">{event.name}</h4>
                                 {event.description && <p className="ah-meta">{event.description}</p>}
@@ -676,10 +676,10 @@ function App() {
                     </div>
 
                     {!collapsedCards['completedEvents'] && (
-                      <div className="events-list">
+                      <div className="ah-list">
                         {events.filter(e => e.status === 'completed').map((event) => (
                           <div key={event.id} className="ah-card event-item" onClick={() => setSelectedEventId(event.id)}>
-                            <div className="event-item-main">
+                            <div className="ah-flex-between">
                               <div>
                                 <h4 className="event-name">{event.name}</h4>
                                 {event.description && <p className="ah-meta">{event.description}</p>}
@@ -698,7 +698,7 @@ function App() {
             {/* Event Detail View */}
             {selectedEventId && selectedEvent && (
               <>
-                <div className="event-detail-header">
+                <div className="ah-detail-header">
                   <button className="ah-btn-back" onClick={() => setSelectedEventId(null)}>
                     ← Back to Events
                   </button>
@@ -750,12 +750,12 @@ function App() {
                         </button>
                       </div>
 
-                      <div className="player-list">
+                      <div className="ah-list">
                         {participants.length === 0 && (
                           <p className="ah-meta">No participants yet. Add players above.</p>
                         )}
                         {participants.map((participant) => (
-                          <div key={participant.id} className="player-item">
+                          <div key={participant.id} className="ah-list-item">
                             <div className="participant-info">
                               <strong>{participant.playerName}</strong>
                               <select
@@ -780,7 +780,7 @@ function App() {
                               </select>
                             </div>
                             <button
-                              className="btn-danger-small"
+                              className="ah-btn-danger-sm"
                               onClick={() => handleRemoveParticipant(participant.id)}
                             >
                               Remove
@@ -805,7 +805,7 @@ function App() {
                       <p className="ah-meta">
                         Add positions that pay out (e.g., 1, 2, 3, last)
                       </p>
-                      <div className="inline-form">
+                      <div className="ah-inline-form">
                         <input
                           type="text"
                           className="ah-input"
@@ -819,9 +819,9 @@ function App() {
                         </button>
                       </div>
 
-                      <div className="position-list">
+                      <div className="ah-list">
                         {positions.map((pos) => (
-                          <div key={pos.id} className="position-item">
+                          <div key={pos.id} className="ah-list-item">
                             <span>
                               <strong>{pos.position}</strong>
                             </span>
@@ -852,7 +852,7 @@ function App() {
                         Assign finishing positions to horses. All winning positions must be assigned.
                       </p>
 
-                      <div className="result-grid">
+                      <div className="ah-grid-auto">
                         {participants
                           .filter((p) => p.horseId)
                           .map((participant) => {
