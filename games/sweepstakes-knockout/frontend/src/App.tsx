@@ -505,12 +505,11 @@ function App() {
 
         {/* SETUP TAB */}
         {activeTab === 'setup' && (
-          <div style={{ marginTop: 20 }}>
+          <div>
             {/* Player Pool */}
-            <div className="ah-card ah-section" style={{ marginBottom: 20 }}>
+            <div className="ah-card ah-section">
               <div
                 className="ah-section-header"
-                style={{ cursor: 'pointer' }}
                 onClick={() => toggleCard('players')}
               >
                 <h3 className="ah-section-title">
@@ -559,7 +558,6 @@ function App() {
             <div className="ah-card ah-section">
               <div
                 className="ah-section-header"
-                style={{ cursor: 'pointer' }}
                 onClick={() => toggleCard('horses')}
               >
                 <h3 className="ah-section-title">
@@ -608,14 +606,13 @@ function App() {
 
         {/* GAMES TAB */}
         {activeTab === 'games' && (
-          <div style={{ marginTop: 20 }}>
+          <div>
             {!selectedEventId && (
               <>
                 {/* Create Event Card */}
-                <div className="ah-card ah-section" style={{ marginBottom: 20 }}>
+                <div className="ah-card ah-section">
                   <div
                     className="ah-section-header"
-                    style={{ cursor: 'pointer' }}
                     onClick={() => toggleCard('createEvent')}
                   >
                     <h3 className="ah-section-title">
@@ -656,7 +653,6 @@ function App() {
                 <div className="ah-card ah-section">
                   <div
                     className="ah-section-header"
-                    style={{ cursor: 'pointer' }}
                     onClick={() => toggleCard('activeEvents')}
                   >
                     <h3 className="ah-section-title">
