@@ -494,6 +494,45 @@
     aspect-ratio: 1;
   }
 
+  /* ── Collapsible Sections ────────────────────────────────── */
+  .ah-section {
+    @apply mb-8;
+  }
+
+  .ah-section-header {
+    @apply flex justify-between items-center mb-5 pb-3 cursor-pointer select-none
+           transition-all duration-150;
+    border-bottom: 1px solid #F0F0F0;
+  }
+
+  .ah-section-header:hover {
+    border-color: #CCC;
+  }
+
+  .ah-section-title {
+    @apply text-sm font-semibold uppercase tracking-wider m-0;
+    color: #666;
+  }
+
+  .ah-section-toggle {
+    @apply text-xs transition-transform duration-150;
+    color: #999;
+  }
+
+  .ah-section-toggle.collapsed {
+    transform: rotate(-90deg);
+  }
+
+  .ah-section-content {
+    @apply overflow-hidden transition-all duration-300;
+    max-height: 2000px;
+  }
+
+  .ah-section-content.collapsed {
+    max-height: 0;
+    opacity: 0;
+  }
+
 }
 
 @tailwind utilities;

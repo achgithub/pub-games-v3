@@ -1,17 +1,7 @@
 /* LMS Manager - App-specific styles only */
 /* Base styles come from shared activity-hub.css */
 
-/* Setup tab styles */
-.setup-section {
-  margin-bottom: 2rem;
-}
-
-.setup-section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
+/* App-specific styles only - collapsible sections now in shared CSS */
 
 .group-list {
   display: flex;

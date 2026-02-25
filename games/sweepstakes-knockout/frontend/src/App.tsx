@@ -507,15 +507,16 @@ function App() {
         {activeTab === 'setup' && (
           <div style={{ marginTop: 20 }}>
             {/* Player Pool */}
-            <div className="ah-card setup-section" style={{ marginBottom: 20 }}>
+            <div className="ah-card ah-section" style={{ marginBottom: 20 }}>
               <div
-                className="setup-section-header"
+                className="ah-section-header"
                 style={{ cursor: 'pointer' }}
                 onClick={() => toggleCard('players')}
               >
                 <h3 className="ah-section-title">
-                  {collapsedCards['players'] ? '▶' : '▼'} Player Pool ({players.length})
+                  Player Pool ({players.length})
                 </h3>
+                <span className="ah-section-toggle">{collapsedCards['players'] ? '▶' : '▼'}</span>
               </div>
 
               {!collapsedCards['players'] && (
@@ -555,15 +556,16 @@ function App() {
             </div>
 
             {/* Horse Pool */}
-            <div className="ah-card setup-section">
+            <div className="ah-card ah-section">
               <div
-                className="setup-section-header"
+                className="ah-section-header"
                 style={{ cursor: 'pointer' }}
                 onClick={() => toggleCard('horses')}
               >
                 <h3 className="ah-section-title">
-                  {collapsedCards['horses'] ? '▶' : '▼'} Horse Pool ({horses.length})
+                  Horse Pool ({horses.length})
                 </h3>
+                <span className="ah-section-toggle">{collapsedCards['horses'] ? '▶' : '▼'}</span>
               </div>
 
               {!collapsedCards['horses'] && (
@@ -610,55 +612,57 @@ function App() {
             {!selectedEventId && (
               <>
                 {/* Create Event Card */}
-                <div className="ah-card setup-section" style={{ marginBottom: 20 }}>
+                <div className="ah-card ah-section" style={{ marginBottom: 20 }}>
                   <div
-                    className="setup-section-header"
+                    className="ah-section-header"
                     style={{ cursor: 'pointer' }}
                     onClick={() => toggleCard('createEvent')}
                   >
                     <h3 className="ah-section-title">
-                      {collapsedCards['createEvent'] ? '▶' : '▼'} Create New Event
+                      CREATE NEW EVENT
                     </h3>
+                    <span className="ah-section-toggle">{collapsedCards['createEvent'] ? '▶' : '▼'}</span>
                   </div>
 
                   {!collapsedCards['createEvent'] && (
-                    <>
+                    <div>
                       <input
                         type="text"
                         className="ah-input"
                         placeholder="Event name (e.g., Grand National 2026)"
                         value={newEventName}
                         onChange={(e) => setNewEventName(e.target.value)}
+                        style={{ marginBottom: '0.75rem' }}
                       />
                       <textarea
                         className="ah-input"
                         placeholder="Description (optional)"
                         value={newEventDescription}
                         onChange={(e) => setNewEventDescription(e.target.value)}
-                        style={{ marginTop: 8 }}
+                        style={{ marginBottom: '1rem' }}
                         rows={3}
                       />
                       <button
                         className="ah-btn-primary"
                         onClick={handleCreateEvent}
-                        style={{ marginTop: 12 }}
                       >
                         Create Event
                       </button>
-                    </>
+                    </div>
                   )}
                 </div>
 
                 {/* Active Events */}
-                <div className="ah-card setup-section">
+                <div className="ah-card ah-section">
                   <div
-                    className="setup-section-header"
+                    className="ah-section-header"
                     style={{ cursor: 'pointer' }}
                     onClick={() => toggleCard('activeEvents')}
                   >
                     <h3 className="ah-section-title">
-                      {collapsedCards['activeEvents'] ? '▶' : '▼'} ACTIVE EVENTS ({events.filter(e => e.status !== 'completed').length})
+                      ACTIVE EVENTS ({events.filter(e => e.status !== 'completed').length})
                     </h3>
+                    <span className="ah-section-toggle">{collapsedCards['activeEvents'] ? '▶' : '▼'}</span>
                   </div>
 
                   {!collapsedCards['activeEvents'] && (
@@ -684,9 +688,9 @@ function App() {
 
                 {/* Completed Events */}
                 {events.filter(e => e.status === 'completed').length > 0 && (
-                  <div className="ah-card setup-section" style={{ marginTop: 20 }}>
+                  <div className="ah-card ah-section" style={{ marginTop: 20 }}>
                     <div
-                      className="setup-section-header"
+                      className="ah-section-header"
                       style={{ cursor: 'pointer' }}
                       onClick={() => toggleCard('completedEvents')}
                     >
@@ -736,9 +740,9 @@ function App() {
                 </div>
 
                 {/* Participants */}
-                <div className="ah-card setup-section" style={{ marginBottom: 20 }}>
+                <div className="ah-card ah-section" style={{ marginBottom: 20 }}>
                   <div
-                    className="setup-section-header"
+                    className="ah-section-header"
                     style={{ cursor: 'pointer' }}
                     onClick={() => toggleCard('participants')}
                   >
@@ -821,9 +825,9 @@ function App() {
                 </div>
 
                 {/* Winning Positions */}
-                <div className="ah-card setup-section" style={{ marginBottom: 20 }}>
+                <div className="ah-card ah-section" style={{ marginBottom: 20 }}>
                   <div
-                    className="setup-section-header"
+                    className="ah-section-header"
                     style={{ cursor: 'pointer' }}
                     onClick={() => toggleCard('positions')}
                   >
@@ -871,9 +875,9 @@ function App() {
                 </div>
 
                 {/* Results */}
-                <div className="ah-card setup-section">
+                <div className="ah-card ah-section">
                   <div
-                    className="setup-section-header"
+                    className="ah-section-header"
                     style={{ cursor: 'pointer' }}
                     onClick={() => toggleCard('results')}
                   >
