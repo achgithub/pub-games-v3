@@ -19,7 +19,6 @@
 - Database: `games/sweepstakes-knockout/database/migrate_to_v2.sql`
 - Backend: `games/sweepstakes-knockout/backend/handlers.go` (completely rewritten)
 - Frontend: `games/sweepstakes-knockout/frontend/src/App.tsx` (completely rewritten)
-- Old files preserved: `handlers_old.go`, `App_old.tsx`
 
 **Resume work**: Compare side-by-side with LMS Manager and fix UI to match exactly
 
