@@ -58,7 +58,7 @@ function App() {
   const params = new URLSearchParams(window.location.search);
   const token = params.get('token') || '';
 
-  const [view, setView] = useState<'events' | 'setup' | 'results' | 'report'>('events');
+  const [activeTab, setActiveTab] = useState<'events' | 'reports'>('events');
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [horses, setHorses] = useState<Horse[]>([]);

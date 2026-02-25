@@ -54,34 +54,36 @@ func main() {
 	api.Use(authlib.Middleware(identityDB))
 	api.Use(authlib.RequireRole("game_manager"))
 
-	// Events
-	api.HandleFunc("/events", handleGetEvents).Methods("GET")
-	api.HandleFunc("/events", handleCreateEvent).Methods("POST")
-	api.HandleFunc("/events/{id}", handleGetEvent).Methods("GET")
-	api.HandleFunc("/events/{id}", handleUpdateEvent).Methods("PUT")
-	api.HandleFunc("/events/{id}", handleDeleteEvent).Methods("DELETE")
-
-	// Horses
-	api.HandleFunc("/events/{eventId}/horses", handleGetHorses).Methods("GET")
-	api.HandleFunc("/events/{eventId}/horses", handleCreateHorse).Methods("POST")
-	api.HandleFunc("/horses/{id}", handleDeleteHorse).Methods("DELETE")
-
-	// Players
-	api.HandleFunc("/events/{eventId}/players", handleGetPlayers).Methods("GET")
-	api.HandleFunc("/events/{eventId}/players", handleCreatePlayer).Methods("POST")
-	api.HandleFunc("/players/{id}", handleUpdatePlayer).Methods("PUT")
+	// Setup tab - Player pool
+	api.HandleFunc("/players", handleGetPlayers).Methods("GET")
+	api.HandleFunc("/players", handleCreatePlayer).Methods("POST")
 	api.HandleFunc("/players/{id}", handleDeletePlayer).Methods("DELETE")
 
-	// Winning Positions
-	api.HandleFunc("/events/{eventId}/positions", handleGetPositions).Methods("GET")
+	// Setup tab - Horse pool
+	api.HandleFunc("/horses", handleGetHorses).Methods("GET")
+	api.HandleFunc("/horses", handleCreateHorse).Methods("POST")
+	api.HandleFunc("/horses/{id}", handleDeleteHorse).Methods("DELETE")
+
+	// Games tab - Events
+	api.HandleFunc("/events", handleGetEvents).Methods("GET")
+	api.HandleFunc("/events", handleCreateEvent).Methods("POST")
+	api.HandleFunc("/events/{id}", handleGetEventDetail).Methods("GET")
+	api.HandleFunc("/events/{id}", handleDeleteEvent).Methods("DELETE")
+
+	// Games tab - Participants
+	api.HandleFunc("/events/{id}/participants", handleAddParticipants).Methods("POST")
+	api.HandleFunc("/participants/{id}", handleAssignHorse).Methods("PUT")
+	api.HandleFunc("/participants/{id}", handleRemoveParticipant).Methods("DELETE")
+
+	// Games tab - Winning Positions
 	api.HandleFunc("/events/{eventId}/positions", handleCreatePosition).Methods("POST")
 	api.HandleFunc("/positions/{id}", handleDeletePosition).Methods("DELETE")
 
-	// Results
+	// Games tab - Results
 	api.HandleFunc("/events/{eventId}/results", handleGetResults).Methods("GET")
 	api.HandleFunc("/events/{eventId}/results", handleSaveResults).Methods("POST")
 
-	// Report
+	// Reports tab
 	api.HandleFunc("/events/{eventId}/report", handleGetReport).Methods("GET")
 
 	// Serve static files

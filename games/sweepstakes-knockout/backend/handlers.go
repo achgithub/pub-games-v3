@@ -3,80 +3,229 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
-	"log"
 	"net/http"
 	"strings"
 
 	"github.com/gorilla/mux"
-
 	authlib "pub-games-v3/lib/activity-hub-common/auth"
 )
 
-// Event models
-type Event struct {
-	ID           int    `json:"id"`
-	Name         string `json:"name"`
-	Description  string `json:"description"`
-	Status       string `json:"status"`
-	ManagerEmail string `json:"managerEmail"`
-	CreatedAt    string `json:"createdAt"`
-	UpdatedAt    string `json:"updatedAt"`
+// ========== SETUP TAB HANDLERS ==========
+
+// Player pool handlers
+func handleGetPlayers(w http.ResponseWriter, r *http.Request) {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
+		respondError(w, 401, "Unauthorized")
+		return
+	}
+
+	rows, err := appDB.Query(`
+		SELECT id, manager_email, name, created_at
+		FROM players
+		WHERE manager_email = $1
+		ORDER BY name ASC
+	`, user.Email)
+	if err != nil {
+		respondError(w, 500, "Database error")
+		return
+	}
+	defer rows.Close()
+
+	type Player struct {
+		ID           int    `json:"id"`
+		ManagerEmail string `json:"managerEmail"`
+		Name         string `json:"name"`
+		CreatedAt    string `json:"createdAt"`
+	}
+
+	players := []Player{}
+	for rows.Next() {
+		var p Player
+		if err := rows.Scan(&p.ID, &p.ManagerEmail, &p.Name, &p.CreatedAt); err != nil {
+			continue
+		}
+		players = append(players, p)
+	}
+
+	respondJSON(w, map[string]interface{}{"players": players})
 }
 
-type Horse struct {
-	ID        int    `json:"id"`
-	EventID   int    `json:"eventId"`
-	Name      string `json:"name"`
-	CreatedAt string `json:"createdAt"`
+func handleCreatePlayer(w http.ResponseWriter, r *http.Request) {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
+		respondError(w, 401, "Unauthorized")
+		return
+	}
+
+	var req struct {
+		Name string `json:"name"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, 400, "Invalid request")
+		return
+	}
+
+	if req.Name == "" {
+		respondError(w, 400, "Player name is required")
+		return
+	}
+
+	_, err := appDB.Exec(`
+		INSERT INTO players (manager_email, name)
+		VALUES ($1, $2)
+	`, user.Email, req.Name)
+	if err != nil {
+		if strings.Contains(err.Error(), "duplicate") {
+			respondError(w, 400, "Player already exists")
+			return
+		}
+		respondError(w, 500, "Database error")
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
 }
 
-type Player struct {
-	ID          int     `json:"id"`
-	EventID     int     `json:"eventId"`
-	PlayerEmail string  `json:"playerEmail"`
-	PlayerName  string  `json:"playerName"`
-	HorseID     *int    `json:"horseId"`
-	HorseName   *string `json:"horseName,omitempty"`
-	CreatedAt   string  `json:"createdAt"`
+func handleDeletePlayer(w http.ResponseWriter, r *http.Request) {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
+		respondError(w, 401, "Unauthorized")
+		return
+	}
+
+	vars := mux.Vars(r)
+	playerID := vars["id"]
+
+	// Verify ownership
+	var managerEmail string
+	err := appDB.QueryRow(`SELECT manager_email FROM players WHERE id = $1`, playerID).Scan(&managerEmail)
+	if err != nil {
+		respondError(w, 404, "Player not found")
+		return
+	}
+	if managerEmail != user.Email {
+		respondError(w, 403, "Forbidden")
+		return
+	}
+
+	_, err = appDB.Exec(`DELETE FROM players WHERE id = $1`, playerID)
+	if err != nil {
+		respondError(w, 500, "Database error")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
-type WinningPosition struct {
-	ID        int    `json:"id"`
-	EventID   int    `json:"eventId"`
-	Position  string `json:"position"`
-	CreatedAt string `json:"createdAt"`
+// Horse pool handlers
+func handleGetHorses(w http.ResponseWriter, r *http.Request) {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
+		respondError(w, 401, "Unauthorized")
+		return
+	}
+
+	rows, err := appDB.Query(`
+		SELECT id, manager_email, name, created_at
+		FROM horses
+		WHERE manager_email = $1
+		ORDER BY name ASC
+	`, user.Email)
+	if err != nil {
+		respondError(w, 500, "Database error")
+		return
+	}
+	defer rows.Close()
+
+	type Horse struct {
+		ID           int    `json:"id"`
+		ManagerEmail string `json:"managerEmail"`
+		Name         string `json:"name"`
+		CreatedAt    string `json:"createdAt"`
+	}
+
+	horses := []Horse{}
+	for rows.Next() {
+		var h Horse
+		if err := rows.Scan(&h.ID, &h.ManagerEmail, &h.Name, &h.CreatedAt); err != nil {
+			continue
+		}
+		horses = append(horses, h)
+	}
+
+	respondJSON(w, map[string]interface{}{"horses": horses})
 }
 
-type Result struct {
-	ID        int    `json:"id"`
-	EventID   int    `json:"eventId"`
-	HorseID   int    `json:"horseId"`
-	HorseName string `json:"horseName"`
-	Position  string `json:"position"`
-	CreatedAt string `json:"createdAt"`
-	UpdatedAt string `json:"updatedAt"`
+func handleCreateHorse(w http.ResponseWriter, r *http.Request) {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
+		respondError(w, 401, "Unauthorized")
+		return
+	}
+
+	var req struct {
+		Name string `json:"name"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, 400, "Invalid request")
+		return
+	}
+
+	if req.Name == "" {
+		respondError(w, 400, "Horse name is required")
+		return
+	}
+
+	_, err := appDB.Exec(`
+		INSERT INTO horses (manager_email, name)
+		VALUES ($1, $2)
+	`, user.Email, req.Name)
+	if err != nil {
+		if strings.Contains(err.Error(), "duplicate") {
+			respondError(w, 400, "Horse already exists")
+			return
+		}
+		respondError(w, 500, "Database error")
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
 }
 
-type ReportEntry struct {
-	PlayerName string `json:"playerName"`
-	PlayerEmail string `json:"playerEmail"`
-	HorseName  string `json:"horseName"`
-	Position   string `json:"position"`
+func handleDeleteHorse(w http.ResponseWriter, r *http.Request) {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
+		respondError(w, 401, "Unauthorized")
+		return
+	}
+
+	vars := mux.Vars(r)
+	horseID := vars["id"]
+
+	// Verify ownership
+	var managerEmail string
+	err := appDB.QueryRow(`SELECT manager_email FROM horses WHERE id = $1`, horseID).Scan(&managerEmail)
+	if err != nil {
+		respondError(w, 404, "Horse not found")
+		return
+	}
+	if managerEmail != user.Email {
+		respondError(w, 403, "Forbidden")
+		return
+	}
+
+	_, err = appDB.Exec(`DELETE FROM horses WHERE id = $1`, horseID)
+	if err != nil {
+		respondError(w, 500, "Database error")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
-// Utility functions
-func respondJSON(w http.ResponseWriter, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(data)
-}
+// ========== GAMES TAB HANDLERS ==========
 
-func respondError(w http.ResponseWriter, code int, message string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-	json.NewEncoder(w).Encode(map[string]string{"error": message})
-}
-
-// Event handlers
 func handleGetEvents(w http.ResponseWriter, r *http.Request) {
 	user, ok := authlib.GetUserFromContext(r.Context())
 	if !ok {
@@ -85,30 +234,41 @@ func handleGetEvents(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rows, err := appDB.Query(`
-		SELECT id, name, description, status, manager_email, created_at, updated_at
-		FROM events
-		WHERE manager_email = $1
-		ORDER BY created_at DESC
+		SELECT e.id, e.name, e.description, e.status, e.manager_email, e.created_at, e.updated_at,
+		       COALESCE(COUNT(DISTINCT ep.player_id), 0) as participant_count
+		FROM events e
+		LEFT JOIN event_participants ep ON e.id = ep.event_id
+		WHERE e.manager_email = $1
+		GROUP BY e.id
+		ORDER BY e.created_at DESC
 	`, user.Email)
 	if err != nil {
-		log.Printf("Error fetching events: %v", err)
-		respondError(w, 500, "Failed to fetch events")
+		respondError(w, 500, "Database error")
 		return
 	}
 	defer rows.Close()
 
+	type Event struct {
+		ID               int    `json:"id"`
+		Name             string `json:"name"`
+		Description      string `json:"description"`
+		Status           string `json:"status"`
+		ManagerEmail     string `json:"managerEmail"`
+		CreatedAt        string `json:"createdAt"`
+		UpdatedAt        string `json:"updatedAt"`
+		ParticipantCount int    `json:"participantCount"`
+	}
+
 	events := []Event{}
 	for rows.Next() {
 		var e Event
-		err := rows.Scan(&e.ID, &e.Name, &e.Description, &e.Status, &e.ManagerEmail, &e.CreatedAt, &e.UpdatedAt)
-		if err != nil {
-			log.Printf("Error scanning event: %v", err)
+		if err := rows.Scan(&e.ID, &e.Name, &e.Description, &e.Status, &e.ManagerEmail, &e.CreatedAt, &e.UpdatedAt, &e.ParticipantCount); err != nil {
 			continue
 		}
 		events = append(events, e)
 	}
 
-	respondJSON(w, events)
+	respondJSON(w, map[string]interface{}{"events": events})
 }
 
 func handleCreateEvent(w http.ResponseWriter, r *http.Request) {
@@ -132,78 +292,16 @@ func handleCreateEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var eventID int
-	err := appDB.QueryRow(`
+	_, err := appDB.Exec(`
 		INSERT INTO events (name, description, manager_email)
 		VALUES ($1, $2, $3)
-		RETURNING id
-	`, req.Name, req.Description, user.Email).Scan(&eventID)
+	`, req.Name, req.Description, user.Email)
 	if err != nil {
-		log.Printf("Error creating event: %v", err)
-		respondError(w, 500, "Failed to create event")
+		respondError(w, 500, "Database error")
 		return
 	}
 
-	respondJSON(w, map[string]interface{}{"id": eventID, "message": "Event created"})
-}
-
-func handleGetEvent(w http.ResponseWriter, r *http.Request) {
-	user, ok := authlib.GetUserFromContext(r.Context())
-	if !ok {
-		respondError(w, 401, "Unauthorized")
-		return
-	}
-	vars := mux.Vars(r)
-	eventID := vars["id"]
-
-	var event Event
-	err := appDB.QueryRow(`
-		SELECT id, name, description, status, manager_email, created_at, updated_at
-		FROM events
-		WHERE id = $1 AND manager_email = $2
-	`, eventID, user.Email).Scan(&event.ID, &event.Name, &event.Description, &event.Status, &event.ManagerEmail, &event.CreatedAt, &event.UpdatedAt)
-	if err == sql.ErrNoRows {
-		respondError(w, 404, "Event not found")
-		return
-	}
-	if err != nil {
-		log.Printf("Error fetching event: %v", err)
-		respondError(w, 500, "Failed to fetch event")
-		return
-	}
-
-	respondJSON(w, event)
-}
-
-func handleUpdateEvent(w http.ResponseWriter, r *http.Request) {
-	user, ok := authlib.GetUserFromContext(r.Context())
-	if !ok {
-		respondError(w, 401, "Unauthorized")
-		return
-	}
-	vars := mux.Vars(r)
-	eventID := vars["id"]
-
-	var req struct {
-		Status string `json:"status"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondError(w, 400, "Invalid request")
-		return
-	}
-
-	_, err := appDB.Exec(`
-		UPDATE events
-		SET status = $1, updated_at = CURRENT_TIMESTAMP
-		WHERE id = $2 AND manager_email = $3
-	`, req.Status, eventID, user.Email)
-	if err != nil {
-		log.Printf("Error updating event: %v", err)
-		respondError(w, 500, "Failed to update event")
-		return
-	}
-
-	respondJSON(w, map[string]string{"message": "Event updated"})
+	w.WriteHeader(http.StatusCreated)
 }
 
 func handleDeleteEvent(w http.ResponseWriter, r *http.Request) {
@@ -212,131 +310,85 @@ func handleDeleteEvent(w http.ResponseWriter, r *http.Request) {
 		respondError(w, 401, "Unauthorized")
 		return
 	}
+
 	vars := mux.Vars(r)
 	eventID := vars["id"]
 
-	_, err := appDB.Exec(`
-		DELETE FROM events
-		WHERE id = $1 AND manager_email = $2
-	`, eventID, user.Email)
+	// Verify ownership
+	var managerEmail string
+	err := appDB.QueryRow(`SELECT manager_email FROM events WHERE id = $1`, eventID).Scan(&managerEmail)
 	if err != nil {
-		log.Printf("Error deleting event: %v", err)
-		respondError(w, 500, "Failed to delete event")
+		respondError(w, 404, "Event not found")
+		return
+	}
+	if managerEmail != user.Email {
+		respondError(w, 403, "Forbidden")
 		return
 	}
 
-	respondJSON(w, map[string]string{"message": "Event deleted"})
+	_, err = appDB.Exec(`DELETE FROM events WHERE id = $1`, eventID)
+	if err != nil {
+		respondError(w, 500, "Database error")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
-// Horse handlers
-func handleGetHorses(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	eventID := vars["eventId"]
+// Get event details (participants, positions)
+func handleGetEventDetail(w http.ResponseWriter, r *http.Request) {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
+		respondError(w, 401, "Unauthorized")
+		return
+	}
 
-	rows, err := appDB.Query(`
-		SELECT id, event_id, name, created_at
-		FROM horses
-		WHERE event_id = $1
-		ORDER BY name
+	vars := mux.Vars(r)
+	eventID := vars["id"]
+
+	// Verify ownership
+	var managerEmail string
+	err := appDB.QueryRow(`SELECT manager_email FROM events WHERE id = $1`, eventID).Scan(&managerEmail)
+	if err != nil {
+		respondError(w, 404, "Event not found")
+		return
+	}
+	if managerEmail != user.Email {
+		respondError(w, 403, "Forbidden")
+		return
+	}
+
+	// Get participants
+	type Participant struct {
+		ID         int     `json:"id"`
+		EventID    int     `json:"eventId"`
+		PlayerID   int     `json:"playerId"`
+		PlayerName string  `json:"playerName"`
+		HorseID    *int    `json:"horseId"`
+		HorseName  *string `json:"horseName"`
+	}
+
+	participantRows, err := appDB.Query(`
+		SELECT ep.id, ep.event_id, ep.player_id, p.name,
+		       ep.horse_id, h.name
+		FROM event_participants ep
+		JOIN players p ON ep.player_id = p.id
+		LEFT JOIN horses h ON ep.horse_id = h.id
+		WHERE ep.event_id = $1
+		ORDER BY p.name ASC
 	`, eventID)
 	if err != nil {
-		log.Printf("Error fetching horses: %v", err)
-		respondError(w, 500, "Failed to fetch horses")
+		respondError(w, 500, "Database error")
 		return
 	}
-	defer rows.Close()
+	defer participantRows.Close()
 
-	horses := []Horse{}
-	for rows.Next() {
-		var h Horse
-		err := rows.Scan(&h.ID, &h.EventID, &h.Name, &h.CreatedAt)
-		if err != nil {
-			log.Printf("Error scanning horse: %v", err)
-			continue
-		}
-		horses = append(horses, h)
-	}
-
-	respondJSON(w, horses)
-}
-
-func handleCreateHorse(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	eventID := vars["eventId"]
-
-	var req struct {
-		Name string `json:"name"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondError(w, 400, "Invalid request")
-		return
-	}
-
-	if req.Name == "" {
-		respondError(w, 400, "Horse name is required")
-		return
-	}
-
-	var horseID int
-	err := appDB.QueryRow(`
-		INSERT INTO horses (event_id, name)
-		VALUES ($1, $2)
-		RETURNING id
-	`, eventID, req.Name).Scan(&horseID)
-	if err != nil {
-		if strings.Contains(err.Error(), "duplicate key") {
-			respondError(w, 400, "Horse name already exists")
-			return
-		}
-		log.Printf("Error creating horse: %v", err)
-		respondError(w, 500, "Failed to create horse")
-		return
-	}
-
-	respondJSON(w, map[string]interface{}{"id": horseID, "message": "Horse added"})
-}
-
-func handleDeleteHorse(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	horseID := vars["id"]
-
-	_, err := appDB.Exec(`DELETE FROM horses WHERE id = $1`, horseID)
-	if err != nil {
-		log.Printf("Error deleting horse: %v", err)
-		respondError(w, 500, "Failed to delete horse")
-		return
-	}
-
-	respondJSON(w, map[string]string{"message": "Horse deleted"})
-}
-
-// Player handlers
-func handleGetPlayers(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	eventID := vars["eventId"]
-
-	rows, err := appDB.Query(`
-		SELECT p.id, p.event_id, p.player_email, p.player_name, p.horse_id, h.name, p.created_at
-		FROM players p
-		LEFT JOIN horses h ON p.horse_id = h.id
-		WHERE p.event_id = $1
-		ORDER BY p.player_name
-	`, eventID)
-	if err != nil {
-		log.Printf("Error fetching players: %v", err)
-		respondError(w, 500, "Failed to fetch players")
-		return
-	}
-	defer rows.Close()
-
-	players := []Player{}
-	for rows.Next() {
-		var p Player
+	participants := []Participant{}
+	for participantRows.Next() {
+		var p Participant
 		var horseID sql.NullInt64
 		var horseName sql.NullString
-		err := rows.Scan(&p.ID, &p.EventID, &p.PlayerEmail, &p.PlayerName, &horseID, &horseName, &p.CreatedAt)
-		if err != nil {
-			log.Printf("Error scanning player: %v", err)
+		if err := participantRows.Scan(&p.ID, &p.EventID, &p.PlayerID, &p.PlayerName, &horseID, &horseName); err != nil {
 			continue
 		}
 		if horseID.Valid {
@@ -344,62 +396,101 @@ func handleGetPlayers(w http.ResponseWriter, r *http.Request) {
 			p.HorseID = &id
 		}
 		if horseName.Valid {
-			name := horseName.String
-			p.HorseName = &name
+			p.HorseName = &horseName.String
 		}
-		players = append(players, p)
+		participants = append(participants, p)
 	}
 
-	respondJSON(w, players)
+	// Get winning positions
+	type Position struct {
+		ID       int    `json:"id"`
+		EventID  int    `json:"eventId"`
+		Position string `json:"position"`
+	}
+
+	positionRows, err := appDB.Query(`
+		SELECT id, event_id, position
+		FROM winning_positions
+		WHERE event_id = $1
+		ORDER BY id ASC
+	`, eventID)
+	if err != nil {
+		respondError(w, 500, "Database error")
+		return
+	}
+	defer positionRows.Close()
+
+	positions := []Position{}
+	for positionRows.Next() {
+		var pos Position
+		if err := positionRows.Scan(&pos.ID, &pos.EventID, &pos.Position); err != nil {
+			continue
+		}
+		positions = append(positions, pos)
+	}
+
+	respondJSON(w, map[string]interface{}{
+		"participants": participants,
+		"positions":    positions,
+	})
 }
 
-func handleCreatePlayer(w http.ResponseWriter, r *http.Request) {
+// Add participants to event
+func handleAddParticipants(w http.ResponseWriter, r *http.Request) {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
+		respondError(w, 401, "Unauthorized")
+		return
+	}
+
 	vars := mux.Vars(r)
-	eventID := vars["eventId"]
+	eventID := vars["id"]
+
+	// Verify ownership
+	var managerEmail string
+	err := appDB.QueryRow(`SELECT manager_email FROM events WHERE id = $1`, eventID).Scan(&managerEmail)
+	if err != nil {
+		respondError(w, 404, "Event not found")
+		return
+	}
+	if managerEmail != user.Email {
+		respondError(w, 403, "Forbidden")
+		return
+	}
 
 	var req struct {
-		PlayerEmail string `json:"playerEmail"`
-		PlayerName  string `json:"playerName"`
-		HorseID     *int   `json:"horseId"`
+		PlayerIDs []int `json:"playerIds"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondError(w, 400, "Invalid request")
 		return
 	}
 
-	if req.PlayerEmail == "" || req.PlayerName == "" {
-		respondError(w, 400, "Player email and name are required")
-		return
-	}
-
-	var playerID int
-	err := appDB.QueryRow(`
-		INSERT INTO players (event_id, player_email, player_name, horse_id)
-		VALUES ($1, $2, $3, $4)
-		RETURNING id
-	`, eventID, req.PlayerEmail, req.PlayerName, req.HorseID).Scan(&playerID)
-	if err != nil {
-		if strings.Contains(err.Error(), "duplicate key") {
-			if strings.Contains(err.Error(), "player_email") {
-				respondError(w, 400, "Player already exists in this event")
-				return
-			}
-			if strings.Contains(err.Error(), "horse_id") {
-				respondError(w, 400, "Horse already assigned to another player")
-				return
-			}
+	for _, playerID := range req.PlayerIDs {
+		_, err := appDB.Exec(`
+			INSERT INTO event_participants (event_id, player_id)
+			VALUES ($1, $2)
+			ON CONFLICT (event_id, player_id) DO NOTHING
+		`, eventID, playerID)
+		if err != nil {
+			respondError(w, 500, "Database error")
+			return
 		}
-		log.Printf("Error creating player: %v", err)
-		respondError(w, 500, "Failed to add player")
-		return
 	}
 
-	respondJSON(w, map[string]interface{}{"id": playerID, "message": "Player added"})
+	w.WriteHeader(http.StatusCreated)
 }
 
-func handleUpdatePlayer(w http.ResponseWriter, r *http.Request) {
+// Assign horse to participant
+func handleAssignHorse(w http.ResponseWriter, r *http.Request) {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
+		respondError(w, 401, "Unauthorized")
+		return
+	}
+
 	vars := mux.Vars(r)
-	playerID := vars["id"]
+	participantID := vars["id"]
 
 	var req struct {
 		HorseID *int `json:"horseId"`
@@ -409,73 +500,91 @@ func handleUpdatePlayer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err := appDB.Exec(`
-		UPDATE players
+	// Verify ownership via event
+	var eventID int
+	err := appDB.QueryRow(`
+		SELECT ep.event_id
+		FROM event_participants ep
+		JOIN events e ON ep.event_id = e.id
+		WHERE ep.id = $1 AND e.manager_email = $2
+	`, participantID, user.Email).Scan(&eventID)
+	if err != nil {
+		respondError(w, 404, "Participant not found")
+		return
+	}
+
+	_, err = appDB.Exec(`
+		UPDATE event_participants
 		SET horse_id = $1
 		WHERE id = $2
-	`, req.HorseID, playerID)
+	`, req.HorseID, participantID)
 	if err != nil {
-		if strings.Contains(err.Error(), "duplicate key") {
-			respondError(w, 400, "Horse already assigned to another player")
+		if strings.Contains(err.Error(), "duplicate") {
+			respondError(w, 400, "Horse already assigned in this event")
 			return
 		}
-		log.Printf("Error updating player: %v", err)
-		respondError(w, 500, "Failed to update player")
+		respondError(w, 500, "Database error")
 		return
 	}
 
-	respondJSON(w, map[string]string{"message": "Player updated"})
+	w.WriteHeader(http.StatusNoContent)
 }
 
-func handleDeletePlayer(w http.ResponseWriter, r *http.Request) {
+// Remove participant from event
+func handleRemoveParticipant(w http.ResponseWriter, r *http.Request) {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
+		respondError(w, 401, "Unauthorized")
+		return
+	}
+
 	vars := mux.Vars(r)
-	playerID := vars["id"]
+	participantID := vars["id"]
 
-	_, err := appDB.Exec(`DELETE FROM players WHERE id = $1`, playerID)
+	// Verify ownership via event
+	var eventID int
+	err := appDB.QueryRow(`
+		SELECT ep.event_id
+		FROM event_participants ep
+		JOIN events e ON ep.event_id = e.id
+		WHERE ep.id = $1 AND e.manager_email = $2
+	`, participantID, user.Email).Scan(&eventID)
 	if err != nil {
-		log.Printf("Error deleting player: %v", err)
-		respondError(w, 500, "Failed to delete player")
+		respondError(w, 404, "Participant not found")
 		return
 	}
 
-	respondJSON(w, map[string]string{"message": "Player deleted"})
-}
-
-// Winning Position handlers
-func handleGetPositions(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	eventID := vars["eventId"]
-
-	rows, err := appDB.Query(`
-		SELECT id, event_id, position, created_at
-		FROM winning_positions
-		WHERE event_id = $1
-		ORDER BY id
-	`, eventID)
+	_, err = appDB.Exec(`DELETE FROM event_participants WHERE id = $1`, participantID)
 	if err != nil {
-		log.Printf("Error fetching positions: %v", err)
-		respondError(w, 500, "Failed to fetch positions")
+		respondError(w, 500, "Database error")
 		return
 	}
-	defer rows.Close()
 
-	positions := []WinningPosition{}
-	for rows.Next() {
-		var p WinningPosition
-		err := rows.Scan(&p.ID, &p.EventID, &p.Position, &p.CreatedAt)
-		if err != nil {
-			log.Printf("Error scanning position: %v", err)
-			continue
-		}
-		positions = append(positions, p)
-	}
-
-	respondJSON(w, positions)
+	w.WriteHeader(http.StatusNoContent)
 }
 
+// Winning positions handlers
 func handleCreatePosition(w http.ResponseWriter, r *http.Request) {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
+		respondError(w, 401, "Unauthorized")
+		return
+	}
+
 	vars := mux.Vars(r)
 	eventID := vars["eventId"]
+
+	// Verify ownership
+	var managerEmail string
+	err := appDB.QueryRow(`SELECT manager_email FROM events WHERE id = $1`, eventID).Scan(&managerEmail)
+	if err != nil {
+		respondError(w, 404, "Event not found")
+		return
+	}
+	if managerEmail != user.Email {
+		respondError(w, 403, "Forbidden")
+		return
+	}
 
 	var req struct {
 		Position string `json:"position"`
@@ -485,77 +594,110 @@ func handleCreatePosition(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Position == "" {
-		respondError(w, 400, "Position is required")
-		return
-	}
-
 	// Normalize "last" to lowercase
 	if strings.ToLower(req.Position) == "last" {
 		req.Position = "last"
 	}
 
-	var posID int
-	err := appDB.QueryRow(`
+	_, err = appDB.Exec(`
 		INSERT INTO winning_positions (event_id, position)
 		VALUES ($1, $2)
-		RETURNING id
-	`, eventID, req.Position).Scan(&posID)
+	`, eventID, req.Position)
 	if err != nil {
-		if strings.Contains(err.Error(), "duplicate key") {
+		if strings.Contains(err.Error(), "duplicate") {
 			respondError(w, 400, "Position already exists")
 			return
 		}
-		log.Printf("Error creating position: %v", err)
-		respondError(w, 500, "Failed to add position")
+		respondError(w, 500, "Database error")
 		return
 	}
 
-	respondJSON(w, map[string]interface{}{"id": posID, "message": "Position added"})
+	w.WriteHeader(http.StatusCreated)
 }
 
 func handleDeletePosition(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	posID := vars["id"]
-
-	_, err := appDB.Exec(`DELETE FROM winning_positions WHERE id = $1`, posID)
-	if err != nil {
-		log.Printf("Error deleting position: %v", err)
-		respondError(w, 500, "Failed to delete position")
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
+		respondError(w, 401, "Unauthorized")
 		return
 	}
 
-	respondJSON(w, map[string]string{"message": "Position deleted"})
+	vars := mux.Vars(r)
+	positionID := vars["id"]
+
+	// Verify ownership via event
+	var eventID int
+	err := appDB.QueryRow(`
+		SELECT wp.event_id
+		FROM winning_positions wp
+		JOIN events e ON wp.event_id = e.id
+		WHERE wp.id = $1 AND e.manager_email = $2
+	`, positionID, user.Email).Scan(&eventID)
+	if err != nil {
+		respondError(w, 404, "Position not found")
+		return
+	}
+
+	_, err = appDB.Exec(`DELETE FROM winning_positions WHERE id = $1`, positionID)
+	if err != nil {
+		respondError(w, 500, "Database error")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // Results handlers
 func handleGetResults(w http.ResponseWriter, r *http.Request) {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
+		respondError(w, 401, "Unauthorized")
+		return
+	}
+
 	vars := mux.Vars(r)
 	eventID := vars["eventId"]
 
+	// Verify ownership
+	var managerEmail string
+	err := appDB.QueryRow(`SELECT manager_email FROM events WHERE id = $1`, eventID).Scan(&managerEmail)
+	if err != nil {
+		respondError(w, 404, "Event not found")
+		return
+	}
+	if managerEmail != user.Email {
+		respondError(w, 403, "Forbidden")
+		return
+	}
+
+	type Result struct {
+		ID        int    `json:"id"`
+		EventID   int    `json:"eventId"`
+		HorseID   int    `json:"horseId"`
+		HorseName string `json:"horseName"`
+		Position  string `json:"position"`
+	}
+
 	rows, err := appDB.Query(`
-		SELECT r.id, r.event_id, r.horse_id, h.name, r.position, r.created_at, r.updated_at
+		SELECT r.id, r.event_id, r.horse_id, h.name, r.position
 		FROM results r
 		JOIN horses h ON r.horse_id = h.id
 		WHERE r.event_id = $1
-		ORDER BY r.position
+		ORDER BY r.position ASC
 	`, eventID)
 	if err != nil {
-		log.Printf("Error fetching results: %v", err)
-		respondError(w, 500, "Failed to fetch results")
+		respondError(w, 500, "Database error")
 		return
 	}
 	defer rows.Close()
 
 	results := []Result{}
 	for rows.Next() {
-		var r Result
-		err := rows.Scan(&r.ID, &r.EventID, &r.HorseID, &r.HorseName, &r.Position, &r.CreatedAt, &r.UpdatedAt)
-		if err != nil {
-			log.Printf("Error scanning result: %v", err)
+		var res Result
+		if err := rows.Scan(&res.ID, &res.EventID, &res.HorseID, &res.HorseName, &res.Position); err != nil {
 			continue
 		}
-		results = append(results, r)
+		results = append(results, res)
 	}
 
 	respondJSON(w, results)
@@ -567,10 +709,11 @@ func handleSaveResults(w http.ResponseWriter, r *http.Request) {
 		respondError(w, 401, "Unauthorized")
 		return
 	}
+
 	vars := mux.Vars(r)
 	eventID := vars["eventId"]
 
-	// Verify user owns this event
+	// Verify ownership
 	var managerEmail string
 	err := appDB.QueryRow(`SELECT manager_email FROM events WHERE id = $1`, eventID).Scan(&managerEmail)
 	if err != nil {
@@ -593,127 +736,77 @@ func handleSaveResults(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Normalize "last" positions
-	for i := range req.Results {
-		if strings.ToLower(req.Results[i].Position) == "last" {
-			req.Results[i].Position = "last"
-		}
-	}
-
-	// Get winning positions for this event
-	rows, err := appDB.Query(`SELECT position FROM winning_positions WHERE event_id = $1`, eventID)
+	// Delete existing results
+	_, err = appDB.Exec(`DELETE FROM results WHERE event_id = $1`, eventID)
 	if err != nil {
-		log.Printf("Error fetching winning positions: %v", err)
-		respondError(w, 500, "Failed to fetch winning positions")
-		return
-	}
-	winningPositions := make(map[string]bool)
-	for rows.Next() {
-		var pos string
-		rows.Scan(&pos)
-		winningPositions[pos] = true
-	}
-	rows.Close()
-
-	// Check all winning positions are assigned
-	assignedPositions := make(map[string]bool)
-	for _, result := range req.Results {
-		assignedPositions[result.Position] = true
-	}
-
-	for pos := range winningPositions {
-		if !assignedPositions[pos] {
-			respondError(w, 400, "All winning positions must be assigned")
-			return
-		}
-	}
-
-	// Save results (upsert)
-	tx, err := appDB.Begin()
-	if err != nil {
-		log.Printf("Error starting transaction: %v", err)
-		respondError(w, 500, "Failed to save results")
-		return
-	}
-	defer tx.Rollback()
-
-	// Clear existing results
-	_, err = tx.Exec(`DELETE FROM results WHERE event_id = $1`, eventID)
-	if err != nil {
-		log.Printf("Error clearing results: %v", err)
-		respondError(w, 500, "Failed to save results")
+		respondError(w, 500, "Database error")
 		return
 	}
 
 	// Insert new results
 	for _, result := range req.Results {
-		_, err = tx.Exec(`
+		_, err := appDB.Exec(`
 			INSERT INTO results (event_id, horse_id, position)
 			VALUES ($1, $2, $3)
 		`, eventID, result.HorseID, result.Position)
 		if err != nil {
-			log.Printf("Error inserting result: %v", err)
-			respondError(w, 500, "Failed to save results")
+			respondError(w, 500, "Database error")
 			return
 		}
 	}
 
 	// Update event status to completed
-	_, err = tx.Exec(`
-		UPDATE events
-		SET status = 'completed', updated_at = CURRENT_TIMESTAMP
-		WHERE id = $1
-	`, eventID)
+	_, err = appDB.Exec(`UPDATE events SET status = 'completed', updated_at = CURRENT_TIMESTAMP WHERE id = $1`, eventID)
 	if err != nil {
-		log.Printf("Error updating event status: %v", err)
-		respondError(w, 500, "Failed to save results")
+		respondError(w, 500, "Database error")
 		return
 	}
 
-	if err = tx.Commit(); err != nil {
-		log.Printf("Error committing transaction: %v", err)
-		respondError(w, 500, "Failed to save results")
-		return
-	}
-
-	respondJSON(w, map[string]string{"message": "Results saved, event completed"})
+	w.WriteHeader(http.StatusNoContent)
 }
 
-// Report handler
+// ========== REPORTS TAB HANDLERS ==========
+
 func handleGetReport(w http.ResponseWriter, r *http.Request) {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
+		respondError(w, 401, "Unauthorized")
+		return
+	}
+
 	vars := mux.Vars(r)
 	eventID := vars["eventId"]
 
-	// Get event to ensure it's completed
-	var status string
-	err := appDB.QueryRow(`SELECT status FROM events WHERE id = $1`, eventID).Scan(&status)
+	// Verify ownership
+	var managerEmail string
+	err := appDB.QueryRow(`SELECT manager_email FROM events WHERE id = $1`, eventID).Scan(&managerEmail)
 	if err != nil {
 		respondError(w, 404, "Event not found")
 		return
 	}
-
-	if status != "completed" {
-		respondJSON(w, []ReportEntry{})
+	if managerEmail != user.Email {
+		respondError(w, 403, "Forbidden")
 		return
 	}
 
-	// Get winners (players whose horses finished in winning positions)
+	type ReportEntry struct {
+		PlayerName string `json:"playerName"`
+		HorseName  string `json:"horseName"`
+		Position   string `json:"position"`
+	}
+
 	rows, err := appDB.Query(`
-		SELECT p.player_name, p.player_email, h.name, r.position
+		SELECT p.name, h.name, r.position
 		FROM results r
 		JOIN horses h ON r.horse_id = h.id
-		JOIN players p ON p.horse_id = h.id
-		JOIN winning_positions wp ON wp.event_id = r.event_id AND wp.position = r.position
+		JOIN event_participants ep ON r.event_id = ep.event_id AND r.horse_id = ep.horse_id
+		JOIN players p ON ep.player_id = p.id
+		JOIN winning_positions wp ON r.event_id = wp.event_id AND r.position = wp.position
 		WHERE r.event_id = $1
-		ORDER BY
-			CASE
-				WHEN r.position = 'last' THEN 999999
-				ELSE CAST(r.position AS INTEGER)
-			END
+		ORDER BY r.position ASC
 	`, eventID)
 	if err != nil {
-		log.Printf("Error fetching report: %v", err)
-		respondError(w, 500, "Failed to generate report")
+		respondError(w, 500, "Database error")
 		return
 	}
 	defer rows.Close()
@@ -721,13 +814,23 @@ func handleGetReport(w http.ResponseWriter, r *http.Request) {
 	report := []ReportEntry{}
 	for rows.Next() {
 		var entry ReportEntry
-		err := rows.Scan(&entry.PlayerName, &entry.PlayerEmail, &entry.HorseName, &entry.Position)
-		if err != nil {
-			log.Printf("Error scanning report entry: %v", err)
+		if err := rows.Scan(&entry.PlayerName, &entry.HorseName, &entry.Position); err != nil {
 			continue
 		}
 		report = append(report, entry)
 	}
 
 	respondJSON(w, report)
+}
+
+// ========== HELPERS ==========
+
+func respondJSON(w http.ResponseWriter, data interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(data)
+}
+
+func respondError(w http.ResponseWriter, code int, message string) {
+	w.WriteHeader(code)
+	respondJSON(w, map[string]string{"error": message})
 }
