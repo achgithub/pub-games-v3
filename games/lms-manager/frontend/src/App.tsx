@@ -1139,7 +1139,7 @@ function App() {
           <div>
             {/* Player Pool Section */}
             <div className="ah-card ah-section">
-              <div className="ah-section-header" style={{ cursor: 'pointer' }} onClick={() => toggleCard('players')}>
+              <div className="ah-section-header" onClick={() => toggleCard('players')}>
                 <h3 className="ah-section-title">
                   {collapsedCards['players'] ? '▶' : '▼'} Player Pool ({players.length})
                 </h3>
@@ -1184,7 +1184,7 @@ function App() {
 
             {/* Groups & Teams Section */}
             <div className="ah-card ah-section">
-              <div className="ah-section-header" style={{ cursor: 'pointer' }} onClick={() => toggleCard('groups')}>
+              <div className="ah-section-header" onClick={() => toggleCard('groups')}>
                 <h3 className="ah-section-title">
                   {collapsedCards['groups'] ? '▶' : '▼'} Groups & Teams ({groups.length})
                 </h3>
@@ -1284,7 +1284,7 @@ function App() {
           <div>
             {/* Games List Section */}
             <div className="ah-card ah-section">
-              <div className="ah-section-header" style={{ cursor: 'pointer' }} onClick={() => toggleCard('activeGames')}>
+              <div className="ah-section-header" onClick={() => toggleCard('activeGames')}>
                 <h3 className="ah-section-title">
                   {collapsedCards['activeGames'] ? '▶' : '▼'} Active Games ({games.length})
                 </h3>
@@ -1331,7 +1331,7 @@ function App() {
 
             {/* Create Game Section */}
             <div className="ah-card ah-section">
-              <div className="ah-section-header" style={{ cursor: 'pointer' }} onClick={() => toggleCard('createGame')}>
+              <div className="ah-section-header" onClick={() => toggleCard('createGame')}>
                 <h3 className="ah-section-title">
                   {collapsedCards['createGame'] ? '▶' : '▼'} Create New Game
                 </h3>
@@ -1572,7 +1572,7 @@ function App() {
 
             {/* Participants */}
             <div className="ah-card">
-              <div className="ah-section-header" style={{ cursor: 'pointer' }} onClick={() => toggleCard('participants')}>
+              <div className="ah-section-header" onClick={() => toggleCard('participants')}>
                 <h3 className="ah-section-title">
                   {collapsedCards['participants'] ? '▶' : '▼'} Participants ({gameDetail.participants.length})
                 </h3>
@@ -1654,7 +1654,7 @@ function App() {
 
                     return (
                       <div className="ah-card">
-                        <div className="ah-section-header" style={{ cursor: 'pointer' }} onClick={() => toggleCard('round')}>
+                        <div className="ah-section-header" onClick={() => toggleCard('round')}>
                           <h3 className="ah-section-title">
                             {collapsedCards['round'] ? '▶' : '▼'} Round {currentRound.roundNumber} -{' '}
                             {currentRound.status === 'open' ? 'Open' : 'Closed'}
