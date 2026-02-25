@@ -76,6 +76,16 @@ function App() {
   const [newPosition, setNewPosition] = useState('');
   const [resultAssignments, setResultAssignments] = useState<Record<number, string>>({});
 
+  // Collapse state for cards
+  const [collapsedCards, setCollapsedCards] = useState<Record<string, boolean>>({});
+
+  const toggleCard = (cardName: string) => {
+    setCollapsedCards({
+      ...collapsedCards,
+      [cardName]: !collapsedCards[cardName],
+    });
+  };
+
   const fetchEvents = async () => {
     try {
       const res = await fetch(`${API_BASE}/events`, {
@@ -465,111 +475,138 @@ function App() {
             </div>
 
             {view === 'setup' && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginTop: 20 }}>
-                {/* Horses */}
-                <div className="ah-card">
-                  <h3 className="ah-section-title">Horses</h3>
-                  <input
-                    type="text"
-                    className="ah-input"
-                    placeholder="Horse name"
-                    value={newHorseName}
-                    onChange={(e) => setNewHorseName(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleCreateHorse()}
-                  />
-                  <button className="ah-btn-primary" onClick={handleCreateHorse} style={{ marginTop: 8 }}>
-                    Add Horse
-                  </button>
-
-                  <div className="horse-list">
-                    {horses.map((horse) => (
-                      <div key={horse.id} className="horse-item">
-                        <span>{horse.name}</span>
-                        <button className="ah-btn-danger" onClick={() => handleDeleteHorse(horse.id)}>
-                          Delete
-                        </button>
-                      </div>
-                    ))}
+              <div style={{ marginTop: 20 }}>
+                {/* Horses Card */}
+                <div className="ah-card setup-section" style={{ marginBottom: 20 }}>
+                  <div className="setup-section-header" style={{ cursor: 'pointer' }} onClick={() => toggleCard('horses')}>
+                    <h3 className="ah-section-title">
+                      {collapsedCards['horses'] ? '▶' : '▼'} Horses ({horses.length})
+                    </h3>
                   </div>
+
+                  {!collapsedCards['horses'] && (
+                    <>
+                      <input
+                        type="text"
+                        className="ah-input"
+                        placeholder="Horse name"
+                        value={newHorseName}
+                        onChange={(e) => setNewHorseName(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleCreateHorse()}
+                      />
+                      <button className="ah-btn-primary" onClick={handleCreateHorse} style={{ marginTop: 8 }}>
+                        Add Horse
+                      </button>
+
+                      <div className="horse-list">
+                        {horses.map((horse) => (
+                          <div key={horse.id} className="horse-item">
+                            <span>{horse.name}</span>
+                            <button className="ah-btn-danger" onClick={() => handleDeleteHorse(horse.id)}>
+                              Delete
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
 
-                {/* Players */}
-                <div className="ah-card">
-                  <h3 className="ah-section-title">Players</h3>
-                  <input
-                    type="email"
-                    className="ah-input"
-                    placeholder="Player email"
-                    value={newPlayerEmail}
-                    onChange={(e) => setNewPlayerEmail(e.target.value)}
-                  />
-                  <input
-                    type="text"
-                    className="ah-input"
-                    placeholder="Player name"
-                    value={newPlayerName}
-                    onChange={(e) => setNewPlayerName(e.target.value)}
-                    style={{ marginTop: 8 }}
-                  />
-                  <button className="ah-btn-primary" onClick={handleCreatePlayer} style={{ marginTop: 8 }}>
-                    Add Player
-                  </button>
-
-                  <div className="player-list">
-                    {players.map((player) => (
-                      <div key={player.id} className="player-item">
-                        <div>
-                          <div><strong>{player.playerName}</strong></div>
-                          <div style={{ fontSize: '14px', color: '#78716C' }}>{player.playerEmail}</div>
-                          <select
-                            className="ah-select"
-                            value={player.horseId || ''}
-                            onChange={(e) => handleAssignHorse(player.id, e.target.value ? parseInt(e.target.value) : null)}
-                            style={{ marginTop: 8, width: '100%' }}
-                          >
-                            <option value="">Not assigned</option>
-                            {player.horseId && player.horseName && (
-                              <option value={player.horseId}>{player.horseName}</option>
-                            )}
-                            {unassignedHorses.map((h) => (
-                              <option key={h.id} value={h.id}>{h.name}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <button className="ah-btn-danger" onClick={() => handleDeletePlayer(player.id)}>
-                          Delete
-                        </button>
-                      </div>
-                    ))}
+                {/* Players Card */}
+                <div className="ah-card setup-section" style={{ marginBottom: 20 }}>
+                  <div className="setup-section-header" style={{ cursor: 'pointer' }} onClick={() => toggleCard('players')}>
+                    <h3 className="ah-section-title">
+                      {collapsedCards['players'] ? '▶' : '▼'} Players ({players.length})
+                    </h3>
                   </div>
+
+                  {!collapsedCards['players'] && (
+                    <>
+                      <input
+                        type="email"
+                        className="ah-input"
+                        placeholder="Player email"
+                        value={newPlayerEmail}
+                        onChange={(e) => setNewPlayerEmail(e.target.value)}
+                      />
+                      <input
+                        type="text"
+                        className="ah-input"
+                        placeholder="Player name"
+                        value={newPlayerName}
+                        onChange={(e) => setNewPlayerName(e.target.value)}
+                        style={{ marginTop: 8 }}
+                      />
+                      <button className="ah-btn-primary" onClick={handleCreatePlayer} style={{ marginTop: 8 }}>
+                        Add Player
+                      </button>
+
+                      <div className="player-list">
+                        {players.map((player) => (
+                          <div key={player.id} className="player-item">
+                            <div>
+                              <div><strong>{player.playerName}</strong></div>
+                              <div style={{ fontSize: '14px', color: '#78716C' }}>{player.playerEmail}</div>
+                              <select
+                                className="ah-select"
+                                value={player.horseId || ''}
+                                onChange={(e) => handleAssignHorse(player.id, e.target.value ? parseInt(e.target.value) : null)}
+                                style={{ marginTop: 8, width: '100%' }}
+                              >
+                                <option value="">Not assigned</option>
+                                {player.horseId && player.horseName && (
+                                  <option value={player.horseId}>{player.horseName}</option>
+                                )}
+                                {unassignedHorses.map((h) => (
+                                  <option key={h.id} value={h.id}>{h.name}</option>
+                                ))}
+                              </select>
+                            </div>
+                            <button className="ah-btn-danger" onClick={() => handleDeletePlayer(player.id)}>
+                              Delete
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
 
-                {/* Winning Positions */}
-                <div className="ah-card" style={{ gridColumn: '1 / -1' }}>
-                  <h3 className="ah-section-title">Winning Positions</h3>
-                  <p className="ah-meta">Add positions that pay out (e.g., 1, 2, 3, last)</p>
-                  <input
-                    type="text"
-                    className="ah-input"
-                    placeholder="Position (e.g., 1, 2, 3, last)"
-                    value={newPosition}
-                    onChange={(e) => setNewPosition(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleCreatePosition()}
-                  />
-                  <button className="ah-btn-primary" onClick={handleCreatePosition} style={{ marginTop: 8 }}>
-                    Add Position
-                  </button>
-
-                  <div className="position-list">
-                    {positions.map((pos) => (
-                      <div key={pos.id} className="position-item">
-                        <span><strong>{pos.position}</strong></span>
-                        <button className="ah-btn-danger" onClick={() => handleDeletePosition(pos.id)}>
-                          Delete
-                        </button>
-                      </div>
-                    ))}
+                {/* Winning Positions Card */}
+                <div className="ah-card setup-section">
+                  <div className="setup-section-header" style={{ cursor: 'pointer' }} onClick={() => toggleCard('positions')}>
+                    <h3 className="ah-section-title">
+                      {collapsedCards['positions'] ? '▶' : '▼'} Winning Positions ({positions.length})
+                    </h3>
                   </div>
+
+                  {!collapsedCards['positions'] && (
+                    <>
+                      <p className="ah-meta">Add positions that pay out (e.g., 1, 2, 3, last)</p>
+                      <input
+                        type="text"
+                        className="ah-input"
+                        placeholder="Position (e.g., 1, 2, 3, last)"
+                        value={newPosition}
+                        onChange={(e) => setNewPosition(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleCreatePosition()}
+                      />
+                      <button className="ah-btn-primary" onClick={handleCreatePosition} style={{ marginTop: 8 }}>
+                        Add Position
+                      </button>
+
+                      <div className="position-list">
+                        {positions.map((pos) => (
+                          <div key={pos.id} className="position-item">
+                            <span><strong>{pos.position}</strong></span>
+                            <button className="ah-btn-danger" onClick={() => handleDeletePosition(pos.id)}>
+                              Delete
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             )}
@@ -583,22 +620,34 @@ function App() {
                   </p>
 
                   <div className="result-grid">
-                    {horses.map((horse) => (
-                      <div key={horse.id} className={`result-card ${resultAssignments[horse.id] ? 'assigned' : ''}`}>
-                        <div style={{ fontWeight: 600, marginBottom: 8 }}>{horse.name}</div>
-                        <select
-                          className="ah-select"
-                          value={resultAssignments[horse.id] || ''}
-                          onChange={(e) => setResultAssignments({ ...resultAssignments, [horse.id]: e.target.value })}
-                          style={{ width: '100%' }}
-                        >
-                          <option value="">Select position</option>
-                          {positions.map((pos) => (
-                            <option key={pos.id} value={pos.position}>{pos.position}</option>
-                          ))}
-                        </select>
-                      </div>
-                    ))}
+                    {horses.map((horse) => {
+                      // Get assigned positions for OTHER horses
+                      const assignedPositions = Object.entries(resultAssignments)
+                        .filter(([horseId, _]) => parseInt(horseId) !== horse.id)
+                        .map(([_, position]) => position);
+
+                      // Available positions = all positions minus those assigned to other horses
+                      const availablePositions = positions.filter(
+                        (pos) => !assignedPositions.includes(pos.position)
+                      );
+
+                      return (
+                        <div key={horse.id} className={`result-card ${resultAssignments[horse.id] ? 'assigned' : ''}`}>
+                          <div style={{ fontWeight: 600, marginBottom: 8 }}>{horse.name}</div>
+                          <select
+                            className="ah-select"
+                            value={resultAssignments[horse.id] || ''}
+                            onChange={(e) => setResultAssignments({ ...resultAssignments, [horse.id]: e.target.value })}
+                            style={{ width: '100%' }}
+                          >
+                            <option value="">Select position</option>
+                            {availablePositions.map((pos) => (
+                              <option key={pos.id} value={pos.position}>{pos.position}</option>
+                            ))}
+                          </select>
+                        </div>
+                      );
+                    })}
                   </div>
 
                   <button className="ah-btn-primary" onClick={handleSaveResults} style={{ marginTop: 20 }}>
