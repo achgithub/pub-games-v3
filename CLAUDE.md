@@ -23,6 +23,27 @@
 
 **Resume work**: Compare side-by-side with LMS Manager and fix UI to match exactly
 
+## 🚧 BROKEN - Pre-commit Styling Checks
+
+**Status**: Git pre-commit hooks NOT preventing styling violations
+
+**Problem**:
+- Created sweepstakes-knockout by copying smoke-test
+- Pre-commit checks passed but app had WRONG patterns:
+  - Missing Activity Hub CSS loading in index.tsx
+  - Using inline styles instead of .ah-* classes
+  - Layout doesn't match reference implementation
+
+**What should have been caught**:
+1. Missing dynamic CSS injection in index.tsx
+2. Hardcoded colors in inline styles
+3. Excessive inline style declarations (should use .ah-* classes)
+4. Wrong container classes (ah-container--wide vs ah-container)
+
+**Current check file**: `.githooks/pre-commit`
+
+**Action needed**: Revisit and strengthen pre-commit checks to actually enforce standards
+
 ---
 
 ## Session Start - Read This First
