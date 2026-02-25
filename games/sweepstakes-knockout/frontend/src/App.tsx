@@ -509,9 +509,8 @@ function App() {
             {/* Player Pool */}
             <div className="ah-card ah-section">
               <div className="ah-section-header" onClick={() => toggleCard('players')}>
-                <h3 className="ah-section-title">
-                  {collapsedCards['players'] ? '▶' : '▼'} Player Pool ({players.length})
-                </h3>
+                <h3 className="ah-section-title">Player Pool ({players.length})</h3>
+                <span className={`ah-section-toggle ${collapsedCards['players'] ? 'collapsed' : ''}`}>▼</span>
               </div>
 
               {!collapsedCards['players'] && (
@@ -553,9 +552,8 @@ function App() {
             {/* Horse Pool */}
             <div className="ah-card ah-section">
               <div className="ah-section-header" onClick={() => toggleCard('horses')}>
-                <h3 className="ah-section-title">
-                  {collapsedCards['horses'] ? '▶' : '▼'} Horse Pool ({horses.length})
-                </h3>
+                <h3 className="ah-section-title">Horse Pool ({horses.length})</h3>
+                <span className={`ah-section-toggle ${collapsedCards['horses'] ? 'collapsed' : ''}`}>▼</span>
               </div>
 
               {!collapsedCards['horses'] && (
@@ -604,9 +602,8 @@ function App() {
                 {/* Create Event Card */}
                 <div className="ah-card ah-section">
                   <div className="ah-section-header" onClick={() => toggleCard('createEvent')}>
-                    <h3 className="ah-section-title">
-                      {collapsedCards['createEvent'] ? '▶' : '▼'} CREATE NEW EVENT
-                    </h3>
+                    <h3 className="ah-section-title">CREATE NEW EVENT</h3>
+                    <span className={`ah-section-toggle ${collapsedCards['createEvent'] ? 'collapsed' : ''}`}>▼</span>
                   </div>
 
                   {!collapsedCards['createEvent'] && (
@@ -638,9 +635,8 @@ function App() {
                 {/* Active Events */}
                 <div className="ah-card ah-section">
                   <div className="ah-section-header" onClick={() => toggleCard('activeEvents')}>
-                    <h3 className="ah-section-title">
-                      {collapsedCards['activeEvents'] ? '▶' : '▼'} ACTIVE EVENTS ({events.filter(e => e.status !== 'completed').length})
-                    </h3>
+                    <h3 className="ah-section-title">ACTIVE EVENTS ({events.filter(e => e.status !== 'completed').length})</h3>
+                    <span className={`ah-section-toggle ${collapsedCards['activeEvents'] ? 'collapsed' : ''}`}>▼</span>
                   </div>
 
                   {!collapsedCards['activeEvents'] && (
@@ -670,9 +666,8 @@ function App() {
                 {events.filter(e => e.status === 'completed').length > 0 && (
                   <div className="ah-card ah-section">
                     <div className="ah-section-header" onClick={() => toggleCard('completedEvents')}>
-                      <h3 className="ah-section-title">
-                        {collapsedCards['completedEvents'] ? '▶' : '▼'} COMPLETED EVENTS ({events.filter(e => e.status === 'completed').length})
-                      </h3>
+                      <h3 className="ah-section-title">COMPLETED EVENTS ({events.filter(e => e.status === 'completed').length})</h3>
+                      <span className={`ah-section-toggle ${collapsedCards['completedEvents'] ? 'collapsed' : ''}`}>▼</span>
                     </div>
 
                     {!collapsedCards['completedEvents'] && (
@@ -717,9 +712,8 @@ function App() {
                 {/* Participants */}
                 <div className="ah-card ah-section">
                   <div className="ah-section-header" onClick={() => toggleCard('participants')}>
-                    <h3 className="ah-section-title">
-                      {collapsedCards['participants'] ? '▶' : '▼'} Participants ({participants.length})
-                    </h3>
+                    <h3 className="ah-section-title">Participants ({participants.length})</h3>
+                    <span className={`ah-section-toggle ${collapsedCards['participants'] ? 'collapsed' : ''}`}>▼</span>
                   </div>
 
                   {!collapsedCards['participants'] && (
@@ -795,9 +789,8 @@ function App() {
                 {/* Winning Positions */}
                 <div className="ah-card ah-section">
                   <div className="ah-section-header" onClick={() => toggleCard('positions')}>
-                    <h3 className="ah-section-title">
-                      {collapsedCards['positions'] ? '▶' : '▼'} Winning Positions ({positions.length})
-                    </h3>
+                    <h3 className="ah-section-title">Winning Positions ({positions.length})</h3>
+                    <span className={`ah-section-toggle ${collapsedCards['positions'] ? 'collapsed' : ''}`}>▼</span>
                   </div>
 
                   {!collapsedCards['positions'] && (
@@ -841,9 +834,8 @@ function App() {
                 {/* Results */}
                 <div className="ah-card ah-section">
                   <div className="ah-section-header" onClick={() => toggleCard('results')}>
-                    <h3 className="ah-section-title">
-                      {collapsedCards['results'] ? '▶' : '▼'} Results
-                    </h3>
+                    <h3 className="ah-section-title">Results</h3>
+                    <span className={`ah-section-toggle ${collapsedCards['results'] ? 'collapsed' : ''}`}>▼</span>
                   </div>
 
                   {!collapsedCards['results'] && (
