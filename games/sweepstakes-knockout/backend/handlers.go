@@ -128,7 +128,7 @@ func handleGetCompetitors(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := appDB.Query(`
 		SELECT id, manager_email, name, created_at
-		FROM horses
+		FROM competitors
 		WHERE manager_email = $1
 		ORDER BY name ASC
 	`, user.Email)
@@ -178,7 +178,7 @@ func handleCreateCompetitor(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, err := appDB.Exec(`
-		INSERT INTO horses (manager_email, name)
+		INSERT INTO competitors (manager_email, name)
 		VALUES ($1, $2)
 	`, user.Email, req.Name)
 	if err != nil {
@@ -205,7 +205,7 @@ func handleDeleteCompetitor(w http.ResponseWriter, r *http.Request) {
 
 	// Verify ownership
 	var managerEmail string
-	err := appDB.QueryRow(`SELECT manager_email FROM horses WHERE id = $1`, competitorID).Scan(&managerEmail)
+	err := appDB.QueryRow(`SELECT manager_email FROM competitors WHERE id = $1`, competitorID).Scan(&managerEmail)
 	if err != nil {
 		respondError(w, 404, "Competitor not found")
 		return
@@ -215,7 +215,7 @@ func handleDeleteCompetitor(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = appDB.Exec(`DELETE FROM horses WHERE id = $1`, competitorID)
+	_, err = appDB.Exec(`DELETE FROM competitors WHERE id = $1`, competitorID)
 	if err != nil {
 		respondError(w, 500, "Database error")
 		return
@@ -370,10 +370,10 @@ func handleGetEventDetail(w http.ResponseWriter, r *http.Request) {
 
 	participantRows, err := appDB.Query(`
 		SELECT ep.id, ep.event_id, ep.player_id, p.name,
-		       ep.horse_id, h.name
+		       ep.competitor_id, c.name
 		FROM event_participants ep
 		JOIN players p ON ep.player_id = p.id
-		LEFT JOIN horses h ON ep.horse_id = h.id
+		LEFT JOIN competitors c ON ep.competitor_id = c.id
 		WHERE ep.event_id = $1
 		ORDER BY p.name ASC
 	`, eventID)
@@ -515,7 +515,7 @@ func handleAssignCompetitor(w http.ResponseWriter, r *http.Request) {
 
 	_, err = appDB.Exec(`
 		UPDATE event_participants
-		SET horse_id = $1
+		SET competitor_id = $1
 		WHERE id = $2
 	`, req.CompetitorID, participantID)
 	if err != nil {
@@ -679,9 +679,9 @@ func handleGetResults(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rows, err := appDB.Query(`
-		SELECT r.id, r.event_id, r.horse_id, h.name, r.position
+		SELECT r.id, r.event_id, r.competitor_id, c.name, r.position
 		FROM results r
-		JOIN horses h ON r.horse_id = h.id
+		JOIN competitors c ON r.competitor_id = c.id
 		WHERE r.event_id = $1
 		ORDER BY r.position ASC
 	`, eventID)
@@ -746,7 +746,7 @@ func handleSaveResults(w http.ResponseWriter, r *http.Request) {
 	// Insert new results
 	for _, result := range req.Results {
 		_, err := appDB.Exec(`
-			INSERT INTO results (event_id, horse_id, position)
+			INSERT INTO results (event_id, competitor_id, position)
 			VALUES ($1, $2, $3)
 		`, eventID, result.CompetitorID, result.Position)
 		if err != nil {
@@ -796,10 +796,10 @@ func handleGetReport(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rows, err := appDB.Query(`
-		SELECT p.name, h.name, r.position
+		SELECT p.name, c.name, r.position
 		FROM results r
-		JOIN horses h ON r.horse_id = h.id
-		JOIN event_participants ep ON r.event_id = ep.event_id AND r.horse_id = ep.horse_id
+		JOIN competitors c ON r.competitor_id = c.id
+		JOIN event_participants ep ON r.event_id = ep.event_id AND r.competitor_id = ep.competitor_id
 		JOIN players p ON ep.player_id = p.id
 		JOIN winning_positions wp ON r.event_id = wp.event_id AND r.position = wp.position
 		WHERE r.event_id = $1
