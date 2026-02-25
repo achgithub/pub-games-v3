@@ -19,7 +19,7 @@ interface Player {
   createdAt: string;
 }
 
-interface Horse {
+interface Competitor {
   id: number;
   managerEmail: string;
   name: string;
@@ -42,8 +42,8 @@ interface Participant {
   eventId: number;
   playerId: number;
   playerName: string;
-  horseId?: number | null;
-  horseName?: string | null;
+  competitorId?: number | null;
+  competitorName?: string | null;
 }
 
 interface Position {
@@ -54,7 +54,7 @@ interface Position {
 
 interface ReportEntry {
   playerName: string;
-  horseName: string;
+  competitorName: string;
   position: string;
 }
 
@@ -64,9 +64,9 @@ function App() {
 
   // Setup tab state
   const [players, setPlayers] = useState<Player[]>([]);
-  const [horses, setHorses] = useState<Horse[]>([]);
+  const [competitors, setCompetitors] = useState<Competitor[]>([]);
   const [newPlayerName, setNewPlayerName] = useState('');
-  const [newHorseName, setNewHorseName] = useState('');
+  const [newCompetitorName, setNewCompetitorName] = useState('');
 
   // Games tab state
   const [events, setEvents] = useState<Event[]>([]);
@@ -77,6 +77,8 @@ function App() {
   const [positions, setPositions] = useState<Position[]>([]);
   const [newPosition, setNewPosition] = useState('');
   const [selectedPlayers, setSelectedPlayers] = useState<number[]>([]);
+  const [playerSearch, setPlayerSearch] = useState('');
+  const [showSelectedPlayersOnly, setShowSelectedPlayersOnly] = useState(false);
   const [resultAssignments, setResultAssignments] = useState<Record<number, string>>({});
 
   // Reports tab state
@@ -99,14 +101,14 @@ function App() {
 
     const fetchSetupData = async () => {
       try {
-        const [playersRes, horsesRes] = await Promise.all([
+        const [playersRes, competitorsRes] = await Promise.all([
           fetch(`${API_BASE}/players`, { headers: { Authorization: `Bearer ${token}` } }),
-          fetch(`${API_BASE}/horses`, { headers: { Authorization: `Bearer ${token}` } }),
+          fetch(`${API_BASE}/competitors`, { headers: { Authorization: `Bearer ${token}` } }),
         ]);
         const playersData = await playersRes.json();
-        const horsesData = await horsesRes.json();
+        const competitorsData = await competitorsRes.json();
         setPlayers(playersData.players || []);
-        setHorses(horsesData.horses || []);
+        setCompetitors(competitorsData.competitors || []);
       } catch (err) {
         console.error('Failed to fetch setup data:', err);
       }
@@ -154,7 +156,7 @@ function App() {
         const resultsData = await resultsRes.json();
         const assignments: Record<number, string> = {};
         (resultsData || []).forEach((r: any) => {
-          assignments[r.horseId] = r.position;
+          assignments[r.competitorId] = r.position;
         });
         setResultAssignments(assignments);
       } catch (err) {
@@ -223,41 +225,41 @@ function App() {
     }
   };
 
-  const handleCreateHorse = async () => {
-    if (!newHorseName.trim()) return;
+  const handleCreateCompetitor = async () => {
+    if (!newCompetitorName.trim()) return;
 
     try {
-      await fetch(`${API_BASE}/horses`, {
+      await fetch(`${API_BASE}/competitors`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ name: newHorseName }),
+        body: JSON.stringify({ name: newCompetitorName }),
       });
-      setNewHorseName('');
-      // Refetch horses
-      const res = await fetch(`${API_BASE}/horses`, {
+      setNewCompetitorName('');
+      // Refetch competitors
+      const res = await fetch(`${API_BASE}/competitors`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-      setHorses(data.horses || []);
+      setCompetitors(data.competitors || []);
     } catch (err) {
-      console.error('Failed to create horse:', err);
+      console.error('Failed to create competitor:', err);
     }
   };
 
-  const handleDeleteHorse = async (id: number) => {
-    if (!window.confirm('Delete this horse?')) return;
+  const handleDeleteCompetitor = async (id: number) => {
+    if (!window.confirm('Delete this competitor?')) return;
 
     try {
-      await fetch(`${API_BASE}/horses/${id}`, {
+      await fetch(`${API_BASE}/competitors/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
-      setHorses(horses.filter((h) => h.id !== id));
+      setCompetitors(competitors.filter((h) => h.id !== id));
     } catch (err) {
-      console.error('Failed to delete horse:', err);
+      console.error('Failed to delete competitor:', err);
     }
   };
 
@@ -307,6 +309,22 @@ function App() {
     }
   };
 
+  const handleSelectAllPlayers = () => {
+    setSelectedPlayers(players.map((p) => p.id));
+  };
+
+  const handleDeselectAllPlayers = () => {
+    setSelectedPlayers([]);
+  };
+
+  const handleTogglePlayerSelection = (playerId: number) => {
+    if (selectedPlayers.includes(playerId)) {
+      setSelectedPlayers(selectedPlayers.filter((id) => id !== playerId));
+    } else {
+      setSelectedPlayers([...selectedPlayers, playerId]);
+    }
+  };
+
   const handleAddParticipants = async () => {
     if (!selectedEventId || selectedPlayers.length === 0) return;
 
@@ -331,7 +349,7 @@ function App() {
     }
   };
 
-  const handleAssignHorse = async (participantId: number, horseId: number | null) => {
+  const handleAssignCompetitor = async (participantId: number, competitorId: number | null) => {
     try {
       await fetch(`${API_BASE}/participants/${participantId}`, {
         method: 'PUT',
@@ -339,7 +357,7 @@ function App() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ horseId }),
+        body: JSON.stringify({ competitorId }),
       });
       // Refetch event details
       if (selectedEventId) {
@@ -350,7 +368,7 @@ function App() {
         setParticipants(data.participants || []);
       }
     } catch (err) {
-      console.error('Failed to assign horse:', err);
+      console.error('Failed to assign competitor:', err);
     }
   };
 
@@ -411,8 +429,8 @@ function App() {
 
     const results = Object.entries(resultAssignments)
       .filter(([_, position]) => position)
-      .map(([horseId, position]) => ({
-        horseId: parseInt(horseId),
+      .map(([competitorId, position]) => ({
+        competitorId: parseInt(competitorId),
         position,
       }));
 
@@ -437,12 +455,12 @@ function App() {
     }
   };
 
-  // Get unassigned horses for a participant dropdown
-  const getAvailableHorses = (currentHorseId?: number | null) => {
-    const assignedHorseIds = participants
-      .filter((p) => p.horseId && p.horseId !== currentHorseId)
-      .map((p) => p.horseId);
-    return horses.filter((h) => !assignedHorseIds.includes(h.id));
+  // Get unassigned competitors for a participant dropdown
+  const getAvailableCompetitors = (currentCompetitorId?: number | null) => {
+    const assignedCompetitorIds = participants
+      .filter((p) => p.competitorId && p.competitorId !== currentCompetitorId)
+      .map((p) => p.competitorId);
+    return competitors.filter((h) => !assignedCompetitorIds.includes(h.id));
   };
 
   // Get players not yet in event
@@ -452,9 +470,9 @@ function App() {
   };
 
   // Get available positions for results dropdown
-  const getAvailablePositions = (currentHorseId: number) => {
+  const getAvailablePositions = (currentCompetitorId: number) => {
     const assignedPositions = Object.entries(resultAssignments)
-      .filter(([horseId, _]) => parseInt(horseId) !== currentHorseId)
+      .filter(([competitorId, _]) => parseInt(competitorId) !== currentCompetitorId)
       .map(([_, position]) => position);
     return positions.filter((pos) => !assignedPositions.includes(pos.position));
   };
@@ -549,39 +567,39 @@ function App() {
               )}
             </div>
 
-            {/* Horse Pool */}
+            {/* Competitor Pool */}
             <div className="ah-card ah-section">
-              <div className="ah-section-header" onClick={() => toggleCard('horses')}>
-                <h3 className="ah-section-title">Horse Pool ({horses.length})</h3>
-                <span className={`ah-section-toggle ${collapsedCards['horses'] ? 'collapsed' : ''}`}>▼</span>
+              <div className="ah-section-header" onClick={() => toggleCard('competitors')}>
+                <h3 className="ah-section-title">Competitor Pool ({competitors.length})</h3>
+                <span className={`ah-section-toggle ${collapsedCards['competitors'] ? 'collapsed' : ''}`}>▼</span>
               </div>
 
-              {!collapsedCards['horses'] && (
+              {!collapsedCards['competitors'] && (
                 <>
                   <div className="ah-inline-form">
                     <input
                       type="text"
                       className="ah-input"
-                      placeholder="Horse name"
-                      value={newHorseName}
-                      onChange={(e) => setNewHorseName(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && handleCreateHorse()}
+                      placeholder="Competitor name"
+                      value={newCompetitorName}
+                      onChange={(e) => setNewCompetitorName(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && handleCreateCompetitor()}
                     />
-                    <button className="ah-btn-primary" onClick={handleCreateHorse}>
-                      Add Horse
+                    <button className="ah-btn-primary" onClick={handleCreateCompetitor}>
+                      Add Competitor
                     </button>
                   </div>
 
                   <div className="ah-list">
-                    {horses.length === 0 && (
-                      <p className="ah-meta">No horses yet. Add one to get started.</p>
+                    {competitors.length === 0 && (
+                      <p className="ah-meta">No competitors yet. Add one to get started.</p>
                     )}
-                    {horses.map((horse) => (
-                      <div key={horse.id} className="ah-list-item">
-                        <strong>{horse.name}</strong>
+                    {competitors.map((competitor) => (
+                      <div key={competitor.id} className="ah-list-item">
+                        <strong>{competitor.name}</strong>
                         <button
                           className="ah-btn-danger-sm"
-                          onClick={() => handleDeleteHorse(horse.id)}
+                          onClick={() => handleDeleteCompetitor(competitor.id)}
                         >
                           Delete
                         </button>
@@ -719,29 +737,72 @@ function App() {
                   {!collapsedCards['participants'] && (
                     <>
                       <div className="add-players-section">
-                        <label className="ah-meta">Add Players:</label>
-                        <select
-                          multiple
-                          className="ah-select player-select"
-                          value={selectedPlayers.map(String)}
-                          onChange={(e) => {
-                            const values = Array.from(e.target.selectedOptions).map((opt) => parseInt(opt.value));
-                            setSelectedPlayers(values);
-                          }}
-                        >
-                          {getAvailablePlayers().map((p) => (
-                            <option key={p.id} value={p.id}>
-                              {p.name}
-                            </option>
+                        <div style={{ marginBottom: '0.75rem' }}>
+                          <p className="ah-meta">
+                            Select Players ({selectedPlayers.length} selected):
+                          </p>
+                          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            <button className="ah-btn-outline" onClick={handleSelectAllPlayers} style={{ padding: '0.25rem 0.75rem', fontSize: '0.875rem' }}>
+                              Select All
+                            </button>
+                            <button className="ah-btn-outline" onClick={handleDeselectAllPlayers} style={{ padding: '0.25rem 0.75rem', fontSize: '0.875rem' }}>
+                              Deselect All
+                            </button>
+                            <button
+                              className="ah-btn-primary"
+                              onClick={handleAddParticipants}
+                              disabled={selectedPlayers.length === 0}
+                              style={{ padding: '0.25rem 0.75rem', fontSize: '0.875rem', marginLeft: 'auto' }}
+                            >
+                              Add Selected Players
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Player filters */}
+                        <div style={{ marginBottom: '0.75rem', padding: '0.75rem', background: '#FAFAF9', borderRadius: '8px', border: '1px solid #E7E5E4' }}>
+                          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <input
+                              type="text"
+                              placeholder="Search players by name..."
+                              value={playerSearch}
+                              onChange={(e) => setPlayerSearch(e.target.value)}
+                              className="ah-input"
+                              style={{ flex: '1 1 200px', minWidth: 0 }}
+                            />
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap', fontSize: '0.875rem' }}>
+                              <input
+                                type="checkbox"
+                                checked={showSelectedPlayersOnly}
+                                onChange={(e) => setShowSelectedPlayersOnly(e.target.checked)}
+                              />
+                              <span>Selected only</span>
+                            </label>
+                          </div>
+                        </div>
+
+                        <div className="player-selection-grid">
+                          {getAvailablePlayers().filter((player) => {
+                            // Text search filter
+                            const matchesSearch = !playerSearch ||
+                              player.name.toLowerCase().includes(playerSearch.toLowerCase());
+
+                            // Selected filter
+                            const matchesSelected = !showSelectedPlayersOnly ||
+                              selectedPlayers.includes(player.id);
+
+                            return matchesSearch && matchesSelected;
+                          }).map((player) => (
+                            <label key={player.id} className="player-checkbox-label">
+                              <input
+                                type="checkbox"
+                                checked={selectedPlayers.includes(player.id)}
+                                onChange={() => handleTogglePlayerSelection(player.id)}
+                              />
+                              <span>{player.name}</span>
+                            </label>
                           ))}
-                        </select>
-                        <button
-                          className="ah-btn-primary"
-                          onClick={handleAddParticipants}
-                          disabled={selectedPlayers.length === 0}
-                        >
-                          Add Selected Players
-                        </button>
+                        </div>
                       </div>
 
                       <div className="ah-list">
@@ -754,19 +815,19 @@ function App() {
                               <strong>{participant.playerName}</strong>
                               <select
                                 className="ah-select"
-                                value={participant.horseId || ''}
+                                value={participant.competitorId || ''}
                                 onChange={(e) =>
-                                  handleAssignHorse(
+                                  handleAssignCompetitor(
                                     participant.id,
                                     e.target.value ? parseInt(e.target.value) : null
                                   )
                                 }
                               >
                                 <option value="">Not assigned</option>
-                                {participant.horseId && participant.horseName && (
-                                  <option value={participant.horseId}>{participant.horseName}</option>
+                                {participant.competitorId && participant.competitorName && (
+                                  <option value={participant.competitorId}>{participant.competitorName}</option>
                                 )}
-                                {getAvailableHorses(participant.horseId).map((h) => (
+                                {getAvailableCompetitors(participant.competitorId).map((h) => (
                                   <option key={h.id} value={h.id}>
                                     {h.name}
                                   </option>
@@ -841,34 +902,34 @@ function App() {
                   {!collapsedCards['results'] && (
                     <>
                       <p className="ah-meta">
-                        Assign finishing positions to horses. All winning positions must be assigned.
+                        Assign finishing positions to competitors. All winning positions must be assigned.
                       </p>
 
                       <div className="ah-grid-auto">
                         {participants
-                          .filter((p) => p.horseId)
+                          .filter((p) => p.competitorId)
                           .map((participant) => {
-                            const availablePos = getAvailablePositions(participant.horseId!);
+                            const availablePos = getAvailablePositions(participant.competitorId!);
                             return (
                               <div
                                 key={participant.id}
                                 className={`ah-card result-card ${
-                                  resultAssignments[participant.horseId!] ? 'assigned' : ''
+                                  resultAssignments[participant.competitorId!] ? 'assigned' : ''
                                 }`}
                               >
-                                <div className="result-card-horse">
-                                  {participant.horseName}
+                                <div className="result-card-competitor">
+                                  {participant.competitorName}
                                 </div>
                                 <div className="ah-meta">
                                   {participant.playerName}
                                 </div>
                                 <select
                                   className="ah-select"
-                                  value={resultAssignments[participant.horseId!] || ''}
+                                  value={resultAssignments[participant.competitorId!] || ''}
                                   onChange={(e) =>
                                     setResultAssignments({
                                       ...resultAssignments,
-                                      [participant.horseId!]: e.target.value,
+                                      [participant.competitorId!]: e.target.value,
                                     })
                                   }
                                 >
@@ -922,7 +983,7 @@ function App() {
               <>
                 {reportData.length === 0 && (
                   <div className="ah-banner ah-banner--info">
-                    No winners (no horses finished in winning positions).
+                    No winners (no competitors finished in winning positions).
                   </div>
                 )}
 
@@ -931,7 +992,7 @@ function App() {
                     <thead>
                       <tr>
                         <th>Player</th>
-                        <th>Horse</th>
+                        <th>Competitor</th>
                         <th>Position</th>
                       </tr>
                     </thead>
@@ -941,7 +1002,7 @@ function App() {
                           <td>
                             <strong>{entry.playerName}</strong>
                           </td>
-                          <td>{entry.horseName}</td>
+                          <td>{entry.competitorName}</td>
                           <td>
                             <span className="winner-badge">{entry.position}</span>
                           </td>
