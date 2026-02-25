@@ -47,7 +47,7 @@ body {
   border: 1px solid #FCA5A5;
   background: #FFF;
   color: #DC2626;
-  border-radius: 4px;
+  border-radius: 0.75rem;
   cursor: pointer;
   transition: background 0.2s;
 }
@@ -88,16 +88,7 @@ body {
 }
 
 .event-item {
-  padding: 16px;
-  background: white;
-  border: 1px solid #E7E5E4;
-  border-radius: 8px;
   cursor: pointer;
-  transition: background 0.2s;
-}
-
-.event-item:hover {
-  background: #FAFAF9;
 }
 
 .event-item-main {
@@ -125,7 +116,7 @@ body {
   padding: 12px;
   background: white;
   border: 1px solid #E7E5E4;
-  border-radius: 8px;
+  border-radius: 1rem;
 }
 
 /* Add players section */
@@ -160,10 +151,6 @@ body {
 }
 
 .result-card {
-  padding: 16px;
-  background: white;
-  border: 1px solid #E7E5E4;
-  border-radius: 8px;
   display: flex;
   flex-direction: column;
   gap: 8px;

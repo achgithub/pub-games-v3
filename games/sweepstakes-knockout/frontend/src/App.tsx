@@ -650,7 +650,7 @@ function App() {
                       )}
                       <div className="events-list">
                         {events.filter(e => e.status !== 'completed').map((event) => (
-                          <div key={event.id} className="event-item" onClick={() => setSelectedEventId(event.id)}>
+                          <div key={event.id} className="ah-card event-item" onClick={() => setSelectedEventId(event.id)}>
                             <div className="event-item-main">
                               <div>
                                 <h4 className="event-name">{event.name}</h4>
@@ -678,7 +678,7 @@ function App() {
                     {!collapsedCards['completedEvents'] && (
                       <div className="events-list">
                         {events.filter(e => e.status === 'completed').map((event) => (
-                          <div key={event.id} className="event-item" onClick={() => setSelectedEventId(event.id)}>
+                          <div key={event.id} className="ah-card event-item" onClick={() => setSelectedEventId(event.id)}>
                             <div className="event-item-main">
                               <div>
                                 <h4 className="event-name">{event.name}</h4>
@@ -860,7 +860,7 @@ function App() {
                             return (
                               <div
                                 key={participant.id}
-                                className={`result-card ${
+                                className={`ah-card result-card ${
                                   resultAssignments[participant.horseId!] ? 'assigned' : ''
                                 }`}
                               >
