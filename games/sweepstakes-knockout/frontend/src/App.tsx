@@ -480,7 +480,7 @@ function App() {
         </div>
       </div>
 
-      <div className="ah-container ah-container--wide">
+      <div className="ah-container">
         {/* Tabs */}
         <div className="ah-tabs">
           <button

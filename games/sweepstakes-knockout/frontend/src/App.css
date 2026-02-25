@@ -9,6 +9,64 @@ body {
   box-sizing: border-box;
 }
 
+/* Inline form layout (input + button side-by-side) */
+.inline-form {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.inline-form input,
+.inline-form select {
+  flex: 1 1 250px;
+  min-width: 150px;
+}
+
+.inline-form button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .inline-form input,
+  .inline-form select {
+    flex: 1 1 100%;
+  }
+
+  .inline-form button {
+    flex: 1 1 100%;
+  }
+}
+
+/* Setup tab styles */
+.setup-section {
+  margin-bottom: 2rem;
+}
+
+.setup-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.btn-danger-small {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.875rem;
+  border: 1px solid #FCA5A5;
+  background: #FFF;
+  color: #DC2626;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-danger-small:hover {
+  background: #FEF2F2;
+}
+
 /* Event-specific styles */
 .horse-list, .player-list, .position-list {
   display: flex;
