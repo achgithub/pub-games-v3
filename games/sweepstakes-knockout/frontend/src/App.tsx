@@ -62,6 +62,12 @@ function App() {
   const { token } = useQueryParams();
   const [activeTab, setActiveTab] = useState<'setup' | 'games' | 'reports'>('games');
 
+  // Report display mode (for screens - no auth)
+  const [reportView, setReportView] = useState<string>('');
+  const [displayEventId, setDisplayEventId] = useState<number>(0);
+  const [displayEventName, setDisplayEventName] = useState<string>('');
+  const [displayReportData, setDisplayReportData] = useState<ReportEntry[]>([]);
+
   // Setup tab state
   const [players, setPlayers] = useState<Player[]>([]);
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
@@ -94,6 +100,44 @@ function App() {
       [cardName]: !collapsedCards[cardName],
     });
   };
+
+  // Check for report display mode from URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const view = params.get('view');
+    const eventId = params.get('eventId');
+
+    if (view === 'report' && eventId) {
+      setReportView('report');
+      setDisplayEventId(parseInt(eventId));
+    }
+  }, []);
+
+  // Fetch display report data
+  useEffect(() => {
+    if (displayEventId === 0) return;
+
+    const fetchDisplayReport = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/report/${displayEventId}`);
+        const data = await res.json();
+        setDisplayReportData(data || []);
+
+        // Fetch event name
+        const eventRes = await fetch(`${API_BASE}/api/events/${displayEventId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (eventRes.ok) {
+          const eventData = await eventRes.json();
+          setDisplayEventName(eventData.event?.name || 'Event Results');
+        }
+      } catch (err) {
+        console.error('Failed to fetch display report:', err);
+      }
+    };
+
+    fetchDisplayReport();
+  }, [displayEventId, token]);
 
   // Fetch setup data
   useEffect(() => {
@@ -185,6 +229,64 @@ function App() {
 
     fetchReport();
   }, [token, reportEventId]);
+
+  // Report display view (public access for screens)
+  if (reportView === 'report' && displayEventId > 0) {
+    const refreshDisplayReport = () => {
+      fetch(`${API_BASE}/api/report/${displayEventId}`)
+        .then(res => res.json())
+        .then(data => setDisplayReportData(data || []))
+        .catch(err => console.error('Failed to refresh display report:', err));
+    };
+
+    return (
+      <>
+        <div className="ah-app-header">
+          <div className="ah-app-header-left">
+            <h1 className="ah-app-title">🏇 {displayEventName}</h1>
+          </div>
+          <div className="ah-app-header-right">
+            <button className="ah-btn-outline" onClick={refreshDisplayReport}>
+              🔄 Refresh
+            </button>
+          </div>
+        </div>
+
+        <div className="ah-container ah-container--wide">
+          <div className="ah-card">
+            {displayReportData.length === 0 ? (
+              <div className="ah-banner ah-banner--info">
+                No results yet. Event may not be completed.
+              </div>
+            ) : (
+              <table className="ah-table">
+                <thead>
+                  <tr>
+                    <th>Position</th>
+                    <th>Player</th>
+                    <th>Competitor</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {displayReportData.map((entry, idx) => (
+                    <tr key={idx}>
+                      <td>
+                        <span className="winner-badge">{entry.position}</span>
+                      </td>
+                      <td>
+                        <strong>{entry.playerName}</strong>
+                      </td>
+                      <td>{entry.competitorName}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      </>
+    );
+  }
 
   // Setup tab handlers
   const handleCreatePlayer = async () => {

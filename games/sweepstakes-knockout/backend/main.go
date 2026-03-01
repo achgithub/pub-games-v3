@@ -48,6 +48,7 @@ func main() {
 
 	// Public routes
 	r.HandleFunc("/api/config", handleConfig).Methods("GET")
+	r.HandleFunc("/api/report/{eventId}", handlePublicReport).Methods("GET")
 
 	// Protected routes - require game_manager role
 	api := r.PathPrefix("/api").Subrouter()

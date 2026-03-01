@@ -823,6 +823,45 @@ func handleGetReport(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, report)
 }
 
+// Public report endpoint (for display screens - no auth required)
+func handlePublicReport(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	eventID, _ := strconv.Atoi(vars["eventId"])
+
+	type ReportEntry struct {
+		PlayerName     string `json:"playerName"`
+		CompetitorName string `json:"competitorName"`
+		Position       string `json:"position"`
+	}
+
+	rows, err := appDB.Query(`
+		SELECT p.name, c.name, r.position
+		FROM results r
+		JOIN competitors c ON r.competitor_id = c.id
+		JOIN event_participants ep ON r.event_id = ep.event_id AND r.competitor_id = ep.competitor_id
+		JOIN players p ON ep.player_id = p.id
+		JOIN winning_positions wp ON r.event_id = wp.event_id AND r.position = wp.position
+		WHERE r.event_id = $1
+		ORDER BY r.position ASC
+	`, eventID)
+	if err != nil {
+		respondError(w, 500, "Database error")
+		return
+	}
+	defer rows.Close()
+
+	report := []ReportEntry{}
+	for rows.Next() {
+		var entry ReportEntry
+		if err := rows.Scan(&entry.PlayerName, &entry.CompetitorName, &entry.Position); err != nil {
+			continue
+		}
+		report = append(report, entry)
+	}
+
+	respondJSON(w, report)
+}
+
 // ========== HELPERS ==========
 
 func respondJSON(w http.ResponseWriter, data interface{}) {
