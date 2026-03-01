@@ -27,7 +27,7 @@ func main() {
 
 	// Initialize app database
 	var err error
-	db, err = database.InitDatabase("component_library_db")
+	db, err = database.InitDatabase("component_library")
 	if err != nil {
 		log.Fatal("Failed to connect to app database:", err)
 	}
