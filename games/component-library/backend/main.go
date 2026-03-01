@@ -43,7 +43,6 @@ func main() {
 	// Build per-route middleware
 	authMiddleware := authlib.Middleware(identityDB)
 	sseMiddleware := authlib.SSEMiddleware(identityDB)
-	adminOnly := authlib.RequireRole("admin")
 
 	// Setup router
 	r := mux.NewRouter()
