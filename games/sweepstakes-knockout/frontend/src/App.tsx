@@ -224,22 +224,6 @@ function App() {
 
   // Report display view (public access for screens)
   if (reportView === 'report' && displayEventId > 0) {
-    const refreshDisplayReport = () => {
-      fetch(`${API_BASE}/report/${displayEventId}`)
-        .then(res => res.json())
-        .then(data => {
-          setDisplayReportData(data.results || []);
-          setDisplayEventName(data.event?.name || displayEventName);
-        })
-        .catch(err => console.error('Failed to refresh display report:', err));
-    };
-
-    // Auto-refresh every 30 seconds
-    useEffect(() => {
-      const interval = setInterval(refreshDisplayReport, 30000);
-      return () => clearInterval(interval);
-    }, [displayEventId]);
-
     return (
       <>
         <div className="ah-app-header">
