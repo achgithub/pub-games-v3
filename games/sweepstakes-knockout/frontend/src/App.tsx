@@ -829,6 +829,34 @@ function App() {
                   </button>
                 </div>
 
+                <div className="ah-card">
+                  <p className="ah-meta">
+                    <strong>Event ID:</strong> {selectedEventId}
+                  </p>
+                  <p className="ah-meta" style={{ marginTop: '0.5rem' }}>
+                    <strong>Display URL:</strong>
+                  </p>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.25rem' }}>
+                    <input
+                      type="text"
+                      className="ah-input"
+                      value={`http://${window.location.hostname}:4032/?view=report&eventId=${selectedEventId}`}
+                      readOnly
+                      style={{ flex: 1 }}
+                    />
+                    <button
+                      className="ah-btn-outline"
+                      onClick={() => {
+                        const url = `http://${window.location.hostname}:4032/?view=report&eventId=${selectedEventId}`;
+                        navigator.clipboard.writeText(url);
+                        alert('Display URL copied to clipboard!');
+                      }}
+                    >
+                      Copy URL
+                    </button>
+                  </div>
+                </div>
+
                 {/* Participants */}
                 <div className="ah-card ah-section">
                   <div className="ah-section-header" onClick={() => toggleCard('participants')}>
@@ -1076,7 +1104,7 @@ function App() {
                 .filter((e) => e.status === 'completed')
                 .map((e) => (
                   <option key={e.id} value={e.id}>
-                    {e.name}
+                    {e.name} (ID: {e.id})
                   </option>
                 ))}
             </select>
