@@ -829,6 +829,14 @@ func handlePublicReport(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	eventID, _ := strconv.Atoi(vars["eventId"])
 
+	// Fetch event details
+	var eventName, eventStatus string
+	err := appDB.QueryRow(`SELECT name, status FROM events WHERE id = $1`, eventID).Scan(&eventName, &eventStatus)
+	if err != nil {
+		respondError(w, 404, "Event not found")
+		return
+	}
+
 	type ReportEntry struct {
 		PlayerName     string `json:"playerName"`
 		CompetitorName string `json:"competitorName"`
@@ -860,7 +868,14 @@ func handlePublicReport(w http.ResponseWriter, r *http.Request) {
 		report = append(report, entry)
 	}
 
-	respondJSON(w, report)
+	respondJSON(w, map[string]interface{}{
+		"event": map[string]interface{}{
+			"id":     eventID,
+			"name":   eventName,
+			"status": eventStatus,
+		},
+		"results": report,
+	})
 }
 
 // ========== HELPERS ==========

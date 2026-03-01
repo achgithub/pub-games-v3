@@ -121,23 +121,15 @@ function App() {
       try {
         const res = await fetch(`${API_BASE}/api/report/${displayEventId}`);
         const data = await res.json();
-        setDisplayReportData(data || []);
-
-        // Fetch event name
-        const eventRes = await fetch(`${API_BASE}/api/events/${displayEventId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (eventRes.ok) {
-          const eventData = await eventRes.json();
-          setDisplayEventName(eventData.event?.name || 'Event Results');
-        }
+        setDisplayReportData(data.results || []);
+        setDisplayEventName(data.event?.name || `Event #${displayEventId} Results`);
       } catch (err) {
         console.error('Failed to fetch display report:', err);
       }
     };
 
     fetchDisplayReport();
-  }, [displayEventId, token]);
+  }, [displayEventId]);
 
   // Fetch setup data
   useEffect(() => {
@@ -235,7 +227,10 @@ function App() {
     const refreshDisplayReport = () => {
       fetch(`${API_BASE}/api/report/${displayEventId}`)
         .then(res => res.json())
-        .then(data => setDisplayReportData(data || []))
+        .then(data => {
+          setDisplayReportData(data.results || []);
+          setDisplayEventName(data.event?.name || displayEventName);
+        })
         .catch(err => console.error('Failed to refresh display report:', err));
     };
 
