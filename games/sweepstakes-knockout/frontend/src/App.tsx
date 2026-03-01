@@ -234,16 +234,17 @@ function App() {
         .catch(err => console.error('Failed to refresh display report:', err));
     };
 
+    // Auto-refresh every 30 seconds
+    useEffect(() => {
+      const interval = setInterval(refreshDisplayReport, 30000);
+      return () => clearInterval(interval);
+    }, [displayEventId]);
+
     return (
       <>
         <div className="ah-app-header">
           <div className="ah-app-header-left">
             <h1 className="ah-app-title">🏇 {displayEventName}</h1>
-          </div>
-          <div className="ah-app-header-right">
-            <button className="ah-btn-outline" onClick={refreshDisplayReport}>
-              🔄 Refresh
-            </button>
           </div>
         </div>
 
