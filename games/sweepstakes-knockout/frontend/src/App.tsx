@@ -119,7 +119,7 @@ function App() {
 
     const fetchDisplayReport = async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/report/${displayEventId}`);
+        const res = await fetch(`${API_BASE}/report/${displayEventId}`);
         const data = await res.json();
         setDisplayReportData(data.results || []);
         setDisplayEventName(data.event?.name || `Event #${displayEventId} Results`);
@@ -225,7 +225,7 @@ function App() {
   // Report display view (public access for screens)
   if (reportView === 'report' && displayEventId > 0) {
     const refreshDisplayReport = () => {
-      fetch(`${API_BASE}/api/report/${displayEventId}`)
+      fetch(`${API_BASE}/report/${displayEventId}`)
         .then(res => res.json())
         .then(data => {
           setDisplayReportData(data.results || []);
