@@ -22,27 +22,6 @@
 
 **Resume work**: Compare side-by-side with LMS Manager and fix UI to match exactly
 
-## 🚧 BROKEN - Pre-commit Styling Checks
-
-**Status**: Git pre-commit hooks NOT preventing styling violations
-
-**Problem**:
-- Created sweepstakes-knockout by copying smoke-test
-- Pre-commit checks passed but app had WRONG patterns:
-  - Missing Activity Hub CSS loading in index.tsx
-  - Using inline styles instead of .ah-* classes
-  - Layout doesn't match reference implementation
-
-**What should have been caught**:
-1. Missing dynamic CSS injection in index.tsx
-2. Hardcoded colors in inline styles
-3. Excessive inline style declarations (should use .ah-* classes)
-4. Wrong container classes (ah-container--wide vs ah-container)
-
-**Current check file**: `.githooks/pre-commit`
-
-**Action needed**: Revisit and strengthen pre-commit checks to actually enforce standards
-
 ---
 
 # Pub Games v3 - Project Guide
@@ -50,25 +29,24 @@
 ## Quick Start
 
 **First Time Here?**
-- Reference implementation: `games/smoke-test/` - COPY THIS when creating new apps
+- **Reference implementation**: `games/component-library/` - Living style guide showcasing ALL Activity Hub components
 - Creating new app: See `docs/NEW-APP-GUIDE.md`
 - Platform overview: See `docs/ARCHITECTURE.md`
+- Component examples: Access Component Library app (admin-only, port 5010)
 
 **Essential Info:**
 - **Platform**: Pi at 192.168.1.29 (server), Mac for editing
 - **Workflow**: Edit on Mac → commit → USER pushes → pull & build on Pi
-- **Reference app**: `games/smoke-test/` - demonstrates all patterns correctly
 - **PostgreSQL**: Port 5555, user "activityhub", password "pubgames"
 - **Build command**: `cd games/{app}/frontend && npm run build && cp -r build/* ../backend/static/`
 
 **Port Allocation:**
 - Identity Shell: 3001
 - Games (4xxx): tic-tac-toe: 4001, dots: 4011, sweepstakes: 4031, lms: 4021, quiz-player: 4041, spoof: 4051, mobile-test: 4061
-- Admin/Support (5xxx): smoke-test: 5010, setup-admin: 5020, leaderboard: 5030, season-scheduler: 5040, display-admin: 5050, display-runtime: 5051, game-admin: 5070, quiz-master: 5080, quiz-display: 5081
+- Admin/Support (5xxx): component-library: 5010, setup-admin: 5020, leaderboard: 5030, display-admin: 5050, display-runtime: 5051, game-admin: 5070, quiz-master: 5080, quiz-display: 5081
 
 **Known Issues:**
 - SSE presence requires manual refresh after impersonation (acceptable for debugging tool)
-- Pre-commit hooks need strengthening (see above)
 - 4 apps need CSS migration: quiz-player, quiz-master, quiz-display, mobile-test
 
 ---
@@ -107,19 +85,27 @@ Multi-app platform for pub-based games and activities. Microservices architectur
 
 ## ⚠️ CRITICAL: Reference Implementation
 
-**WHEN CREATING A NEW APP, COPY `games/smoke-test/`**
+**Component Library (`games/component-library/`) is THE definitive reference**
 
-Smoke-test demonstrates the complete Activity Hub stack:
-- ✅ Shared CSS pattern (dynamic load from identity-shell)
-- ✅ TypeScript frontend
-- ✅ activity-hub-common library for auth
-- ✅ PostgreSQL for persistent data
-- ✅ Redis for ephemeral state + pub/sub
-- ✅ SSE for real-time updates
-- ✅ URL parameter parsing (userId, userName, token)
-- ✅ Activity Hub CSS classes (.ah-*)
+Component Library is a living style guide that showcases:
+- ✅ **ALL Activity Hub CSS classes** with live examples
+- ✅ **Zero app-specific CSS** - uses ONLY shared CSS
+- ✅ **Zero inline styles** - everything uses `.ah-*` classes
+- ✅ **TypeScript throughout** - no .js files
+- ✅ **Dynamic CSS loading** from identity-shell
+- ✅ **Copy-paste code snippets** for every component
+- ✅ **Interactive demo** - tests PostgreSQL + Redis + SSE
+- ✅ **Admin-only access** via role-based auth
 
-See `games/smoke-test/README.md` for complete documentation.
+**Access**: Port 5010 (requires `admin` role)
+
+**Purpose**:
+- Living documentation for all UI components
+- Reference for correct patterns
+- Proof that complex UIs work with shared CSS only
+- Source of truth for component usage
+
+See `games/component-library/README.md` for complete documentation.
 
 ---
 
@@ -154,7 +140,9 @@ root.render(<App />);
    - `.ah-btn-primary` / `.ah-btn-outline` / `.ah-btn-danger`
    - `.ah-tabs` / `.ah-tab` / `.ah-tab.active`
    - `.ah-banner` / `.ah-banner--error` / `.ah-banner--success`
-   - Full reference: `identity-shell/backend/static/activity-hub.css`
+   - **Full reference with live examples**: Component Library app (port 5010)
+   - **CSS source**: `lib/activity-hub-common/styles/activity-hub-src.css`
+   - **Compiled CSS**: `identity-shell/backend/static/activity-hub.css`
 
 ### Why This Pattern
 
@@ -182,6 +170,45 @@ curl http://localhost:3001/shared/activity-hub.css | head -20
 
 ---
 
+## ⚠️ CRITICAL: Component Library (Living Style Guide)
+
+**Component Library is THE reference for all UI development**
+
+**Access**: `http://192.168.1.29:5010/?userId=X&userName=Admin&token=XXX` (admin role required)
+
+### What It Provides
+
+1. **Live Examples**: Every Activity Hub CSS class with working demos
+2. **Code Snippets**: Copy-paste ready code for each component
+3. **Interactive Demo**: Tests full stack (PostgreSQL + Redis + SSE)
+4. **Proof of Concept**: Shows complex UIs work with shared CSS only
+
+### Component Categories (12 Tabs)
+
+1. **Interactive Demo** - Tests DB/Redis/SSE integration
+2. **Layout & Structure** - Containers, flexbox utilities
+3. **Buttons** - All button variants with states
+4. **Forms** - Inputs, selects, inline forms
+5. **Navigation** - Tabs, app headers
+6. **Cards & Banners** - Content surfaces and notifications
+7. **Data Display** - Tables, lists, grids
+8. **Status & Feedback** - Status indicators, badges
+9. **Loading States** - Spinners, skeletons, animations
+10. **Modals** - Modal dialogs with size variants
+11. **Game Components** - Game boards (3×3, 4×4, 5×5, 6×6)
+12. **Common Patterns** - Reusable component combinations
+
+### Why It Matters
+
+- **Zero app-specific CSS** - Proves shared CSS pattern works
+- **Zero inline styles** - Every example uses `.ah-*` classes
+- **Zero violations** - Passes all pre-commit checks
+- **Single source of truth** - Developers copy from here, not from random apps
+
+**When building UIs**: Check Component Library first. If a component exists, use it. If not, add it to shared CSS.
+
+---
+
 ## ⚠️ CRITICAL: Automated Enforcement
 
 **All new apps MUST follow standards. Enforcement is automated.**
@@ -202,13 +229,27 @@ This automatically creates correct patterns for:
 - Backend with activity-hub-common
 - ESLint configuration
 
-### 2. Pre-commit Hooks
+### 2. Pre-commit Hooks (STRICT ENFORCEMENT)
 
-Installed in `.git/hooks/pre-commit` - checks for:
-- ✅ Dynamic CSS loading in `index.tsx` (ERROR - blocks commit)
-- ✅ Hardcoded colors in inline styles (WARNING)
-- ✅ Excessive inline styles (WARNING)
-- ✅ `.js/.jsx` files in `frontend/src` (ERROR - blocks commit)
+Installed in `.git/hooks/pre-commit` - **ZERO TOLERANCE** for violations:
+
+**ERRORS (block commit)**:
+- ❌ App-specific CSS files in `games/*/frontend/` (NO EXCEPTIONS)
+- ❌ CSS imports in TypeScript files (`import './App.css'`)
+- ❌ Missing Activity Hub CSS loading in `index.tsx`
+- ❌ `.js/.jsx` files in `frontend/src` (must be `.tsx`)
+- ❌ `localhost` in SQL migration URLs (use `{host}` placeholder)
+
+**WARNINGS (allowed but discouraged)**:
+- ⚠️  Hardcoded colors in inline styles
+- ⚠️  Excessive inline styles (> 3 declarations)
+
+**Setup**:
+```bash
+./scripts/setup-git-hooks.sh
+```
+
+**If you need new styles**: Add them to `lib/activity-hub-common/styles/activity-hub-src.css`, NOT to app-specific CSS files.
 
 ### 3. ESLint Plugin
 
@@ -336,11 +377,13 @@ curl http://localhost:4XXX/api/config
 
 ## Getting Help
 
-1. **Check reference implementation**: `games/smoke-test/`
+1. **Check Component Library**: `games/component-library/` - Live examples of ALL components
 2. **Read relevant doc**: See Documentation Index above
 3. **Search codebase**: Look for similar patterns in existing apps
 4. **Check lessons learned**: `docs/LESSONS-LEARNED.md`
 5. **Review roadmap**: `docs/ROADMAP.md` for planned features
+
+**For UI/CSS questions**: Access Component Library app (port 5010, requires admin role)
 
 ---
 
@@ -361,7 +404,7 @@ pub-games-v3/
 │   ├── LESSONS-LEARNED.md
 │   └── ROADMAP.md
 ├── games/
-│   ├── smoke-test/                # Reference implementation (COPY THIS)
+│   ├── component-library/         # Reference implementation & living style guide
 │   ├── tic-tac-toe/
 │   ├── dots/
 │   └── {your-app}/
