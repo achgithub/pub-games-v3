@@ -10,6 +10,7 @@ const AVAILABLE_ROLES = [
   { id: 'super_user', label: 'Super User', color: '#FF9800' },
   { id: 'game_manager', label: 'Game Manager', color: '#4CAF50' },
   { id: 'quiz_master', label: 'Quiz Master', color: '#E91E63' },
+  { id: 'admin', label: 'Admin', color: '#F44336' },
 ];
 
 interface User {
