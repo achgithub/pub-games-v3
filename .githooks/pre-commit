@@ -84,14 +84,14 @@ fi
 # Check 4b: No app-specific CSS files (must use shared CSS only)
 echo ""
 echo "Checking for app-specific CSS files..."
-APP_CSS_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E 'games/.*/frontend/.*\.css$' | grep -v 'games/component-library/' || true)
+APP_CSS_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E 'games/.*/frontend/.*\.css$' || true)
 if [ ! -z "$APP_CSS_FILES" ]; then
     echo -e "${RED}❌ ERROR: Found app-specific CSS files (use shared Activity Hub CSS only):${NC}"
     echo "$APP_CSS_FILES"
     echo -e "${YELLOW}   Apps must use ONLY shared CSS from identity-shell${NC}"
     echo -e "${YELLOW}   Loaded dynamically via: http://\${window.location.hostname}:3001/shared/activity-hub.css${NC}"
     echo -e "${YELLOW}   Use Activity Hub classes (.ah-*) instead of custom CSS${NC}"
-    echo -e "${YELLOW}   Note: component-library is exempt (dev tool needs showcase styles)${NC}"
+    echo -e "${YELLOW}   If you need new styles, add them to lib/activity-hub-common/styles/activity-hub-src.css${NC}"
     ERRORS=$((ERRORS + 1))
 fi
 
@@ -99,18 +99,13 @@ fi
 echo ""
 echo "Checking for CSS imports in TypeScript..."
 for FILE in $STAGED_FILES; do
-    # Skip component-library (dev tool exception)
-    if [[ $FILE == *"component-library"* ]]; then
-        continue
-    fi
-
     CSS_IMPORTS=$(grep -n "import.*\.css" "$FILE" 2>/dev/null || true)
     if [ ! -z "$CSS_IMPORTS" ]; then
         echo -e "${RED}❌ ERROR: $FILE imports CSS files${NC}"
         echo "$CSS_IMPORTS"
         echo -e "${YELLOW}   Remove CSS imports - use Activity Hub classes (.ah-*) only${NC}"
         echo -e "${YELLOW}   Shared CSS loaded automatically in index.tsx${NC}"
-        echo -e "${YELLOW}   Note: component-library is exempt (dev tool needs showcase styles)${NC}"
+        echo -e "${YELLOW}   If you need new styles, add them to lib/activity-hub-common/styles/activity-hub-src.css${NC}"
         ERRORS=$((ERRORS + 1))
     fi
 done

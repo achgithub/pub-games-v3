@@ -644,6 +644,120 @@
     @apply opacity-50 cursor-not-allowed;
   }
 
+  /* ── Component Library Showcase Styles ───────────────────── */
+  /* Used by component-library app for displaying examples */
+
+  .component-section {
+    @apply mb-8;
+  }
+
+  .component-demo {
+    @apply p-5 border border-stone-200 rounded-lg my-4 bg-stone-50;
+  }
+
+  .component-header {
+    @apply mb-4;
+  }
+
+  .component-name {
+    @apply text-xl font-semibold text-stone-900;
+  }
+
+  .component-class {
+    @apply font-mono text-sm text-brand-600 bg-white px-2 py-0.5 rounded ml-2;
+  }
+
+  .component-purpose {
+    @apply text-stone-600 my-2;
+  }
+
+  .component-preview {
+    @apply p-5 bg-white rounded-lg my-4;
+  }
+
+  .component-code {
+    @apply mt-4;
+  }
+
+  .component-code pre {
+    @apply bg-white p-4 rounded-lg overflow-x-auto text-sm leading-relaxed border border-stone-200;
+  }
+
+  .component-code code {
+    @apply font-mono text-stone-900;
+    font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+  }
+
+  .component-variants {
+    @apply mt-4;
+  }
+
+  .component-variants-title {
+    @apply font-semibold mb-2;
+  }
+
+  .variant-item {
+    @apply my-2 p-2 bg-white rounded;
+  }
+
+  .variant-label {
+    @apply text-sm text-stone-600 mb-1;
+  }
+
+  .component-grid {
+    @apply grid gap-5 my-4;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  }
+
+  .grid-item {
+    @apply p-4 bg-white rounded-lg border border-stone-200;
+  }
+
+  /* Interactive demo specific styles */
+  .full-width {
+    @apply w-full;
+  }
+
+  .counter-display {
+    @apply text-center my-5;
+  }
+
+  .counter-value {
+    @apply text-7xl font-bold text-brand-600 my-2;
+  }
+
+  .activity-list {
+    @apply max-h-96 overflow-y-auto;
+  }
+
+  .activity-item {
+    @apply p-3 border-b border-stone-200 flex justify-between items-center;
+  }
+
+  .activity-item:last-child {
+    @apply border-b-0;
+  }
+
+  .activity-user {
+    @apply font-medium;
+  }
+
+  .activity-time {
+    @apply text-sm text-stone-500;
+  }
+
+  .tech-stack-list {
+    @apply list-none p-0 m-0;
+  }
+
+  .tech-stack-list li {
+    @apply py-2 border-b border-stone-200;
+  }
+
+  .tech-stack-list li:last-child {
+    @apply border-b-0;
+  }
+
 }
 
 @tailwind utilities;

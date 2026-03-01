@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import './App.css';
 
-// Component sections (will be created next)
+// Component sections
 import InteractiveDemo from './components/InteractiveDemo';
 import LayoutSection from './components/LayoutSection';
 import ButtonsSection from './components/ButtonsSection';
