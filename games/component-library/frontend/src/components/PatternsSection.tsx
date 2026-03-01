@@ -28,20 +28,15 @@ function PatternsSection({ token }: Props) {
           </p>
           <div className="component-preview">
             <div className="ah-section">
-              <div className="ah-section-header">
+              <div className="ah-section-header" onClick={() => setSectionOpen(!sectionOpen)}>
                 <h3 className="ah-section-title">Section Title</h3>
-                <button
-                  className="ah-section-toggle"
-                  onClick={() => setSectionOpen(!sectionOpen)}
-                >
-                  {sectionOpen ? '−' : '+'}
-                </button>
+                <span className={`ah-section-toggle ${!sectionOpen ? 'collapsed' : ''}`}>▼</span>
               </div>
               {sectionOpen && (
                 <div className="ah-section-content">
                   <p>
-                    This is collapsible content. Click the toggle button to
-                    expand or collapse this section.
+                    This is collapsible content. Click anywhere on the header to
+                    expand or collapse this section. The triangle rotates when collapsed.
                   </p>
                   <button className="ah-btn-primary">Action Button</button>
                 </div>
@@ -50,11 +45,12 @@ function PatternsSection({ token }: Props) {
           </div>
           <div className="component-code">
             <pre><code>{`<div className="ah-section">
-  <div className="ah-section-header">
+  <div className="ah-section-header"
+       onClick={() => setOpen(!open)}>
     <h3 className="ah-section-title">Title</h3>
-    <button className="ah-section-toggle">
-      {open ? '−' : '+'}
-    </button>
+    <span className={\`ah-section-toggle \${!open ? 'collapsed' : ''}\`}>
+      ▼
+    </span>
   </div>
   {open && (
     <div className="ah-section-content">

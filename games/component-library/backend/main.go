@@ -51,13 +51,13 @@ func main() {
 	// Public endpoint
 	r.HandleFunc("/api/config", HandleConfig).Methods("GET")
 
-	// Protected endpoints (require authentication AND admin role)
-	r.Handle("/api/counter", adminOnly(authMiddleware(http.HandlerFunc(HandleGetCounter)))).Methods("GET")
-	r.Handle("/api/counter/increment", adminOnly(authMiddleware(http.HandlerFunc(HandleIncrementCounter)))).Methods("POST")
-	r.Handle("/api/activity", adminOnly(authMiddleware(http.HandlerFunc(HandleGetActivity)))).Methods("GET")
+	// Protected endpoints (require authentication)
+	r.Handle("/api/counter", authMiddleware(http.HandlerFunc(HandleGetCounter))).Methods("GET")
+	r.Handle("/api/counter/increment", authMiddleware(http.HandlerFunc(HandleIncrementCounter))).Methods("POST")
+	r.Handle("/api/activity", authMiddleware(http.HandlerFunc(HandleGetActivity))).Methods("GET")
 
-	// SSE endpoint for real-time counter updates (admin only)
-	r.Handle("/api/events", adminOnly(sseMiddleware(http.HandlerFunc(HandleSSE)))).Methods("GET")
+	// SSE endpoint for real-time counter updates
+	r.Handle("/api/events", sseMiddleware(http.HandlerFunc(HandleSSE))).Methods("GET")
 
 	// Serve static files (React build output)
 	staticDir := "./static"
