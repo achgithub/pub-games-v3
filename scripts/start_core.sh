@@ -1,5 +1,5 @@
 #!/bin/bash
-# Start core services: identity-shell, setup-admin, game-admin, tic-tac-toe, dots, last-man-standing, lms-manager, sweepstakes, sweepstakes-knockout, quiz-player, quiz-master, quiz-display, mobile-test, smoke-test, leaderboard
+# Start core services: identity-shell, setup-admin, game-admin, tic-tac-toe, dots, last-man-standing, lms-manager, sweepstakes, sweepstakes-knockout, quiz-player, quiz-master, quiz-display, mobile-test, component-library, leaderboard
 
 # Check if tmux session exists
 if tmux has-session -t core 2>/dev/null; then
@@ -64,9 +64,9 @@ tmux send-keys -t core:quiz-display "cd ~/pub-games-v3/games/quiz-display/backen
 tmux new-window -t core -n mobile-test
 tmux send-keys -t core:mobile-test "cd ~/pub-games-v3/games/mobile-test/backend && go run *.go" C-m
 
-# Smoke Test (port 5010)
-tmux new-window -t core -n smoke-test
-tmux send-keys -t core:smoke-test "cd ~/pub-games-v3/games/smoke-test/backend && go run *.go" C-m
+# Component Library (port 5010)
+tmux new-window -t core -n component-library
+tmux send-keys -t core:component-library "cd ~/pub-games-v3/games/component-library/backend && go run *.go" C-m
 
 # Leaderboard (port 5030)
 tmux new-window -t core -n leaderboard
@@ -91,7 +91,7 @@ declare -A SERVICES=(
     ["quiz-master"]="5080"
     ["quiz-display"]="5081"
     ["mobile-test"]="4061"
-    ["smoke-test"]="5010"
+    ["component-library"]="5010"
     ["leaderboard"]="5030"
 )
 
