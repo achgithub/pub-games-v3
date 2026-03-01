@@ -115,7 +115,7 @@ function ButtonsSection({ token }: Props) {
   ← Lobby
 </button>`}</code></pre>
           </div>
-          <p className="component-purpose" style={{ marginTop: '10px' }}>
+          <p className="component-purpose">
             Used in app headers to return to main lobby
           </p>
         </div>

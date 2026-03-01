@@ -78,7 +78,7 @@ function PatternsSection({ token }: Props) {
                 <h2>Game Name</h2>
                 <p className="ah-meta">Created: 2026-03-01 | Status: Active</p>
               </div>
-              <div className="ah-flex ah-flex-between" style={{ marginTop: '20px' }}>
+              <div className="ah-flex ah-flex-between">
                 <button className="ah-btn-primary">Start Game</button>
                 <button className="ah-btn-danger">Delete</button>
               </div>
@@ -158,10 +158,10 @@ function PatternsSection({ token }: Props) {
           </p>
           <div className="component-preview">
             <div className="ah-card">
-              <div className="ah-flex ah-flex-col ah-flex-center" style={{ padding: '40px 20px' }}>
-                <div style={{ fontSize: '48px', marginBottom: '15px' }}>📭</div>
+              <div className="ah-flex ah-flex-col ah-flex-center">
+                <h1>📭</h1>
                 <h3>No Items Yet</h3>
-                <p className="ah-meta" style={{ marginBottom: '20px' }}>
+                <p className="ah-meta">
                   Get started by creating your first item.
                 </p>
                 <button className="ah-btn-primary">Create First Item</button>
@@ -171,7 +171,7 @@ function PatternsSection({ token }: Props) {
           <div className="component-code">
             <pre><code>{`<div className="ah-card">
   <div className="ah-flex ah-flex-col ah-flex-center">
-    <div style={{fontSize: '48px'}}>📭</div>
+    <h1>📭</h1>
     <h3>No Items Yet</h3>
     <p className="ah-meta">Message here</p>
     <button className="ah-btn-primary">

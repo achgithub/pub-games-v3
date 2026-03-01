@@ -47,7 +47,7 @@ function NavigationSection({ token }: Props) {
                 Tab 3
               </button>
             </div>
-            <div className="ah-card" style={{ marginTop: '20px' }}>
+            <div className="ah-card">
               <p>Content for {activeTab}</p>
             </div>
           </div>

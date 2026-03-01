@@ -25,18 +25,18 @@ function LoadingSection({ token }: Props) {
             Loading spinner with size variants
           </p>
           <div className="component-preview">
-            <div style={{ display: 'flex', gap: '30px', alignItems: 'center' }}>
-              <div>
+            <div className="ah-flex ah-flex-center">
+              <div className="ah-flex ah-flex-col ah-flex-center">
                 <div className="ah-spinner ah-spinner--small"></div>
-                <p className="ah-meta" style={{ textAlign: 'center', marginTop: '10px' }}>Small</p>
+                <p className="ah-meta">Small</p>
               </div>
-              <div>
+              <div className="ah-flex ah-flex-col ah-flex-center">
                 <div className="ah-spinner"></div>
-                <p className="ah-meta" style={{ textAlign: 'center', marginTop: '10px' }}>Default</p>
+                <p className="ah-meta">Default</p>
               </div>
-              <div>
+              <div className="ah-flex ah-flex-col ah-flex-center">
                 <div className="ah-spinner ah-spinner--large"></div>
-                <p className="ah-meta" style={{ textAlign: 'center', marginTop: '10px' }}>Large</p>
+                <p className="ah-meta">Large</p>
               </div>
             </div>
           </div>
@@ -84,15 +84,13 @@ function LoadingSection({ token }: Props) {
             Placeholder elements for loading content
           </p>
           <div className="component-preview">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+            <div className="ah-flex ah-flex-col">
               <div className="ah-skeleton ah-skeleton--title"></div>
               <div className="ah-skeleton ah-skeleton--text"></div>
               <div className="ah-skeleton ah-skeleton--text"></div>
-              <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+              <div className="ah-flex ah-flex-center">
                 <div className="ah-skeleton ah-skeleton--circle"></div>
-                <div style={{ flex: 1 }}>
-                  <div className="ah-skeleton ah-skeleton--text"></div>
-                </div>
+                <div className="ah-skeleton ah-skeleton--text"></div>
               </div>
             </div>
           </div>
@@ -114,7 +112,7 @@ function LoadingSection({ token }: Props) {
             Utility animation classes for transitions
           </p>
           <div className="component-preview">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+            <div className="ah-flex ah-flex-col">
               <div className="ah-card ah-pulse">
                 <p>.ah-pulse - Pulsing animation</p>
               </div>

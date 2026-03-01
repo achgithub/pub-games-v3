@@ -25,8 +25,10 @@ function LayoutSection({ token }: Props) {
             Main content container with responsive max-width and padding
           </p>
           <div className="component-preview">
-            <div className="ah-container" style={{ background: '#e3f2fd', padding: '20px' }}>
-              Default container (max-width: 1200px)
+            <div className="ah-container">
+              <div className="ah-card">
+                Default container (max-width: 1200px)
+              </div>
             </div>
           </div>
           <div className="component-code">
@@ -38,14 +40,18 @@ function LayoutSection({ token }: Props) {
             <h4 className="component-variants-title">Variants:</h4>
             <div className="variant-item">
               <div className="variant-label">.ah-container--narrow</div>
-              <div className="ah-container--narrow" style={{ background: '#e8f5e9', padding: '15px' }}>
-                Narrow container (max-width: 800px)
+              <div className="ah-container--narrow">
+                <div className="ah-card">
+                  Narrow container (max-width: 800px)
+                </div>
               </div>
             </div>
             <div className="variant-item">
               <div className="variant-label">.ah-container--wide</div>
-              <div className="ah-container--wide" style={{ background: '#fff3e0', padding: '15px' }}>
-                Wide container (max-width: 1400px)
+              <div className="ah-container--wide">
+                <div className="ah-card">
+                  Wide container (max-width: 1400px)
+                </div>
               </div>
             </div>
           </div>
@@ -63,8 +69,10 @@ function LayoutSection({ token }: Props) {
             Flexbox utility for centering content vertically
           </p>
           <div className="component-preview">
-            <div className="ah-flex ah-flex-center" style={{ background: '#f3e5f5', padding: '20px', minHeight: '100px' }}>
-              <div>Centered vertically</div>
+            <div className="ah-card">
+              <div className="ah-flex ah-flex-center">
+                <div>Centered vertically</div>
+              </div>
             </div>
           </div>
           <div className="component-code">
@@ -85,9 +93,11 @@ function LayoutSection({ token }: Props) {
             Flexbox utility for space-between layout
           </p>
           <div className="component-preview">
-            <div className="ah-flex ah-flex-between" style={{ background: '#e0f2f1', padding: '20px' }}>
-              <div>Left content</div>
-              <div>Right content</div>
+            <div className="ah-card">
+              <div className="ah-flex ah-flex-between">
+                <div>Left content</div>
+                <div>Right content</div>
+              </div>
             </div>
           </div>
           <div className="component-code">
@@ -109,10 +119,12 @@ function LayoutSection({ token }: Props) {
             Flexbox column layout with optional centering
           </p>
           <div className="component-preview">
-            <div className="ah-flex ah-flex-col ah-flex-center" style={{ background: '#fce4ec', padding: '20px', minHeight: '150px' }}>
-              <div>Item 1</div>
-              <div>Item 2</div>
-              <div>Item 3</div>
+            <div className="ah-card">
+              <div className="ah-flex ah-flex-col ah-flex-center">
+                <div>Item 1</div>
+                <div>Item 2</div>
+                <div>Item 3</div>
+              </div>
             </div>
           </div>
           <div className="component-code">

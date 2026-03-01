@@ -25,7 +25,7 @@ function StatusSection({ token }: Props) {
             Status pills for different states
           </p>
           <div className="component-preview">
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <div className="ah-flex ah-flex-wrap">
               <span className="ah-status ah-status--active">Active</span>
               <span className="ah-status ah-status--waiting">Waiting</span>
               <span className="ah-status ah-status--disabled">Disabled</span>
@@ -56,7 +56,7 @@ function StatusSection({ token }: Props) {
             Small labels for counts, notifications, and categories
           </p>
           <div className="component-preview">
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <div className="ah-flex ah-flex-wrap">
               <span className="ah-badge ah-badge--success">Success</span>
               <span className="ah-badge ah-badge--error">Error</span>
               <span className="ah-badge ah-badge--warning">Warning</span>
@@ -85,7 +85,7 @@ function StatusSection({ token }: Props) {
             Player status indicators for games
           </p>
           <div className="component-preview">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div className="ah-flex ah-flex-col">
               <div className="ah-player ah-player--current">Current Player (You)</div>
               <div className="ah-player ah-player--opponent">Opponent</div>
               <div className="ah-player ah-player--winner">Winner</div>
@@ -112,20 +112,20 @@ function StatusSection({ token }: Props) {
             Small colored dots for online/offline status
           </p>
           <div className="component-preview">
-            <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div className="ah-flex ah-flex-wrap">
+              <div className="ah-flex ah-flex-center">
                 <span className="ah-status-dot ah-status-dot--online"></span>
                 Online
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div className="ah-flex ah-flex-center">
                 <span className="ah-status-dot ah-status-dot--offline"></span>
                 Offline
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div className="ah-flex ah-flex-center">
                 <span className="ah-status-dot ah-status-dot--away"></span>
                 Away
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div className="ah-flex ah-flex-center">
                 <span className="ah-status-dot ah-status-dot--busy"></span>
                 Busy
               </div>
