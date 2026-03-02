@@ -2,9 +2,24 @@
 
 ## Recent Updates (2026-03-02)
 
-**CSS Migration Complete for Two Apps:**
+**CSS Migration Complete for Four Apps:**
 - ✅ **sweepstakes-knockout** - Migrated from app-specific CSS to Activity Hub shared CSS
 - ✅ **lms-manager** - Migrated from app-specific CSS to Activity Hub shared CSS
+- ✅ **dots** - Migrated to shared CSS with `dots-board.css` pattern
+- ✅ **tic-tac-toe** - Migrated to shared CSS with `tictactoe-board.css` pattern
+
+**NEW: `*-board.css` Pattern Established:**
+- Game board rendering CSS allowed in `*-board.css` files (ONLY exception)
+- All UI elements MUST use Activity Hub shared CSS classes
+- Removed `index.css` exception (was a loophole for app-specific CSS)
+- Pre-commit hook strictly enforces: ONLY `*-board.css` allowed
+- Activity Hub CSS provides all resets (box-sizing, body styles)
+
+**Key Learnings:**
+- Frontend/backend type mismatches cause silent failures (dots `winnerId` bug)
+- Mobile grid alignment requires precise margin math (dots v-line drift fix)
+- `ah-flex-center` vs `ah-flex-center-justify` for full centering
+- Check twice before commits to avoid JSX syntax errors
 
 **Shared CSS Enhancements:**
 - Added `.ah-player-grid`, `.ah-player-grid-item`, `.ah-filter-box` utility classes
@@ -46,9 +61,12 @@
 - Games (4xxx): tic-tac-toe: 4001, dots: 4011, sweepstakes: 4031, lms: 4021, quiz-player: 4041, spoof: 4051, mobile-test: 4061
 - Admin/Support (5xxx): component-library: 5010, setup-admin: 5020, leaderboard: 5030, display-admin: 5050, display-runtime: 5051, game-admin: 5070, quiz-master: 5080, quiz-display: 5081
 
+**CSS Migration Status:**
+- ✅ Completed: sweepstakes-knockout, lms-manager, dots, tic-tac-toe, component-library
+- ⏳ Remaining: quiz-player, quiz-master, quiz-display, mobile-test (4 apps)
+
 **Known Issues:**
 - SSE presence requires manual refresh after impersonation (acceptable for debugging tool)
-- 4 apps need CSS migration: quiz-player, quiz-master, quiz-display, mobile-test
 
 ---
 
@@ -235,8 +253,11 @@ This automatically creates correct patterns for:
 Installed in `.git/hooks/pre-commit` - **ZERO TOLERANCE** for violations:
 
 **ERRORS (block commit)**:
-- ❌ App-specific CSS files in `games/*/frontend/` (NO EXCEPTIONS)
-- ❌ CSS imports in TypeScript files (`import './App.css'`)
+- ❌ App-specific CSS files in `games/*/frontend/`
+  - **ONLY exception**: `*-board.css` for game board rendering
+  - ❌ No `index.css` (use Activity Hub CSS resets)
+  - ❌ No `App.css`, `styles.css`, or any other CSS files
+- ❌ CSS imports in TypeScript files (except `*-board.css` in `index.tsx`)
 - ❌ Missing Activity Hub CSS loading in `index.tsx`
 - ❌ `.js/.jsx` files in `frontend/src` (must be `.tsx`)
 - ❌ `localhost` in SQL migration URLs (use `{host}` placeholder)
@@ -250,7 +271,9 @@ Installed in `.git/hooks/pre-commit` - **ZERO TOLERANCE** for violations:
 ./scripts/setup-git-hooks.sh
 ```
 
-**If you need new styles**: Add them to `lib/activity-hub-common/styles/activity-hub-src.css`, NOT to app-specific CSS files.
+**If you need new styles**:
+- Game board rendering: Add to `*-board.css` (dots, lines, cells, game-specific layout)
+- UI elements: Add to `lib/activity-hub-common/styles/activity-hub-src.css` (buttons, cards, shared patterns)
 
 ### 3. ESLint Plugin
 

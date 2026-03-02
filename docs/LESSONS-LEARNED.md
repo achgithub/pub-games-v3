@@ -172,7 +172,7 @@ See `docs/MIGRATION-TO-ACTIVITY-HUB-CSS.md` for migration guide.
 
 ## Pre-commit Hooks
 
-**Lesson**: Enforcement mechanisms prevent technical debt
+**Lesson**: Enforcement mechanisms prevent technical debt, but need iteration to close loopholes
 
 **What happened**: Created sweepstakes-knockout by copying smoke-test. Pre-commit checks passed but app had wrong patterns (missing CSS loading, inline styles, etc.).
 
@@ -180,7 +180,43 @@ See `docs/MIGRATION-TO-ACTIVITY-HUB-CSS.md` for migration guide.
 
 **Solution**: Strengthened pre-commit hooks, added ESLint plugin, created app template generator.
 
-**Why it matters**: Automated enforcement is more reliable than manual code review. Catching issues before commit is cheaper than fixing them later.
+**Loophole discovered**: `index.css` was allowed without content restrictions, creating backdoor for app-specific CSS.
+
+**Final solution**:
+- Removed `index.css` exception entirely (Activity Hub CSS has all resets)
+- ONLY exception: `*-board.css` for game board rendering
+- Clear boundary: board internals vs UI elements
+- Pre-commit hook validates naming pattern only
+
+**Why it matters**: Automated enforcement is more reliable than manual code review. Catching issues before commit is cheaper than fixing them later. But enforcement rules need review - broad exceptions become loopholes.
+
+---
+
+## Frontend/Backend Type Safety
+
+**Lesson**: Type mismatches between frontend and backend cause silent failures
+
+**What happened**: Dots game showed "You Lost" to both players after game ended.
+
+**Problem**:
+- Backend sends: `winnerId: "player@email.com"` (string)
+- Frontend expected: `winner: 1` or `2` (number)
+- Comparison `game.winner === playerNum` always returned false
+- No compile-time errors, no runtime errors - just wrong behavior
+
+**Solution**:
+1. Review backend response format before writing frontend types
+2. Match TypeScript interfaces EXACTLY to backend JSON
+3. Test both win/loss scenarios to catch logic bugs
+4. Consider using generated types from backend schemas
+
+**Why it matters**: TypeScript only provides type safety within the frontend. Backend responses are runtime data - if your types don't match reality, you get silent failures that are hard to debug.
+
+**Similar issues to watch for**:
+- Number vs string IDs
+- `null` vs `0` for "no value"
+- Date formats (timestamp vs ISO string)
+- Arrays vs single objects
 
 ---
 
