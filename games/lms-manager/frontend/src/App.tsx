@@ -1594,7 +1594,7 @@ function App() {
               </div>
 
               {!collapsedCards['participants'] && (
-                <>
+                <div className="ah-section-content">
                   {showAddPlayers && (
                     <div className="ah-filter-box" style={{ marginBottom: '1rem' }}>
                       <p className="ah-meta" style={{ marginBottom: '0.5rem' }}>Select players to add:</p>
@@ -1614,7 +1614,7 @@ function App() {
                             />
                             <span>{player.name}</span>
                           </label>
-                        )))}
+                        ))}
                       </div>
                       <button
                         className="ah-btn-primary"
@@ -1656,7 +1656,7 @@ function App() {
                       </div>
                     ))}
                   </div>
-                </>
+                </div>
               )}
             </div>
 
