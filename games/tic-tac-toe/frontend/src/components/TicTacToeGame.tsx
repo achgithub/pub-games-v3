@@ -268,7 +268,6 @@ const TicTacToeGame: React.FC<TicTacToeGameProps> = ({ gameId, user, token }) =>
           </div>
         </div>
       )}
-      </div>
     </>
   );
 };
