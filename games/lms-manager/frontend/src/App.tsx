@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import './App.css';
 
 const API_BASE = window.location.origin;
 
@@ -1147,7 +1146,7 @@ function App() {
 
               {!collapsedCards['players'] && (
               <>
-              <div className="inline-form">
+              <div className="ah-inline-form">
                 <input
                   type="text"
                   className="ah-input"
@@ -1161,16 +1160,16 @@ function App() {
                 </button>
               </div>
 
-              <div className="player-list" style={{ marginTop: '1rem' }}>
+              <div className="ah-list" style={{ marginTop: '1rem' }}>
                 {players.length === 0 && (
                   <p className="ah-meta">No players yet. Add one to get started.</p>
                 )}
 
                 {players.map((player) => (
-                  <div key={player.id} className="player-item">
+                  <div key={player.id} className="ah-list-item">
                     <strong>{player.name}</strong>
                     <button
-                      className="btn-danger-small"
+                      className="ah-btn-danger-sm"
                       onClick={() => handleDeletePlayer(player.id)}
                     >
                       Delete
@@ -1192,7 +1191,7 @@ function App() {
 
               {!collapsedCards['groups'] && (
               <>
-              <div className="inline-form">
+              <div className="ah-inline-form">
                 <input
                   type="text"
                   className="ah-input"
@@ -1206,15 +1205,15 @@ function App() {
                 </button>
               </div>
 
-              <div className="group-list" style={{ marginTop: '1rem' }}>
+              <div className="ah-list" style={{ marginTop: '1rem' }}>
                 {groups.length === 0 && (
                   <p className="ah-meta">No groups yet. Create one to get started.</p>
                 )}
 
                 {groups.map((group) => (
-                  <div key={group.id} className="group-item">
+                  <div key={group.id} className="ah-card">
                     <div
-                      className="group-item-header"
+                      className="ah-flex-between" style={{ cursor: 'pointer' }}
                       onClick={() => handleToggleGroup(group.id)}
                     >
                       <div>
@@ -1222,7 +1221,7 @@ function App() {
                         <p className="ah-meta">{group.teamCount} teams</p>
                       </div>
                       <button
-                        className="btn-danger-small"
+                        className="ah-btn-danger-sm"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleDeleteGroup(group.id);
@@ -1233,8 +1232,8 @@ function App() {
                     </div>
 
                     {expandedGroup === group.id && (
-                      <div className="teams-list">
-                        <div className="inline-form">
+                      <div className="ah-list" style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #E7E5E4' }}>
+                        <div className="ah-inline-form">
                           <input
                             type="text"
                             className="ah-input"
@@ -1254,10 +1253,10 @@ function App() {
                         </div>
 
                         {groupTeams[group.id]?.map((team) => (
-                          <div key={team.id} className="team-item">
+                          <div key={team.id} className="ah-flex-between" style={{ padding: '0.5rem', background: '#FAFAF9', borderRadius: '4px' }}>
                             <strong>{team.name}</strong>
                             <button
-                              className="btn-danger-small"
+                              className="ah-btn-danger-sm"
                               onClick={() => handleDeleteTeam(team.id, group.id)}
                             >
                               Delete
@@ -1296,14 +1295,14 @@ function App() {
                 <p className="ah-meta">No games yet. Create one below to get started.</p>
               )}
 
-              <div className="games-list">
+              <div className="ah-list" style={{ gap: '0.75rem' }}>
                 {games.map((game) => (
                   <div
                     key={game.id}
-                    className="game-item"
+                    className="ah-card" style={{ cursor: 'pointer', padding: '1.25rem' }}
                     onClick={() => handleViewGame(game.id)}
                   >
-                    <div className="game-item-main">
+                    <div className="ah-flex-between" style={{ alignItems: 'flex-start' }}>
                       <div>
                         <strong>{game.name}</strong>
                         <p className="ah-meta">
@@ -1312,8 +1311,8 @@ function App() {
                         </p>
                       </div>
                       <span
-                        className={`game-status ${
-                          game.status === 'active' ? 'status-active' : 'status-completed'
+                        className={`ah-status ${
+                          game.status === 'active' ? 'ah-status--active' : 'ah-status--complete'
                         }`}
                       >
                         {game.status}
@@ -1353,7 +1352,7 @@ function App() {
 
               {groups.length > 0 && players.length > 0 && (
                 <div>
-                  <div className="inline-form">
+                  <div className="ah-inline-form">
                     <input
                       type="text"
                       className="ah-input"
@@ -1412,7 +1411,17 @@ function App() {
                       </div>
                     </div>
 
-                    <div className="player-selection-grid">
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                      gap: '0.5rem',
+                      padding: '0.5rem',
+                      background: '#FAFAF9',
+                      borderRadius: '8px',
+                      border: '1px solid #E7E5E4',
+                      maxHeight: '300px',
+                      overflowY: 'auto'
+                    }}>
                       {players.filter((player) => {
                         // Text search filter
                         const matchesSearch = !gameCreationPlayerSearch ||
@@ -1424,7 +1433,14 @@ function App() {
 
                         return matchesSearch && matchesSelected;
                       }).map((player) => (
-                        <label key={player.id} className="player-checkbox-label">
+                        <label key={player.id} style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          padding: '0.5rem',
+                          cursor: 'pointer',
+                          borderRadius: '4px'
+                        }}>
                           <input
                             type="checkbox"
                             checked={selectedPlayerNames.includes(player.name)}
@@ -1437,7 +1453,14 @@ function App() {
                   </div>
 
                   <div style={{ marginTop: '1rem' }}>
-                    <label className="postpone-checkbox-label">
+                    <label className="ah-flex-center" style={{
+                      gap: '0.5rem',
+                      padding: '0.75rem',
+                      background: '#FAFAF9',
+                      border: '1px solid #E7E5E4',
+                      borderRadius: '6px',
+                      cursor: 'pointer'
+                    }}>
                       <input
                         type="checkbox"
                         checked={postponeAsWin}
@@ -1549,8 +1572,8 @@ function App() {
                 <p className="ah-meta">
                   {gameDetail.game.groupName} •{' '}
                   <span
-                    className={`game-status ${
-                      gameDetail.game.status === 'active' ? 'status-active' : 'status-completed'
+                    className={`ah-status ${
+                      gameDetail.game.status === 'active' ? 'ah-status--active' : 'ah-status--complete'
                     }`}
                   >
                     {gameDetail.game.status}
@@ -1596,9 +1619,26 @@ function App() {
               {showAddPlayers && (
                 <div style={{ marginBottom: '1rem', padding: '1rem', background: '#FAFAF9', borderRadius: '8px' }}>
                   <p className="ah-meta" style={{ marginBottom: '0.5rem' }}>Select players to add:</p>
-                  <div className="player-selection-grid" style={{ maxHeight: '200px' }}>
+                  <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                      gap: '0.5rem',
+                      padding: '0.5rem',
+                      background: '#FAFAF9',
+                      borderRadius: '8px',
+                      border: '1px solid #E7E5E4',
+                      maxHeight: '300px',
+                      overflowY: 'auto'
+                    }} style={{ maxHeight: '200px' }}>
                     {players.filter(p => !gameDetail.participants.some(part => part.playerName === p.name)).map((player) => (
-                      <label key={player.id} className="player-checkbox-label">
+                      <label key={player.id} style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          padding: '0.5rem',
+                          cursor: 'pointer',
+                          borderRadius: '4px'
+                        }}>
                         <input
                           type="checkbox"
                           checked={playersToAdd.includes(player.name)}
@@ -1624,17 +1664,32 @@ function App() {
                 </div>
               )}
 
-              <div className="participants-grid">
+              <div className="ah-grid-auto" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }>
                 {gameDetail.participants.map((participant) => (
                   <div
                     key={participant.id}
-                    className={`participant-badge ${
-                      participant.isActive ? 'participant-active' : 'participant-eliminated'
-                    }`}
+                    className="ah-flex-between"
+                    style={{
+                      padding: '0.5rem 0.75rem',
+                      borderRadius: '6px',
+                      fontSize: '0.875rem',
+                      fontWeight: 500,
+                      ...(participant.isActive
+                        ? { background: '#D1FAE5', color: '#065F46' }
+                        : { background: '#FEE2E2', color: '#991B1B', opacity: 0.7 })
+                    }}
                   >
                     <span>{participant.playerName}</span>
                     {!participant.isActive && participant.eliminatedInRound && (
-                      <span className="elimination-round">R{participant.eliminatedInRound}</span>
+                      <span style={{
+                        fontSize: '0.75rem',
+                        background: '#991B1B',
+                        color: 'white',
+                        padding: '0.125rem 0.5rem',
+                        borderRadius: '4px'
+                      }}>
+                        R{participant.eliminatedInRound}
+                      </span>
                     )}
                   </div>
                 ))}
@@ -1699,7 +1754,7 @@ function App() {
                             </div>
 
                             {/* Team assignment for each active player */}
-                            <div className="picks-list">
+                            <div className="ah-list" style={{ gap: '0.75rem' }}>
                               {activePlayers.filter((participant) => {
                                 const existingPick = picks.find(
                                   (p) => p.playerName === participant.playerName
@@ -1720,7 +1775,13 @@ function App() {
                                 );
 
                                 return (
-                                  <div key={participant.id} className="pick-row">
+                                  <div key={participant.id} className="ah-flex-between" style={{
+                      padding: '0.75rem',
+                      background: '#FAFAF9',
+                      border: '1px solid #E7E5E4',
+                      borderRadius: '6px',
+                      gap: '1rem'
+                    }}>
                                     <strong>{participant.playerName}</strong>
                                     <select
                                       className="ah-select"
@@ -1781,7 +1842,7 @@ function App() {
                                   Click result for each team. All players who picked that team will get the same result.
                                 </p>
 
-                                <div className="team-results-list">
+                                <div className="ah-list" style={{ gap: '1rem' }}>
                                   {(() => {
                                     // Group picks by team
                                     const teamGroups: Record<string, Pick[]> = {};
@@ -1806,34 +1867,90 @@ function App() {
                                       };
 
                                       return (
-                                        <div key={teamName} className="team-result-row">
+                                        <div key={teamName} className="ah-card ah-flex-col" style={{ gap: '1rem' }}>
                                           <div>
                                             <strong style={{ fontSize: '1.125rem' }}>{teamName}</strong>
                                             <p className="ah-meta">
                                               {teamPicks.map(p => p.playerName).join(', ')}
                                             </p>
                                           </div>
-                                          <div className="result-buttons">
+                                          <div className="ah-flex-wrap" style={{ gap: '0.5rem' }}>
                                             <button
-                                              className={`result-btn result-btn-win ${currentResult === 'win' ? 'active' : ''}`}
+                                              style={{
+                                                flex: 1,
+                                                minWidth: '100px',
+                                                padding: '0.75rem 1rem',
+                                                fontSize: '0.875rem',
+                                                fontWeight: 600,
+                                                border: '2px solid',
+                                                borderRadius: '6px',
+                                                cursor: 'pointer',
+                                                textTransform: 'uppercase',
+                                                ...(currentResult === 'win'
+                                                  ? { background: '#10B981', borderColor: '#10B981', color: '#FFF' }
+                                                  : { background: '#FFF', borderColor: '#10B981', color: '#10B981' })
+                                              }}
                                               onClick={() => setTeamResult('win')}
                                             >
                                               Win
                                             </button>
                                             <button
-                                              className={`result-btn result-btn-loss ${currentResult === 'loss' ? 'active' : ''}`}
+                                              style={{
+                                                flex: 1,
+                                                minWidth: '100px',
+                                                padding: '0.75rem 1rem',
+                                                fontSize: '0.875rem',
+                                                fontWeight: 600,
+                                                border: '2px solid',
+                                                borderRadius: '6px',
+                                                cursor: 'pointer',
+                                                textTransform: 'uppercase',
+                                                ...(currentResult === 'loss'
+                                                  ? { background: '#EF4444', borderColor: '#EF4444', color: '#FFF' }
+                                                  : { background: '#FFF', borderColor: '#EF4444', color: '#EF4444' })
+                                              }}
                                               onClick={() => setTeamResult('loss')}
                                             >
                                               Loss
                                             </button>
                                             <button
-                                              className={`result-btn result-btn-loss ${currentResult === 'draw' ? 'active' : ''}`}
+                                              style={{
+                                                flex: 1,
+                                                minWidth: '100px',
+                                                padding: '0.75rem 1rem',
+                                                fontSize: '0.875rem',
+                                                fontWeight: 600,
+                                                border: '2px solid',
+                                                borderRadius: '6px',
+                                                cursor: 'pointer',
+                                                textTransform: 'uppercase',
+                                                ...(currentResult === 'draw'
+                                                  ? { background: '#F59E0B', borderColor: '#F59E0B', color: '#FFF' }
+                                                  : { background: '#FFF', borderColor: '#F59E0B', color: '#F59E0B' })
+                                              }}
                                               onClick={() => setTeamResult('draw')}
                                             >
                                               Draw
                                             </button>
                                             <button
-                                              className={`result-btn ${gameDetail.game.postponeAsWin ? 'result-btn-win' : 'result-btn-loss'} ${currentResult === 'postponed' ? 'active' : ''}`}
+                                              style={{
+                                                flex: 1,
+                                                minWidth: '100px',
+                                                padding: '0.75rem 1rem',
+                                                fontSize: '0.875rem',
+                                                fontWeight: 600,
+                                                border: '2px solid',
+                                                borderRadius: '6px',
+                                                cursor: 'pointer',
+                                                textTransform: 'uppercase',
+                                                ...(currentResult === 'postponed'
+                                                  ? (gameDetail.game.postponeAsWin
+                                                      ? { background: '#10B981', borderColor: '#10B981', color: '#FFF' }
+                                                      : { background: '#EF4444', borderColor: '#EF4444', color: '#FFF' })
+                                                  : (gameDetail.game.postponeAsWin
+                                                      ? { background: '#FFF', borderColor: '#10B981', color: '#10B981' }
+                                                      : { background: '#FFF', borderColor: '#EF4444', color: '#EF4444' }))
+                                              }}
                                               onClick={() => setTeamResult('postponed')}
                                             >
                                               Postponed
@@ -1871,15 +1988,32 @@ function App() {
                               Round complete. Click "Next Round" to continue.
                             </p>
                             {picks.filter(p => p.result).length > 0 && (
-                              <div className="picks-list">
+                              <div className="ah-list" style={{ gap: '0.75rem' }}>
                                 {picks.filter(p => p.result).map((pick) => (
-                                  <div key={pick.id} className="pick-row">
+                                  <div key={pick.id} className="ah-flex-between" style={{
+                      padding: '0.75rem',
+                      background: '#FAFAF9',
+                      border: '1px solid #E7E5E4',
+                      borderRadius: '6px',
+                      gap: '1rem'
+                    }}>
                                     <div>
                                       <strong>{pick.playerName}</strong>
                                       <p className="ah-meta">{pick.teamName || 'No team'}</p>
                                     </div>
                                     <span
-                                      className={`result-badge result-${pick.result}`}
+                                      style={{
+                                        padding: '0.25rem 0.75rem',
+                                        borderRadius: '12px',
+                                        fontSize: '0.75rem',
+                                        fontWeight: 600,
+                                        textTransform: 'uppercase',
+                                        ...(pick.result === 'win' ? { background: '#D1FAE5', color: '#065F46' } :
+                                            pick.result === 'loss' ? { background: '#FEE2E2', color: '#991B1B' } :
+                                            pick.result === 'draw' ? { background: '#FED7AA', color: '#9A3412' } :
+                                            pick.result === 'postponed' ? { background: '#DBEAFE', color: '#1E3A8A' } :
+                                            { background: '#E5E7EB', color: '#6B7280' })
+                                      }}
                                     >
                                       {pick.result}
                                     </span>
