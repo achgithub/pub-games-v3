@@ -6,6 +6,8 @@ interface Props {
 
 function PatternsSection({ token }: Props) {
   const [sectionOpen, setSectionOpen] = useState(true);
+  const [sectionWithButton, setSectionWithButton] = useState(true);
+  const [showAddForm, setShowAddForm] = useState(false);
 
   return (
     <>
@@ -16,35 +18,45 @@ function PatternsSection({ token }: Props) {
         </p>
       </div>
 
-      {/* Collapsible Section */}
+      {/* Collapsible Section - Basic */}
       <div className="component-section">
         <div className="component-demo">
           <div className="component-header">
-            <span className="component-name">Collapsible Section</span>
+            <span className="component-name">Collapsible Section - Basic</span>
             <code className="component-class">.ah-section</code>
           </div>
           <p className="component-purpose">
-            Expandable/collapsible content section with toggle
+            Expandable/collapsible content section with toggle arrow on RIGHT side
           </p>
+
+          {/* Best Practices Banner */}
+          <div className="ah-banner ah-banner--info" style={{ marginBottom: '1rem' }}>
+            <strong>✅ Best Practice:</strong> Arrow must be a <strong>separate element</strong> on the <strong>right side</strong>.
+            Uses <code>.ah-section-header</code> with <code>justify-between</code> to position title left and arrow right.
+          </div>
+
           <div className="component-preview">
-            <div className="ah-section">
+            <div className="ah-card ah-section">
               <div className="ah-section-header" onClick={() => setSectionOpen(!sectionOpen)}>
                 <h3 className="ah-section-title">Section Title</h3>
                 <span className={`ah-section-toggle ${!sectionOpen ? 'collapsed' : ''}`}>▼</span>
               </div>
               {sectionOpen && (
                 <div className="ah-section-content">
-                  <p>
+                  <p className="ah-meta">
                     This is collapsible content. Click anywhere on the header to
-                    expand or collapse this section. The triangle rotates when collapsed.
+                    expand or collapse this section. The triangle rotates 90° when collapsed.
                   </p>
-                  <button className="ah-btn-primary">Action Button</button>
+                  <div className="ah-inline-form">
+                    <input type="text" className="ah-input" placeholder="Add item..." />
+                    <button className="ah-btn-primary">Add</button>
+                  </div>
                 </div>
               )}
             </div>
           </div>
           <div className="component-code">
-            <pre><code>{`<div className="ah-section">
+            <pre><code>{`<div className="ah-card ah-section">
   <div className="ah-section-header"
        onClick={() => setOpen(!open)}>
     <h3 className="ah-section-title">Title</h3>
@@ -58,6 +70,129 @@ function PatternsSection({ token }: Props) {
     </div>
   )}
 </div>`}</code></pre>
+          </div>
+        </div>
+      </div>
+
+      {/* Collapsible Section with Action Button */}
+      <div className="component-section">
+        <div className="component-demo">
+          <div className="component-header">
+            <span className="component-name">Collapsible Section - With Action Button</span>
+          </div>
+          <p className="component-purpose">
+            Collapsible section with action button in header (e.g., "Add Players", "Next Round")
+          </p>
+
+          <div className="component-preview">
+            <div className="ah-card ah-section">
+              <div className="ah-section-header" onClick={() => setSectionWithButton(!sectionWithButton)}>
+                <h3 className="ah-section-title">Participants (3)</h3>
+                <div className="ah-flex-center" style={{ gap: '0.5rem' }}>
+                  {!sectionWithButton && (
+                    <button
+                      className="ah-btn-outline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowAddForm(!showAddForm);
+                      }}
+                      style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
+                    >
+                      {showAddForm ? 'Cancel' : '+ Add Player'}
+                    </button>
+                  )}
+                  <span className={`ah-section-toggle ${!sectionWithButton ? 'collapsed' : ''}`}>▼</span>
+                </div>
+              </div>
+              {sectionWithButton && (
+                <div className="ah-section-content">
+                  {showAddForm && (
+                    <div className="ah-banner ah-banner--info" style={{ marginBottom: '1rem' }}>
+                      Add player form would appear here
+                    </div>
+                  )}
+                  <ul className="ah-list">
+                    <li className="ah-list-item">
+                      <span>Alice</span>
+                      <button className="ah-btn-danger-sm">Remove</button>
+                    </li>
+                    <li className="ah-list-item">
+                      <span>Bob</span>
+                      <button className="ah-btn-danger-sm">Remove</button>
+                    </li>
+                    <li className="ah-list-item">
+                      <span>Charlie</span>
+                      <button className="ah-btn-danger-sm">Remove</button>
+                    </li>
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="component-code">
+            <pre><code>{`<div className="ah-section-header" onClick={toggleSection}>
+  <h3 className="ah-section-title">Participants (3)</h3>
+  <div className="ah-flex-center" style={{ gap: '0.5rem' }}>
+    {!collapsed && (
+      <button
+        className="ah-btn-outline"
+        onClick={(e) => {
+          e.stopPropagation(); // Prevent section toggle
+          handleAction();
+        }}
+      >
+        + Add Player
+      </button>
+    )}
+    <span className={\`ah-section-toggle \${collapsed ? 'collapsed' : ''}\`}>
+      ▼
+    </span>
+  </div>
+</div>`}</code></pre>
+          </div>
+        </div>
+      </div>
+
+      {/* Anti-Pattern Warning */}
+      <div className="component-section">
+        <div className="component-demo">
+          <div className="component-header">
+            <span className="component-name">❌ Anti-Pattern: Arrow Inside Title</span>
+          </div>
+          <p className="component-purpose">
+            <strong style={{ color: '#DC2626' }}>DO NOT DO THIS</strong> - Arrow embedded in title text (wrong!)
+          </p>
+
+          <div className="ah-banner ah-banner--error" style={{ marginBottom: '1rem' }}>
+            <strong>Why this is wrong:</strong>
+            <ul style={{ marginTop: '0.5rem', marginBottom: 0, paddingLeft: '1.5rem' }}>
+              <li>Arrow appears on LEFT side instead of RIGHT</li>
+              <li>Breaks visual consistency across apps</li>
+              <li>Doesn't use proper <code>.ah-section-toggle</code> class</li>
+              <li>Rotation logic mixed into title instead of separate element</li>
+            </ul>
+          </div>
+
+          <div className="component-preview" style={{ opacity: 0.6 }}>
+            <div className="ah-card ah-section">
+              <div className="ah-section-header">
+                <h3 className="ah-section-title">
+                  {sectionOpen ? '▼' : '▶'} Section Title (WRONG!)
+                </h3>
+              </div>
+            </div>
+          </div>
+          <div className="component-code">
+            <pre style={{ background: '#FEE2E2', borderColor: '#DC2626' }}><code>{`❌ WRONG - Don't do this:
+<h3 className="ah-section-title">
+  {collapsed ? '▶' : '▼'} Title
+</h3>
+
+✅ CORRECT - Do this:
+<h3 className="ah-section-title">Title</h3>
+<span className={\`ah-section-toggle \${collapsed ? 'collapsed' : ''}\`}>
+  ▼
+</span>`}</code></pre>
           </div>
         </div>
       </div>
