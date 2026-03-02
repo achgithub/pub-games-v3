@@ -1,1 +1,2 @@
 Pre-commit hook updated 2026-03-02: Now checks entire app being worked on
+Pre-commit hook updated 2026-03-02: Inline styles now BLOCK commits (zero tolerance)

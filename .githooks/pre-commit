@@ -76,19 +76,23 @@ for FILE in $STAGED_FILES; do
     fi
 done
 
-# Check 3: Look for common inline style patterns
+# Check 3: Block ALL inline styles (zero tolerance)
 echo ""
-echo "Checking for inline styles that should use Activity Hub classes..."
+echo "Checking for inline styles..."
 for FILE in $STAGED_FILES; do
     # Check for style={{ patterns
     INLINE_STYLES=$(grep -n 'style={{' "$FILE" 2>/dev/null || true)
     if [ ! -z "$INLINE_STYLES" ]; then
         STYLE_COUNT=$(echo "$INLINE_STYLES" | wc -l | xargs)
-        if [ "$STYLE_COUNT" -gt 3 ]; then
-            echo -e "${YELLOW}⚠️  WARNING: $FILE has $STYLE_COUNT inline style declarations${NC}"
-            echo -e "${YELLOW}   Consider using Activity Hub classes (.ah-*) instead${NC}"
-            WARNINGS=$((WARNINGS + 1))
+        echo -e "${RED}❌ ERROR: $FILE has $STYLE_COUNT inline style declaration(s)${NC}"
+        echo "$INLINE_STYLES" | head -5
+        if [ "$STYLE_COUNT" -gt 5 ]; then
+            echo "... (showing first 5 of $STYLE_COUNT)"
         fi
+        echo -e "${YELLOW}   Use Activity Hub classes (.ah-*) instead of inline styles${NC}"
+        echo -e "${YELLOW}   ONLY exception: *-board.css (game board rendering ONLY)${NC}"
+        echo -e "${YELLOW}   If you need new styles, add them to lib/activity-hub-common/styles/activity-hub-src.css${NC}"
+        ERRORS=$((ERRORS + 1))
     fi
 done
 
