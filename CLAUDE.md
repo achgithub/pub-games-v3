@@ -1,30 +1,31 @@
-## 🚧 INCOMPLETE WORK - Sweepstakes Knockout
+# Pub Games v3 - Project Guide
 
-**Status**: Backend complete, frontend UI DOES NOT match LMS Manager design
+## Recent Updates (2026-03-02)
 
-**What's broken**:
-1. **Game creation layout** - Description field presentation is skewed/wrong
-2. **Results dropdowns NOT dynamic** - Should only show unassigned positions (1, 2, 3, last)
-   - Code has `getAvailablePositions()` function but may not be working
-   - As positions are assigned, they should disappear from other dropdowns
-3. **Overall layout mismatch** - Width, spacing, button alignment still different from LMS Manager
-4. **Games tab structure** - Event cards and expansion behavior needs review
+**CSS Migration Complete for Two Apps:**
+- ✅ **sweepstakes-knockout** - Migrated from app-specific CSS to Activity Hub shared CSS
+- ✅ **lms-manager** - Migrated from app-specific CSS to Activity Hub shared CSS
 
-**What works**:
-- ✅ Database restructure complete (global player/horse pools)
-- ✅ Backend API all working (Setup/Games/Reports tabs)
-- ✅ Setup tab: Player Pool and Horse Pool cards functional
+**Shared CSS Enhancements:**
+- Added `.ah-player-grid`, `.ah-player-grid-item`, `.ah-filter-box` utility classes
+- Added horizontal scroll to `.ah-tabs` for overflow handling
+- Fixed `.ah-header` to include `justify-between` for right-aligned buttons
+- Confirmed `.ah-list-item` has built-in `justify-between`
 
-**Files modified** (2026-02-25):
-- Database: `games/sweepstakes-knockout/database/migrate_to_v2.sql`
-- Backend: `games/sweepstakes-knockout/backend/handlers.go` (completely rewritten)
-- Frontend: `games/sweepstakes-knockout/frontend/src/App.tsx` (completely rewritten)
+**Component Library Updates:**
+- Added collapsible section pattern documentation with best practices
+- Added anti-pattern warnings showing wrong approaches
+- Fixed "List with Actions" example to use correct pattern
 
-**Resume work**: Compare side-by-side with LMS Manager and fix UI to match exactly
+**Section Toggle Standardization:**
+- All collapsible sections now use toggle arrow on RIGHT side (separate element)
+- Pattern enforced: `.ah-section-header` → `.ah-section-title` + `.ah-section-toggle`
+
+**Features Added:**
+- Display URL with copy button added to lms-manager (matches sweepstakes pattern)
+- Competitor assignment fix in sweepstakes-knockout
 
 ---
-
-# Pub Games v3 - Project Guide
 
 ## Quick Start
 
