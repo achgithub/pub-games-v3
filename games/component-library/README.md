@@ -4,6 +4,14 @@
 
 This is an admin-only development tool that showcases all Activity Hub CSS classes with live examples, code snippets, and interactive demos.
 
+## Recent Updates (2026-03-02)
+
+- ✅ Added collapsible section pattern with **best practices** and **anti-pattern warnings**
+- ✅ Documented correct toggle arrow placement (right side, separate element)
+- ✅ Added player selection grid, filter box, and list patterns
+- ✅ Updated list with actions to show built-in `justify-between` usage
+- ✅ Enhanced code examples with explanatory comments
+
 ## Purpose
 
 - **Reference**: Complete catalog of all Activity Hub components
@@ -30,7 +38,14 @@ This is an admin-only development tool that showcases all Activity Hub CSS class
 8. **Loading States** - Spinners, skeletons, animations
 9. **Modals** - Modal dialogs with size variants
 10. **Game Components** - Game boards (3×3, 4×4, 5×5, 6×6)
-11. **Common Patterns** - Reusable component combinations
+11. **Common Patterns** - Reusable component combinations including:
+    - Collapsible sections (basic and with action buttons)
+    - Player selection grids
+    - Filter/search boxes
+    - Detail view headers
+    - Form cards
+    - Empty states
+    - Lists with actions
 
 ## Access
 
