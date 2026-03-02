@@ -1139,9 +1139,8 @@ function App() {
             {/* Player Pool Section */}
             <div className="ah-card ah-section">
               <div className="ah-section-header" onClick={() => toggleCard('players')}>
-                <h3 className="ah-section-title">
-                  {collapsedCards['players'] ? '▶' : '▼'} Player Pool ({players.length})
-                </h3>
+                <h3 className="ah-section-title">Player Pool ({players.length})</h3>
+                <span className={`ah-section-toggle ${collapsedCards['players'] ? 'collapsed' : ''}`}>▼</span>
               </div>
 
               {!collapsedCards['players'] && (
@@ -1184,9 +1183,8 @@ function App() {
             {/* Groups & Teams Section */}
             <div className="ah-card ah-section">
               <div className="ah-section-header" onClick={() => toggleCard('groups')}>
-                <h3 className="ah-section-title">
-                  {collapsedCards['groups'] ? '▶' : '▼'} Groups & Teams ({groups.length})
-                </h3>
+                <h3 className="ah-section-title">Groups & Teams ({groups.length})</h3>
+                <span className={`ah-section-toggle ${collapsedCards['groups'] ? 'collapsed' : ''}`}>▼</span>
               </div>
 
               {!collapsedCards['groups'] && (
@@ -1284,9 +1282,8 @@ function App() {
             {/* Games List Section */}
             <div className="ah-card ah-section">
               <div className="ah-section-header" onClick={() => toggleCard('activeGames')}>
-                <h3 className="ah-section-title">
-                  {collapsedCards['activeGames'] ? '▶' : '▼'} Active Games ({games.length})
-                </h3>
+                <h3 className="ah-section-title">Active Games ({games.length})</h3>
+                <span className={`ah-section-toggle ${collapsedCards['activeGames'] ? 'collapsed' : ''}`}>▼</span>
               </div>
 
               {!collapsedCards['activeGames'] && (
@@ -1331,9 +1328,8 @@ function App() {
             {/* Create Game Section */}
             <div className="ah-card ah-section">
               <div className="ah-section-header" onClick={() => toggleCard('createGame')}>
-                <h3 className="ah-section-title">
-                  {collapsedCards['createGame'] ? '▶' : '▼'} Create New Game
-                </h3>
+                <h3 className="ah-section-title">Create New Game</h3>
+                <span className={`ah-section-toggle ${collapsedCards['createGame'] ? 'collapsed' : ''}`}>▼</span>
               </div>
 
               {!collapsedCards['createGame'] && (
@@ -1596,21 +1592,22 @@ function App() {
             {/* Participants */}
             <div className="ah-card">
               <div className="ah-section-header" onClick={() => toggleCard('participants')}>
-                <h3 className="ah-section-title">
-                  {collapsedCards['participants'] ? '▶' : '▼'} Participants ({gameDetail.participants.length})
-                </h3>
-                {gameDetail.game.status === 'active' && !collapsedCards['participants'] && (
-                  <button
-                    className="ah-btn-outline"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowAddPlayers(!showAddPlayers);
-                    }}
-                    style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
-                  >
-                    {showAddPlayers ? 'Cancel' : '+ Add Players'}
-                  </button>
-                )}
+                <h3 className="ah-section-title">Participants ({gameDetail.participants.length})</h3>
+                <div className="ah-flex-center" style={{ gap: '0.5rem' }}>
+                  {gameDetail.game.status === 'active' && !collapsedCards['participants'] && (
+                    <button
+                      className="ah-btn-outline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowAddPlayers(!showAddPlayers);
+                      }}
+                      style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
+                    >
+                      {showAddPlayers ? 'Cancel' : '+ Add Players'}
+                    </button>
+                  )}
+                  <span className={`ah-section-toggle ${collapsedCards['participants'] ? 'collapsed' : ''}`}>▼</span>
+                </div>
               </div>
 
               {!collapsedCards['participants'] && (
@@ -1711,14 +1708,16 @@ function App() {
                       <div className="ah-card">
                         <div className="ah-section-header" onClick={() => toggleCard('round')}>
                           <h3 className="ah-section-title">
-                            {collapsedCards['round'] ? '▶' : '▼'} Round {currentRound.roundNumber} -{' '}
-                            {currentRound.status === 'open' ? 'Open' : 'Closed'}
+                            Round {currentRound.roundNumber} - {currentRound.status === 'open' ? 'Open' : 'Closed'}
                           </h3>
-                          {currentRound.status === 'closed' && !collapsedCards['round'] && (
-                            <button className="ah-btn-primary" onClick={(e) => { e.stopPropagation(); handleAdvanceRound(); }}>
-                              Next Round →
-                            </button>
-                          )}
+                          <div className="ah-flex-center" style={{ gap: '0.5rem' }}>
+                            {currentRound.status === 'closed' && !collapsedCards['round'] && (
+                              <button className="ah-btn-primary" onClick={(e) => { e.stopPropagation(); handleAdvanceRound(); }}>
+                                Next Round →
+                              </button>
+                            )}
+                            <span className={`ah-section-toggle ${collapsedCards['round'] ? 'collapsed' : ''}`}>▼</span>
+                          </div>
                         </div>
 
                         {!collapsedCards['round'] && (
