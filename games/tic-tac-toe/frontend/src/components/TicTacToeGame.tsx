@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import TicTacToeBoard from './TicTacToeBoard';
 import { useGameSocket } from '../hooks/useGameSocket';
-import '../styles/tictactoe.css';
 
 // User type from identity shell
 interface User {
@@ -182,24 +181,23 @@ const TicTacToeGame: React.FC<TicTacToeGameProps> = ({ gameId, user, token }) =>
         </div>
       </div>
 
-      <div className="ttt-container">
-        {/* Header with scores */}
-        <div className="ttt-header">
-        <div className="ttt-player ttt-player-me">
-          <span className="ttt-player-symbol">{mySymbol}</span>
-          <span className="ttt-player-name">{myName} (You)</span>
-          <span className="ttt-player-score">{myScore}</span>
-        </div>
-
-        <div className="ttt-vs">
-          <span className="ttt-round">Round {game.currentRound}</span>
-          <span className="ttt-first-to">First to {game.firstTo}</span>
-        </div>
-
-        <div className="ttt-player ttt-player-opponent">
-          <span className="ttt-player-score">{opponentScore}</span>
-          <span className="ttt-player-name">{opponentName}</span>
-          <span className="ttt-player-symbol">{isPlayer1 ? game.player2Symbol : game.player1Symbol}</span>
+      {/* Header with scores - compact centered like dots */}
+      <div style={{ width: '100%', background: 'white', borderBottom: '1px solid #e7e5e4', padding: '12px 16px', marginBottom: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', maxWidth: '600px', margin: '0 auto' }}>
+          <div className={`ah-badge ${isMyTurn && !gameEnded ? 'ah-badge--primary' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '15px', fontWeight: 600, padding: '8px 14px' }}>
+            <span style={{ fontSize: '18px', fontWeight: 'bold' }}>{mySymbol}</span>
+            <span style={{ fontSize: '14px', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{myName}</span>
+            <span style={{ fontSize: '18px', fontWeight: 'bold', minWidth: '20px' }}>{myScore}</span>
+          </div>
+          <div style={{ fontSize: '14px', color: '#999', fontWeight: 500, textAlign: 'center' }}>
+            <div>vs</div>
+            <div style={{ fontSize: '11px', color: '#adb5bd' }}>R{game.currentRound} • First to {game.firstTo}</div>
+          </div>
+          <div className={`ah-badge ${!isMyTurn && !gameEnded ? 'ah-badge--primary' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '15px', fontWeight: 600, padding: '8px 14px' }}>
+            <span style={{ fontSize: '18px', fontWeight: 'bold', minWidth: '20px' }}>{opponentScore}</span>
+            <span style={{ fontSize: '14px', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{opponentName}</span>
+            <span style={{ fontSize: '18px', fontWeight: 'bold' }}>{isPlayer1 ? game.player2Symbol : game.player1Symbol}</span>
+          </div>
         </div>
       </div>
 
@@ -212,46 +210,40 @@ const TicTacToeGame: React.FC<TicTacToeGameProps> = ({ gameId, user, token }) =>
         disabled={!ready || !connected || gameEnded || opponentDisconnected}
       />
 
-      {/* Everything below the board — no layout shift above */}
-      <div className="ttt-below-board">
+      {/* Everything below the board */}
+      <div className="ah-flex-col-center" style={{ gap: '12px', marginTop: '16px', width: '100%' }}>
         {/* Status message */}
-        <div className={`ttt-status ${isMyTurn && !gameEnded ? 'ttt-status-myturn' : ''} ${gameEnded ? (iWon ? 'ttt-status-won' : 'ttt-status-lost') : ''} ${opponentDisconnected ? 'ttt-status-disconnected' : ''} ${connectionStatus === 'reconnecting' ? 'ttt-status-reconnecting' : ''}`}>
+        <div className={`ah-status-indicator ${isMyTurn && !gameEnded ? 'ah-status--success' : ''} ${gameEnded ? (iWon ? 'ah-status--success' : 'ah-status--error') : ''} ${opponentDisconnected || connectionStatus === 'reconnecting' ? 'ah-status--warning' : ''}`} style={{ fontSize: '18px', fontWeight: 500, padding: '10px 20px' }}>
           {getStatusMessage()}
         </div>
 
         {/* Claim Win button */}
         {opponentDisconnected && claimWinAvailable && !gameEnded && (
-          <div>
-            <button className="ah-btn-primary" onClick={claimWin}>
-              Claim Win
-            </button>
-          </div>
+          <button className="ah-btn-primary" onClick={claimWin}>
+            Claim Win
+          </button>
         )}
 
         {error && <div className="ah-banner ah-banner--error">{error}</div>}
 
         {/* Game actions */}
         {!gameEnded && connected && ready && (
-          <div>
-            <button className="ah-btn-outline" onClick={handleForfeitClick}>
-              Leave Game
-            </button>
-          </div>
+          <button className="ah-btn-outline" onClick={handleForfeitClick}>
+            Leave Game
+          </button>
         )}
 
         {/* Back to Lobby - shown when game ends */}
         {gameEnded && (
-          <div>
-            <button
-              className="ah-btn-primary"
-              onClick={() => {
-                const shellUrl = `http://${window.location.hostname}:3001`;
-                window.location.href = shellUrl;
-              }}
-            >
-              Back to Lobby
-            </button>
-          </div>
+          <button
+            className="ah-btn-primary"
+            onClick={() => {
+              const shellUrl = `http://${window.location.hostname}:3001`;
+              window.location.href = shellUrl;
+            }}
+          >
+            Back to Lobby
+          </button>
         )}
       </div>
 

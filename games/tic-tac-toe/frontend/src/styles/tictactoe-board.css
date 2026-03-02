@@ -1,0 +1,84 @@
+/* Tic-Tac-Toe - Game Board Rendering Only */
+/* All UI elements use Activity Hub shared CSS (.ah-*) */
+
+/* Game board */
+.ttt-board {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #E7E5E4;  /* Light stone background */
+  padding: 8px;
+  border-radius: 12px;
+  width: fit-content;
+  margin: 0 auto;
+}
+
+.ttt-row {
+  display: flex;
+  gap: 8px;
+}
+
+.ttt-cell {
+  width: 100px;
+  height: 100px;
+  border: none;
+  background: #f8f9fa;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.ttt-cell:disabled {
+  cursor: not-allowed;
+}
+
+.ttt-cell-clickable:hover {
+  background: #e9ecef;
+  transform: scale(1.02);
+}
+
+.ttt-cell-x {
+  background: #fff3cd;
+}
+
+.ttt-cell-o {
+  background: #cce5ff;
+}
+
+.ttt-symbol {
+  font-size: 48px;
+  font-weight: bold;
+  user-select: none;
+}
+
+.ttt-cell-x .ttt-symbol {
+  color: #856404;
+}
+
+.ttt-cell-o .ttt-symbol {
+  color: #004085;
+}
+
+.ttt-symbol-preview {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.ttt-cell-clickable:hover .ttt-symbol-preview {
+  opacity: 0.3;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .ttt-cell {
+    width: 80px;
+    height: 80px;
+  }
+
+  .ttt-symbol {
+    font-size: 36px;
+  }
+}

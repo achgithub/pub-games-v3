@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import '../styles/dots.css';
 
 const API_BASE = '/api';
 
@@ -323,21 +322,21 @@ const DotsGame: React.FC<DotsGameProps> = ({ gameId, user, token }) => {
         </div>
       </div>
 
-      <div className="dots-container">
-        {/* Score header - combines header and score in compact layout */}
-        <div className="dots-header">
-        <div className="dots-scores">
-          <div className={`dots-score ${isPlayer1 ? 'active' : ''}`}>
+      {/* Score header - compact layout */}
+      <div style={{ width: '100%', background: 'white', borderBottom: '1px solid #e7e5e4', padding: '12px 16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', maxWidth: '600px', margin: '0 auto' }}>
+          <div className={`ah-badge ${isPlayer1 && !gameEnded ? 'ah-badge--primary' : ''}`} style={{ fontSize: '16px', fontWeight: 600, padding: '8px 16px' }}>
             {myName}: {isPlayer1 ? game.player1Score : game.player2Score}
           </div>
-          <div className="dots-divider">vs</div>
-          <div className={`dots-score ${!isPlayer1 ? 'active' : ''}`}>
+          <div style={{ fontSize: '14px', color: '#999', fontWeight: 500 }}>vs</div>
+          <div className={`ah-badge ${!isPlayer1 && !gameEnded ? 'ah-badge--primary' : ''}`} style={{ fontSize: '16px', fontWeight: 600, padding: '8px 16px' }}>
             {opponentName}: {isPlayer1 ? game.player2Score : game.player1Score}
           </div>
         </div>
       </div>
 
-      <div className="game-board-wrapper">
+      {/* Game board wrapper */}
+      <div className="ah-flex-center" style={{ flex: 1, padding: '8px 16px', width: '100%' }}>
         <DotsGrid
           game={game}
           playerNum={playerNum}
@@ -346,9 +345,10 @@ const DotsGame: React.FC<DotsGameProps> = ({ gameId, user, token }) => {
         />
       </div>
 
-      <div className="below-grid">
+      {/* Below board content */}
+      <div className="ah-flex-col-center" style={{ gap: '12px', padding: '8px 16px', width: '100%', maxWidth: '600px', margin: '0 auto' }}>
         {!gameEnded && (
-          <div className="turn-indicator">
+          <div className="ah-status-indicator" style={{ fontSize: '18px', fontWeight: 500 }}>
             {isMyTurn() ? 'Your Turn' : `${opponentName}'s Turn`}
           </div>
         )}
@@ -360,16 +360,16 @@ const DotsGame: React.FC<DotsGameProps> = ({ gameId, user, token }) => {
         )}
 
         {!opponentConnected && opponentEverConnected && !gameEnded && (
-          <div className="ah-banner ah-banner--warning">
+          <div className="ah-banner ah-banner--warning" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             Opponent disconnected. Waiting for reconnection...
-            <button onClick={claimWin} className="ah-btn-primary ml-2.5">
+            <button onClick={claimWin} className="ah-btn-primary">
               Claim Win
             </button>
           </div>
         )}
 
         {!gameEnded && (
-          <div className="actions">
+          <div className="ah-flex-center" style={{ gap: '10px', marginTop: '15px' }}>
             <button onClick={forfeit} className="ah-btn-danger">
               Forfeit
             </button>
@@ -378,25 +378,24 @@ const DotsGame: React.FC<DotsGameProps> = ({ gameId, user, token }) => {
             </button>
           </div>
         )}
-      </div>
 
-      {gameEnded && (
-        <div className="game-over">
-          <h2>
-            {game.winner === playerNum
-              ? '🎉 You Won!'
-              : game.winner === 0
-              ? "It's a Draw!"
-              : '😢 You Lost'}
-          </h2>
-          <p>
-            Final Score: {game.player1Score} - {game.player2Score}
-          </p>
-          <button onClick={returnToLobby} className="ah-btn-primary">
-            Return to Lobby
-          </button>
-        </div>
-      )}
+        {gameEnded && (
+          <div className="ah-text-center" style={{ padding: '20px', width: '100%' }}>
+            <h2 style={{ margin: '0 0 12px 0', fontSize: '1.5em' }}>
+              {game.winner === playerNum
+                ? '🎉 You Won!'
+                : game.winner === 0
+                ? "It's a Draw!"
+                : '😢 You Lost'}
+            </h2>
+            <p style={{ fontSize: '1.1em', margin: '12px 0 16px 0' }}>
+              Final Score: {game.player1Score} - {game.player2Score}
+            </p>
+            <button onClick={returnToLobby} className="ah-btn-primary">
+              Return to Lobby
+            </button>
+          </div>
+        )}
       </div>
     </>
   );
