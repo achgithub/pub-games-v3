@@ -197,6 +197,104 @@ function PatternsSection({ token }: Props) {
         </div>
       </div>
 
+      {/* Player Selection Grid */}
+      <div className="component-section">
+        <div className="component-demo">
+          <div className="component-header">
+            <span className="component-name">Player Selection Grid</span>
+            <code className="component-class">.ah-player-grid</code>
+          </div>
+          <p className="component-purpose">
+            Common pattern for multi-select player/item grids (used in LMS, Sweepstakes, Game Admin)
+          </p>
+
+          <div className="component-preview">
+            <div className="ah-card">
+              <h3 className="ah-section-title">Select Players</h3>
+              <div className="ah-player-grid">
+                {['Alice', 'Bob', 'Charlie', 'Dana', 'Eve', 'Frank'].map((name, i) => (
+                  <label key={i} className="ah-player-grid-item">
+                    <input type="checkbox" />
+                    <span>{name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="component-code">
+            <pre><code>{`<div className="ah-player-grid">
+  {players.map(player => (
+    <label key={player.id} className="ah-player-grid-item">
+      <input
+        type="checkbox"
+        checked={selected.includes(player.id)}
+        onChange={() => toggle(player.id)}
+      />
+      <span>{player.name}</span>
+    </label>
+  ))}
+</div>
+
+/* Features:
+ * - Auto-fill grid (200px min column width)
+ * - Max height 300px with scroll
+ * - Hover states on grid items
+ * - Light gray background
+ */`}</code></pre>
+          </div>
+        </div>
+      </div>
+
+      {/* Filter Box */}
+      <div className="component-section">
+        <div className="component-demo">
+          <div className="component-header">
+            <span className="component-name">Filter/Search Box</span>
+            <code className="component-class">.ah-filter-box</code>
+          </div>
+          <p className="component-purpose">
+            Light container for search inputs and filter controls
+          </p>
+
+          <div className="component-preview">
+            <div className="ah-card">
+              <div className="ah-filter-box">
+                <div className="ah-flex-wrap" style={{ gap: '0.75rem', alignItems: 'center' }}>
+                  <input
+                    type="text"
+                    className="ah-input"
+                    placeholder="Search..."
+                    style={{ flex: '1 1 200px', minWidth: 0 }}
+                  />
+                  <label className="ah-flex-center" style={{ gap: '0.5rem', whiteSpace: 'nowrap', fontSize: '0.875rem' }}>
+                    <input type="checkbox" />
+                    <span>Active only</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="component-code">
+            <pre><code>{`<div className="ah-filter-box">
+  <div className="ah-flex-wrap" style={{ gap: '0.75rem' }}>
+    <input
+      type="text"
+      className="ah-input"
+      placeholder="Search..."
+      style={{ flex: '1 1 200px' }}
+    />
+    <label className="ah-flex-center" style={{ gap: '0.5rem' }}>
+      <input type="checkbox" />
+      <span>Filter option</span>
+    </label>
+  </div>
+</div>
+
+/* Light gray container for search/filter UI */`}</code></pre>
+          </div>
+        </div>
+      </div>
+
       {/* Detail Header Pattern */}
       <div className="component-section">
         <div className="component-demo">

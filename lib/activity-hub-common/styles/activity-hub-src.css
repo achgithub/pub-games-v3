@@ -644,6 +644,35 @@
     @apply opacity-50 cursor-not-allowed;
   }
 
+  /* ── Game-Specific Patterns ──────────────────────────────── */
+  /* Common patterns used across multiple game apps */
+
+  /* Player selection grid - used in sweepstakes, lms, game-admin */
+  .ah-player-grid {
+    @apply grid gap-2 p-2 rounded-lg;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    background: #FAFAF9;
+    border: 1px solid #E7E5E4;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  .ah-player-grid-item {
+    @apply flex items-center gap-2 p-2 cursor-pointer rounded;
+    transition: background 0.2s;
+  }
+
+  .ah-player-grid-item:hover {
+    @apply bg-stone-100;
+  }
+
+  /* Light container for filters/search boxes */
+  .ah-filter-box {
+    @apply p-3 rounded-lg;
+    background: #FAFAF9;
+    border: 1px solid #E7E5E4;
+  }
+
   /* ── Component Library Showcase Styles ───────────────────── */
   /* Used by component-library app for displaying examples */
 

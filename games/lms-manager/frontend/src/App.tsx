@@ -1386,7 +1386,7 @@ function App() {
                     </div>
 
                     {/* Player filters */}
-                    <div style={{ marginBottom: '0.75rem', padding: '0.75rem', background: '#FAFAF9', borderRadius: '8px', border: '1px solid #E7E5E4' }}>
+                    <div className="ah-filter-box" style={{ marginBottom: '0.75rem' }}>
                       <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
                         <input
                           type="text"
@@ -1407,17 +1407,7 @@ function App() {
                       </div>
                     </div>
 
-                    <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                      gap: '0.5rem',
-                      padding: '0.5rem',
-                      background: '#FAFAF9',
-                      borderRadius: '8px',
-                      border: '1px solid #E7E5E4',
-                      maxHeight: '300px',
-                      overflowY: 'auto'
-                    }}>
+                    <div className="ah-player-grid">
                       {players.filter((player) => {
                         // Text search filter
                         const matchesSearch = !gameCreationPlayerSearch ||
@@ -1429,14 +1419,7 @@ function App() {
 
                         return matchesSearch && matchesSelected;
                       }).map((player) => (
-                        <label key={player.id} style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                          padding: '0.5rem',
-                          cursor: 'pointer',
-                          borderRadius: '4px'
-                        }}>
+                        <label key={player.id} className="ah-player-grid-item">
                           <input
                             type="checkbox"
                             checked={selectedPlayerNames.includes(player.name)}
@@ -1614,28 +1597,11 @@ function App() {
               <>
 
               {showAddPlayers && (
-                <div style={{ marginBottom: '1rem', padding: '1rem', background: '#FAFAF9', borderRadius: '8px' }}>
+                <div className="ah-filter-box" style={{ marginBottom: '1rem' }}>
                   <p className="ah-meta" style={{ marginBottom: '0.5rem' }}>Select players to add:</p>
-                  <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                      gap: '0.5rem',
-                      padding: '0.5rem',
-                      background: '#FAFAF9',
-                      borderRadius: '8px',
-                      border: '1px solid #E7E5E4',
-                      maxHeight: '300px',
-                      overflowY: 'auto'
-                    }} style={{ maxHeight: '200px' }}>
+                  <div className="ah-player-grid" style={{ maxHeight: '200px' }}>
                     {players.filter(p => !gameDetail.participants.some(part => part.playerName === p.name)).map((player) => (
-                      <label key={player.id} style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                          padding: '0.5rem',
-                          cursor: 'pointer',
-                          borderRadius: '4px'
-                        }}>
+                      <label key={player.id} className="ah-player-grid-item">
                         <input
                           type="checkbox"
                           checked={playersToAdd.includes(player.name)}

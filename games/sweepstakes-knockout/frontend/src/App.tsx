@@ -870,7 +870,7 @@ function App() {
                         </div>
 
                         {/* Player filters */}
-                        <div style={{ marginBottom: '0.75rem', padding: '0.75rem', background: '#FAFAF9', borderRadius: '8px', border: '1px solid #E7E5E4' }}>
+                        <div className="ah-filter-box" style={{ marginBottom: '0.75rem' }}>
                           <div className="ah-flex-wrap" style={{ gap: '0.75rem', alignItems: 'center' }}>
                             <input
                               type="text"
@@ -891,17 +891,7 @@ function App() {
                           </div>
                         </div>
 
-                        <div style={{
-                          display: 'grid',
-                          gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                          gap: '0.5rem',
-                          padding: '0.5rem',
-                          background: '#FAFAF9',
-                          borderRadius: '8px',
-                          border: '1px solid #E7E5E4',
-                          maxHeight: '300px',
-                          overflowY: 'auto'
-                        }}>
+                        <div className="ah-player-grid">
                           {getAvailablePlayers().filter((player) => {
                             // Text search filter
                             const matchesSearch = !playerSearch ||
@@ -913,14 +903,7 @@ function App() {
 
                             return matchesSearch && matchesSelected;
                           }).map((player) => (
-                            <label key={player.id} style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.5rem',
-                              padding: '0.5rem',
-                              cursor: 'pointer',
-                              borderRadius: '4px'
-                            }}>
+                            <label key={player.id} className="ah-player-grid-item">
                               <input
                                 type="checkbox"
                                 checked={selectedPlayers.includes(player.id)}
