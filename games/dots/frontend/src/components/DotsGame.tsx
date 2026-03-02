@@ -336,7 +336,7 @@ const DotsGame: React.FC<DotsGameProps> = ({ gameId, user, token }) => {
       </div>
 
       {/* Game board wrapper */}
-      <div className="ah-flex-center" style={{ flex: 1, padding: '8px 16px', width: '100%' }}>
+      <div className="ah-flex-center-justify" style={{ flex: 1, padding: '8px 16px', width: '100%' }}>
         <DotsGrid
           game={game}
           playerNum={playerNum}

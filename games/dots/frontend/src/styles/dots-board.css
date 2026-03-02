@@ -121,7 +121,7 @@
   .line.vertical {
     width: 6px;
     height: 40px;
-    margin: 0 2px;
+    margin: 0 3px;  /* Increased from 2px to 3px so total width (6px + 6px margin = 12px) matches dot width */
   }
 
   .box {
