@@ -232,7 +232,7 @@
 
   /* ── App header ──────────────────────────────────────────── */
   .ah-header {
-    @apply flex items-center gap-3 mb-4 flex-wrap;
+    @apply flex items-center justify-between gap-3 mb-4 flex-wrap;
   }
   .ah-header-title {
     @apply text-xl font-bold m-0;
