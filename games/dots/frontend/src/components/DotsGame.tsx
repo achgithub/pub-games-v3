@@ -31,7 +31,7 @@ interface Game {
   boxes: Box[];
   currentTurn: number;
   status: 'waiting' | 'active' | 'completed';
-  winner: number;
+  winnerId: string | null;
 }
 
 interface SSEMessage {
@@ -382,9 +382,9 @@ const DotsGame: React.FC<DotsGameProps> = ({ gameId, user, token }) => {
         {gameEnded && (
           <div className="ah-text-center" style={{ padding: '20px', width: '100%' }}>
             <h2 style={{ margin: '0 0 12px 0', fontSize: '1.5em' }}>
-              {game.winner === playerNum
+              {game.winnerId === userId
                 ? '🎉 You Won!'
-                : game.winner === 0
+                : game.winnerId === null
                 ? "It's a Draw!"
                 : '😢 You Lost'}
             </h2>
