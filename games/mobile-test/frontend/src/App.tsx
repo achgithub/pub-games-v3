@@ -216,36 +216,61 @@ function App() {
 
   if (!userId || !token) {
     return (
-      <div style={s.page}>
-        <div style={s.card}>
-          <div style={s.cardHeader}>
-            <div style={s.appIcon}>MT</div>
-            <div>
-              <div style={s.appTitle}>Mobile Test</div>
-              <div style={s.appSubtitle}>Device Compatibility Check</div>
-            </div>
+      <>
+        {/* App Header Bar */}
+        <div className="ah-app-header">
+          <div className="ah-app-header-left">
+            <h1 className="ah-app-title">Mobile Test</h1>
           </div>
-          <p style={s.notice}>Access this app through the lobby to run tests.</p>
+          <div className="ah-app-header-right">
+            <button
+              className="ah-lobby-btn"
+              onClick={() => {
+                const shellUrl = `http://${window.location.hostname}:3001`;
+                window.location.href = shellUrl;
+              }}
+            >
+              ← Lobby
+            </button>
+          </div>
         </div>
-      </div>
+
+        <div style={s.page}>
+          <div style={s.card}>
+            <p style={s.notice}>Access this app through the lobby to run tests.</p>
+          </div>
+        </div>
+      </>
     );
   }
 
   return (
-    <div style={s.page}>
-      {/* Header card */}
-      <div style={s.card}>
-        <div style={s.cardHeader}>
-          <div style={s.appIcon}>MT</div>
-          <div>
-            <div style={s.appTitle}>Mobile Test</div>
-            <div style={s.appSubtitle}>Device Compatibility Check</div>
-          </div>
+    <>
+      {/* App Header Bar */}
+      <div className="ah-app-header">
+        <div className="ah-app-header-left">
+          <h1 className="ah-app-title">Mobile Test</h1>
         </div>
-        <p style={s.notice}>
-          Tests HTTP, SSE, text, image and audio delivery on this device and browser.
-        </p>
+        <div className="ah-app-header-right">
+          <button
+            className="ah-lobby-btn"
+            onClick={() => {
+              const shellUrl = `http://${window.location.hostname}:3001`;
+              window.location.href = shellUrl;
+            }}
+          >
+            ← Lobby
+          </button>
+        </div>
       </div>
+
+      <div style={s.page}>
+        {/* Description card */}
+        <div style={s.card}>
+          <p style={s.notice}>
+            Tests HTTP, SSE, text, image and audio delivery on this device and browser.
+          </p>
+        </div>
 
       {/* Steps card */}
       <div style={s.card}>
@@ -324,7 +349,8 @@ function App() {
           Run Again
         </button>
       )}
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -396,8 +422,6 @@ const s: Record<string, React.CSSProperties> = {
     margin: '0 auto',
     padding: '16px 16px 32px',
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    backgroundColor: '#F5F7FA',
-    minHeight: '100vh',
   },
   card: {
     backgroundColor: '#FFFFFF',
@@ -405,36 +429,6 @@ const s: Record<string, React.CSSProperties> = {
     padding: 16,
     marginBottom: 12,
     boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
-  },
-  cardHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 10,
-  },
-  appIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
-    backgroundColor: '#1565C0',
-    color: '#FFFFFF',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: 14,
-    fontWeight: 700,
-    letterSpacing: 0.5,
-    flexShrink: 0,
-  },
-  appTitle: {
-    fontSize: 17,
-    fontWeight: 700,
-    color: '#1A1A1A',
-  },
-  appSubtitle: {
-    fontSize: 12,
-    color: '#888',
-    marginTop: 2,
   },
   notice: {
     fontSize: 13,
