@@ -1594,9 +1594,8 @@ function App() {
               </div>
 
               {!collapsedCards['participants'] && (
-              <>
-
-              {showAddPlayers && (
+                <>
+                  {showAddPlayers && (
                 <div className="ah-filter-box" style={{ marginBottom: '1rem' }}>
                   <p className="ah-meta" style={{ marginBottom: '0.5rem' }}>Select players to add:</p>
                   <div className="ah-player-grid" style={{ maxHeight: '200px' }}>
@@ -1625,9 +1624,9 @@ function App() {
                     Add Selected Players
                   </button>
                 </div>
-              )}
+                  )}
 
-              <div className="ah-grid-auto" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }>
+                  <div className="ah-grid-auto" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }>
                 {gameDetail.participants.map((participant) => (
                   <div
                     key={participant.id}
@@ -1656,8 +1655,8 @@ function App() {
                     )}
                   </div>
                 ))}
-              </div>
-              </>
+                  </div>
+                </>
               )}
             </div>
 
