@@ -431,10 +431,8 @@ function PatternsSection({ token }: Props) {
               <ul className="ah-list">
                 {['Alice', 'Bob', 'Charlie'].map((name, i) => (
                   <li key={i} className="ah-list-item">
-                    <div className="ah-flex ah-flex-between">
-                      <span>{name}</span>
-                      <button className="ah-btn-danger-sm">Remove</button>
-                    </div>
+                    <span>{name}</span>
+                    <button className="ah-btn-danger-sm">Remove</button>
                   </li>
                 ))}
               </ul>
@@ -445,15 +443,13 @@ function PatternsSection({ token }: Props) {
   <h3 className="ah-section-title">Title</h3>
   <ul className="ah-list">
     <li className="ah-list-item">
-      <div className="ah-flex ah-flex-between">
-        <span>Item name</span>
-        <button className="ah-btn-danger-sm">
-          Remove
-        </button>
-      </div>
+      <span>Item name</span>
+      <button className="ah-btn-danger-sm">Remove</button>
     </li>
   </ul>
-</div>`}</code></pre>
+</div>
+
+/* .ah-list-item already has justify-between built-in */`}</code></pre>
           </div>
         </div>
       </div>

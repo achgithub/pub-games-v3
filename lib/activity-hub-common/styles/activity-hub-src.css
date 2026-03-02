@@ -100,12 +100,16 @@
   .ah-tabs {
     @apply flex mb-5 border-b;
     border-color: #F0F0F0;
+    overflow-x: auto;
+    flex-wrap: nowrap;
   }
   .ah-tab {
     @apply px-5 py-2.5 border-0 bg-transparent cursor-pointer text-sm font-medium
            border-b-2 border-transparent -mb-px
            transition-colors duration-150;
     color: #78716C;
+    flex-shrink: 0;
+    white-space: nowrap;
   }
   .ah-tab:hover { color: #1C1917; }
   .ah-tab.active {
