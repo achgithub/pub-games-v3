@@ -1626,7 +1626,7 @@ function App() {
                     </div>
                   )}
 
-                  <div className="ah-grid-auto" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }>
+                  <div className="ah-grid-auto" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }}>
                     {gameDetail.participants.map((participant) => (
                       <div
                         key={participant.id}
