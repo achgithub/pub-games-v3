@@ -1614,7 +1614,7 @@ function App() {
                             />
                             <span>{player.name}</span>
                           </label>
-                        ))}
+                        )))}
                       </div>
                       <button
                         className="ah-btn-primary"
