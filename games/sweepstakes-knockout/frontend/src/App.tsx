@@ -133,7 +133,7 @@ function App() {
 
   // Fetch setup data
   useEffect(() => {
-    if (!token || activeTab !== 'setup') return;
+    if (!token || (activeTab !== 'setup' && activeTab !== 'games')) return;
 
     const fetchSetupData = async () => {
       try {
