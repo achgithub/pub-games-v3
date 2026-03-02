@@ -1748,7 +1748,6 @@ function App() {
                                             key={team.id}
                                             value={team.id}
                                             disabled={alreadyUsed}
-                                            style={alreadyUsed ? { color: '#999', textDecoration: 'line-through' } : {}}
                                           >
                                             {team.name}{alreadyUsed ? ' (used)' : ''}
                                           </option>
