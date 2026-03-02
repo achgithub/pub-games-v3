@@ -1594,69 +1594,69 @@ function App() {
               </div>
 
               {!collapsedCards['participants'] && (
-              <>
-              {showAddPlayers && (
-                <div className="ah-filter-box" style={{ marginBottom: '1rem' }}>
-                  <p className="ah-meta" style={{ marginBottom: '0.5rem' }}>Select players to add:</p>
-                  <div className="ah-player-grid" style={{ maxHeight: '200px' }}>
-                    {players.filter(p => !gameDetail.participants.some(part => part.playerName === p.name)).map((player) => (
-                      <label key={player.id} className="ah-player-grid-item">
-                        <input
-                          type="checkbox"
-                          checked={playersToAdd.includes(player.name)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setPlayersToAdd([...playersToAdd, player.name]);
-                            } else {
-                              setPlayersToAdd(playersToAdd.filter(n => n !== player.name));
-                            }
-                          }}
-                        />
-                        <span>{player.name}</span>
-                      </label>
-                    ))}
-                  </div>
-                  <button
-                    className="ah-btn-primary"
-                    onClick={handleAddPlayersToGame}
-                    style={{ marginTop: '0.5rem' }}
-                  >
-                    Add Selected Players
-                  </button>
-                </div>
-              )}
+                <>
+                  {showAddPlayers && (
+                    <div className="ah-filter-box" style={{ marginBottom: '1rem' }}>
+                      <p className="ah-meta" style={{ marginBottom: '0.5rem' }}>Select players to add:</p>
+                      <div className="ah-player-grid" style={{ maxHeight: '200px' }}>
+                        {players.filter(p => !gameDetail.participants.some(part => part.playerName === p.name)).map((player) => (
+                          <label key={player.id} className="ah-player-grid-item">
+                            <input
+                              type="checkbox"
+                              checked={playersToAdd.includes(player.name)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setPlayersToAdd([...playersToAdd, player.name]);
+                                } else {
+                                  setPlayersToAdd(playersToAdd.filter(n => n !== player.name));
+                                }
+                              }}
+                            />
+                            <span>{player.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                      <button
+                        className="ah-btn-primary"
+                        onClick={handleAddPlayersToGame}
+                        style={{ marginTop: '0.5rem' }}
+                      >
+                        Add Selected Players
+                      </button>
+                    </div>
+                  )}
 
-              <div className="ah-grid-auto" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }>
-                {gameDetail.participants.map((participant) => (
-                  <div
-                    key={participant.id}
-                    className="ah-flex-between"
-                    style={{
-                      padding: '0.5rem 0.75rem',
-                      borderRadius: '6px',
-                      fontSize: '0.875rem',
-                      fontWeight: 500,
-                      ...(participant.isActive
-                        ? { background: '#D1FAE5', color: '#065F46' }
-                        : { background: '#FEE2E2', color: '#991B1B', opacity: 0.7 })
-                    }}
-                  >
-                    <span>{participant.playerName}</span>
-                    {!participant.isActive && participant.eliminatedInRound && (
-                      <span style={{
-                        fontSize: '0.75rem',
-                        background: '#991B1B',
-                        color: 'white',
-                        padding: '0.125rem 0.5rem',
-                        borderRadius: '4px'
-                      }}>
-                        R{participant.eliminatedInRound}
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-              </>
+                <div className="ah-grid-auto" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }>
+                  {gameDetail.participants.map((participant) => (
+                    <div
+                      key={participant.id}
+                      className="ah-flex-between"
+                      style={{
+                        padding: '0.5rem 0.75rem',
+                        borderRadius: '6px',
+                        fontSize: '0.875rem',
+                        fontWeight: 500,
+                        ...(participant.isActive
+                          ? { background: '#D1FAE5', color: '#065F46' }
+                          : { background: '#FEE2E2', color: '#991B1B', opacity: 0.7 })
+                      }}
+                    >
+                      <span>{participant.playerName}</span>
+                      {!participant.isActive && participant.eliminatedInRound && (
+                        <span style={{
+                          fontSize: '0.75rem',
+                          background: '#991B1B',
+                          color: 'white',
+                          padding: '0.125rem 0.5rem',
+                          borderRadius: '4px'
+                        }}>
+                          R{participant.eliminatedInRound}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                </>
               )}
             </div>
 
