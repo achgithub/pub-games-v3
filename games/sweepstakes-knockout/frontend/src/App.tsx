@@ -707,7 +707,7 @@ function App() {
                   </div>
 
                   {!collapsedCards['createEvent'] && (
-                    <div className="ah-flex-col" style={{ gap: '0.75rem' }}>
+                    <div className="ah-flex-col gap-3">
                       <input
                         type="text"
                         className="ah-input"
@@ -746,10 +746,10 @@ function App() {
                       )}
                       <div className="ah-list">
                         {events.filter(e => e.status !== 'completed').map((event) => (
-                          <div key={event.id} className="ah-card" style={{ cursor: 'pointer' }} onClick={() => setSelectedEventId(event.id)}>
+                          <div key={event.id} className="ah-card cursor-pointer" onClick={() => setSelectedEventId(event.id)}>
                             <div className="ah-flex-between">
                               <div>
-                                <h4 style={{ margin: '0 0 4px 0' }}>{event.name}</h4>
+                                <h4 className="m-0 mb-1">{event.name}</h4>
                                 {event.description && <p className="ah-meta">{event.description}</p>}
                                 <p className="ah-meta">{event.participantCount} participants</p>
                               </div>
@@ -773,10 +773,10 @@ function App() {
                     {!collapsedCards['completedEvents'] && (
                       <div className="ah-list">
                         {events.filter(e => e.status === 'completed').map((event) => (
-                          <div key={event.id} className="ah-card" style={{ cursor: 'pointer' }} onClick={() => setSelectedEventId(event.id)}>
+                          <div key={event.id} className="ah-card cursor-pointer" onClick={() => setSelectedEventId(event.id)}>
                             <div className="ah-flex-between">
                               <div>
-                                <h4 style={{ margin: '0 0 4px 0' }}>{event.name}</h4>
+                                <h4 className="m-0 mb-1">{event.name}</h4>
                                 {event.description && <p className="ah-meta">{event.description}</p>}
                               </div>
                               <span className="ah-status ah-status--active">{event.status}</span>
@@ -797,7 +797,7 @@ function App() {
                   <button className="ah-btn-back" onClick={() => setSelectedEventId(null)}>
                     ← Back to Events
                   </button>
-                  <h2 style={{ margin: 0 }}>{selectedEvent.name}</h2>
+                  <h2 className="m-0">{selectedEvent.name}</h2>
                   <span className={`ah-status ah-status--${selectedEvent.status === 'completed' ? 'active' : 'waiting'}`}>
                     {selectedEvent.status}
                   </span>
@@ -813,16 +813,16 @@ function App() {
                   <p className="ah-meta">
                     <strong>Event ID:</strong> {selectedEventId}
                   </p>
-                  <p className="ah-meta" style={{ marginTop: '0.5rem' }}>
+                  <p className="ah-meta mt-2">
                     <strong>Display URL:</strong>
                   </p>
-                  <div className="ah-flex-center" style={{ gap: '0.5rem', marginTop: '0.25rem' }}>
+                  <div className="ah-flex-center gap-2 mt-1">
                     <input
                       type="text"
                       className="ah-input"
                       value={`http://${window.location.hostname}:4032/?view=report&eventId=${selectedEventId}`}
                       readOnly
-                      style={{ flex: 1 }}
+                      className="flex-1"
                     />
                     <button
                       className="ah-btn-outline"
@@ -846,23 +846,23 @@ function App() {
 
                   {!collapsedCards['participants'] && (
                     <>
-                      <div style={{ marginBottom: '1rem' }}>
-                        <div style={{ marginBottom: '0.75rem' }}>
+                      <div className="mb-4">
+                        <div className="mb-3">
                           <p className="ah-meta">
                             Select Players ({selectedPlayers.length} selected):
                           </p>
-                          <div className="ah-flex-wrap" style={{ gap: '0.5rem' }}>
-                            <button className="ah-btn-outline" onClick={handleSelectAllPlayers} style={{ padding: '0.25rem 0.75rem', fontSize: '0.875rem' }}>
+                          <div className="ah-flex-wrap gap-2">
+                            <button className="ah-btn-outline ah-btn-sm" onClick={handleSelectAllPlayers}>
                               Select All
                             </button>
-                            <button className="ah-btn-outline" onClick={handleDeselectAllPlayers} style={{ padding: '0.25rem 0.75rem', fontSize: '0.875rem' }}>
+                            <button className="ah-btn-outline ah-btn-sm" onClick={handleDeselectAllPlayers}>
                               Deselect All
                             </button>
                             <button
                               className="ah-btn-primary"
                               onClick={handleAddParticipants}
                               disabled={selectedPlayers.length === 0}
-                              style={{ padding: '0.25rem 0.75rem', fontSize: '0.875rem', marginLeft: 'auto' }}
+                              className="ah-btn-outline ah-btn-sm ml-auto"
                             >
                               Add Selected Players
                             </button>
@@ -870,17 +870,17 @@ function App() {
                         </div>
 
                         {/* Player filters */}
-                        <div className="ah-filter-box" style={{ marginBottom: '0.75rem' }}>
-                          <div className="ah-flex-wrap" style={{ gap: '0.75rem', alignItems: 'center' }}>
+                        <div className="ah-filter-box mb-3">
+                          <div className="ah-flex-wrap gap-3 items-center">
                             <input
                               type="text"
                               placeholder="Search players by name..."
                               value={playerSearch}
                               onChange={(e) => setPlayerSearch(e.target.value)}
                               className="ah-input"
-                              style={{ flex: '1 1 200px', minWidth: 0 }}
+                              className="flex-1 min-w-0"
                             />
-                            <label className="ah-flex-center" style={{ gap: '0.5rem', whiteSpace: 'nowrap', fontSize: '0.875rem' }}>
+                            <label className="ah-flex-center gap-2 whitespace-nowrap text-sm">
                               <input
                                 type="checkbox"
                                 checked={showSelectedPlayersOnly}
@@ -921,7 +921,7 @@ function App() {
                         )}
                         {participants.map((participant) => (
                           <div key={participant.id} className="ah-list-item">
-                            <div className="ah-flex-col" style={{ flex: 1, gap: '8px' }}>
+                            <div className="ah-flex-col flex-1 gap-2">
                               <strong>{participant.playerName}</strong>
                               <select
                                 className="ah-select"
@@ -1023,16 +1023,9 @@ function App() {
                             return (
                               <div
                                 key={participant.id}
-                                className="ah-card ah-flex-col"
-                                style={{
-                                  gap: '8px',
-                                  ...(resultAssignments[participant.competitorId!] ? {
-                                    borderColor: '#22C55E',
-                                    background: '#F0FDF4'
-                                  } : {})
-                                }}
+                                className="ah-card ah-flex-col gap-2"
                               >
-                                <div style={{ fontWeight: 600 }}>
+                                <div className="font-semibold">
                                   {participant.competitorName}
                                 </div>
                                 <div className="ah-meta">
@@ -1062,7 +1055,7 @@ function App() {
 
                       <button
                         className="ah-btn-primary"
-                        style={{ marginTop: '20px' }}
+                        className="mt-5"
                         onClick={handleSaveResults}
                       >
                         Save Results & Complete Event
@@ -1082,7 +1075,7 @@ function App() {
 
             <select
               className="ah-select"
-              style={{ width: '100%', marginBottom: '20px' }}
+              className="w-full mb-5"
               value={reportEventId}
               onChange={(e) => setReportEventId(parseInt(e.target.value))}
             >

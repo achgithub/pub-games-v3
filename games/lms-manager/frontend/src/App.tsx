@@ -316,13 +316,13 @@ function App() {
               <p className="ah-meta">Loading report...</p>
             ) : (
               <>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <div className="ah-flex-between mb-4">
                   <h2>{reportData.game.name}</h2>
                   <button className="ah-btn-outline" onClick={refreshReport}>
                     🔄 Refresh
                   </button>
                 </div>
-                <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                <div className="flex gap-4 mb-4 flex-wrap">
                   <p><strong>Starting Players:</strong> {reportData.game.startingPlayers}</p>
                   <p><strong>Status:</strong> {reportData.game.status}</p>
                   {reportData.game.winnerName && <p><strong>Winner:</strong> {reportData.game.winnerName}</p>}
@@ -331,34 +331,28 @@ function App() {
 
                 {reportData.rounds && reportData.rounds.length > 0 && (
                   <>
-                    <h3 style={{ marginTop: '2rem', marginBottom: '1rem' }}>
+                    <h3 className="mt-8 mb-4">
                       {reportRound === 'all' ? 'All Rounds' : `Round ${reportRound}`}
                     </h3>
                     {reportData.rounds
                       .filter((r: any) => reportRound === 'all' || r.roundNumber.toString() === reportRound)
                       .map((round: any) => (
-                        <div key={round.roundNumber} style={{ marginBottom: '2rem', padding: '1rem', background: '#FAFAF9', borderRadius: '8px' }}>
+                        <div key={round.roundNumber} className="mb-8 p-4 rounded-lg">
                           <h4>Round {round.roundNumber} - {round.status.toUpperCase()}</h4>
 
                           {round.status === 'open' && (
-                            <div style={{ marginTop: '1rem' }}>
+                            <div className="mt-4">
                               <p><strong>Active Players:</strong> {round.activePlayers}</p>
                               {round.teamPicks && Object.keys(round.teamPicks).length > 0 && (
-                                <div style={{ marginTop: '1rem' }}>
-                                  <p style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Team Picks:</p>
-                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.5rem' }}>
+                                <div className="mt-4">
+                                  <p className="font-semibold mb-2">Team Picks:</p>
+                                  <div className="ah-grid-auto gap-2">
                                     {Object.entries(round.teamPicks)
                                       .sort(([, a]: any, [, b]: any) => b - a)
                                       .map(([team, count]: any) => (
                                         <div
                                           key={team}
-                                          style={{
-                                            padding: '0.5rem',
-                                            background: '#FFF',
-                                            border: '1px solid #E7E5E4',
-                                            borderRadius: '4px',
-                                            fontWeight: 600
-                                          }}
+                                          className="p-2 border rounded font-semibold"
                                         >
                                           {team}: {count}
                                         </div>
@@ -370,30 +364,23 @@ function App() {
                           )}
 
                           {round.status === 'closed' && (
-                            <div style={{ marginTop: '1rem' }}>
-                              <div style={{ display: 'flex', gap: '2rem', marginBottom: '1rem' }}>
+                            <div className="mt-4">
+                              <div className="flex gap-8 mb-4">
                                 <p><strong>Eliminated:</strong> {round.eliminatedCount} players</p>
                                 <p><strong>Through to Round {round.roundNumber + 1}:</strong> {round.throughCount} players</p>
                               </div>
                               {round.teamResults && Object.keys(round.teamResults).length > 0 && (
                                 <div>
-                                  <p style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Team Results:</p>
-                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.5rem' }}>
+                                  <p className="font-semibold mb-2">Team Results:</p>
+                                  <div className="ah-grid-auto gap-2">
                                     {Object.entries(round.teamResults)
                                       .sort(([a]: any, [b]: any) => a.localeCompare(b))
                                       .map(([team, result]: any) => {
                                         // Green = progress (win, postponed-as-win), Red = eliminated (loss, draw, postponed-as-loss)
-                                        const isProgress = result === 'win' || (result === 'postponed' && reportData.game.postponeAsWin);
                                         return (
                                           <div
                                             key={team}
-                                            style={{
-                                              padding: '0.5rem',
-                                              borderRadius: '4px',
-                                              fontWeight: 600,
-                                              background: isProgress ? '#D1FAE5' : '#FEE2E2',
-                                              color: isProgress ? '#065F46' : '#991B1B'
-                                            }}
+                                            className="p-2 rounded font-semibold"
                                           >
                                             {team} - {result.toUpperCase()}
                                           </div>
@@ -1159,7 +1146,7 @@ function App() {
                 </button>
               </div>
 
-              <div className="ah-list" style={{ marginTop: '1rem' }}>
+              <div className="ah-list" className="mt-4">
                 {players.length === 0 && (
                   <p className="ah-meta">No players yet. Add one to get started.</p>
                 )}
@@ -1203,7 +1190,7 @@ function App() {
                 </button>
               </div>
 
-              <div className="ah-list" style={{ marginTop: '1rem' }}>
+              <div className="ah-list" className="mt-4">
                 {groups.length === 0 && (
                   <p className="ah-meta">No groups yet. Create one to get started.</p>
                 )}
@@ -1211,7 +1198,7 @@ function App() {
                 {groups.map((group) => (
                   <div key={group.id} className="ah-card">
                     <div
-                      className="ah-flex-between" style={{ cursor: 'pointer' }}
+                      className="ah-flex-between cursor-pointer"
                       onClick={() => handleToggleGroup(group.id)}
                     >
                       <div>
@@ -1230,7 +1217,7 @@ function App() {
                     </div>
 
                     {expandedGroup === group.id && (
-                      <div className="ah-list" style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #E7E5E4' }}>
+                      <div className="ah-list mt-4 pt-4 border-t">
                         <div className="ah-inline-form">
                           <input
                             type="text"
@@ -1251,7 +1238,7 @@ function App() {
                         </div>
 
                         {groupTeams[group.id]?.map((team) => (
-                          <div key={team.id} className="ah-flex-between" style={{ padding: '0.5rem', background: '#FAFAF9', borderRadius: '4px' }}>
+                          <div key={team.id} className="ah-flex-between p-2 rounded">
                             <strong>{team.name}</strong>
                             <button
                               className="ah-btn-danger-sm"
@@ -1292,14 +1279,14 @@ function App() {
                 <p className="ah-meta">No games yet. Create one below to get started.</p>
               )}
 
-              <div className="ah-list" style={{ gap: '0.75rem' }}>
+              <div className="ah-list gap-3">
                 {games.map((game) => (
                   <div
                     key={game.id}
-                    className="ah-card" style={{ cursor: 'pointer', padding: '1.25rem' }}
+                    className="ah-card cursor-pointer p-5
                     onClick={() => handleViewGame(game.id)}
                   >
-                    <div className="ah-flex-between" style={{ alignItems: 'flex-start' }}>
+                    <div className="ah-flex-between items-start">
                       <div>
                         <strong>{game.name}</strong>
                         <p className="ah-meta">
@@ -1370,33 +1357,32 @@ function App() {
                     </select>
                   </div>
 
-                  <div style={{ marginTop: '1rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <div className="mt-4">
+                    <div className="ah-flex-between mb-2">
                       <p className="ah-meta">
                         Select Players ({selectedPlayerNames.length} selected):
                       </p>
-                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                        <button className="ah-btn-outline" onClick={handleSelectAll} style={{ padding: '0.25rem 0.75rem', fontSize: '0.875rem' }}>
+                      <div className="flex gap-2 flex-wrap">
+                        <button className="ah-btn-outline ah-btn-sm" onClick={handleSelectAll}>
                           Select All
                         </button>
-                        <button className="ah-btn-outline" onClick={handleDeselectAll} style={{ padding: '0.25rem 0.75rem', fontSize: '0.875rem' }}>
+                        <button className="ah-btn-outline ah-btn-sm" onClick={handleDeselectAll}>
                           Deselect All
                         </button>
                       </div>
                     </div>
 
                     {/* Player filters */}
-                    <div className="ah-filter-box" style={{ marginBottom: '0.75rem' }}>
-                      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <div className="ah-filter-box mb-3">
+                      <div className="flex gap-3 items-center flex-wrap">
                         <input
                           type="text"
                           placeholder="Search players by name..."
                           value={gameCreationPlayerSearch}
                           onChange={(e) => setGameCreationPlayerSearch(e.target.value)}
-                          className="ah-input"
-                          style={{ flex: '1 1 200px', minWidth: 0 }}
+                          className="ah-input flex-1"
                         />
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap', fontSize: '0.875rem' }}>
+                        <label className="flex items-center gap-2 whitespace-nowrap text-sm">
                           <input
                             type="checkbox"
                             checked={showSelectedPlayersOnly}
@@ -1431,15 +1417,8 @@ function App() {
                     </div>
                   </div>
 
-                  <div style={{ marginTop: '1rem' }}>
-                    <label className="ah-flex-center" style={{
-                      gap: '0.5rem',
-                      padding: '0.75rem',
-                      background: '#FAFAF9',
-                      border: '1px solid #E7E5E4',
-                      borderRadius: '6px',
-                      cursor: 'pointer'
-                    }}>
+                  <div className="mt-4">
+                    <label className="ah-flex-center gap-2 p-3 border rounded-md cursor-pointer">
                       <input
                         type="checkbox"
                         checked={postponeAsWin}
@@ -1449,10 +1428,10 @@ function App() {
                     </label>
                   </div>
 
-                  <div style={{ marginTop: '1rem' }}>
+                  <div className="mt-4">
                     <strong>Winner Mode:</strong>
-                    <div style={{ marginTop: '0.5rem', marginLeft: '1rem' }}>
-                      <label style={{ display: 'block', marginBottom: '0.25rem' }}>
+                    <div className="mt-2 ml-4">
+                      <label className="block mb-1">
                         <input
                           type="radio"
                           name="winnerMode"
@@ -1460,9 +1439,9 @@ function App() {
                           checked={winnerMode === 'single'}
                           onChange={(e) => setWinnerMode(e.target.value)}
                         />
-                        <span style={{ marginLeft: '0.5rem' }}>1 winner only (default)</span>
+                        <span className="ml-2">1 winner only (default)</span>
                       </label>
-                      <label style={{ display: 'block' }}>
+                      <label className="block">
                         <input
                           type="radio"
                           name="winnerMode"
@@ -1470,13 +1449,13 @@ function App() {
                           checked={winnerMode === 'multiple'}
                           onChange={(e) => setWinnerMode(e.target.value)}
                         />
-                        <span style={{ marginLeft: '0.5rem' }}>Multiple winners allowed</span>
+                        <span className="ml-2">Multiple winners allowed</span>
                       </label>
                     </div>
                   </div>
 
                   {winnerMode === 'multiple' && (
-                    <div style={{ marginTop: '0.5rem', marginLeft: '1rem' }}>
+                    <div className="mt-2 ml-4">
                       <label>
                         <strong>Max Winners:</strong>{' '}
                         <input
@@ -1485,17 +1464,16 @@ function App() {
                           max="100"
                           value={maxWinners}
                           onChange={(e) => setMaxWinners(parseInt(e.target.value) || 4)}
-                          style={{ width: '80px', marginLeft: '0.5rem' }}
-                          className="ah-input"
+                          className="ah-input w-20 ml-2"
                         />
                       </label>
                     </div>
                   )}
 
-                  <div style={{ marginTop: '1rem' }}>
+                  <div className="mt-4">
                     <strong>Rollover Mode:</strong>
-                    <div style={{ marginTop: '0.5rem', marginLeft: '1rem' }}>
-                      <label style={{ display: 'block', marginBottom: '0.25rem' }}>
+                    <div className="mt-2 ml-4">
+                      <label className="block mb-1">
                         <input
                           type="radio"
                           name="rolloverMode"
@@ -1503,9 +1481,9 @@ function App() {
                           checked={rolloverMode === 'round'}
                           onChange={(e) => setRolloverMode(e.target.value)}
                         />
-                        <span style={{ marginLeft: '0.5rem' }}>Rollover round (default)</span>
+                        <span className="ml-2">Rollover round (default)</span>
                       </label>
-                      <label style={{ display: 'block' }}>
+                      <label className="block">
                         <input
                           type="radio"
                           name="rolloverMode"
@@ -1513,7 +1491,7 @@ function App() {
                           checked={rolloverMode === 'game'}
                           onChange={(e) => setRolloverMode(e.target.value)}
                         />
-                        <span style={{ marginLeft: '0.5rem' }}>Rollover game</span>
+                        <span className="ml-2">Rollover game</span>
                       </label>
                     </div>
                   </div>
@@ -1521,7 +1499,7 @@ function App() {
                   <button
                     className="ah-btn-primary"
                     onClick={handleCreateGame}
-                    style={{ marginTop: '1rem' }}
+                    className="mt-4"
                   >
                     Create Game
                   </button>
@@ -1538,7 +1516,7 @@ function App() {
           <div>
             {/* Header */}
             <div className="ah-card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div className="ah-flex-between">
                 <button className="ah-btn-outline" onClick={handleBackToGamesList}>
                   ← Back to Games
                 </button>
@@ -1546,7 +1524,7 @@ function App() {
                   Delete Game
                 </button>
               </div>
-              <div style={{ marginTop: '1rem' }}>
+              <div className="mt-4">
                 <h3 className="ah-section-title">{gameDetail.game.name}</h3>
                 <p className="ah-meta">
                   {gameDetail.game.groupName} •{' '}
@@ -1558,27 +1536,27 @@ function App() {
                     {gameDetail.game.status}
                   </span>
                 </p>
-                <div style={{ marginTop: '0.75rem', fontSize: '0.875rem', color: '#78716C' }}>
+                <div className="mt-3 text-sm">
                   <strong>Configuration:</strong>{' '}
                   {gameDetail.game.postponeAsWin ? 'Postpone=Win' : 'Postpone=Loss'} •{' '}
                   {gameDetail.game.winnerMode === 'single' ? '1 Winner' : `Multiple Winners (max ${gameDetail.game.maxWinners})`} •{' '}
                   {gameDetail.game.rolloverMode === 'round' ? 'Rollover Round' : 'Rollover Game'}
                 </div>
                 {gameDetail.game.status === 'completed' && gameDetail.game.winnerName && (
-                  <p style={{ marginTop: '0.5rem', fontSize: '1.125rem', fontWeight: 600 }}>
+                  <p className="mt-2 text-lg font-semibold">
                     Winner: {gameDetail.game.winnerName} 🏆
                   </p>
                 )}
-                <p className="ah-meta" style={{ marginTop: '0.75rem' }}>
+                <p className="ah-meta mt-3">
                   <strong>Display URL:</strong>
                 </p>
-                <div className="ah-flex-center" style={{ gap: '0.5rem', marginTop: '0.25rem' }}>
+                <div className="ah-flex-center gap-2 mt-1">
                   <input
                     type="text"
                     className="ah-input"
                     value={`http://${window.location.hostname}:4021/?view=report&gameId=${selectedGameId}`}
                     readOnly
-                    style={{ flex: 1 }}
+                    className="flex-1"
                   />
                   <button
                     className="ah-btn-outline"
@@ -1598,7 +1576,7 @@ function App() {
             <div className="ah-card">
               <div className="ah-section-header" onClick={() => toggleCard('participants')}>
                 <h3 className="ah-section-title">Participants ({gameDetail.participants.length})</h3>
-                <div className="ah-flex-center" style={{ gap: '0.5rem' }}>
+                <div className="ah-flex-center gap-2">
                   {gameDetail.game.status === 'active' && !collapsedCards['participants'] && (
                     <button
                       className="ah-btn-outline"
@@ -1606,7 +1584,7 @@ function App() {
                         e.stopPropagation();
                         setShowAddPlayers(!showAddPlayers);
                       }}
-                      style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
+                      className="px-4 py-2 text-sm"
                     >
                       {showAddPlayers ? 'Cancel' : '+ Add Players'}
                     </button>
@@ -1618,9 +1596,9 @@ function App() {
               {!collapsedCards['participants'] && (
                 <>
                   {showAddPlayers && (
-                    <div className="ah-filter-box" style={{ marginBottom: '1rem' }}>
-                      <p className="ah-meta" style={{ marginBottom: '0.5rem' }}>Select players to add:</p>
-                      <div className="ah-player-grid" style={{ maxHeight: '200px' }}>
+                    <div className="ah-filter-box mb-4">
+                      <p className="ah-meta mb-2">Select players to add:</p>
+                      <div className="ah-player-grid max-h-[200px]">
                         {players.filter(p => !gameDetail.participants.some(part => part.playerName === p.name)).map((player) => (
                           <label key={player.id} className="ah-player-grid-item">
                             <input
@@ -1641,37 +1619,22 @@ function App() {
                       <button
                         className="ah-btn-primary"
                         onClick={handleAddPlayersToGame}
-                        style={{ marginTop: '0.5rem' }}
+                        className="mt-2"
                       >
                         Add Selected Players
                       </button>
                     </div>
                   )}
 
-                  <div className="ah-grid-auto" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }}>
+                  <div className="ah-grid-auto">
                     {gameDetail.participants.map((participant) => (
                       <div
                         key={participant.id}
-                        className="ah-flex-between"
-                        style={{
-                          padding: '0.5rem 0.75rem',
-                          borderRadius: '6px',
-                          fontSize: '0.875rem',
-                          fontWeight: 500,
-                          ...(participant.isActive
-                            ? { background: '#D1FAE5', color: '#065F46' }
-                            : { background: '#FEE2E2', color: '#991B1B', opacity: 0.7 })
-                        }}
+                        className="ah-flex-between py-2 px-3 rounded-md text-sm font-medium"
                       >
                         <span>{participant.playerName}</span>
                         {!participant.isActive && participant.eliminatedInRound && (
-                          <span style={{
-                            fontSize: '0.75rem',
-                            background: '#991B1B',
-                            color: 'white',
-                            padding: '0.125rem 0.5rem',
-                            borderRadius: '4px'
-                          }}>
+                          <span className="text-xs px-2 py-0.5 rounded">
                             R{participant.eliminatedInRound}
                           </span>
                         )}
@@ -1697,7 +1660,7 @@ function App() {
                           <h3 className="ah-section-title">
                             Round {currentRound.roundNumber} - {currentRound.status === 'open' ? 'Open' : 'Closed'}
                           </h3>
-                          <div className="ah-flex-center" style={{ gap: '0.5rem' }}>
+                          <div className="ah-flex-center gap-2">
                             {currentRound.status === 'closed' && !collapsedCards['round'] && (
                               <button className="ah-btn-primary" onClick={(e) => { e.stopPropagation(); handleAdvanceRound(); }}>
                                 Next Round →
@@ -1711,24 +1674,24 @@ function App() {
                         <>
                         {currentRound.status === 'open' && (
                           <div>
-                            <p className="ah-meta" style={{ marginBottom: '1rem' }}>
+                            <p className="ah-meta mb-4">
                               Assign teams to active players:
                             </p>
 
                             {/* Player filters */}
-                            <div style={{ marginBottom: '1rem', padding: '1rem', background: '#FAFAF9', borderRadius: '8px' }}>
-                              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                                <div style={{ flex: '1 1 300px' }}>
+                            <div className="mb-4 p-4 rounded-lg">
+                              <div className="flex gap-4 items-center flex-wrap">
+                                <div className="flex-1">
                                   <input
                                     type="text"
                                     placeholder="Search players (e.g., 'Dave P' to find Dave P...)"
                                     value={playerSearchText}
                                     onChange={(e) => setPlayerSearchText(e.target.value)}
                                     className="ah-input"
-                                    style={{ width: '100%' }}
+                                    className="w-full"
                                   />
                                 </div>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap' }}>
+                                <label className="flex items-center gap-2 whitespace-nowrap">
                                   <input
                                     type="checkbox"
                                     checked={showUnassignedPlayersOnly}
@@ -1740,7 +1703,7 @@ function App() {
                             </div>
 
                             {/* Team assignment for each active player */}
-                            <div className="ah-list" style={{ gap: '0.75rem' }}>
+                            <div className="ah-list gap-3">
                               {activePlayers.filter((participant) => {
                                 const existingPick = picks.find(
                                   (p) => p.playerName === participant.playerName
@@ -1761,13 +1724,7 @@ function App() {
                                 );
 
                                 return (
-                                  <div key={participant.id} className="ah-flex-between" style={{
-                      padding: '0.75rem',
-                      background: '#FAFAF9',
-                      border: '1px solid #E7E5E4',
-                      borderRadius: '6px',
-                      gap: '1rem'
-                    }}>
+                                  <div key={participant.id} className="ah-flex-between p-3 border rounded-md gap-4">
                                     <strong>{participant.playerName}</strong>
                                     <select
                                       className="ah-select"
@@ -1803,7 +1760,7 @@ function App() {
                               })}
                             </div>
 
-                            <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
+                            <div className="mt-4 flex gap-2">
                               <button
                                 className="ah-btn-outline"
                                 onClick={handleSavePicks}
@@ -1822,13 +1779,13 @@ function App() {
 
                             {/* Results Entry - Team-based (only after finalize) */}
                             {picksFinalized && picks.length > 0 && (
-                              <div style={{ marginTop: '2rem' }}>
+                              <div className="mt-8">
                                 <h4 className="ah-section-title">Enter Results (by Team)</h4>
-                                <p className="ah-meta" style={{ marginBottom: '1rem' }}>
+                                <p className="ah-meta mb-4">
                                   Click result for each team. All players who picked that team will get the same result.
                                 </p>
 
-                                <div className="ah-list" style={{ gap: '1rem' }}>
+                                <div className="ah-list gap-4">
                                   {(() => {
                                     // Group picks by team
                                     const teamGroups: Record<string, Pick[]> = {};
@@ -1853,90 +1810,34 @@ function App() {
                                       };
 
                                       return (
-                                        <div key={teamName} className="ah-card ah-flex-col" style={{ gap: '1rem' }}>
+                                        <div key={teamName} className="ah-card ah-flex-col gap-4">
                                           <div>
-                                            <strong style={{ fontSize: '1.125rem' }}>{teamName}</strong>
+                                            <strong className="text-lg">{teamName}</strong>
                                             <p className="ah-meta">
                                               {teamPicks.map(p => p.playerName).join(', ')}
                                             </p>
                                           </div>
-                                          <div className="ah-flex-wrap" style={{ gap: '0.5rem' }}>
+                                          <div className="ah-flex-wrap gap-2">
                                             <button
-                                              style={{
-                                                flex: 1,
-                                                minWidth: '100px',
-                                                padding: '0.75rem 1rem',
-                                                fontSize: '0.875rem',
-                                                fontWeight: 600,
-                                                border: '2px solid',
-                                                borderRadius: '6px',
-                                                cursor: 'pointer',
-                                                textTransform: 'uppercase',
-                                                ...(currentResult === 'win'
-                                                  ? { background: '#10B981', borderColor: '#10B981', color: '#FFF' }
-                                                  : { background: '#FFF', borderColor: '#10B981', color: '#10B981' })
-                                              }}
+                                              className="flex-1 min-w-[100px] px-4 py-3 text-sm font-semibold border-2 rounded-md cursor-pointer uppercase"
                                               onClick={() => setTeamResult('win')}
                                             >
                                               Win
                                             </button>
                                             <button
-                                              style={{
-                                                flex: 1,
-                                                minWidth: '100px',
-                                                padding: '0.75rem 1rem',
-                                                fontSize: '0.875rem',
-                                                fontWeight: 600,
-                                                border: '2px solid',
-                                                borderRadius: '6px',
-                                                cursor: 'pointer',
-                                                textTransform: 'uppercase',
-                                                ...(currentResult === 'loss'
-                                                  ? { background: '#EF4444', borderColor: '#EF4444', color: '#FFF' }
-                                                  : { background: '#FFF', borderColor: '#EF4444', color: '#EF4444' })
-                                              }}
+                                              className="flex-1 min-w-[100px] px-4 py-3 text-sm font-semibold border-2 rounded-md cursor-pointer uppercase"
                                               onClick={() => setTeamResult('loss')}
                                             >
                                               Loss
                                             </button>
                                             <button
-                                              style={{
-                                                flex: 1,
-                                                minWidth: '100px',
-                                                padding: '0.75rem 1rem',
-                                                fontSize: '0.875rem',
-                                                fontWeight: 600,
-                                                border: '2px solid',
-                                                borderRadius: '6px',
-                                                cursor: 'pointer',
-                                                textTransform: 'uppercase',
-                                                ...(currentResult === 'draw'
-                                                  ? { background: '#F59E0B', borderColor: '#F59E0B', color: '#FFF' }
-                                                  : { background: '#FFF', borderColor: '#F59E0B', color: '#F59E0B' })
-                                              }}
+                                              className="flex-1 min-w-[100px] px-4 py-3 text-sm font-semibold border-2 rounded-md cursor-pointer uppercase"
                                               onClick={() => setTeamResult('draw')}
                                             >
                                               Draw
                                             </button>
                                             <button
-                                              style={{
-                                                flex: 1,
-                                                minWidth: '100px',
-                                                padding: '0.75rem 1rem',
-                                                fontSize: '0.875rem',
-                                                fontWeight: 600,
-                                                border: '2px solid',
-                                                borderRadius: '6px',
-                                                cursor: 'pointer',
-                                                textTransform: 'uppercase',
-                                                ...(currentResult === 'postponed'
-                                                  ? (gameDetail.game.postponeAsWin
-                                                      ? { background: '#10B981', borderColor: '#10B981', color: '#FFF' }
-                                                      : { background: '#EF4444', borderColor: '#EF4444', color: '#FFF' })
-                                                  : (gameDetail.game.postponeAsWin
-                                                      ? { background: '#FFF', borderColor: '#10B981', color: '#10B981' }
-                                                      : { background: '#FFF', borderColor: '#EF4444', color: '#EF4444' }))
-                                              }}
+                                              className="flex-1 min-w-[100px] px-4 py-3 text-sm font-semibold border-2 rounded-md cursor-pointer uppercase"
                                               onClick={() => setTeamResult('postponed')}
                                             >
                                               Postponed
@@ -1948,7 +1849,7 @@ function App() {
                                   })()}
                                 </div>
 
-                                <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                <div className="mt-4 flex gap-2 flex-wrap">
                                   <button
                                     className="ah-btn-outline"
                                     onClick={handleSaveResults}
@@ -1970,36 +1871,19 @@ function App() {
                         {/* Closed round - show results */}
                         {currentRound.status === 'closed' && (
                           <div>
-                            <p className="ah-meta" style={{ marginBottom: '1rem' }}>
+                            <p className="ah-meta mb-4">
                               Round complete. Click "Next Round" to continue.
                             </p>
                             {picks.filter(p => p.result).length > 0 && (
-                              <div className="ah-list" style={{ gap: '0.75rem' }}>
+                              <div className="ah-list gap-3">
                                 {picks.filter(p => p.result).map((pick) => (
-                                  <div key={pick.id} className="ah-flex-between" style={{
-                      padding: '0.75rem',
-                      background: '#FAFAF9',
-                      border: '1px solid #E7E5E4',
-                      borderRadius: '6px',
-                      gap: '1rem'
-                    }}>
+                                  <div key={pick.id} className="ah-flex-between p-3 border rounded-md gap-4">
                                     <div>
                                       <strong>{pick.playerName}</strong>
                                       <p className="ah-meta">{pick.teamName || 'No team'}</p>
                                     </div>
                                     <span
-                                      style={{
-                                        padding: '0.25rem 0.75rem',
-                                        borderRadius: '12px',
-                                        fontSize: '0.75rem',
-                                        fontWeight: 600,
-                                        textTransform: 'uppercase',
-                                        ...(pick.result === 'win' ? { background: '#D1FAE5', color: '#065F46' } :
-                                            pick.result === 'loss' ? { background: '#FEE2E2', color: '#991B1B' } :
-                                            pick.result === 'draw' ? { background: '#FED7AA', color: '#9A3412' } :
-                                            pick.result === 'postponed' ? { background: '#DBEAFE', color: '#1E3A8A' } :
-                                            { background: '#E5E7EB', color: '#6B7280' })
-                                      }}
+                                      className="px-3 py-1 rounded-xl text-xs font-semibold uppercase"
                                     >
                                       {pick.result}
                                     </span>
@@ -2026,15 +1910,15 @@ function App() {
               <h3 className="ah-section-title">Game Reports</h3>
 
               {/* Game Selection */}
-              <div style={{ marginTop: '1rem' }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem' }}>
+              <div className="mt-4">
+                <label className="block mb-2">
                   <strong>Select Game:</strong>
                 </label>
                 <select
                   className="ah-select"
                   value={reportGameId}
                   onChange={(e) => setReportGameId(parseInt(e.target.value))}
-                  style={{ width: '100%', maxWidth: '400px' }}
+                  className="w-full max-w-[400px]"
                 >
                   <option value={0}>-- Select a game --</option>
                   {games.map((game) => (
@@ -2047,15 +1931,15 @@ function App() {
 
               {/* Round Selection */}
               {reportGameId > 0 && (
-                <div style={{ marginTop: '1rem' }}>
-                  <label style={{ display: 'block', marginBottom: '0.5rem' }}>
+                <div className="mt-4">
+                  <label className="block mb-2">
                     <strong>Select Round:</strong>
                   </label>
                   <select
                     className="ah-select"
                     value={reportRound}
                     onChange={(e) => setReportRound(e.target.value)}
-                    style={{ width: '100%', maxWidth: '400px' }}
+                    className="w-full max-w-[400px]"
                   >
                     <option value="all">All Rounds</option>
                     {(() => {
@@ -2074,10 +1958,10 @@ function App() {
 
             {/* Report Display */}
             {reportGameId > 0 && reportData && (
-              <div style={{ marginTop: '1rem' }}>
+              <div className="mt-4">
                 {/* Game Header */}
                 <div className="ah-card">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <div className="ah-flex-between mb-2">
                     <h2>{reportData.game.name}</h2>
                     <button
                       className="ah-btn-outline"
@@ -2103,22 +1987,22 @@ function App() {
                     {reportData.rounds
                       .filter((round: any) => reportRound === 'all' || round.roundNumber === parseInt(reportRound))
                       .map((round: any) => (
-                        <div key={round.roundNumber} className="ah-card" style={{ marginTop: '1rem' }}>
+                        <div key={round.roundNumber} className="ah-card" className="mt-4">
                           <h3 className="ah-section-title">
                             Round {round.roundNumber} - {round.status === 'open' ? 'OPEN' : 'CLOSED'}
                           </h3>
 
                           {round.status === 'open' && (
-                            <div style={{ marginTop: '1rem' }}>
+                            <div className="mt-4">
                               <p><strong>Active Players:</strong> {round.activePlayers}</p>
                               {round.teamPicks && Object.keys(round.teamPicks).length > 0 && (
-                                <div style={{ marginTop: '1rem' }}>
-                                  <p style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Team Picks:</p>
-                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.5rem' }}>
+                                <div className="mt-4">
+                                  <p className="font-semibold mb-2">Team Picks:</p>
+                                  <div className="ah-grid-auto gap-2">
                                     {Object.entries(round.teamPicks)
                                       .sort(([, a]: any, [, b]: any) => b - a)
                                       .map(([team, count]: any) => (
-                                        <div key={team} style={{ padding: '0.5rem', background: '#FAFAF9', borderRadius: '4px' }}>
+                                        <div key={team} className="p-2 rounded">
                                           {team} ({count})
                                         </div>
                                       ))}
@@ -2129,30 +2013,23 @@ function App() {
                           )}
 
                           {round.status === 'closed' && (
-                            <div style={{ marginTop: '1rem' }}>
-                              <div style={{ display: 'flex', gap: '2rem', marginBottom: '1rem' }}>
+                            <div className="mt-4">
+                              <div className="flex gap-8 mb-4">
                                 <p><strong>Eliminated:</strong> {round.eliminatedCount} players</p>
                                 <p><strong>Through to Round {round.roundNumber + 1}:</strong> {round.throughCount} players</p>
                               </div>
                               {round.teamResults && Object.keys(round.teamResults).length > 0 && (
                                 <div>
-                                  <p style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Team Results:</p>
-                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.5rem' }}>
+                                  <p className="font-semibold mb-2">Team Results:</p>
+                                  <div className="ah-grid-auto gap-2">
                                     {Object.entries(round.teamResults)
                                       .sort(([a]: any, [b]: any) => a.localeCompare(b))
                                       .map(([team, result]: any) => {
                                         // Green = progress (win, postponed-as-win), Red = eliminated (loss, draw, postponed-as-loss)
-                                        const isProgress = result === 'win' || (result === 'postponed' && reportData.game.postponeAsWin);
                                         return (
                                           <div
                                             key={team}
-                                            style={{
-                                              padding: '0.5rem',
-                                              borderRadius: '4px',
-                                              fontWeight: 600,
-                                              background: isProgress ? '#D1FAE5' : '#FEE2E2',
-                                              color: isProgress ? '#065F46' : '#991B1B'
-                                            }}
+                                            className="p-2 rounded font-semibold"
                                           >
                                             {team} - {result.toUpperCase()}
                                           </div>
