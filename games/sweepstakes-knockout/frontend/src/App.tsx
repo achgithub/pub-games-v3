@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import './App.css';
 
+// API configuration
 const API_BASE = '/api';
 
 // Parse query params
@@ -251,7 +251,7 @@ function App() {
                   {displayReportData.map((entry, idx) => (
                     <tr key={idx}>
                       <td>
-                        <span className="winner-badge">{entry.position}</span>
+                        <span className="ah-badge ah-badge--success">{entry.position}</span>
                       </td>
                       <td>
                         <strong>{entry.playerName}</strong>
@@ -707,7 +707,7 @@ function App() {
                   </div>
 
                   {!collapsedCards['createEvent'] && (
-                    <div className="event-form">
+                    <div className="ah-flex-col" style={{ gap: '0.75rem' }}>
                       <input
                         type="text"
                         className="ah-input"
@@ -746,10 +746,10 @@ function App() {
                       )}
                       <div className="ah-list">
                         {events.filter(e => e.status !== 'completed').map((event) => (
-                          <div key={event.id} className="ah-card event-item" onClick={() => setSelectedEventId(event.id)}>
+                          <div key={event.id} className="ah-card" style={{ cursor: 'pointer' }} onClick={() => setSelectedEventId(event.id)}>
                             <div className="ah-flex-between">
                               <div>
-                                <h4 className="event-name">{event.name}</h4>
+                                <h4 style={{ margin: '0 0 4px 0' }}>{event.name}</h4>
                                 {event.description && <p className="ah-meta">{event.description}</p>}
                                 <p className="ah-meta">{event.participantCount} participants</p>
                               </div>
@@ -773,10 +773,10 @@ function App() {
                     {!collapsedCards['completedEvents'] && (
                       <div className="ah-list">
                         {events.filter(e => e.status === 'completed').map((event) => (
-                          <div key={event.id} className="ah-card event-item" onClick={() => setSelectedEventId(event.id)}>
+                          <div key={event.id} className="ah-card" style={{ cursor: 'pointer' }} onClick={() => setSelectedEventId(event.id)}>
                             <div className="ah-flex-between">
                               <div>
-                                <h4 className="event-name">{event.name}</h4>
+                                <h4 style={{ margin: '0 0 4px 0' }}>{event.name}</h4>
                                 {event.description && <p className="ah-meta">{event.description}</p>}
                               </div>
                               <span className="ah-status ah-status--active">{event.status}</span>
@@ -797,7 +797,7 @@ function App() {
                   <button className="ah-btn-back" onClick={() => setSelectedEventId(null)}>
                     ← Back to Events
                   </button>
-                  <h2 className="event-detail-title">{selectedEvent.name}</h2>
+                  <h2 style={{ margin: 0 }}>{selectedEvent.name}</h2>
                   <span className={`ah-status ah-status--${selectedEvent.status === 'completed' ? 'active' : 'waiting'}`}>
                     {selectedEvent.status}
                   </span>
@@ -816,7 +816,7 @@ function App() {
                   <p className="ah-meta" style={{ marginTop: '0.5rem' }}>
                     <strong>Display URL:</strong>
                   </p>
-                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.25rem' }}>
+                  <div className="ah-flex-center" style={{ gap: '0.5rem', marginTop: '0.25rem' }}>
                     <input
                       type="text"
                       className="ah-input"
@@ -846,12 +846,12 @@ function App() {
 
                   {!collapsedCards['participants'] && (
                     <>
-                      <div className="add-players-section">
+                      <div style={{ marginBottom: '1rem' }}>
                         <div style={{ marginBottom: '0.75rem' }}>
                           <p className="ah-meta">
                             Select Players ({selectedPlayers.length} selected):
                           </p>
-                          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                          <div className="ah-flex-wrap" style={{ gap: '0.5rem' }}>
                             <button className="ah-btn-outline" onClick={handleSelectAllPlayers} style={{ padding: '0.25rem 0.75rem', fontSize: '0.875rem' }}>
                               Select All
                             </button>
@@ -871,7 +871,7 @@ function App() {
 
                         {/* Player filters */}
                         <div style={{ marginBottom: '0.75rem', padding: '0.75rem', background: '#FAFAF9', borderRadius: '8px', border: '1px solid #E7E5E4' }}>
-                          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                          <div className="ah-flex-wrap" style={{ gap: '0.75rem', alignItems: 'center' }}>
                             <input
                               type="text"
                               placeholder="Search players by name..."
@@ -880,7 +880,7 @@ function App() {
                               className="ah-input"
                               style={{ flex: '1 1 200px', minWidth: 0 }}
                             />
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap', fontSize: '0.875rem' }}>
+                            <label className="ah-flex-center" style={{ gap: '0.5rem', whiteSpace: 'nowrap', fontSize: '0.875rem' }}>
                               <input
                                 type="checkbox"
                                 checked={showSelectedPlayersOnly}
@@ -891,7 +891,17 @@ function App() {
                           </div>
                         </div>
 
-                        <div className="player-selection-grid">
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                          gap: '0.5rem',
+                          padding: '0.5rem',
+                          background: '#FAFAF9',
+                          borderRadius: '8px',
+                          border: '1px solid #E7E5E4',
+                          maxHeight: '300px',
+                          overflowY: 'auto'
+                        }}>
                           {getAvailablePlayers().filter((player) => {
                             // Text search filter
                             const matchesSearch = !playerSearch ||
@@ -903,7 +913,14 @@ function App() {
 
                             return matchesSearch && matchesSelected;
                           }).map((player) => (
-                            <label key={player.id} className="player-checkbox-label">
+                            <label key={player.id} style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.5rem',
+                              padding: '0.5rem',
+                              cursor: 'pointer',
+                              borderRadius: '4px'
+                            }}>
                               <input
                                 type="checkbox"
                                 checked={selectedPlayers.includes(player.id)}
@@ -921,7 +938,7 @@ function App() {
                         )}
                         {participants.map((participant) => (
                           <div key={participant.id} className="ah-list-item">
-                            <div className="participant-info">
+                            <div className="ah-flex-col" style={{ flex: 1, gap: '8px' }}>
                               <strong>{participant.playerName}</strong>
                               <select
                                 className="ah-select"
@@ -1023,11 +1040,16 @@ function App() {
                             return (
                               <div
                                 key={participant.id}
-                                className={`ah-card result-card ${
-                                  resultAssignments[participant.competitorId!] ? 'assigned' : ''
-                                }`}
+                                className="ah-card ah-flex-col"
+                                style={{
+                                  gap: '8px',
+                                  ...(resultAssignments[participant.competitorId!] ? {
+                                    borderColor: '#22C55E',
+                                    background: '#F0FDF4'
+                                  } : {})
+                                }}
                               >
-                                <div className="result-card-competitor">
+                                <div style={{ fontWeight: 600 }}>
                                   {participant.competitorName}
                                 </div>
                                 <div className="ah-meta">
@@ -1056,7 +1078,8 @@ function App() {
                       </div>
 
                       <button
-                        className="ah-btn-primary save-results-btn"
+                        className="ah-btn-primary"
+                        style={{ marginTop: '20px' }}
                         onClick={handleSaveResults}
                       >
                         Save Results & Complete Event
@@ -1075,7 +1098,8 @@ function App() {
             <h3 className="ah-section-title">Event Report</h3>
 
             <select
-              className="ah-select report-select"
+              className="ah-select"
+              style={{ width: '100%', marginBottom: '20px' }}
               value={reportEventId}
               onChange={(e) => setReportEventId(parseInt(e.target.value))}
             >
@@ -1114,7 +1138,7 @@ function App() {
                           </td>
                           <td>{entry.competitorName}</td>
                           <td>
-                            <span className="winner-badge">{entry.position}</span>
+                            <span className="ah-badge ah-badge--success">{entry.position}</span>
                           </td>
                         </tr>
                       ))}
