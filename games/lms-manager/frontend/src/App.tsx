@@ -1569,6 +1569,28 @@ function App() {
                     Winner: {gameDetail.game.winnerName} 🏆
                   </p>
                 )}
+                <p className="ah-meta" style={{ marginTop: '0.75rem' }}>
+                  <strong>Display URL:</strong>
+                </p>
+                <div className="ah-flex-center" style={{ gap: '0.5rem', marginTop: '0.25rem' }}>
+                  <input
+                    type="text"
+                    className="ah-input"
+                    value={`http://${window.location.hostname}:4021/?view=report&gameId=${selectedGameId}`}
+                    readOnly
+                    style={{ flex: 1 }}
+                  />
+                  <button
+                    className="ah-btn-outline"
+                    onClick={() => {
+                      const url = `http://${window.location.hostname}:4021/?view=report&gameId=${selectedGameId}`;
+                      navigator.clipboard.writeText(url);
+                      alert('Display URL copied to clipboard!');
+                    }}
+                  >
+                    Copy URL
+                  </button>
+                </div>
               </div>
             </div>
 
