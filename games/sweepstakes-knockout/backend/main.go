@@ -90,7 +90,7 @@ func main() {
 	// Serve static files
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./static")))
 
-	port := "4031"
+	port := "4032"
 	log.Printf("Sweepstakes Knockout server starting on port %s...", port)
 	log.Fatal(http.ListenAndServe(":"+port, corsHandler(r)))
 }

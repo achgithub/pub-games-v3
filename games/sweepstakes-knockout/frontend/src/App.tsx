@@ -1024,13 +1024,13 @@ function App() {
                 <input
                   type="text"
                   className="ah-input flex-1"
-                  value={`http://${window.location.hostname}:4031/?view=report&eventId=${selectedEventId}`}
+                  value={`http://${window.location.hostname}:4032/?view=report&eventId=${selectedEventId}`}
                   readOnly
                 />
                 <button
                   className="ah-btn-outline"
                   onClick={() => {
-                    const url = `http://${window.location.hostname}:4031/?view=report&eventId=${selectedEventId}`;
+                    const url = `http://${window.location.hostname}:4032/?view=report&eventId=${selectedEventId}`;
                     navigator.clipboard.writeText(url);
                     alert('Display URL copied to clipboard!');
                   }}
