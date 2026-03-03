@@ -858,10 +858,9 @@ function App() {
                               Deselect All
                             </button>
                             <button
-                              className="ah-btn-primary"
+                              className="ah-btn-outline ah-btn-sm ml-auto"
                               onClick={handleAddParticipants}
                               disabled={selectedPlayers.length === 0}
-                              className="ah-btn-outline ah-btn-sm ml-auto"
                             >
                               Add Selected Players
                             </button>
