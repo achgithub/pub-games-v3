@@ -1721,7 +1721,12 @@ function App() {
                                   (p) => p.playerName === participant.playerName
                                 );
                                 const isRevealed = revealedPlayers.has(participant.playerName);
-                                const hasAssignment = !!(pickAssignments[participant.playerName] || existingPick?.teamId);
+                                const assignedTeamId = pickAssignments[participant.playerName] || existingPick?.teamId;
+                                const hasAssignment = !!assignedTeamId;
+                                const assignedTeam = groupTeams[gameDetail.game.groupId]?.find(t => t.id === assignedTeamId);
+                                const maskedName = assignedTeam
+                                  ? '*'.repeat(assignedTeam.name.length)
+                                  : '**********';
 
                                 return (
                                   <div key={participant.id} className="ah-flex-between p-3 border rounded-md gap-3">
@@ -1730,11 +1735,7 @@ function App() {
                                     <div className="flex gap-2 items-center">
                                       <select
                                         className="ah-select"
-                                        value={
-                                          pickAssignments[participant.playerName] ||
-                                          existingPick?.teamId ||
-                                          ''
-                                        }
+                                        value={assignedTeamId || ''}
                                         onChange={(e) =>
                                           setPickAssignments({
                                             ...pickAssignments,
@@ -1743,7 +1744,7 @@ function App() {
                                         }
                                       >
                                         <option value="">
-                                          {!isRevealed && hasAssignment ? '**********' : 'Select Team'}
+                                          {!isRevealed && hasAssignment ? maskedName : 'Select Team'}
                                         </option>
                                         {!isRevealed && hasAssignment ? null : groupTeams[gameDetail.game.groupId]?.map((team) => {
                                           const alreadyUsed = usedTeams[participant.playerName]?.includes(team.id);
@@ -1758,6 +1759,20 @@ function App() {
                                           );
                                         })}
                                       </select>
+
+                                      {hasAssignment && (
+                                        <button
+                                          className="ah-btn-outline ah-btn-sm"
+                                          onClick={() => {
+                                            const newAssignments = { ...pickAssignments };
+                                            delete newAssignments[participant.playerName];
+                                            setPickAssignments(newAssignments);
+                                          }}
+                                          title="Clear team selection"
+                                        >
+                                          ✕
+                                        </button>
+                                      )}
 
                                       <button
                                         className="ah-btn-outline ah-btn-sm"

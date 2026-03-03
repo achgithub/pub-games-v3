@@ -1175,6 +1175,9 @@ function App() {
                     {participants.map((participant) => {
                       const isRevealed = revealedParticipants.has(participant.id);
                       const hasAssignment = !!participant.competitorId;
+                      const maskedName = participant.competitorName
+                        ? '*'.repeat(participant.competitorName.length)
+                        : '**********';
 
                       return (
                         <div key={participant.id} className="ah-flex-between p-3 border rounded-md gap-3">
@@ -1202,11 +1205,11 @@ function App() {
                               }
                             >
                               <option value="">
-                                {!isRevealed && hasAssignment ? '**********' : 'Not assigned'}
+                                {!isRevealed && hasAssignment ? maskedName : 'Not assigned'}
                               </option>
                               {participant.competitorId && participant.competitorName && (
                                 <option value={participant.competitorId}>
-                                  {!isRevealed ? '**********' : participant.competitorName}
+                                  {!isRevealed ? maskedName : participant.competitorName}
                                 </option>
                               )}
                               {!isRevealed && hasAssignment ? null : getAvailableCompetitors(participant.competitorId).map((c) => (
@@ -1215,6 +1218,16 @@ function App() {
                                 </option>
                               ))}
                             </select>
+
+                            {hasAssignment && (
+                              <button
+                                className="ah-btn-outline ah-btn-sm"
+                                onClick={() => handleAssignCompetitor(participant.id, null)}
+                                title="Clear assignment"
+                              >
+                                ✕
+                              </button>
+                            )}
 
                             <button
                               className="ah-btn-outline ah-btn-sm"
