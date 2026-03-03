@@ -1,6 +1,31 @@
 # Pub Games v3 - Project Guide
 
-## Recent Updates (2026-03-02)
+## Recent Updates (2026-03-03)
+
+**Sweepstakes Knockout & LMS Manager Enhancements:**
+- ✅ Sweepstakes migrated to Groups/Competitors pattern (matches LMS Groups/Teams)
+- ✅ Spinner feature for randomized competitor assignment (mobile-friendly)
+- ✅ Privacy reveal button (press & hold) to hide selections from users
+- ✅ Clear/reset button for assignment corrections
+- ✅ Auto-save results on each selection (supports multi-hour data collection)
+- ✅ Fixed-width dropdowns prevent all layout shifting
+- ✅ Database schema v3 with winning positions configured at game creation
+
+**Shared CSS Enhancements:**
+- Added `.ah-select-fixed` - Fixed-width (200px) dropdown preventing layout shifts
+  - Prevents shifting when masking selections with asterisks
+  - Prevents shifting when adjacent buttons appear/disappear
+  - Prevents shifting when option text varies in length
+- Added `.ah-player-grid`, `.ah-player-grid-item`, `.ah-filter-box` utility classes
+- Added horizontal scroll to `.ah-tabs` for overflow handling
+- Fixed `.ah-header` to include `justify-between` for right-aligned buttons
+- Confirmed `.ah-list-item` has built-in `justify-between`
+
+**Component Library Updates:**
+- ✅ Added `.ah-select-fixed` documentation with live example
+- Added collapsible section pattern documentation with best practices
+- Added anti-pattern warnings showing wrong approaches
+- Fixed "List with Actions" example to use correct pattern
 
 **CSS Migration Complete for Four Apps:**
 - ✅ **sweepstakes-knockout** - Migrated from app-specific CSS to Activity Hub shared CSS
@@ -8,37 +33,16 @@
 - ✅ **dots** - Migrated to shared CSS with `dots-board.css` pattern
 - ✅ **tic-tac-toe** - Migrated to shared CSS with `tictactoe-board.css` pattern
 
-**NEW: `*-board.css` Pattern Established:**
+**`*-board.css` Pattern Established:**
 - Game board rendering CSS allowed in `*-board.css` files (ONLY exception)
 - All UI elements MUST use Activity Hub shared CSS classes
 - Removed `index.css` exception (was a loophole for app-specific CSS)
 - Pre-commit hook strictly enforces: ONLY `*-board.css` allowed
 - Activity Hub CSS provides all resets (box-sizing, body styles)
 
-**Key Learnings:**
-- Frontend/backend type mismatches cause silent failures (dots `winnerId` bug)
-- Mobile grid alignment requires precise margin math (dots v-line drift fix)
-- `ah-flex-center` vs `ah-flex-center-justify` for full centering
-- Check twice before commits to avoid JSX syntax errors
-
-**Shared CSS Enhancements:**
-- Added `.ah-player-grid`, `.ah-player-grid-item`, `.ah-filter-box` utility classes
-- Added horizontal scroll to `.ah-tabs` for overflow handling
-- Fixed `.ah-header` to include `justify-between` for right-aligned buttons
-- Confirmed `.ah-list-item` has built-in `justify-between`
-
-**Component Library Updates:**
-- Added collapsible section pattern documentation with best practices
-- Added anti-pattern warnings showing wrong approaches
-- Fixed "List with Actions" example to use correct pattern
-
 **Section Toggle Standardization:**
 - All collapsible sections now use toggle arrow on RIGHT side (separate element)
 - Pattern enforced: `.ah-section-header` → `.ah-section-title` + `.ah-section-toggle`
-
-**Features Added:**
-- Display URL with copy button added to lms-manager (matches sweepstakes pattern)
-- Competitor assignment fix in sweepstakes-knockout
 
 ---
 

@@ -245,7 +245,18 @@ Common flexbox patterns to avoid inline styles:
   <option value="">Select...</option>
   <option value="a">Option A</option>
 </select>
+
+// Fixed-width select (prevents layout shifting)
+<select className="ah-select-fixed" value={selected} onChange={e => setSelected(e.target.value)}>
+  <option value="">*************************</option>
+  <option value="a">Team Name</option>
+</select>
 ```
+
+**When to use `.ah-select-fixed`:**
+- Privacy masking with asterisks (LMS Manager, Sweepstakes Knockout)
+- Layouts with adjacent buttons that could cause shifting
+- Any situation where dropdown width changes create unprofessional shifting
 
 ### Tabs
 
@@ -691,6 +702,7 @@ For grid-based games (tic-tac-toe, dots, etc.):
 ### Forms
 - `.ah-input` - Text input field
 - `.ah-select` - Select dropdown
+- `.ah-select-fixed` - Fixed-width select (200px, prevents layout shifting)
 - `.ah-label` - Form label text
 - `.ah-meta` - Helper/meta text (gray, 14px)
 
