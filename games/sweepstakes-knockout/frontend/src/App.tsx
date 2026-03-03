@@ -1147,8 +1147,6 @@ function App() {
                 </div>
               </>
             )}
-          </div>
-        )}
 
         {/* REPORTS TAB */}
         {activeTab === 'reports' && (
