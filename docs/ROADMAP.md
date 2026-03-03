@@ -4,6 +4,47 @@ This document tracks future features, enhancements, and planned work for the pub
 
 ---
 
+## NEXT: Setup Admin - CSS Migration & New Features
+
+**Scheduled**: 2026-03-04
+
+**Goal**: Migrate setup-admin to Activity Hub shared CSS and implement new features
+
+**Tasks**:
+
+1. **CSS Migration**:
+   - [ ] Add dynamic CSS loading in `index.tsx`
+   - [ ] Replace all inline styles with `.ah-*` classes
+   - [ ] Remove app-specific CSS file (or minimize to game-specific only)
+   - [ ] Use `.ah-app-header` pattern for consistency
+   - [ ] Apply `.ah-card`, `.ah-btn-*`, `.ah-input`, `.ah-select` throughout
+   - [ ] Ensure pre-commit hooks pass (zero inline styles tolerance)
+
+2. **New Features** (TBD - to be specified):
+   - [ ] Feature 1: _[Details to be added]_
+   - [ ] Feature 2: _[Details to be added]_
+   - [ ] Feature 3: _[Details to be added]_
+
+**Current State**:
+- setup-admin (Port 5020) - Admin tool for initial system setup
+- Not yet migrated to Activity Hub shared CSS
+- Uses custom CSS/inline styles
+
+**Success Criteria**:
+- ✅ Zero inline styles (passes pre-commit checks)
+- ✅ All UI uses Activity Hub CSS classes
+- ✅ Visual consistency with other migrated apps
+- ✅ New features implemented and tested
+- ✅ Component library reference used for all patterns
+
+**Reference**:
+- Component Library (Port 5010) - Use as reference for all UI patterns
+- `docs/STYLE-GUIDE.md` - Complete Activity Hub CSS class reference
+
+**Effort Estimate**: TBD (depends on new features scope)
+
+---
+
 ## User Font Size Settings (Accessibility)
 
 **Goal**: Allow users to adjust font size across all apps (Small/Medium/Large)
