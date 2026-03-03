@@ -533,30 +533,6 @@ function App() {
     }
   };
 
-  const handleAddParticipants = async () => {
-    if (!selectedEventId || selectedPlayers.length === 0) return;
-
-    try {
-      await fetch(`${API_BASE}/events/${selectedEventId}/participants`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ playerIds: selectedPlayers }),
-      });
-      setSelectedPlayers([]);
-      // Refetch event details
-      const res = await fetch(`${API_BASE}/events/${selectedEventId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      setParticipants(data.participants || []);
-    } catch (err) {
-      console.error('Failed to add participants:', err);
-    }
-  };
-
   const handleAssignCompetitor = async (participantId: number, competitorId: number | null) => {
     try {
       await fetch(`${API_BASE}/participants/${participantId}`, {
@@ -638,20 +614,6 @@ function App() {
         setSpinnerParticipantId(null);
       }, 2000);
     }, 6000);
-  };
-
-  const handleRemoveParticipant = async (participantId: number) => {
-    if (!window.confirm('Remove this participant?')) return;
-
-    try {
-      await fetch(`${API_BASE}/participants/${participantId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setParticipants(participants.filter((p) => p.id !== participantId));
-    } catch (err) {
-      console.error('Failed to remove participant:', err);
-    }
   };
 
   // Positions are now configured at event creation time, not dynamically added
