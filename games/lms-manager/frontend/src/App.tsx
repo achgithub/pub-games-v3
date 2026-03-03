@@ -1497,9 +1497,8 @@ function App() {
                   </div>
 
                   <button
-                    className="ah-btn-primary"
+                    className="ah-btn-primary mt-4"
                     onClick={handleCreateGame}
-                    className="mt-4"
                   >
                     Create Game
                   </button>
@@ -1553,10 +1552,9 @@ function App() {
                 <div className="ah-flex-center gap-2 mt-1">
                   <input
                     type="text"
-                    className="ah-input"
+                    className="ah-input flex-1"
                     value={`http://${window.location.hostname}:4021/?view=report&gameId=${selectedGameId}`}
                     readOnly
-                    className="flex-1"
                   />
                   <button
                     className="ah-btn-outline"
@@ -1579,12 +1577,11 @@ function App() {
                 <div className="ah-flex-center gap-2">
                   {gameDetail.game.status === 'active' && !collapsedCards['participants'] && (
                     <button
-                      className="ah-btn-outline"
+                      className="ah-btn-outline px-4 py-2 text-sm"
                       onClick={(e) => {
                         e.stopPropagation();
                         setShowAddPlayers(!showAddPlayers);
                       }}
-                      className="px-4 py-2 text-sm"
                     >
                       {showAddPlayers ? 'Cancel' : '+ Add Players'}
                     </button>
@@ -1617,9 +1614,8 @@ function App() {
                         ))}
                       </div>
                       <button
-                        className="ah-btn-primary"
+                        className="ah-btn-primary mt-2"
                         onClick={handleAddPlayersToGame}
-                        className="mt-2"
                       >
                         Add Selected Players
                       </button>
@@ -1687,8 +1683,7 @@ function App() {
                                     placeholder="Search players (e.g., 'Dave P' to find Dave P...)"
                                     value={playerSearchText}
                                     onChange={(e) => setPlayerSearchText(e.target.value)}
-                                    className="ah-input"
-                                    className="w-full"
+                                    className="ah-input w-full"
                                   />
                                 </div>
                                 <label className="flex items-center gap-2 whitespace-nowrap">
@@ -1914,10 +1909,9 @@ function App() {
                   <strong>Select Game:</strong>
                 </label>
                 <select
-                  className="ah-select"
+                  className="ah-select w-full max-w-[400px]"
                   value={reportGameId}
                   onChange={(e) => setReportGameId(parseInt(e.target.value))}
-                  className="w-full max-w-[400px]"
                 >
                   <option value={0}>-- Select a game --</option>
                   {games.map((game) => (
@@ -1935,10 +1929,9 @@ function App() {
                     <strong>Select Round:</strong>
                   </label>
                   <select
-                    className="ah-select"
+                    className="ah-select w-full max-w-[400px]"
                     value={reportRound}
                     onChange={(e) => setReportRound(e.target.value)}
-                    className="w-full max-w-[400px]"
                   >
                     <option value="all">All Rounds</option>
                     {(() => {
