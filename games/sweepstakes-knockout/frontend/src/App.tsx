@@ -42,6 +42,7 @@ interface Event {
   status: string;
   managerEmail: string;
   winningPositions: string; // comma-separated: "1,2,3,last"
+  spinnerEnabled: boolean; // use spinner for random assignment
   createdAt: string;
   updatedAt: string;
   participantCount: number;
@@ -89,9 +90,17 @@ function App() {
   const [playerSearch, setPlayerSearch] = useState('');
   const [showSelectedPlayersOnly, setShowSelectedPlayersOnly] = useState(false);
   const [winningPositions, setWinningPositions] = useState<string>('1,2,3,last');
+  const [spinnerEnabled, setSpinnerEnabled] = useState<boolean>(false);
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [resultAssignments, setResultAssignments] = useState<Record<number, string>>({});
+
+  // Spinner state
+  const [spinnerModalOpen, setSpinnerModalOpen] = useState<boolean>(false);
+  const [spinnerParticipantId, setSpinnerParticipantId] = useState<number | null>(null);
+  const [spinnerResult, setSpinnerResult] = useState<Competitor | null>(null);
+  const [isSpinning, setIsSpinning] = useState<boolean>(false);
+  const [spinnerDisplayIndex, setSpinnerDisplayIndex] = useState<number>(0);
 
   // Reports tab state
   const [reportEventId, setReportEventId] = useState<number>(0);
@@ -467,12 +476,14 @@ function App() {
           groupId: selectedGroupId,
           playerNames: selectedPlayers,
           winningPositions: winningPositions,
+          spinnerEnabled: spinnerEnabled,
         }),
       });
       setNewEventName('');
       setSelectedGroupId(0);
       setSelectedPlayers([]);
       setWinningPositions('1,2,3,last');
+      setSpinnerEnabled(false);
       // Refetch events
       const res = await fetch(`${API_BASE}/events`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -563,6 +574,66 @@ function App() {
     } catch (err) {
       console.error('Failed to assign competitor:', err);
     }
+  };
+
+  const handleSpin = (participantId: number, currentCompetitorId: number | null) => {
+    // Get available competitors for this participant
+    const available = getAvailableCompetitors(currentCompetitorId);
+
+    if (available.length === 0) {
+      alert('No competitors available to assign');
+      return;
+    }
+
+    // If only 1 competitor, skip animation and assign directly
+    if (available.length === 1) {
+      const selectedCompetitor = available[0];
+      setSpinnerResult(selectedCompetitor);
+      setSpinnerParticipantId(participantId);
+      setSpinnerModalOpen(true);
+      // Auto-assign after showing result
+      setTimeout(() => {
+        handleAssignCompetitor(participantId, selectedCompetitor.id);
+        setSpinnerModalOpen(false);
+        setSpinnerResult(null);
+        setSpinnerParticipantId(null);
+      }, 2000);
+      return;
+    }
+
+    // Multiple competitors - start spinner animation
+    setSpinnerParticipantId(participantId);
+    setSpinnerDisplayIndex(0);
+    setIsSpinning(true);
+    setSpinnerModalOpen(true);
+
+    // Randomly select a competitor
+    const randomIndex = Math.floor(Math.random() * available.length);
+    const selectedCompetitor = available[randomIndex];
+
+    // Rotate through competitors during animation (60 iterations over 6 seconds = 100ms each)
+    let iteration = 0;
+    const rotationInterval = setInterval(() => {
+      setSpinnerDisplayIndex((prev) => (prev + 1) % available.length);
+      iteration++;
+      if (iteration >= 60) {
+        clearInterval(rotationInterval);
+      }
+    }, 100);
+
+    // After 6 seconds, show result
+    setTimeout(() => {
+      setIsSpinning(false);
+      setSpinnerResult(selectedCompetitor);
+
+      // Auto-assign after showing result for 2 seconds
+      setTimeout(() => {
+        handleAssignCompetitor(participantId, selectedCompetitor.id);
+        setSpinnerModalOpen(false);
+        setSpinnerResult(null);
+        setSpinnerParticipantId(null);
+      }, 2000);
+    }, 6000);
   };
 
   const handleRemoveParticipant = async (participantId: number) => {
@@ -979,6 +1050,17 @@ function App() {
                     <p className="ah-meta mt-1">These positions will determine the winners</p>
                   </div>
 
+                  <div className="mt-4">
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={spinnerEnabled}
+                        onChange={(e) => setSpinnerEnabled(e.target.checked)}
+                      />
+                      <span><strong>Enable Spinner</strong> - Use randomized spinner for competitor assignment (mobile-friendly)</span>
+                    </label>
+                  </div>
+
                   <button
                     className="ah-btn-primary mt-4"
                     onClick={handleCreateEvent}
@@ -1057,29 +1139,40 @@ function App() {
                       <div key={participant.id} className="ah-list-item">
                         <div className="ah-flex-col flex-1 gap-2">
                           <strong>{participant.playerName}</strong>
-                          <select
-                            className="ah-select"
-                            value={participant.competitorId || ''}
-                            onChange={(e) =>
-                              handleAssignCompetitor(
-                                participant.id,
-                                e.target.value ? parseInt(e.target.value) : null
-                              )
-                            }
-                          >
-                            <option value="">Not assigned</option>
-                            {participant.competitorId && participant.competitorName && (
-                              <option value={participant.competitorId}>{participant.competitorName}</option>
+                          <div className="flex gap-2 items-center">
+                            <select
+                              className="ah-select flex-1"
+                              value={participant.competitorId || ''}
+                              onChange={(e) =>
+                                handleAssignCompetitor(
+                                  participant.id,
+                                  e.target.value ? parseInt(e.target.value) : null
+                                )
+                              }
+                            >
+                              <option value="">Not assigned</option>
+                              {participant.competitorId && participant.competitorName && (
+                                <option value={participant.competitorId}>{participant.competitorName}</option>
+                              )}
+                              {getAvailableCompetitors(participant.competitorId).map((c) => (
+                                <option key={c.id} value={c.id}>
+                                  {c.name}
+                                </option>
+                              ))}
+                            </select>
+                            {selectedEvent?.spinnerEnabled && (
+                              <button
+                                className="ah-btn-primary"
+                                onClick={() => handleSpin(participant.id, participant.competitorId)}
+                                disabled={getAvailableCompetitors(participant.competitorId).length === 0}
+                              >
+                                🎲 Spin
+                              </button>
                             )}
-                            {getAvailableCompetitors(participant.competitorId).map((c) => (
-                              <option key={c.id} value={c.id}>
-                                {c.name}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
                           </div>
-                        ))}
+                        </div>
+                      </div>
+                    ))}
                       </div>
                     </>
                   )}
@@ -1205,6 +1298,54 @@ function App() {
           </div>
         )}
       </div>
+
+      {/* Spinner Modal */}
+      {spinnerModalOpen && (
+        <div className="ah-modal-overlay" onClick={() => !isSpinning && setSpinnerModalOpen(false)}>
+          <div className="ah-modal ah-modal--md" onClick={(e) => e.stopPropagation()}>
+            <div className="ah-modal-header">
+              <h3 className="ah-modal-title">
+                {isSpinning ? '🎲 Spinning...' : '🎉 Result!'}
+              </h3>
+              {!isSpinning && (
+                <button className="ah-modal-close" onClick={() => setSpinnerModalOpen(false)}>
+                  ✕
+                </button>
+              )}
+            </div>
+            <div className="ah-modal-body">
+              {isSpinning ? (
+                <div className="text-center py-10">
+                  <div className="text-6xl mb-5">🎲</div>
+                  {spinnerParticipantId && (() => {
+                    const available = getAvailableCompetitors(
+                      participants.find(p => p.id === spinnerParticipantId)?.competitorId || null
+                    );
+                    const currentCompetitor = available[spinnerDisplayIndex % available.length];
+                    return (
+                      <h2 className="text-3xl font-bold mb-5 ah-spinner-text">
+                        {currentCompetitor?.name || ''}
+                      </h2>
+                    );
+                  })()}
+                  <p className="ah-meta">Randomizing competitor selection...</p>
+                  <p className="ah-meta mt-2">
+                    For: {participants.find(p => p.id === spinnerParticipantId)?.playerName}
+                  </p>
+                </div>
+              ) : (
+                <div className="text-center py-10">
+                  <div className="text-6xl mb-5">🏆</div>
+                  <h2 className="text-3xl font-bold mb-5">{spinnerResult?.name}</h2>
+                  <p className="ah-meta">
+                    Assigned to {participants.find(p => p.id === spinnerParticipantId)?.playerName}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

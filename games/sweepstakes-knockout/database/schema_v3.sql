@@ -47,6 +47,8 @@ CREATE TABLE events (
     manager_email VARCHAR(255) NOT NULL,
     -- Winning positions configured at creation time (comma-separated: "1,2,3,last")
     winning_positions TEXT DEFAULT '1,2,3,last',
+    -- Spinner feature for randomized competitor assignment
+    spinner_enabled BOOLEAN DEFAULT false,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

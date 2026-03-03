@@ -381,7 +381,7 @@ func handleGetEvents(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := appDB.Query(`
 		SELECT e.id, e.name, e.group_id, g.name as group_name, e.status, e.manager_email,
-		       e.winning_positions, e.created_at, e.updated_at,
+		       e.winning_positions, e.spinner_enabled, e.created_at, e.updated_at,
 		       COALESCE(COUNT(DISTINCT ep.player_id), 0) as participant_count
 		FROM events e
 		JOIN groups g ON e.group_id = g.id
@@ -404,6 +404,7 @@ func handleGetEvents(w http.ResponseWriter, r *http.Request) {
 		Status           string `json:"status"`
 		ManagerEmail     string `json:"managerEmail"`
 		WinningPositions string `json:"winningPositions"`
+		SpinnerEnabled   bool   `json:"spinnerEnabled"`
 		CreatedAt        string `json:"createdAt"`
 		UpdatedAt        string `json:"updatedAt"`
 		ParticipantCount int    `json:"participantCount"`
@@ -412,7 +413,7 @@ func handleGetEvents(w http.ResponseWriter, r *http.Request) {
 	events := []Event{}
 	for rows.Next() {
 		var e Event
-		if err := rows.Scan(&e.ID, &e.Name, &e.GroupID, &e.GroupName, &e.Status, &e.ManagerEmail, &e.WinningPositions, &e.CreatedAt, &e.UpdatedAt, &e.ParticipantCount); err != nil {
+		if err := rows.Scan(&e.ID, &e.Name, &e.GroupID, &e.GroupName, &e.Status, &e.ManagerEmail, &e.WinningPositions, &e.SpinnerEnabled, &e.CreatedAt, &e.UpdatedAt, &e.ParticipantCount); err != nil {
 			continue
 		}
 		events = append(events, e)
@@ -433,6 +434,7 @@ func handleCreateEvent(w http.ResponseWriter, r *http.Request) {
 		GroupID          int      `json:"groupId"`
 		PlayerNames      []string `json:"playerNames"`
 		WinningPositions string   `json:"winningPositions"`
+		SpinnerEnabled   bool     `json:"spinnerEnabled"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondError(w, 400, "Invalid request")
@@ -478,10 +480,10 @@ func handleCreateEvent(w http.ResponseWriter, r *http.Request) {
 	// Create event
 	var eventID int
 	err = tx.QueryRow(`
-		INSERT INTO events (name, group_id, manager_email, winning_positions)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO events (name, group_id, manager_email, winning_positions, spinner_enabled)
+		VALUES ($1, $2, $3, $4, $5)
 		RETURNING id
-	`, req.Name, req.GroupID, user.Email, req.WinningPositions).Scan(&eventID)
+	`, req.Name, req.GroupID, user.Email, req.WinningPositions, req.SpinnerEnabled).Scan(&eventID)
 	if err != nil {
 		respondError(w, 500, "Database error")
 		return
