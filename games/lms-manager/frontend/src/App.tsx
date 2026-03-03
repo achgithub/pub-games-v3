@@ -1283,7 +1283,7 @@ function App() {
                 {games.map((game) => (
                   <div
                     key={game.id}
-                    className="ah-card cursor-pointer p-5
+                    className="ah-card cursor-pointer p-5"
                     onClick={() => handleViewGame(game.id)}
                   >
                     <div className="ah-flex-between items-start">
