@@ -875,8 +875,7 @@ function App() {
                               placeholder="Search players by name..."
                               value={playerSearch}
                               onChange={(e) => setPlayerSearch(e.target.value)}
-                              className="ah-input"
-                              className="flex-1 min-w-0"
+                              className="ah-input flex-1 min-w-0"
                             />
                             <label className="ah-flex-center gap-2 whitespace-nowrap text-sm">
                               <input
