@@ -1979,7 +1979,7 @@ function App() {
                     {reportData.rounds
                       .filter((round: any) => reportRound === 'all' || round.roundNumber === parseInt(reportRound))
                       .map((round: any) => (
-                        <div key={round.roundNumber} className="ah-card" className="mt-4">
+                        <div key={round.roundNumber} className="ah-card mt-4">
                           <h3 className="ah-section-title">
                             Round {round.roundNumber} - {round.status === 'open' ? 'OPEN' : 'CLOSED'}
                           </h3>
