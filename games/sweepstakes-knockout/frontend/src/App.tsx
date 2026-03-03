@@ -1051,8 +1051,7 @@ function App() {
                       </div>
 
                       <button
-                        className="ah-btn-primary"
-                        className="mt-5"
+                        className="ah-btn-primary mt-5"
                         onClick={handleSaveResults}
                       >
                         Save Results & Complete Event
