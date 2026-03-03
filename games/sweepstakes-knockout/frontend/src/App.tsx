@@ -19,9 +19,17 @@ interface Player {
   createdAt: string;
 }
 
-interface Competitor {
+interface Group {
   id: number;
   managerEmail: string;
+  name: string;
+  competitorCount: number;
+  createdAt: string;
+}
+
+interface Competitor {
+  id: number;
+  groupId: number;
   name: string;
   createdAt: string;
 }
@@ -29,9 +37,11 @@ interface Competitor {
 interface Event {
   id: number;
   name: string;
-  description: string;
+  groupId: number;
+  groupName: string;
   status: string;
   managerEmail: string;
+  winningPositions: string; // comma-separated: "1,2,3,last"
   createdAt: string;
   updatedAt: string;
   participantCount: number;
@@ -44,12 +54,6 @@ interface Participant {
   playerName: string;
   competitorId?: number | null;
   competitorName?: string | null;
-}
-
-interface Position {
-  id: number;
-  eventId: number;
-  position: string;
 }
 
 interface ReportEntry {
@@ -70,21 +74,23 @@ function App() {
 
   // Setup tab state
   const [players, setPlayers] = useState<Player[]>([]);
-  const [competitors, setCompetitors] = useState<Competitor[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [expandedGroup, setExpandedGroup] = useState<number | null>(null);
+  const [groupCompetitors, setGroupCompetitors] = useState<Record<number, Competitor[]>>({});
   const [newPlayerName, setNewPlayerName] = useState('');
+  const [newGroupName, setNewGroupName] = useState('');
   const [newCompetitorName, setNewCompetitorName] = useState('');
 
   // Games tab state
   const [events, setEvents] = useState<Event[]>([]);
   const [newEventName, setNewEventName] = useState('');
-  const [newEventDescription, setNewEventDescription] = useState('');
-  const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
-  const [participants, setParticipants] = useState<Participant[]>([]);
-  const [positions, setPositions] = useState<Position[]>([]);
-  const [newPosition, setNewPosition] = useState('');
-  const [selectedPlayers, setSelectedPlayers] = useState<number[]>([]);
+  const [selectedGroupId, setSelectedGroupId] = useState<number>(0);
+  const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]); // Now using player names like LMS
   const [playerSearch, setPlayerSearch] = useState('');
   const [showSelectedPlayersOnly, setShowSelectedPlayersOnly] = useState(false);
+  const [winningPositions, setWinningPositions] = useState<string>('1,2,3,last');
+  const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
+  const [participants, setParticipants] = useState<Participant[]>([]);
   const [resultAssignments, setResultAssignments] = useState<Record<number, string>>({});
 
   // Reports tab state
@@ -137,14 +143,14 @@ function App() {
 
     const fetchSetupData = async () => {
       try {
-        const [playersRes, competitorsRes] = await Promise.all([
+        const [playersRes, groupsRes] = await Promise.all([
           fetch(`${API_BASE}/players`, { headers: { Authorization: `Bearer ${token}` } }),
-          fetch(`${API_BASE}/competitors`, { headers: { Authorization: `Bearer ${token}` } }),
+          fetch(`${API_BASE}/groups`, { headers: { Authorization: `Bearer ${token}` } }),
         ]);
         const playersData = await playersRes.json();
-        const competitorsData = await competitorsRes.json();
+        const groupsData = await groupsRes.json();
         setPlayers(playersData.players || []);
-        setCompetitors(competitorsData.competitors || []);
+        setGroups(groupsData.groups || []);
       } catch (err) {
         console.error('Failed to fetch setup data:', err);
       }
@@ -183,7 +189,19 @@ function App() {
         });
         const data = await res.json();
         setParticipants(data.participants || []);
-        setPositions(data.positions || []);
+
+        // Fetch group competitors for this event
+        const selectedEv = events.find(e => e.id === selectedEventId);
+        if (selectedEv && selectedEv.groupId) {
+          const compRes = await fetch(`${API_BASE}/groups/${selectedEv.groupId}/competitors`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const compData = await compRes.json();
+          setGroupCompetitors({
+            ...groupCompetitors,
+            [selectedEv.groupId]: compData.competitors || [],
+          });
+        }
 
         // Fetch results
         const resultsRes = await fetch(`${API_BASE}/events/${selectedEventId}/results`, {
@@ -201,7 +219,7 @@ function App() {
     };
 
     fetchEventDetail();
-  }, [token, selectedEventId]);
+  }, [token, selectedEventId, events, groupCompetitors]);
 
   // Fetch report
   useEffect(() => {
@@ -269,6 +287,7 @@ function App() {
   }
 
   // Setup tab handlers
+  // Setup handlers
   const handleCreatePlayer = async () => {
     if (!newPlayerName.trim()) return;
 
@@ -307,11 +326,77 @@ function App() {
     }
   };
 
-  const handleCreateCompetitor = async () => {
+  const handleCreateGroup = async () => {
+    if (!newGroupName.trim()) return;
+
+    try {
+      await fetch(`${API_BASE}/groups`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name: newGroupName }),
+      });
+      setNewGroupName('');
+      // Refetch groups
+      const res = await fetch(`${API_BASE}/groups`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      setGroups(data.groups || []);
+    } catch (err) {
+      console.error('Failed to create group:', err);
+    }
+  };
+
+  const handleDeleteGroup = async (id: number) => {
+    if (!window.confirm('Delete this group and all its competitors?')) return;
+
+    try {
+      await fetch(`${API_BASE}/groups/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setGroups(groups.filter((g) => g.id !== id));
+      if (expandedGroup === id) {
+        setExpandedGroup(null);
+      }
+    } catch (err) {
+      console.error('Failed to delete group:', err);
+    }
+  };
+
+  const handleToggleGroup = async (groupId: number) => {
+    if (expandedGroup === groupId) {
+      setExpandedGroup(null);
+      return;
+    }
+
+    setExpandedGroup(groupId);
+
+    // Fetch competitors for this group
+    if (!groupCompetitors[groupId]) {
+      try {
+        const res = await fetch(`${API_BASE}/groups/${groupId}/competitors`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        setGroupCompetitors({
+          ...groupCompetitors,
+          [groupId]: data.competitors || [],
+        });
+      } catch (err) {
+        console.error('Failed to fetch competitors:', err);
+      }
+    }
+  };
+
+  const handleCreateCompetitor = async (groupId: number) => {
     if (!newCompetitorName.trim()) return;
 
     try {
-      await fetch(`${API_BASE}/competitors`, {
+      await fetch(`${API_BASE}/groups/${groupId}/competitors`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -320,18 +405,27 @@ function App() {
         body: JSON.stringify({ name: newCompetitorName }),
       });
       setNewCompetitorName('');
-      // Refetch competitors
-      const res = await fetch(`${API_BASE}/competitors`, {
+      // Refetch competitors for this group
+      const res = await fetch(`${API_BASE}/groups/${groupId}/competitors`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-      setCompetitors(data.competitors || []);
+      setGroupCompetitors({
+        ...groupCompetitors,
+        [groupId]: data.competitors || [],
+      });
+      // Update group competitor count
+      const groupRes = await fetch(`${API_BASE}/groups`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const groupData = await groupRes.json();
+      setGroups(groupData.groups || []);
     } catch (err) {
       console.error('Failed to create competitor:', err);
     }
   };
 
-  const handleDeleteCompetitor = async (id: number) => {
+  const handleDeleteCompetitor = async (id: number, groupId: number) => {
     if (!window.confirm('Delete this competitor?')) return;
 
     try {
@@ -339,7 +433,16 @@ function App() {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
-      setCompetitors(competitors.filter((h) => h.id !== id));
+      setGroupCompetitors({
+        ...groupCompetitors,
+        [groupId]: groupCompetitors[groupId].filter((c) => c.id !== id),
+      });
+      // Update group competitor count
+      const groupRes = await fetch(`${API_BASE}/groups`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const groupData = await groupRes.json();
+      setGroups(groupData.groups || []);
     } catch (err) {
       console.error('Failed to delete competitor:', err);
     }
@@ -347,7 +450,10 @@ function App() {
 
   // Games tab handlers
   const handleCreateEvent = async () => {
-    if (!newEventName.trim()) return;
+    if (!newEventName.trim() || selectedGroupId === 0 || selectedPlayers.length === 0) {
+      alert('Please provide event name, select a group, and select at least one player');
+      return;
+    }
 
     try {
       await fetch(`${API_BASE}/events`, {
@@ -358,11 +464,15 @@ function App() {
         },
         body: JSON.stringify({
           name: newEventName,
-          description: newEventDescription,
+          groupId: selectedGroupId,
+          playerNames: selectedPlayers,
+          winningPositions: winningPositions,
         }),
       });
       setNewEventName('');
-      setNewEventDescription('');
+      setSelectedGroupId(0);
+      setSelectedPlayers([]);
+      setWinningPositions('1,2,3,last');
       // Refetch events
       const res = await fetch(`${API_BASE}/events`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -371,6 +481,7 @@ function App() {
       setEvents(data.events || []);
     } catch (err) {
       console.error('Failed to create event:', err);
+      alert('Failed to create event');
     }
   };
 
@@ -392,18 +503,18 @@ function App() {
   };
 
   const handleSelectAllPlayers = () => {
-    setSelectedPlayers(players.map((p) => p.id));
+    setSelectedPlayers(players.map((p) => p.name));
   };
 
   const handleDeselectAllPlayers = () => {
     setSelectedPlayers([]);
   };
 
-  const handleTogglePlayerSelection = (playerId: number) => {
-    if (selectedPlayers.includes(playerId)) {
-      setSelectedPlayers(selectedPlayers.filter((id) => id !== playerId));
+  const handleTogglePlayerSelection = (playerName: string) => {
+    if (selectedPlayers.includes(playerName)) {
+      setSelectedPlayers(selectedPlayers.filter((name) => name !== playerName));
     } else {
-      setSelectedPlayers([...selectedPlayers, playerId]);
+      setSelectedPlayers([...selectedPlayers, playerName]);
     }
   };
 
@@ -468,43 +579,7 @@ function App() {
     }
   };
 
-  const handleCreatePosition = async () => {
-    if (!selectedEventId || !newPosition.trim()) return;
-
-    try {
-      await fetch(`${API_BASE}/events/${selectedEventId}/positions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ position: newPosition }),
-      });
-      setNewPosition('');
-      // Refetch event details
-      const res = await fetch(`${API_BASE}/events/${selectedEventId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      setPositions(data.positions || []);
-    } catch (err) {
-      console.error('Failed to create position:', err);
-    }
-  };
-
-  const handleDeletePosition = async (positionId: number) => {
-    if (!window.confirm('Delete this position?')) return;
-
-    try {
-      await fetch(`${API_BASE}/positions/${positionId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setPositions(positions.filter((p) => p.id !== positionId));
-    } catch (err) {
-      console.error('Failed to delete position:', err);
-    }
-  };
+  // Positions are now configured at event creation time, not dynamically added
 
   const handleSaveResults = async () => {
     if (!selectedEventId) return;
@@ -537,26 +612,26 @@ function App() {
     }
   };
 
-  // Get unassigned competitors for a participant dropdown
+  // Get unassigned competitors for a participant dropdown (from event's group)
   const getAvailableCompetitors = (currentCompetitorId?: number | null) => {
+    if (!selectedEvent) return [];
+
+    const groupComps = groupCompetitors[selectedEvent.groupId] || [];
     const assignedCompetitorIds = participants
       .filter((p) => p.competitorId && p.competitorId !== currentCompetitorId)
       .map((p) => p.competitorId);
-    return competitors.filter((h) => !assignedCompetitorIds.includes(h.id));
+    return groupComps.filter((c) => !assignedCompetitorIds.includes(c.id));
   };
 
-  // Get players not yet in event
-  const getAvailablePlayers = () => {
-    const participantPlayerIds = participants.map((p) => p.playerId);
-    return players.filter((p) => !participantPlayerIds.includes(p.id));
-  };
-
-  // Get available positions for results dropdown
+  // Get available positions for results dropdown (from event's winningPositions)
   const getAvailablePositions = (currentCompetitorId: number) => {
+    if (!selectedEvent) return [];
+
+    const positions = selectedEvent.winningPositions.split(',').map(p => p.trim());
     const assignedPositions = Object.entries(resultAssignments)
       .filter(([competitorId, _]) => parseInt(competitorId) !== currentCompetitorId)
       .map(([_, position]) => position);
-    return positions.filter((pos) => !assignedPositions.includes(pos.position));
+    return positions.filter((pos) => !assignedPositions.includes(pos));
   };
 
   const selectedEvent = events.find((e) => e.id === selectedEventId);
@@ -599,14 +674,14 @@ function App() {
             className={`ah-tab ${activeTab === 'reports' ? 'active' : ''}`}
             onClick={() => setActiveTab('reports')}
           >
-            Reports
+            Game Reports
           </button>
         </div>
 
         {/* SETUP TAB */}
         {activeTab === 'setup' && (
           <div>
-            {/* Player Pool */}
+            {/* Player Pool Section */}
             <div className="ah-card ah-section">
               <div className="ah-section-header" onClick={() => toggleCard('players')}>
                 <h3 className="ah-section-title">Player Pool ({players.length})</h3>
@@ -629,10 +704,11 @@ function App() {
                     </button>
                   </div>
 
-                  <div className="ah-list">
+                  <div className="ah-list mt-4">
                     {players.length === 0 && (
                       <p className="ah-meta">No players yet. Add one to get started.</p>
                     )}
+
                     {players.map((player) => (
                       <div key={player.id} className="ah-list-item">
                         <strong>{player.name}</strong>
@@ -649,42 +725,93 @@ function App() {
               )}
             </div>
 
-            {/* Competitor Pool */}
+            {/* Groups & Competitors Section */}
             <div className="ah-card ah-section">
-              <div className="ah-section-header" onClick={() => toggleCard('competitors')}>
-                <h3 className="ah-section-title">Competitor Pool ({competitors.length})</h3>
-                <span className={`ah-section-toggle ${collapsedCards['competitors'] ? 'collapsed' : ''}`}>▼</span>
+              <div className="ah-section-header" onClick={() => toggleCard('groups')}>
+                <h3 className="ah-section-title">Groups & Competitors ({groups.length})</h3>
+                <span className={`ah-section-toggle ${collapsedCards['groups'] ? 'collapsed' : ''}`}>▼</span>
               </div>
 
-              {!collapsedCards['competitors'] && (
+              {!collapsedCards['groups'] && (
                 <>
                   <div className="ah-inline-form">
                     <input
                       type="text"
                       className="ah-input"
-                      placeholder="Competitor name"
-                      value={newCompetitorName}
-                      onChange={(e) => setNewCompetitorName(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && handleCreateCompetitor()}
+                      placeholder="New group name (e.g., Grand National 2026)"
+                      value={newGroupName}
+                      onChange={(e) => setNewGroupName(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && handleCreateGroup()}
                     />
-                    <button className="ah-btn-primary" onClick={handleCreateCompetitor}>
-                      Add Competitor
+                    <button className="ah-btn-primary" onClick={handleCreateGroup}>
+                      Create Group
                     </button>
                   </div>
 
-                  <div className="ah-list">
-                    {competitors.length === 0 && (
-                      <p className="ah-meta">No competitors yet. Add one to get started.</p>
+                  <div className="ah-list mt-4">
+                    {groups.length === 0 && (
+                      <p className="ah-meta">No groups yet. Create one to get started.</p>
                     )}
-                    {competitors.map((competitor) => (
-                      <div key={competitor.id} className="ah-list-item">
-                        <strong>{competitor.name}</strong>
-                        <button
-                          className="ah-btn-danger-sm"
-                          onClick={() => handleDeleteCompetitor(competitor.id)}
+
+                    {groups.map((group) => (
+                      <div key={group.id} className="ah-card">
+                        <div
+                          className="ah-flex-between cursor-pointer"
+                          onClick={() => handleToggleGroup(group.id)}
                         >
-                          Delete
-                        </button>
+                          <div>
+                            <strong>{group.name}</strong>
+                            <p className="ah-meta">{group.competitorCount} competitors</p>
+                          </div>
+                          <button
+                            className="ah-btn-danger-sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteGroup(group.id);
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </div>
+
+                        {expandedGroup === group.id && (
+                          <div className="ah-list mt-4 pt-4 border-t">
+                            <div className="ah-inline-form">
+                              <input
+                                type="text"
+                                className="ah-input"
+                                placeholder="Competitor name (e.g., Seabiscuit)"
+                                value={newCompetitorName}
+                                onChange={(e) => setNewCompetitorName(e.target.value)}
+                                onKeyPress={(e) =>
+                                  e.key === 'Enter' && handleCreateCompetitor(group.id)
+                                }
+                              />
+                              <button
+                                className="ah-btn-primary"
+                                onClick={() => handleCreateCompetitor(group.id)}
+                              >
+                                Add Competitor
+                              </button>
+                            </div>
+
+                            {groupCompetitors[group.id]?.map((competitor) => (
+                              <div key={competitor.id} className="ah-flex-between p-2 rounded">
+                                <strong>{competitor.name}</strong>
+                                <button
+                                  className="ah-btn-danger-sm"
+                                  onClick={() => handleDeleteCompetitor(competitor.id, group.id)}
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            ))}
+
+                            {groupCompetitors[group.id]?.length === 0 && (
+                              <p className="ah-meta">No competitors yet. Add one above.</p>
+                            )}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -695,303 +822,262 @@ function App() {
         )}
 
         {/* GAMES TAB */}
-        {activeTab === 'games' && (
+        {activeTab === 'games' && !selectedEventId && (
           <div>
-            {!selectedEventId && (
-              <>
-                {/* Create Event Card */}
-                <div className="ah-card ah-section">
-                  <div className="ah-section-header" onClick={() => toggleCard('createEvent')}>
-                    <h3 className="ah-section-title">CREATE NEW EVENT</h3>
-                    <span className={`ah-section-toggle ${collapsedCards['createEvent'] ? 'collapsed' : ''}`}>▼</span>
-                  </div>
+            {/* Games List Section (moved to top like LMS) */}
+            <div className="ah-card ah-section">
+              <div className="ah-section-header" onClick={() => toggleCard('games')}>
+                <h3 className="ah-section-title">Games ({events.length})</h3>
+                <span className={`ah-section-toggle ${collapsedCards['games'] ? 'collapsed' : ''}`}>▼</span>
+              </div>
 
-                  {!collapsedCards['createEvent'] && (
-                    <div className="ah-flex-col gap-3">
-                      <input
-                        type="text"
-                        className="ah-input"
-                        placeholder="Event name (e.g., Grand National 2026)"
-                        value={newEventName}
-                        onChange={(e) => setNewEventName(e.target.value)}
-                      />
-                      <textarea
-                        className="ah-input"
-                        placeholder="Description (optional)"
-                        value={newEventDescription}
-                        onChange={(e) => setNewEventDescription(e.target.value)}
-                        rows={3}
-                      />
-                      <button
-                        className="ah-btn-primary"
-                        onClick={handleCreateEvent}
+              {!collapsedCards['games'] && (
+                <>
+                  {events.length === 0 && (
+                    <p className="ah-meta">No games yet. Create one below.</p>
+                  )}
+                  <div className="ah-list gap-3">
+                    {events.map((event) => (
+                      <div
+                        key={event.id}
+                        className="ah-card cursor-pointer p-5"
+                        onClick={() => setSelectedEventId(event.id)}
                       >
-                        Create Event
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Active Events */}
-                <div className="ah-card ah-section">
-                  <div className="ah-section-header" onClick={() => toggleCard('activeEvents')}>
-                    <h3 className="ah-section-title">ACTIVE EVENTS ({events.filter(e => e.status !== 'completed').length})</h3>
-                    <span className={`ah-section-toggle ${collapsedCards['activeEvents'] ? 'collapsed' : ''}`}>▼</span>
-                  </div>
-
-                  {!collapsedCards['activeEvents'] && (
-                    <>
-                      {events.filter(e => e.status !== 'completed').length === 0 && (
-                        <p className="ah-meta">No active events. Create one above.</p>
-                      )}
-                      <div className="ah-list">
-                        {events.filter(e => e.status !== 'completed').map((event) => (
-                          <div key={event.id} className="ah-card cursor-pointer" onClick={() => setSelectedEventId(event.id)}>
-                            <div className="ah-flex-between">
-                              <div>
-                                <h4 className="m-0 mb-1">{event.name}</h4>
-                                {event.description && <p className="ah-meta">{event.description}</p>}
-                                <p className="ah-meta">{event.participantCount} participants</p>
-                              </div>
-                              <span className="ah-status ah-status--waiting">{event.status}</span>
-                            </div>
+                        <div className="ah-flex-between items-start">
+                          <div>
+                            <strong>{event.name}</strong>
+                            <p className="ah-meta">
+                              {event.groupName} • {event.participantCount} players
+                            </p>
                           </div>
-                        ))}
+                          <span
+                            className={`ah-status ${
+                              event.status === 'active' ? 'ah-status--active' : event.status === 'completed' ? 'ah-status--complete' : 'ah-status--waiting'
+                            }`}
+                          >
+                            {event.status}
+                          </span>
+                        </div>
                       </div>
-                    </>
-                  )}
-                </div>
-
-                {/* Completed Events */}
-                {events.filter(e => e.status === 'completed').length > 0 && (
-                  <div className="ah-card ah-section">
-                    <div className="ah-section-header" onClick={() => toggleCard('completedEvents')}>
-                      <h3 className="ah-section-title">COMPLETED EVENTS ({events.filter(e => e.status === 'completed').length})</h3>
-                      <span className={`ah-section-toggle ${collapsedCards['completedEvents'] ? 'collapsed' : ''}`}>▼</span>
-                    </div>
-
-                    {!collapsedCards['completedEvents'] && (
-                      <div className="ah-list">
-                        {events.filter(e => e.status === 'completed').map((event) => (
-                          <div key={event.id} className="ah-card cursor-pointer" onClick={() => setSelectedEventId(event.id)}>
-                            <div className="ah-flex-between">
-                              <div>
-                                <h4 className="m-0 mb-1">{event.name}</h4>
-                                {event.description && <p className="ah-meta">{event.description}</p>}
-                              </div>
-                              <span className="ah-status ah-status--active">{event.status}</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    ))}
                   </div>
-                )}
-              </>
-            )}
+                </>
+              )}
+            </div>
 
-            {/* Event Detail View */}
-            {selectedEventId && selectedEvent && (
-              <>
-                <div className="ah-detail-header">
-                  <button className="ah-btn-back" onClick={() => setSelectedEventId(null)}>
-                    ← Back to Events
-                  </button>
-                  <h2 className="m-0">{selectedEvent.name}</h2>
-                  <span className={`ah-status ah-status--${selectedEvent.status === 'completed' ? 'active' : 'waiting'}`}>
-                    {selectedEvent.status}
-                  </span>
-                  <button
-                    className="ah-btn-danger"
-                    onClick={() => handleDeleteEvent(selectedEventId)}
-                  >
-                    Delete Event
-                  </button>
-                </div>
+            {/* Create Game Section (moved below like LMS) */}
+            <div className="ah-card ah-section">
+              <div className="ah-section-header" onClick={() => toggleCard('createGame')}>
+                <h3 className="ah-section-title">Create New Game</h3>
+                <span className={`ah-section-toggle ${collapsedCards['createGame'] ? 'collapsed' : ''}`}>▼</span>
+              </div>
 
-                <div className="ah-card">
-                  <p className="ah-meta">
-                    <strong>Event ID:</strong> {selectedEventId}
-                  </p>
-                  <p className="ah-meta mt-2">
-                    <strong>Display URL:</strong>
-                  </p>
-                  <div className="ah-flex-center gap-2 mt-1">
+              {!collapsedCards['createGame'] && (
+                <>
+                  <div className="mt-4">
+                    <label className="block mb-2">
+                      <strong>Game Name:</strong>
+                    </label>
                     <input
                       type="text"
-                      className="ah-input flex-1"
-                      value={`http://${window.location.hostname}:4032/?view=report&eventId=${selectedEventId}`}
-                      readOnly
+                      className="ah-input w-full"
+                      placeholder="e.g., Grand National 2026"
+                      value={newEventName}
+                      onChange={(e) => setNewEventName(e.target.value)}
                     />
-                    <button
-                      className="ah-btn-outline"
-                      onClick={() => {
-                        const url = `http://${window.location.hostname}:4032/?view=report&eventId=${selectedEventId}`;
-                        navigator.clipboard.writeText(url);
-                        alert('Display URL copied to clipboard!');
-                      }}
+                  </div>
+
+                  <div className="mt-4">
+                    <label className="block mb-2">
+                      <strong>Select Group:</strong>
+                    </label>
+                    <select
+                      className="ah-select w-full"
+                      value={selectedGroupId}
+                      onChange={(e) => setSelectedGroupId(parseInt(e.target.value))}
                     >
-                      Copy URL
-                    </button>
-                  </div>
-                </div>
-
-                {/* Participants */}
-                <div className="ah-card ah-section">
-                  <div className="ah-section-header" onClick={() => toggleCard('participants')}>
-                    <h3 className="ah-section-title">Participants ({participants.length})</h3>
-                    <span className={`ah-section-toggle ${collapsedCards['participants'] ? 'collapsed' : ''}`}>▼</span>
+                      <option value={0}>Select Group</option>
+                      {groups.map((group) => (
+                        <option key={group.id} value={group.id}>
+                          {group.name} ({group.competitorCount} competitors)
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
-                  {!collapsedCards['participants'] && (
-                    <>
-                      <div className="mb-4">
-                        <div className="mb-3">
-                          <p className="ah-meta">
-                            Select Players ({selectedPlayers.length} selected):
-                          </p>
-                          <div className="ah-flex-wrap gap-2">
-                            <button className="ah-btn-outline ah-btn-sm" onClick={handleSelectAllPlayers}>
-                              Select All
-                            </button>
-                            <button className="ah-btn-outline ah-btn-sm" onClick={handleDeselectAllPlayers}>
-                              Deselect All
-                            </button>
-                            <button
-                              className="ah-btn-outline ah-btn-sm ml-auto"
-                              onClick={handleAddParticipants}
-                              disabled={selectedPlayers.length === 0}
-                            >
-                              Add Selected Players
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Player filters */}
-                        <div className="ah-filter-box mb-3">
-                          <div className="ah-flex-wrap gap-3 items-center">
-                            <input
-                              type="text"
-                              placeholder="Search players by name..."
-                              value={playerSearch}
-                              onChange={(e) => setPlayerSearch(e.target.value)}
-                              className="ah-input flex-1 min-w-0"
-                            />
-                            <label className="ah-flex-center gap-2 whitespace-nowrap text-sm">
-                              <input
-                                type="checkbox"
-                                checked={showSelectedPlayersOnly}
-                                onChange={(e) => setShowSelectedPlayersOnly(e.target.checked)}
-                              />
-                              <span>Selected only</span>
-                            </label>
-                          </div>
-                        </div>
-
-                        <div className="ah-player-grid">
-                          {getAvailablePlayers().filter((player) => {
-                            // Text search filter
-                            const matchesSearch = !playerSearch ||
-                              player.name.toLowerCase().includes(playerSearch.toLowerCase());
-
-                            // Selected filter
-                            const matchesSelected = !showSelectedPlayersOnly ||
-                              selectedPlayers.includes(player.id);
-
-                            return matchesSearch && matchesSelected;
-                          }).map((player) => (
-                            <label key={player.id} className="ah-player-grid-item">
-                              <input
-                                type="checkbox"
-                                checked={selectedPlayers.includes(player.id)}
-                                onChange={() => handleTogglePlayerSelection(player.id)}
-                              />
-                              <span>{player.name}</span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="ah-list">
-                        {participants.length === 0 && (
-                          <p className="ah-meta">No participants yet. Add players above.</p>
-                        )}
-                        {participants.map((participant) => (
-                          <div key={participant.id} className="ah-list-item">
-                            <div className="ah-flex-col flex-1 gap-2">
-                              <strong>{participant.playerName}</strong>
-                              <select
-                                className="ah-select"
-                                value={participant.competitorId || ''}
-                                onChange={(e) =>
-                                  handleAssignCompetitor(
-                                    participant.id,
-                                    e.target.value ? parseInt(e.target.value) : null
-                                  )
-                                }
-                              >
-                                <option value="">Not assigned</option>
-                                {participant.competitorId && participant.competitorName && (
-                                  <option value={participant.competitorId}>{participant.competitorName}</option>
-                                )}
-                                {getAvailableCompetitors(participant.competitorId).map((h) => (
-                                  <option key={h.id} value={h.id}>
-                                    {h.name}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                            <button
-                              className="ah-btn-danger-sm"
-                              onClick={() => handleRemoveParticipant(participant.id)}
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                {/* Winning Positions */}
-                <div className="ah-card ah-section">
-                  <div className="ah-section-header" onClick={() => toggleCard('positions')}>
-                    <h3 className="ah-section-title">Winning Positions ({positions.length})</h3>
-                    <span className={`ah-section-toggle ${collapsedCards['positions'] ? 'collapsed' : ''}`}>▼</span>
-                  </div>
-
-                  {!collapsedCards['positions'] && (
-                    <>
+                  <div className="mt-4">
+                    <div className="ah-flex-between mb-2">
                       <p className="ah-meta">
-                        Add positions that pay out (e.g., 1, 2, 3, last)
+                        Select Players ({selectedPlayers.length} selected):
                       </p>
-                      <div className="ah-inline-form">
-                        <input
-                          type="text"
-                          className="ah-input"
-                          placeholder="Position (e.g., 1, 2, 3, last)"
-                          value={newPosition}
-                          onChange={(e) => setNewPosition(e.target.value)}
-                          onKeyPress={(e) => e.key === 'Enter' && handleCreatePosition()}
-                        />
-                        <button className="ah-btn-primary" onClick={handleCreatePosition}>
-                          Add Position
+                      <div className="flex gap-2 flex-wrap">
+                        <button className="ah-btn-outline ah-btn-sm" onClick={handleSelectAllPlayers}>
+                          Select All
+                        </button>
+                        <button className="ah-btn-outline ah-btn-sm" onClick={handleDeselectAllPlayers}>
+                          Deselect All
                         </button>
                       </div>
+                    </div>
 
-                      <div className="ah-list">
-                        {positions.map((pos) => (
-                          <div key={pos.id} className="ah-list-item">
-                            <span>
-                              <strong>{pos.position}</strong>
-                            </span>
-                            <button
-                              className="ah-btn-danger"
-                              onClick={() => handleDeletePosition(pos.id)}
-                            >
-                              Delete
-                            </button>
+                    {/* Player filters */}
+                    <div className="ah-filter-box mb-3">
+                      <div className="flex gap-3 items-center flex-wrap">
+                        <input
+                          type="text"
+                          placeholder="Search players by name..."
+                          value={playerSearch}
+                          onChange={(e) => setPlayerSearch(e.target.value)}
+                          className="ah-input flex-1"
+                        />
+                        <label className="flex items-center gap-2 whitespace-nowrap text-sm">
+                          <input
+                            type="checkbox"
+                            checked={showSelectedPlayersOnly}
+                            onChange={(e) => setShowSelectedPlayersOnly(e.target.checked)}
+                          />
+                          <span>Selected only</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="ah-player-grid">
+                      {players.filter((player) => {
+                        // Text search filter
+                        const matchesSearch = !playerSearch ||
+                          player.name.toLowerCase().includes(playerSearch.toLowerCase());
+
+                        // Selected filter
+                        const matchesSelected = !showSelectedPlayersOnly ||
+                          selectedPlayers.includes(player.name);
+
+                        return matchesSearch && matchesSelected;
+                      }).map((player) => (
+                        <label key={player.id} className="ah-player-grid-item">
+                          <input
+                            type="checkbox"
+                            checked={selectedPlayers.includes(player.name)}
+                            onChange={() => handleTogglePlayerSelection(player.name)}
+                          />
+                          <span>{player.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mt-4">
+                    <label className="block mb-2">
+                      <strong>Winning Positions (comma-separated):</strong>
+                    </label>
+                    <input
+                      type="text"
+                      className="ah-input w-full"
+                      placeholder="e.g., 1,2,3,last"
+                      value={winningPositions}
+                      onChange={(e) => setWinningPositions(e.target.value)}
+                    />
+                    <p className="ah-meta mt-1">These positions will determine the winners</p>
+                  </div>
+
+                  <button
+                    className="ah-btn-primary mt-4"
+                    onClick={handleCreateEvent}
+                  >
+                    Create Game
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Event Detail View */}
+        {activeTab === 'games' && selectedEventId && selectedEvent && (
+          <>
+            <div className="ah-detail-header">
+              <button className="ah-btn-back" onClick={() => setSelectedEventId(null)}>
+                ← Back to Games
+              </button>
+              <h2 className="m-0">{selectedEvent.name}</h2>
+              <span className={`ah-status ah-status--${selectedEvent.status === 'completed' ? 'active' : 'waiting'}`}>
+                {selectedEvent.status}
+              </span>
+              <button
+                className="ah-btn-danger"
+                onClick={() => handleDeleteEvent(selectedEventId)}
+              >
+                Delete Game
+              </button>
+            </div>
+
+            <div className="ah-card">
+              <p className="ah-meta">
+                <strong>Group:</strong> {selectedEvent.groupName}
+              </p>
+              <p className="ah-meta mt-2">
+                <strong>Winning Positions:</strong> {selectedEvent.winningPositions}
+              </p>
+              <p className="ah-meta mt-2">
+                <strong>Display URL:</strong>
+              </p>
+              <div className="ah-flex-center gap-2 mt-1">
+                <input
+                  type="text"
+                  className="ah-input flex-1"
+                  value={`http://${window.location.hostname}:4031/?view=report&eventId=${selectedEventId}`}
+                  readOnly
+                />
+                <button
+                  className="ah-btn-outline"
+                  onClick={() => {
+                    const url = `http://${window.location.hostname}:4031/?view=report&eventId=${selectedEventId}`;
+                    navigator.clipboard.writeText(url);
+                    alert('Display URL copied to clipboard!');
+                  }}
+                >
+                  Copy URL
+                </button>
+              </div>
+            </div>
+
+            {/* Participants & Competitor Assignments */}
+            <div className="ah-card ah-section">
+              <div className="ah-section-header" onClick={() => toggleCard('participants')}>
+                <h3 className="ah-section-title">Participants & Competitor Assignments ({participants.length})</h3>
+                <span className={`ah-section-toggle ${collapsedCards['participants'] ? 'collapsed' : ''}`}>▼</span>
+              </div>
+
+              {!collapsedCards['participants'] && (
+                <>
+                  <div className="ah-list">
+                    {participants.length === 0 && (
+                      <p className="ah-meta">No participants in this game.</p>
+                    )}
+                    {participants.map((participant) => (
+                      <div key={participant.id} className="ah-list-item">
+                        <div className="ah-flex-col flex-1 gap-2">
+                          <strong>{participant.playerName}</strong>
+                          <select
+                            className="ah-select"
+                            value={participant.competitorId || ''}
+                            onChange={(e) =>
+                              handleAssignCompetitor(
+                                participant.id,
+                                e.target.value ? parseInt(e.target.value) : null
+                              )
+                            }
+                          >
+                            <option value="">Not assigned</option>
+                            {participant.competitorId && participant.competitorName && (
+                              <option value={participant.competitorId}>{participant.competitorName}</option>
+                            )}
+                            {getAvailableCompetitors(participant.competitorId).map((c) => (
+                              <option key={c.id} value={c.id}>
+                                {c.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
                           </div>
                         ))}
                       </div>
@@ -1040,8 +1126,8 @@ function App() {
                                 >
                                   <option value="">Select position</option>
                                   {availablePos.map((pos) => (
-                                    <option key={pos.id} value={pos.position}>
-                                      {pos.position}
+                                    <option key={pos} value={pos}>
+                                      {pos}
                                     </option>
                                   ))}
                                 </select>
