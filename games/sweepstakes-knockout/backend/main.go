@@ -60,9 +60,14 @@ func main() {
 	api.HandleFunc("/players", handleCreatePlayer).Methods("POST")
 	api.HandleFunc("/players/{id}", handleDeletePlayer).Methods("DELETE")
 
-	// Setup tab - Competitor pool
-	api.HandleFunc("/competitors", handleGetCompetitors).Methods("GET")
-	api.HandleFunc("/competitors", handleCreateCompetitor).Methods("POST")
+	// Setup tab - Groups
+	api.HandleFunc("/groups", handleGetGroups).Methods("GET")
+	api.HandleFunc("/groups", handleCreateGroup).Methods("POST")
+	api.HandleFunc("/groups/{id}", handleDeleteGroup).Methods("DELETE")
+
+	// Setup tab - Competitors (within groups)
+	api.HandleFunc("/groups/{groupId}/competitors", handleGetGroupCompetitors).Methods("GET")
+	api.HandleFunc("/groups/{groupId}/competitors", handleCreateGroupCompetitor).Methods("POST")
 	api.HandleFunc("/competitors/{id}", handleDeleteCompetitor).Methods("DELETE")
 
 	// Games tab - Events
@@ -72,13 +77,8 @@ func main() {
 	api.HandleFunc("/events/{id}", handleDeleteEvent).Methods("DELETE")
 
 	// Games tab - Participants
-	api.HandleFunc("/events/{id}/participants", handleAddParticipants).Methods("POST")
 	api.HandleFunc("/participants/{id}", handleAssignCompetitor).Methods("PUT")
 	api.HandleFunc("/participants/{id}", handleRemoveParticipant).Methods("DELETE")
-
-	// Games tab - Winning Positions
-	api.HandleFunc("/events/{eventId}/positions", handleCreatePosition).Methods("POST")
-	api.HandleFunc("/positions/{id}", handleDeletePosition).Methods("DELETE")
 
 	// Games tab - Results
 	api.HandleFunc("/events/{eventId}/results", handleGetResults).Methods("GET")
@@ -90,7 +90,7 @@ func main() {
 	// Serve static files
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./static")))
 
-	port := "4032"
+	port := "4031"
 	log.Printf("Sweepstakes Knockout server starting on port %s...", port)
 	log.Fatal(http.ListenAndServe(":"+port, corsHandler(r)))
 }
