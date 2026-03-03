@@ -8,7 +8,7 @@ set -e
 DB_HOST="${DB_HOST:-192.168.1.29}"
 DB_PORT="${DB_PORT:-5555}"
 DB_USER="${DB_USER:-activityhub}"
-DB_NAME="sweepstakes_knockout"
+DB_NAME="sweepstakes_knockout_db"
 
 echo "========================================="
 echo "Sweepstakes Knockout v3 Migration"
