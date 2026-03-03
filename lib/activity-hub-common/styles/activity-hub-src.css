@@ -230,6 +230,13 @@
   }
   .ah-select:hover { border-color: #A8A29E; }
 
+  .ah-select-fixed {
+    @apply ah-select;
+    width: 200px; /* Fixed width for ~25 characters */
+    min-width: 200px;
+    max-width: 200px;
+  }
+
   /* ── App header ──────────────────────────────────────────── */
   .ah-header {
     @apply flex items-center justify-between gap-3 mb-4 flex-wrap;

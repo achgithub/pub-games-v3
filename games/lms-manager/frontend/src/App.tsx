@@ -1723,10 +1723,7 @@ function App() {
                                 const isRevealed = revealedPlayers.has(participant.playerName);
                                 const assignedTeamId = pickAssignments[participant.playerName] || existingPick?.teamId;
                                 const hasAssignment = !!assignedTeamId;
-                                const assignedTeam = groupTeams[gameDetail.game.groupId]?.find(t => t.id === assignedTeamId);
-                                const maskedName = assignedTeam
-                                  ? '*'.repeat(assignedTeam.name.length)
-                                  : '**********';
+                                const maskedName = '*************************'; // Always 25 chars
 
                                 return (
                                   <div key={participant.id} className="ah-flex-between p-3 border rounded-md gap-3">
@@ -1734,7 +1731,7 @@ function App() {
 
                                     <div className="flex gap-2 items-center">
                                       <select
-                                        className="ah-select"
+                                        className="ah-select-fixed"
                                         value={assignedTeamId || ''}
                                         onChange={(e) =>
                                           setPickAssignments({
@@ -1760,19 +1757,18 @@ function App() {
                                         })}
                                       </select>
 
-                                      {hasAssignment && (
-                                        <button
-                                          className="ah-btn-outline ah-btn-sm"
-                                          onClick={() => {
-                                            const newAssignments = { ...pickAssignments };
-                                            delete newAssignments[participant.playerName];
-                                            setPickAssignments(newAssignments);
-                                          }}
-                                          title="Clear team selection"
-                                        >
-                                          ✕
-                                        </button>
-                                      )}
+                                      <button
+                                        className="ah-btn-outline ah-btn-sm"
+                                        onClick={() => {
+                                          const newAssignments = { ...pickAssignments };
+                                          delete newAssignments[participant.playerName];
+                                          setPickAssignments(newAssignments);
+                                        }}
+                                        disabled={!hasAssignment}
+                                        title="Clear team selection"
+                                      >
+                                        ✕
+                                      </button>
 
                                       <button
                                         className="ah-btn-outline ah-btn-sm"
