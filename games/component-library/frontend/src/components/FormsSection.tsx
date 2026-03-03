@@ -82,6 +82,61 @@ function FormsSection({ token }: Props) {
         </div>
       </div>
 
+      {/* Fixed-Width Select */}
+      <div className="component-section">
+        <div className="component-demo">
+          <div className="component-header">
+            <span className="component-name">Fixed-Width Select</span>
+            <code className="component-class">.ah-select-fixed</code>
+          </div>
+          <p className="component-purpose">
+            Fixed-width dropdown (200px) that prevents layout shifts when content changes.
+            Use when masking selections (asterisks) or when adjacent buttons could cause shifting.
+          </p>
+          <div className="component-preview">
+            <div className="ah-list-item">
+              <strong>Player Name</strong>
+              <div className="ah-flex-center gap-2">
+                <select className="ah-select-fixed">
+                  <option value="">*************************</option>
+                  <option value="1">Option with long name here</option>
+                  <option value="2">Short</option>
+                </select>
+                <button className="ah-btn-outline ah-btn-sm">✕</button>
+                <button className="ah-btn-outline ah-btn-sm">👁️</button>
+              </div>
+            </div>
+          </div>
+          <div className="component-code">
+            <pre><code>{`<div className="ah-list-item">
+  <strong>Player Name</strong>
+  <div className="ah-flex-center gap-2">
+    <select className="ah-select-fixed">
+      <option value="">*************************</option>
+      <option value="1">Team Name</option>
+    </select>
+    <button className="ah-btn-outline ah-btn-sm">✕</button>
+    <button className="ah-btn-outline ah-btn-sm">👁️</button>
+  </div>
+</div>
+
+/* Fixed width prevents layout shifts when:
+ * - Masking selections with asterisks
+ * - Adjacent buttons appear/disappear
+ * - Option text varies in length
+ */`}</code></pre>
+          </div>
+          <div className="component-variants">
+            <div className="component-variants-title">Use Cases:</div>
+            <ul>
+              <li>Privacy masking (showing asterisks for hidden selections)</li>
+              <li>Assignment interfaces with reveal buttons</li>
+              <li>Any layout where dropdown width changes cause shifting</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
       {/* Label */}
       <div className="component-section">
         <div className="component-demo">
