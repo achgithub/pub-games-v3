@@ -763,6 +763,62 @@ func handleGetResults(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, results)
 }
 
+func handleUpdateResults(w http.ResponseWriter, r *http.Request) {
+	user, ok := authlib.GetUserFromContext(r.Context())
+	if !ok {
+		respondError(w, 401, "Unauthorized")
+		return
+	}
+
+	vars := mux.Vars(r)
+	eventID := vars["eventId"]
+
+	// Verify ownership
+	var managerEmail string
+	err := appDB.QueryRow(`SELECT manager_email FROM events WHERE id = $1`, eventID).Scan(&managerEmail)
+	if err != nil {
+		respondError(w, 404, "Event not found")
+		return
+	}
+	if managerEmail != user.Email {
+		respondError(w, 403, "Forbidden")
+		return
+	}
+
+	var req struct {
+		Results []struct {
+			CompetitorID int    `json:"competitorId"`
+			Position     string `json:"position"`
+		} `json:"results"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, 400, "Invalid request")
+		return
+	}
+
+	// Delete existing results
+	_, err = appDB.Exec(`DELETE FROM results WHERE event_id = $1`, eventID)
+	if err != nil {
+		respondError(w, 500, "Database error")
+		return
+	}
+
+	// Insert new results
+	for _, result := range req.Results {
+		_, err := appDB.Exec(`
+			INSERT INTO results (event_id, competitor_id, position)
+			VALUES ($1, $2, $3)
+		`, eventID, result.CompetitorID, result.Position)
+		if err != nil {
+			respondError(w, 500, "Database error")
+			return
+		}
+	}
+
+	// Note: Does NOT update event status (that's done by handleSaveResults)
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func handleSaveResults(w http.ResponseWriter, r *http.Request) {
 	user, ok := authlib.GetUserFromContext(r.Context())
 	if !ok {

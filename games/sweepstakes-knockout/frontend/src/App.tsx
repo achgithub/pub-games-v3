@@ -228,7 +228,8 @@ function App() {
     };
 
     fetchEventDetail();
-  }, [token, selectedEventId, events, groupCompetitors]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, selectedEventId]);
 
   // Fetch report
   useEffect(() => {
@@ -652,6 +653,39 @@ function App() {
 
   // Positions are now configured at event creation time, not dynamically added
 
+  const handleResultChange = async (competitorId: number, position: string) => {
+    // Update local state immediately for UI responsiveness
+    setResultAssignments({
+      ...resultAssignments,
+      [competitorId]: position,
+    });
+
+    // Save to backend immediately
+    if (!selectedEventId) return;
+
+    const currentResults = Object.entries(resultAssignments)
+      .filter(([cId, pos]) => pos && parseInt(cId) !== competitorId)
+      .map(([cId, pos]) => ({ competitorId: parseInt(cId), position: pos }));
+
+    // Add the new/updated result
+    if (position) {
+      currentResults.push({ competitorId, position });
+    }
+
+    try {
+      await fetch(`${API_BASE}/events/${selectedEventId}/results`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ results: currentResults }),
+      });
+    } catch (err) {
+      console.error('Failed to save result:', err);
+    }
+  };
+
   const handleSaveResults = async () => {
     if (!selectedEventId) return;
 
@@ -671,7 +705,7 @@ function App() {
         },
         body: JSON.stringify({ results }),
       });
-      alert('Results saved! Event completed.');
+      alert('Event marked as completed!');
       // Refetch events to update status
       const res = await fetch(`${API_BASE}/events`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -1188,7 +1222,7 @@ function App() {
                   {!collapsedCards['results'] && (
                     <>
                       <p className="ah-meta">
-                        Assign finishing positions to competitors. All winning positions must be assigned.
+                        Assign finishing positions to competitors. Results are saved automatically.
                       </p>
 
                       <div className="ah-grid-auto">
@@ -1211,10 +1245,7 @@ function App() {
                                   className="ah-select"
                                   value={resultAssignments[participant.competitorId!] || ''}
                                   onChange={(e) =>
-                                    setResultAssignments({
-                                      ...resultAssignments,
-                                      [participant.competitorId!]: e.target.value,
-                                    })
+                                    handleResultChange(participant.competitorId!, e.target.value)
                                   }
                                 >
                                   <option value="">Select position</option>
@@ -1233,7 +1264,7 @@ function App() {
                         className="ah-btn-primary mt-5"
                         onClick={handleSaveResults}
                       >
-                        Save Results & Complete Event
+                        Complete Event
                       </button>
                     </>
                   )}

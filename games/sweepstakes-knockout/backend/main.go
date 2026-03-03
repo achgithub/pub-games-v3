@@ -82,6 +82,7 @@ func main() {
 
 	// Games tab - Results
 	api.HandleFunc("/events/{eventId}/results", handleGetResults).Methods("GET")
+	api.HandleFunc("/events/{eventId}/results", handleUpdateResults).Methods("PUT")
 	api.HandleFunc("/events/{eventId}/results", handleSaveResults).Methods("POST")
 
 	// Reports tab
