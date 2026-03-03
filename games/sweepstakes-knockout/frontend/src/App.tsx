@@ -1163,8 +1163,8 @@ function App() {
                             {selectedEvent?.spinnerEnabled && (
                               <button
                                 className="ah-btn-primary"
-                                onClick={() => handleSpin(participant.id, participant.competitorId)}
-                                disabled={getAvailableCompetitors(participant.competitorId).length === 0}
+                                onClick={() => handleSpin(participant.id, participant.competitorId ?? null)}
+                                disabled={getAvailableCompetitors(participant.competitorId ?? null).length === 0}
                               >
                                 🎲 Spin
                               </button>
