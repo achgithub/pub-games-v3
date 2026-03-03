@@ -1761,12 +1761,36 @@ function App() {
 
                                       <button
                                         className="ah-btn-outline ah-btn-sm"
-                                        onMouseDown={() => setRevealedPlayers(new Set([...revealedPlayers, participant.playerName]))}
-                                        onMouseUp={() => setRevealedPlayers(new Set([...revealedPlayers].filter(name => name !== participant.playerName)))}
-                                        onMouseLeave={() => setRevealedPlayers(new Set([...revealedPlayers].filter(name => name !== participant.playerName)))}
-                                        onTouchStart={() => setRevealedPlayers(new Set([...revealedPlayers, participant.playerName]))}
-                                        onTouchEnd={() => setRevealedPlayers(new Set([...revealedPlayers].filter(name => name !== participant.playerName)))}
-                                        onTouchCancel={() => setRevealedPlayers(new Set([...revealedPlayers].filter(name => name !== participant.playerName)))}
+                                        onMouseDown={() => {
+                                          const newSet = new Set(revealedPlayers);
+                                          newSet.add(participant.playerName);
+                                          setRevealedPlayers(newSet);
+                                        }}
+                                        onMouseUp={() => {
+                                          const newSet = new Set(revealedPlayers);
+                                          newSet.delete(participant.playerName);
+                                          setRevealedPlayers(newSet);
+                                        }}
+                                        onMouseLeave={() => {
+                                          const newSet = new Set(revealedPlayers);
+                                          newSet.delete(participant.playerName);
+                                          setRevealedPlayers(newSet);
+                                        }}
+                                        onTouchStart={() => {
+                                          const newSet = new Set(revealedPlayers);
+                                          newSet.add(participant.playerName);
+                                          setRevealedPlayers(newSet);
+                                        }}
+                                        onTouchEnd={() => {
+                                          const newSet = new Set(revealedPlayers);
+                                          newSet.delete(participant.playerName);
+                                          setRevealedPlayers(newSet);
+                                        }}
+                                        onTouchCancel={() => {
+                                          const newSet = new Set(revealedPlayers);
+                                          newSet.delete(participant.playerName);
+                                          setRevealedPlayers(newSet);
+                                        }}
                                       >
                                         👁️
                                       </button>
