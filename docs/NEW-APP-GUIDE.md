@@ -361,7 +361,7 @@ Add to `identity-shell/backend/apps.json`:
 
 ### Step 12: Update Start Services Script
 
-Add your app to `start_services.sh` so it starts automatically:
+Add your app to `scripts/start_core.sh` so it starts automatically:
 
 ```bash
 # Start Your App (optional)
@@ -441,7 +441,7 @@ go run *.go
 - [ ] App shows error if `userId` missing
 - [ ] App added to `apps.json`
 - [ ] Database added to `setup_databases.sh`
-- [ ] App added to `start_services.sh`
+- [ ] App added to `scripts/start_core.sh`
 - [ ] `/api/config` endpoint implemented
 - [ ] `/api/game` (POST) creates game
 - [ ] `/api/game/{id}` (GET) fetches state

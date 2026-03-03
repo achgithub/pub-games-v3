@@ -61,9 +61,9 @@ When challenging via the shell, you can configure:
 
 ## Running
 
-Via start_services.sh:
+Via scripts/start_core.sh:
 ```bash
-./start_services.sh
+./scripts/start_core.sh
 ```
 
 Manual:

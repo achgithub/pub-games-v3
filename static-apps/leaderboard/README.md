@@ -69,9 +69,9 @@ Standings are ranked by: points DESC, wins DESC, total games DESC.
 
 ## Running
 
-Via start_services.sh:
+Via scripts/start_core.sh:
 ```bash
-./start_services.sh
+./scripts/start_core.sh
 ```
 
 Manual:
