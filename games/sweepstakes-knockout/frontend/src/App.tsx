@@ -1070,8 +1070,7 @@ function App() {
             <h3 className="ah-section-title">Event Report</h3>
 
             <select
-              className="ah-select"
-              className="w-full mb-5"
+              className="ah-select w-full mb-5"
               value={reportEventId}
               onChange={(e) => setReportEventId(parseInt(e.target.value))}
             >
