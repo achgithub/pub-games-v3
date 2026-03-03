@@ -102,6 +102,9 @@ function App() {
   const [isSpinning, setIsSpinning] = useState<boolean>(false);
   const [spinnerDisplayIndex, setSpinnerDisplayIndex] = useState<number>(0);
 
+  // Reveal state (for hiding selections from users)
+  const [revealedParticipants, setRevealedParticipants] = useState<Set<number>>(new Set());
+
   // Reports tab state
   const [reportEventId, setReportEventId] = useState<number>(0);
   const [reportData, setReportData] = useState<ReportEntry[]>([]);
@@ -1169,13 +1172,27 @@ function App() {
                     {participants.length === 0 && (
                       <p className="ah-meta">No participants in this game.</p>
                     )}
-                    {participants.map((participant) => (
-                      <div key={participant.id} className="ah-list-item">
-                        <div className="ah-flex-col flex-1 gap-2">
+                    {participants.map((participant) => {
+                      const isRevealed = revealedParticipants.has(participant.id);
+                      const hasAssignment = !!participant.competitorId;
+
+                      return (
+                        <div key={participant.id} className="ah-flex-between p-3 border rounded-md gap-3">
                           <strong>{participant.playerName}</strong>
+
                           <div className="flex gap-2 items-center">
+                            {selectedEvent?.spinnerEnabled && (
+                              <button
+                                className="ah-btn-primary ah-btn-sm"
+                                onClick={() => handleSpin(participant.id, participant.competitorId ?? null)}
+                                disabled={getAvailableCompetitors(participant.competitorId ?? null).length === 0}
+                              >
+                                🎲
+                              </button>
+                            )}
+
                             <select
-                              className="ah-select flex-1"
+                              className="ah-select"
                               value={participant.competitorId || ''}
                               onChange={(e) =>
                                 handleAssignCompetitor(
@@ -1184,29 +1201,36 @@ function App() {
                                 )
                               }
                             >
-                              <option value="">Not assigned</option>
+                              <option value="">
+                                {!isRevealed && hasAssignment ? '**********' : 'Not assigned'}
+                              </option>
                               {participant.competitorId && participant.competitorName && (
-                                <option value={participant.competitorId}>{participant.competitorName}</option>
+                                <option value={participant.competitorId}>
+                                  {!isRevealed ? '**********' : participant.competitorName}
+                                </option>
                               )}
-                              {getAvailableCompetitors(participant.competitorId).map((c) => (
+                              {!isRevealed && hasAssignment ? null : getAvailableCompetitors(participant.competitorId).map((c) => (
                                 <option key={c.id} value={c.id}>
                                   {c.name}
                                 </option>
                               ))}
                             </select>
-                            {selectedEvent?.spinnerEnabled && (
-                              <button
-                                className="ah-btn-primary"
-                                onClick={() => handleSpin(participant.id, participant.competitorId ?? null)}
-                                disabled={getAvailableCompetitors(participant.competitorId ?? null).length === 0}
-                              >
-                                🎲 Spin
-                              </button>
-                            )}
+
+                            <button
+                              className="ah-btn-outline ah-btn-sm"
+                              onMouseDown={() => setRevealedParticipants(new Set([...revealedParticipants, participant.id]))}
+                              onMouseUp={() => setRevealedParticipants(new Set([...revealedParticipants].filter(id => id !== participant.id)))}
+                              onMouseLeave={() => setRevealedParticipants(new Set([...revealedParticipants].filter(id => id !== participant.id)))}
+                              onTouchStart={() => setRevealedParticipants(new Set([...revealedParticipants, participant.id]))}
+                              onTouchEnd={() => setRevealedParticipants(new Set([...revealedParticipants].filter(id => id !== participant.id)))}
+                              onTouchCancel={() => setRevealedParticipants(new Set([...revealedParticipants].filter(id => id !== participant.id)))}
+                            >
+                              👁️
+                            </button>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                       </div>
                     </>
                   )}

@@ -133,6 +133,9 @@ function App() {
   const [playerSearchText, setPlayerSearchText] = useState<string>('');
   const [showUnassignedPlayersOnly, setShowUnassignedPlayersOnly] = useState<boolean>(false);
 
+  // Reveal state (for hiding team selections from users)
+  const [revealedPlayers, setRevealedPlayers] = useState<Set<string>>(new Set());
+
   // Player filter state (for game creation)
   const [gameCreationPlayerSearch, setGameCreationPlayerSearch] = useState<string>('');
   const [showSelectedPlayersOnly, setShowSelectedPlayersOnly] = useState<boolean>(false);
@@ -1717,38 +1720,57 @@ function App() {
                                 const existingPick = picks.find(
                                   (p) => p.playerName === participant.playerName
                                 );
+                                const isRevealed = revealedPlayers.has(participant.playerName);
+                                const hasAssignment = !!(pickAssignments[participant.playerName] || existingPick?.teamId);
 
                                 return (
-                                  <div key={participant.id} className="ah-flex-between p-3 border rounded-md gap-4">
+                                  <div key={participant.id} className="ah-flex-between p-3 border rounded-md gap-3">
                                     <strong>{participant.playerName}</strong>
-                                    <select
-                                      className="ah-select"
-                                      value={
-                                        pickAssignments[participant.playerName] ||
-                                        existingPick?.teamId ||
-                                        ''
-                                      }
-                                      onChange={(e) =>
-                                        setPickAssignments({
-                                          ...pickAssignments,
-                                          [participant.playerName]: Number(e.target.value),
-                                        })
-                                      }
-                                    >
-                                      <option value="">Select Team</option>
-                                      {groupTeams[gameDetail.game.groupId]?.map((team) => {
-                                        const alreadyUsed = usedTeams[participant.playerName]?.includes(team.id);
-                                        return (
-                                          <option
-                                            key={team.id}
-                                            value={team.id}
-                                            disabled={alreadyUsed}
-                                          >
-                                            {team.name}{alreadyUsed ? ' (used)' : ''}
-                                          </option>
-                                        );
-                                      })}
-                                    </select>
+
+                                    <div className="flex gap-2 items-center">
+                                      <select
+                                        className="ah-select"
+                                        value={
+                                          pickAssignments[participant.playerName] ||
+                                          existingPick?.teamId ||
+                                          ''
+                                        }
+                                        onChange={(e) =>
+                                          setPickAssignments({
+                                            ...pickAssignments,
+                                            [participant.playerName]: Number(e.target.value),
+                                          })
+                                        }
+                                      >
+                                        <option value="">
+                                          {!isRevealed && hasAssignment ? '**********' : 'Select Team'}
+                                        </option>
+                                        {!isRevealed && hasAssignment ? null : groupTeams[gameDetail.game.groupId]?.map((team) => {
+                                          const alreadyUsed = usedTeams[participant.playerName]?.includes(team.id);
+                                          return (
+                                            <option
+                                              key={team.id}
+                                              value={team.id}
+                                              disabled={alreadyUsed}
+                                            >
+                                              {team.name}{alreadyUsed ? ' (used)' : ''}
+                                            </option>
+                                          );
+                                        })}
+                                      </select>
+
+                                      <button
+                                        className="ah-btn-outline ah-btn-sm"
+                                        onMouseDown={() => setRevealedPlayers(new Set([...revealedPlayers, participant.playerName]))}
+                                        onMouseUp={() => setRevealedPlayers(new Set([...revealedPlayers].filter(name => name !== participant.playerName)))}
+                                        onMouseLeave={() => setRevealedPlayers(new Set([...revealedPlayers].filter(name => name !== participant.playerName)))}
+                                        onTouchStart={() => setRevealedPlayers(new Set([...revealedPlayers, participant.playerName]))}
+                                        onTouchEnd={() => setRevealedPlayers(new Set([...revealedPlayers].filter(name => name !== participant.playerName)))}
+                                        onTouchCancel={() => setRevealedPlayers(new Set([...revealedPlayers].filter(name => name !== participant.playerName)))}
+                                      >
+                                        👁️
+                                      </button>
+                                    </div>
                                   </div>
                                 );
                               })}
