@@ -1146,7 +1146,7 @@ function App() {
                 </button>
               </div>
 
-              <div className="ah-list" className="mt-4">
+              <div className="ah-list mt-4">
                 {players.length === 0 && (
                   <p className="ah-meta">No players yet. Add one to get started.</p>
                 )}
@@ -1190,7 +1190,7 @@ function App() {
                 </button>
               </div>
 
-              <div className="ah-list" className="mt-4">
+              <div className="ah-list mt-4">
                 {groups.length === 0 && (
                   <p className="ah-meta">No groups yet. Create one to get started.</p>
                 )}
