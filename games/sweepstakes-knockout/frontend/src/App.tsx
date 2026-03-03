@@ -819,10 +819,9 @@ function App() {
                   <div className="ah-flex-center gap-2 mt-1">
                     <input
                       type="text"
-                      className="ah-input"
+                      className="ah-input flex-1"
                       value={`http://${window.location.hostname}:4032/?view=report&eventId=${selectedEventId}`}
                       readOnly
-                      className="flex-1"
                     />
                     <button
                       className="ah-btn-outline"
