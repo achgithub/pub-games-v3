@@ -175,9 +175,14 @@ func handleUpdateApp(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Name          string   `json:"name"`
 		Icon          string   `json:"icon"`
+		Type          string   `json:"type"`
 		Description   string   `json:"description"`
 		Category      string   `json:"category"`
+		URL           string   `json:"url"`
+		BackendPort   int      `json:"backendPort"`
+		Realtime      string   `json:"realtime"`
 		RequiredRoles []string `json:"requiredRoles"`
+		Enabled       bool     `json:"enabled"`
 		DisplayOrder  int      `json:"displayOrder"`
 	}
 
@@ -189,11 +194,13 @@ func handleUpdateApp(w http.ResponseWriter, r *http.Request) {
 	// Update app in database
 	_, err := identityDB.Exec(`
 		UPDATE applications
-		SET name = $1, icon = $2, description = $3, category = $4,
-		    required_roles = $5, display_order = $6
-		WHERE id = $7
-	`, req.Name, req.Icon, req.Description, req.Category,
-		pq.Array(req.RequiredRoles), req.DisplayOrder, appID)
+		SET name = $1, icon = $2, type = $3, description = $4, category = $5,
+		    url = $6, backend_port = $7, realtime = $8,
+		    required_roles = $9, enabled = $10, display_order = $11
+		WHERE id = $12
+	`, req.Name, req.Icon, req.Type, req.Description, req.Category,
+		req.URL, req.BackendPort, req.Realtime,
+		pq.Array(req.RequiredRoles), req.Enabled, req.DisplayOrder, appID)
 
 	if err != nil {
 		log.Printf("Error updating app: %v", err)

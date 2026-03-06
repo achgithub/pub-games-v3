@@ -281,6 +281,73 @@
   .ah-table-row:nth-child(even) { background-color: #FAFAF9; }
   .ah-table-row:hover { background-color: #F5F5F4; }
 
+  /* ── HTML Tables (traditional <table> elements) ────────────── */
+  .ah-html-table {
+    @apply w-full border-collapse;
+    margin-top: 20px;
+  }
+
+  .ah-html-table thead {
+    background-color: #FAFAF9;
+  }
+
+  .ah-html-table th {
+    @apply px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider;
+    color: #78716C;
+    border-bottom: 2px solid #E7E5E4;
+  }
+
+  .ah-html-table td {
+    @apply px-3 py-3 align-top;
+    border-bottom: 1px solid #F5F5F4;
+  }
+
+  .ah-html-table tbody tr:hover {
+    background-color: #FAFAF9;
+  }
+
+  .ah-html-table td.icon {
+    @apply text-2xl;
+    width: 50px;
+  }
+
+  /* ── Role Chips (toggle buttons for roles) ──────────────────── */
+  .ah-role-chips {
+    @apply flex flex-wrap gap-1.5;
+    margin-top: 8px;
+  }
+
+  .ah-role-chip {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium cursor-pointer transition-all duration-150;
+    border-radius: 12px;
+    border: 1px solid;
+  }
+
+  .ah-role-chip.active {
+    @apply bg-brand-500 text-white border-brand-500;
+  }
+
+  .ah-role-chip.inactive {
+    @apply bg-stone-50 text-stone-500 border-stone-300;
+  }
+
+  .ah-role-chip:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .ah-role-chip:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
+
+  .ah-role-chip.active:hover:not(:disabled) {
+    @apply bg-brand-600;
+  }
+
+  .ah-role-chip.inactive:hover:not(:disabled) {
+    @apply bg-stone-100;
+  }
+
   /* ── Game Boards ─────────────────────────────────────────── */
   .ah-game-board {
     @apply grid gap-1 bg-stone-200 p-2;
