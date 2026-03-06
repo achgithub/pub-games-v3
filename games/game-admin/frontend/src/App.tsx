@@ -349,8 +349,8 @@ function FixturesTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isRe
           <p className="ah-meta">Re-uploading with the same name updates existing matches. Results in the CSV are stored but status is only set to Completed when you confirm results in the Results tab.</p>
           <div className="ah-flex flex-wrap gap-2 mt-2">
             <input
-              className="ah-input"
-              className="flex-1" style={{ minWidth: 180 }}
+              className="ah-input flex-1"
+              style={{ minWidth: 180 }}
               placeholder="Fixture file name (e.g. Premier League 2025/26)"
               value={uploadName}
               onChange={e => setUploadName(e.target.value)}
@@ -543,7 +543,7 @@ function GamesTab({ api, isReadOnly, onGameSelect }: {
             <div className="ah-flex-between" style={{ alignItems: 'flex-start' }}>
               <div>
                 <strong>{game.name}</strong>
-                {String(game.id) === currentGameId && <span className="ah-badge--info" className="ml-2">CURRENT</span>}
+                {String(game.id) === currentGameId && <span className="ah-badge--info ml-2">CURRENT</span>}
                 <p className="ah-meta">Status: {game.status} · Fixture: {game.fixtureName || '—'}</p>
               </div>
               {!isReadOnly && (
@@ -759,7 +759,7 @@ function RoundsTab({ gameId, api, isReadOnly }: {
                 <span style={{ color: statusColor(round.status), fontSize: 13, fontWeight: 500 }}> {round.status}</span>
                 <p className="ah-meta">{round.startDate} → {round.endDate} · {round.predCount} picks</p>
                 {round.submissionDeadline && (
-                  <p className="ah-meta" className="text-orange-700">
+                  <p className="ah-meta text-orange-700">
                     Deadline: {new Date(round.submissionDeadline).toLocaleString()}
                   </p>
                 )}
@@ -893,7 +893,7 @@ function ResultsTab({ gameId, api, isReadOnly }: {
                   <strong>#{match.matchNumber}: {match.homeTeam} vs {match.awayTeam}</strong>
                   <p className="ah-meta">{match.date} · {match.location}</p>
                   {match.result && (
-                    <p className="ah-meta" className="font-semibold text-gray-800">Result: {match.result}</p>
+                    <p className="ah-meta font-semibold text-gray-800">Result: {match.result}</p>
                   )}
                   {match.status !== 'upcoming' && (
                     <p className="ah-meta" style={{ color: statusColor(match.status), fontWeight: 500 }}>
@@ -924,9 +924,9 @@ function ResultsTab({ gameId, api, isReadOnly }: {
           ))}
 
           {!isReadOnly && (
-            <div className="ah-card" className="mt-2">
+            <div className="ah-card mt-2">
               {missingResults > 0 && (
-                <p className="ah-meta" className="text-orange-700 mb-2">
+                <p className="ah-meta text-orange-700 mb-2">
                   {missingResults} match{missingResults > 1 ? 'es' : ''} still need{missingResults === 1 ? 's' : ''} a result before processing.
                 </p>
               )}
@@ -938,7 +938,7 @@ function ResultsTab({ gameId, api, isReadOnly }: {
                 Process Round {selectedRound}
               </button>
               {processResult && (
-                <p className="ah-meta" className="mt-2 text-gray-800">
+                <p className="ah-meta mt-2 text-gray-800">
                   ✅ {processResult.survived} survived · ❌ {processResult.eliminated} eliminated
                   {processResult.autoPicked > 0 && ` · 🤖 ${processResult.autoPicked} auto-picked`}
                 </p>
@@ -1131,7 +1131,7 @@ function SweepCompetitionsTab({ api, isReadOnly, onSelectComp }: {
               onChange={e => setNewDesc(e.target.value)}
             />
           </div>
-          <button className="ah-btn-primary" className="mt-2" onClick={createComp} disabled={!newName.trim()}>
+          <button className="ah-btn-primary mt-2" onClick={createComp} disabled={!newName.trim()}>
             Create
           </button>
         </div>
@@ -1661,10 +1661,10 @@ function QuizMediaTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isR
                         placeholder="Clip label" value={clipForm.label}
                         onChange={e => setClipForm(cf => ({ ...cf, label: e.target.value }))} />
                       <div className="ah-flex gap-1">
-                        <input className="ah-input" className="flex-1" placeholder="Start (s)" type="number" step="0.1"
+                        <input className="ah-input flex-1" placeholder="Start (s)" type="number" step="0.1"
                           value={clipForm.audioStartSec}
                           onChange={e => setClipForm(cf => ({ ...cf, audioStartSec: e.target.value }))} />
-                        <input className="ah-input" className="flex-1" placeholder="Dur (s)" type="number" step="0.1"
+                        <input className="ah-input flex-1" placeholder="Dur (s)" type="number" step="0.1"
                           value={clipForm.audioDurationSec}
                           onChange={e => setClipForm(cf => ({ ...cf, audioDurationSec: e.target.value }))} />
                       </div>
@@ -1817,8 +1817,8 @@ function QuizQuestionsTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>;
             onChange={e => setForm(f => ({ ...f, text: e.target.value }))}
           />
           <div className="ah-flex flex-wrap gap-2 mt-2">
-            <input className="ah-input" className="flex-2" placeholder="Answer" value={form.answer} onChange={e => setForm(f => ({ ...f, answer: e.target.value }))} />
-            <input className="ah-input" className="flex-1" placeholder="Category" value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} />
+            <input className="ah-input flex-2" placeholder="Answer" value={form.answer} onChange={e => setForm(f => ({ ...f, answer: e.target.value }))} />
+            <input className="ah-input flex-1" placeholder="Category" value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} />
             <select className="ah-select" value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
               <option value="text">Text</option>
               <option value="picture">Picture</option>
@@ -1881,7 +1881,7 @@ function QuizQuestionsTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>;
             </a>
           </div>
           {importResult && (
-            <p className="ah-meta" className="mt-2 text-gray-800">{importResult}</p>
+            <p className="ah-meta mt-2 text-gray-800">{importResult}</p>
           )}
         </div>
       )}
@@ -1904,7 +1904,7 @@ function QuizQuestionsTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>;
                 <p style={{ fontWeight: 500, fontSize: 14 }}>{q.text}</p>
                 <p className="ah-meta">Answer: <strong>{q.answer}</strong> · {q.type} · {q.difficulty} {q.category && `· ${q.category}`}</p>
                 {q.imagePath && <p className="ah-meta" style={{ color: '#1565C0' }}>Image attached</p>}
-                {q.audioPath && <p className="ah-meta" className="text-orange-700">Audio attached</p>}
+                {q.audioPath && <p className="ah-meta text-orange-700">Audio attached</p>}
                 {q.requiresMedia && !q.imageClipId && !q.audioClipId && (
                   <span className="ah-badge" style={{ backgroundColor: '#FFEBEE', color: '#C62828' }}>NEEDS CLIP</span>
                 )}
@@ -2088,7 +2088,7 @@ function QuizPacksTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isR
               <div className="ah-card mb-3">
                 <h4 style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Add Round</h4>
                 <div className="ah-flex flex-wrap gap-2">
-                  <input className="ah-input" className="flex-2" placeholder="Round name" value={newRoundName} onChange={e => setNewRoundName(e.target.value)} />
+                  <input className="ah-input flex-2" placeholder="Round name" value={newRoundName} onChange={e => setNewRoundName(e.target.value)} />
                   <select className="ah-select" value={newRoundType} onChange={e => setNewRoundType(e.target.value)}>
                     <option value="text">Text</option>
                     <option value="picture">Picture</option>
