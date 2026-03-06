@@ -59,6 +59,15 @@ func main() {
 
 	api.HandleFunc("/config", handleConfig).Methods("GET")
 
+	// Setup endpoints (players & groups management)
+	api.HandleFunc("/setup/players", handleGetPlayers).Methods("GET")
+	api.HandleFunc("/setup/players", handleCreatePlayer).Methods("POST")
+	api.HandleFunc("/setup/players/{id}", handleDeletePlayer).Methods("DELETE")
+
+	api.HandleFunc("/setup/groups", handleGetGroups).Methods("GET")
+	api.HandleFunc("/setup/groups", handleCreateGroup).Methods("POST")
+	api.HandleFunc("/setup/groups/{id}", handleDeleteGroup).Methods("DELETE")
+
 	// LMS game management
 	api.HandleFunc("/lms/games", handleGetLMSGames).Methods("GET")
 	api.HandleFunc("/lms/games", handleCreateLMSGame).Methods("POST")
@@ -132,6 +141,10 @@ func main() {
 	api.HandleFunc("/quiz/packs/{packId}/rounds", handleCreatePackRound).Methods("POST")
 	api.HandleFunc("/quiz/packs/{packId}/rounds/{roundId}", handleDeletePackRound).Methods("DELETE")
 	api.HandleFunc("/quiz/packs/{packId}/rounds/{roundId}/questions", handleSetRoundQuestions).Methods("PUT")
+
+	// Export endpoints (no auth - read-only, used by LMS/Sweepstakes)
+	r.HandleFunc("/api/export/players", handleExportPlayers).Methods("GET")
+	r.HandleFunc("/api/export/groups", handleExportGroups).Methods("GET")
 
 	// Serve uploaded media files
 	r.PathPrefix("/uploads/").Handler(http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
