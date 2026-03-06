@@ -500,8 +500,7 @@ function GamesTab({ api, isReadOnly, onGameSelect }: {
           ) : (
             <>
               <input
-                className="ah-input"
-                className="w-full"
+                className="ah-input w-full"
                 placeholder="Game name (e.g. Andy's Friends 2025)"
                 value={newName}
                 onChange={e => setNewName(e.target.value)}
@@ -520,8 +519,7 @@ function GamesTab({ api, isReadOnly, onGameSelect }: {
                 </select>
               </div>
               <button
-                className="ah-btn-primary"
-                className="mt-3"
+                className="ah-btn-primary mt-3"
                 onClick={createGame}
                 disabled={!newName.trim() || !newFixtureId}
               >
@@ -2334,7 +2332,7 @@ function SetupTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isReadO
               <div key={g.id} className="ah-list-item">
                 <div>
                   <strong>{g.name}</strong>
-                  {g.description && <p className="ah-meta" className="m-0">{g.description}</p>}
+                  {g.description && <p className="ah-meta m-0">{g.description}</p>}
                   <p className="ah-meta m-0">Added {new Date(g.createdAt).toLocaleDateString()}</p>
                 </div>
                 {!isReadOnly && (
