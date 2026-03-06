@@ -172,6 +172,12 @@ func handleUpdateApp(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	appID := vars["id"]
 
+	// Protect identity-shell from modification
+	if appID == "lobby" || appID == "identity-shell" {
+		http.Error(w, "Cannot modify identity-shell - it is the core platform", http.StatusForbidden)
+		return
+	}
+
 	var req struct {
 		Name          string   `json:"name"`
 		Icon          string   `json:"icon"`
@@ -231,6 +237,12 @@ func handleToggleApp(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	appID := vars["id"]
 	action := vars["action"]
+
+	// Protect identity-shell from being disabled
+	if appID == "lobby" || appID == "identity-shell" {
+		http.Error(w, "Cannot toggle identity-shell - it must always be enabled", http.StatusForbidden)
+		return
+	}
 
 	enabled := action == "enable"
 

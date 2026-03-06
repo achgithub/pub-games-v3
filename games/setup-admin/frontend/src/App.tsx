@@ -2,6 +2,11 @@ import React, { useState, useEffect } from 'react';
 
 const API_BASE = window.location.origin;
 
+// Helper to identify the identity-shell (Lobby) app - cannot be disabled or modified
+const isIdentityShell = (app: AppRecord): boolean => {
+  return app.id === 'lobby' || app.name === 'Lobby' || app.id === 'identity-shell';
+};
+
 // Available roles in the system
 const AVAILABLE_ROLES = [
   { id: 'setup_admin', label: 'Setup Admin', color: '#9C27B0' },
@@ -327,6 +332,12 @@ function App() {
 
           {editingApp ? (
             <div>
+              {isIdentityShell(editingApp) && (
+                <div className="ah-banner ah-banner--warning mb-3">
+                  🔒 This is the Identity Shell (core platform). Editing is disabled to prevent breaking the system.
+                </div>
+              )}
+
               <div className="ah-flex ah-flex-between mb-3">
                 <h4>Editing: {editingApp.name}</h4>
                 <button
@@ -474,9 +485,9 @@ function App() {
                   <button
                     className="ah-btn-primary"
                     onClick={() => saveApp(editingApp)}
-                    disabled={readOnly || saving}
+                    disabled={readOnly || saving || isIdentityShell(editingApp)}
                   >
-                    {saving ? 'Saving...' : 'Save Changes'}
+                    {saving ? 'Saving...' : isIdentityShell(editingApp) ? 'Cannot Save (Protected)' : 'Save Changes'}
                   </button>
                 </div>
               </div>
@@ -495,10 +506,15 @@ function App() {
                 </tr>
               </thead>
               <tbody>
-                {apps.map(app => (
-                  <tr key={app.id}>
+                {apps.map(app => {
+                  const isCore = isIdentityShell(app);
+                  return (
+                  <tr key={app.id} className={isCore ? 'opacity-60' : ''}>
                     <td className="icon">{app.icon}</td>
-                    <td>{app.name}</td>
+                    <td>
+                      {app.name}
+                      {isCore && <div className="ah-meta text-xs">Core Platform - Cannot Edit</div>}
+                    </td>
                     <td><span className="ah-meta">{app.type}</span></td>
                     <td><span className="ah-meta">{app.category}</span></td>
                     <td><span className="ah-meta">{app.backendPort}</span></td>
@@ -513,13 +529,15 @@ function App() {
                       <button
                         className="ah-btn-outline text-xs"
                         onClick={() => setEditingApp({ ...app })}
-                        disabled={readOnly}
+                        disabled={readOnly || isCore}
+                        title={isCore ? 'Identity Shell cannot be modified' : ''}
                       >
-                        Edit
+                        {isCore ? 'Protected' : 'Edit'}
                       </button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           )}
@@ -588,18 +606,27 @@ function App() {
               </tr>
             </thead>
             <tbody>
-              {apps.map(app => (
-                <tr key={app.id}>
+              {apps.map(app => {
+                const isCore = isIdentityShell(app);
+                return (
+                <tr key={app.id} className={isCore ? 'opacity-60' : ''}>
                   <td className="icon">{app.icon}</td>
-                  <td>{app.name}</td>
                   <td>
-                    <button
-                      className={`${app.enabled ? 'ah-btn-primary' : 'ah-btn-outline'} text-xs`}
-                      onClick={() => toggleApp(app.id, app.enabled)}
-                      disabled={readOnly || togglingAppId === app.id}
-                    >
-                      {togglingAppId === app.id ? '...' : app.enabled ? '✓ Enabled' : 'Disabled'}
-                    </button>
+                    {app.name}
+                    {isCore && <div className="ah-meta text-xs">Core Platform</div>}
+                  </td>
+                  <td>
+                    {isCore ? (
+                      <span className="ah-badge ah-badge--neutral text-xs">Always On</span>
+                    ) : (
+                      <button
+                        className={`${app.enabled ? 'ah-btn-primary' : 'ah-btn-outline'} text-xs`}
+                        onClick={() => toggleApp(app.id, app.enabled)}
+                        disabled={readOnly || togglingAppId === app.id}
+                      >
+                        {togglingAppId === app.id ? '...' : app.enabled ? '✓ Enabled' : 'Disabled'}
+                      </button>
+                    )}
                   </td>
                   <td>
                     {app.requiredRoles.length > 0 ? (
@@ -616,6 +643,8 @@ function App() {
                   </td>
                   <td>{app.displayOrder}</td>
                 </tr>
+                );
+              })}
               ))}
             </tbody>
           </table>
