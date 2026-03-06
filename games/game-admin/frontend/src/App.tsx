@@ -2206,7 +2206,7 @@ function SetupTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isReadO
   };
 
   const deletePlayer = async (id: number, name: string) => {
-    if (!confirm(`Delete player "${name}"?`)) return;
+    if (!window.confirm(`Delete player "${name}"?`)) return;
     try {
       await api(`/api/setup/players/${id}`, { method: 'DELETE' });
       setSuccess(`Deleted player: ${name}`);
@@ -2235,7 +2235,7 @@ function SetupTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isReadO
   };
 
   const deleteGroup = async (id: number, name: string) => {
-    if (!confirm(`Delete group "${name}"?`)) return;
+    if (!window.confirm(`Delete group "${name}"?`)) return;
     try {
       await api(`/api/setup/groups/${id}`, { method: 'DELETE' });
       setSuccess(`Deleted group: ${name}`);
