@@ -2043,8 +2043,8 @@ function QuizPacksTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isR
         <div className="ah-card">
           <h3 className="ah-section-title">Create Pack</h3>
           <div className="ah-flex gap-2">
-            <input className="ah-input" className="flex-2" placeholder="Pack name" value={newPackName} onChange={e => setNewPackName(e.target.value)} />
-            <input className="ah-input" className="flex-grow" placeholder="Description (optional)" value={newPackDesc} onChange={e => setNewPackDesc(e.target.value)} />
+            <input className="ah-input flex-2" placeholder="Pack name" value={newPackName} onChange={e => setNewPackName(e.target.value)} />
+            <input className="ah-input flex-grow" placeholder="Description (optional)" value={newPackDesc} onChange={e => setNewPackDesc(e.target.value)} />
             <button className="ah-btn-primary" onClick={createPack} disabled={!newPackName.trim()}>Create</button>
           </div>
         </div>
@@ -2143,7 +2143,7 @@ function QuizPacksTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isR
                             </label>
                           ))}
                         </div>
-                        <p className="ah-meta" className="mt-1">{roundQuestionIds.length} selected (order = selection order)</p>
+                        <p className="ah-meta mt-1">{roundQuestionIds.length} selected (order = selection order)</p>
                         <div className="ah-flex gap-2 mt-2">
                           <button className="ah-btn-primary" onClick={saveRoundQuestions}>Save</button>
                           <button className="ah-btn-outline" onClick={() => setEditRoundId(null)}>Cancel</button>
@@ -2157,8 +2157,7 @@ function QuizPacksTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isR
           </div>
         )}
       </div>
-      </div>
-    </>
+    </div>
   );
 }
 
@@ -2255,7 +2254,7 @@ function SetupTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isReadO
       {/* Info Section */}
       <div className="ah-card" style={{ backgroundColor: '#E3F2FD', borderColor: '#90CAF9' }}>
         <h3 className="ah-section-title" style={{ color: '#1565C0', marginBottom: 12 }}>Players & Groups Registry</h3>
-        <p className="ah-meta" className="m-0">
+        <p className="ah-meta m-0">
           Create reusable players and groups here. LMS Manager and Sweepstakes can import from this registry
           (feature coming soon). Players are global (not tied to groups). Groups are organizational containers.
         </p>
@@ -2288,7 +2287,7 @@ function SetupTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isReadO
               <div key={p.id} className="ah-list-item">
                 <div>
                   <strong>{p.name}</strong>
-                  <p className="ah-meta" className="m-0">Added {new Date(p.createdAt).toLocaleDateString()}</p>
+                  <p className="ah-meta m-0">Added {new Date(p.createdAt).toLocaleDateString()}</p>
                 </div>
                 {!isReadOnly && (
                   <button className="ah-btn-danger-sm" onClick={() => deletePlayer(p.id, p.name)}>
@@ -2336,7 +2335,7 @@ function SetupTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isReadO
                 <div>
                   <strong>{g.name}</strong>
                   {g.description && <p className="ah-meta" className="m-0">{g.description}</p>}
-                  <p className="ah-meta" className="m-0">Added {new Date(g.createdAt).toLocaleDateString()}</p>
+                  <p className="ah-meta m-0">Added {new Date(g.createdAt).toLocaleDateString()}</p>
                 </div>
                 {!isReadOnly && (
                   <button className="ah-btn-danger-sm" onClick={() => deleteGroup(g.id, g.name)}>
