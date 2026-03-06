@@ -1628,7 +1628,7 @@ function QuizMediaTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isR
                 {fileClips.length > 0 && (
                   <div style={{ marginTop: 6, borderTop: '1px solid #f0f0f0', paddingTop: 6 }}>
                     {fileClips.map(c => (
-                      <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 3 }}>
+                      <div key={c.id} className="ah-flex-center gap-1 mb-1">
                         <span style={{ fontSize: 11, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={c.guid}>
                           {c.label}
                         </span>
@@ -1659,7 +1659,7 @@ function QuizMediaTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isR
                       <input className="ah-input" style={{ width: '100%', marginBottom: 4 }}
                         placeholder="Clip label" value={clipForm.label}
                         onChange={e => setClipForm(cf => ({ ...cf, label: e.target.value }))} />
-                      <div style={{ display: 'flex', gap: 4 }}>
+                      <div className="ah-flex gap-1">
                         <input className="ah-input" className="flex-1" placeholder="Start (s)" type="number" step="0.1"
                           value={clipForm.audioStartSec}
                           onChange={e => setClipForm(cf => ({ ...cf, audioStartSec: e.target.value }))} />
@@ -1667,7 +1667,7 @@ function QuizMediaTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isR
                           value={clipForm.audioDurationSec}
                           onChange={e => setClipForm(cf => ({ ...cf, audioDurationSec: e.target.value }))} />
                       </div>
-                      <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+                      <div className="ah-flex gap-1 mt-1">
                         <button className="ah-btn-primary" style={{ flex: 1, fontSize: 11, padding: '4px 0' }} onClick={() => addClip(f.id)}>Add</button>
                         <button className="ah-btn-outline" style={{ flex: 1, fontSize: 11, padding: '4px 0' }} onClick={() => setAddClipFor(null)}>Cancel</button>
                       </div>
@@ -2110,7 +2110,7 @@ function QuizPacksTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isR
                       <p className="ah-meta">{rd.type} · {rd.questionCount} questions{rd.timeLimitSeconds ? ` · ${rd.timeLimitSeconds}s` : ''}</p>
                     </div>
                     {!isReadOnly && (
-                      <div style={{ display: 'flex', gap: 6 }}>
+                      <div className="ah-flex gap-1">
                         <button className="ah-btn-outline" style={{ fontSize: 11 }} onClick={() => openRoundEdit(rd)}>
                           {editRoundId === rd.id ? 'Editing' : 'Edit Q'}
                         </button>
@@ -2142,7 +2142,7 @@ function QuizPacksTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isR
                             </label>
                           ))}
                         </div>
-                        <p className="ah-meta" style={{ marginTop: 4 }}>{roundQuestionIds.length} selected (order = selection order)</p>
+                        <p className="ah-meta" className="mt-1">{roundQuestionIds.length} selected (order = selection order)</p>
                         <div className="ah-flex gap-2 mt-2">
                           <button className="ah-btn-primary" onClick={saveRoundQuestions}>Save</button>
                           <button className="ah-btn-outline" onClick={() => setEditRoundId(null)}>Cancel</button>
