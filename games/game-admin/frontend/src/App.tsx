@@ -1857,7 +1857,7 @@ function QuizQuestionsTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>;
               Test content
             </label>
           </div>
-          <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+          <div className="ah-flex gap-2 mt-2">
             <button className="ah-btn-primary" onClick={save}>{editingId ? 'Update' : 'Add Question'}</button>
             {editingId && <button className="ah-btn-outline" onClick={resetForm}>Cancel</button>}
           </div>
@@ -1873,7 +1873,7 @@ function QuizQuestionsTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>;
             Optional: <code>category</code>, <code>difficulty</code>, <code>type</code>, <code>image_guid</code>, <code>audio_guid</code>, <code>requires_media</code>.
             GUIDs come from the Media tab's Export Reference Sheet.
           </p>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8, flexWrap: 'wrap' }}>
+          <div className="ah-flex-center flex-wrap gap-2 mt-2">
             <input type="file" accept=".csv" onChange={importCSV} />
             <a href={templateHref} download="quiz-questions-template.csv" className="ah-btn-outline" style={{ fontSize: 12, textDecoration: 'none', padding: '5px 10px' }}>
               Download Template
@@ -2041,7 +2041,7 @@ function QuizPacksTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isR
       {!isReadOnly && (
         <div className="ah-card">
           <h3 className="ah-section-title">Create Pack</h3>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className="ah-flex gap-2">
             <input className="ah-input" className="flex-2" placeholder="Pack name" value={newPackName} onChange={e => setNewPackName(e.target.value)} />
             <input className="ah-input" className="flex-grow" placeholder="Description (optional)" value={newPackDesc} onChange={e => setNewPackDesc(e.target.value)} />
             <button className="ah-btn-primary" onClick={createPack} disabled={!newPackName.trim()}>Create</button>
