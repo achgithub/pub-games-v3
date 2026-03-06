@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import './App.css';
 
 // --- Types ---
 
@@ -46,6 +45,21 @@ interface Match {
   status: string;
 }
 
+interface ManagedPlayer {
+  id: number;
+  managerEmail: string;
+  name: string;
+  createdAt: string;
+}
+
+interface ManagedGroup {
+  id: number;
+  managerEmail: string;
+  name: string;
+  description: string;
+  createdAt: string;
+}
+
 // --- Hooks ---
 
 function useUrlParams() {
@@ -78,7 +92,7 @@ function useApi(token: string) {
 
 // --- Main App ---
 
-type Module = 'lms' | 'sweepstakes' | 'quiz';
+type Module = 'setup' | 'lms' | 'sweepstakes' | 'quiz';
 type LMSTab = 'fixtures' | 'games' | 'rounds' | 'results' | 'predictions';
 type SweepTab = 'sw-competitions' | 'sw-entries';
 type QuizTab = 'quiz-media' | 'quiz-questions' | 'quiz-packs';
@@ -109,19 +123,19 @@ function App() {
     return (
       <div className="ah-container">
         <h2>Game Admin</h2>
-        <p style={{ color: '#666' }}>Access this app through the lobby.</p>
+        <p className="ah-meta">Access this app through the lobby.</p>
       </div>
     );
   }
 
-  if (loading) return <div className="ah-container"><p style={{ color: '#666' }}>Loading...</p></div>;
+  if (loading) return <div className="ah-container"><p className="ah-meta">Loading...</p></div>;
 
   if (authError) {
     return (
       <div className="ah-container">
         <h2>Game Admin</h2>
         <div className="ah-banner ah-banner--error">{authError}</div>
-        <p style={{ color: '#666' }}>You need the game_admin or super_user role to access this app.</p>
+        <p className="ah-meta">You need the game_admin or super_user role to access this app.</p>
       </div>
     );
   }
@@ -134,7 +148,7 @@ function App() {
       <div className="ah-app-header">
         <div className="ah-app-header-left">
           <h1 className="ah-app-title">Game Admin</h1>
-          {isReadOnly && <span style={s.readOnlyBadge}>Read-only</span>}
+          {isReadOnly && <span className="ah-badge--warning">Read-only</span>}
         </div>
         <div className="ah-app-header-right">
           <button className="ah-lobby-btn" onClick={goToLobby}>← Lobby</button>
@@ -143,24 +157,25 @@ function App() {
 
       <div className="ah-container">
         {/* Module switcher */}
-        <div style={{ display: 'flex', gap: 8, padding: '8px 0', borderBottom: '2px solid #e0e0e0', marginBottom: 8 }}>
-          {(['lms', 'sweepstakes', 'quiz'] as Module[]).map(mod => (
+        <div className="ah-tabs">
+          {(['setup', 'lms', 'sweepstakes', 'quiz'] as Module[]).map(mod => (
             <button
               key={mod}
+              className={`ah-tab${activeModule === mod ? ' active' : ''}`}
               onClick={() => {
                 setActiveModule(mod);
-                setActiveTab(mod === 'lms' ? 'fixtures' : mod === 'sweepstakes' ? 'sw-competitions' : 'quiz-media');
-              }}
-              style={{
-                padding: '6px 18px', borderRadius: 6, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13,
-                backgroundColor: activeModule === mod ? '#1565C0' : '#e0e0e0',
-                color: activeModule === mod ? 'white' : '#333',
+                if (mod === 'lms') setActiveTab('fixtures');
+                else if (mod === 'sweepstakes') setActiveTab('sw-competitions');
+                else if (mod === 'quiz') setActiveTab('quiz-media');
               }}
             >
-              {mod === 'lms' ? 'Last Man Standing' : mod === 'sweepstakes' ? 'Sweepstakes' : 'Quiz'}
+              {mod === 'setup' ? '⚙️ Setup' : mod === 'lms' ? 'Last Man Standing' : mod === 'sweepstakes' ? 'Sweepstakes' : 'Quiz'}
             </button>
           ))}
         </div>
+
+      {/* Setup module */}
+      {activeModule === 'setup' && <SetupTab api={api} isReadOnly={isReadOnly} />}
 
       {/* LMS module */}
       {activeModule === 'lms' && (
@@ -189,7 +204,7 @@ function App() {
           {activeTab === 'results' && selectedGameId && <ResultsTab gameId={selectedGameId} api={api} isReadOnly={isReadOnly} />}
           {activeTab === 'predictions' && selectedGameId && <PredictionsTab gameId={selectedGameId} api={api} />}
           {(activeTab === 'rounds' || activeTab === 'results' || activeTab === 'predictions') && !selectedGameId && (
-            <div className="ah-card"><p style={{ color: '#666' }}>Select a game above to continue.</p></div>
+            <div className="ah-card"><p className="ah-meta">Select a game above to continue.</p></div>
           )}
         </>
       )}
@@ -259,7 +274,7 @@ function GameSelector({ selectedGameId, onSelect, api }: {
   }, [api]);
 
   return (
-    <div style={{ marginBottom: 16 }}>
+    <div className="mb-4">
       <label className="ah-label">Game: </label>
       <select value={selectedGameId} onChange={e => onSelect(e.target.value)} className="ah-select">
         <option value="">— select game —</option>
@@ -331,7 +346,7 @@ function FixturesTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isRe
           <h3 className="ah-section-title">Upload Fixture File (CSV)</h3>
           <p className="ah-meta">Format: match_number, round_number, date, location, home_team, away_team[, result]</p>
           <p className="ah-meta">Re-uploading with the same name updates existing matches. Results in the CSV are stored but status is only set to Completed when you confirm results in the Results tab.</p>
-          <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+          <div className="ah-flex flex-wrap gap-2 mt-2">
             <input
               className="ah-input"
               style={{ flex: 1, minWidth: 180 }}
@@ -352,13 +367,13 @@ function FixturesTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isRe
 
       <h3 className="ah-section-title">Fixture Files</h3>
       {fixtures.length === 0 ? (
-        <div className="ah-card"><p style={{ color: '#666' }}>No fixture files yet. Upload a CSV above.</p></div>
+        <div className="ah-card"><p className="ah-meta">No fixture files yet. Upload a CSV above.</p></div>
       ) : (
         fixtures.map(f => (
           <div key={f.id} className="ah-card" style={{
             borderLeft: selectedFixture?.id === f.id ? '4px solid #2196F3' : undefined,
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="ah-flex-between">
               <div>
                 <strong>{f.name}</strong>
                 <p className="ah-meta">{f.matchCount} matches · updated {f.updatedAt}</p>
@@ -369,7 +384,7 @@ function FixturesTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isRe
             </div>
 
             {selectedFixture?.id === f.id && matches.length > 0 && (
-              <div style={{ marginTop: 12 }}>
+              <div className="mt-3">
                 {roundNumbers.map(roundNum => (
                   <div key={roundNum}>
                     <p className="ah-section-title" style={{ marginTop: 8 }}>Round {roundNum}</p>
@@ -505,7 +520,7 @@ function GamesTab({ api, isReadOnly, onGameSelect }: {
               </div>
               <button
                 className="ah-btn-primary"
-                style={{ marginTop: 12 }}
+                className="mt-3"
                 onClick={createGame}
                 disabled={!newName.trim() || !newFixtureId}
               >
@@ -518,16 +533,16 @@ function GamesTab({ api, isReadOnly, onGameSelect }: {
 
       <h3 className="ah-section-title">All Games</h3>
       {games.length === 0 ? (
-        <div className="ah-card"><p style={{ color: '#666' }}>No games yet.</p></div>
+        <div className="ah-card"><p className="ah-meta">No games yet.</p></div>
       ) : (
         games.map(game => (
           <div key={game.id} className="ah-card" style={{
             borderLeft: String(game.id) === currentGameId ? '4px solid #2196F3' : undefined,
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div className="ah-flex-between" style={{ alignItems: 'flex-start' }}>
               <div>
                 <strong>{game.name}</strong>
-                {String(game.id) === currentGameId && <span style={s.currentBadge}>CURRENT</span>}
+                {String(game.id) === currentGameId && <span className="ah-badge--info" style={{ marginLeft: 8 }}>CURRENT</span>}
                 <p className="ah-meta">Status: {game.status} · Fixture: {game.fixtureName || '—'}</p>
               </div>
               {!isReadOnly && (
@@ -733,11 +748,11 @@ function RoundsTab({ gameId, api, isReadOnly }: {
 
       <h3 className="ah-section-title">Rounds</h3>
       {rounds.length === 0 ? (
-        <div className="ah-card"><p style={{ color: '#666' }}>No rounds yet.</p></div>
+        <div className="ah-card"><p className="ah-meta">No rounds yet.</p></div>
       ) : (
         rounds.map(round => (
           <div key={round.label} className="ah-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="ah-flex-between">
               <div>
                 <strong>Round {round.label}</strong>
                 <span style={{ ...s.statusDot, color: statusColor(round.status) }}> {round.status}</span>
@@ -852,7 +867,7 @@ function ResultsTab({ gameId, api, isReadOnly }: {
       <Toast message={success} />
 
       {/* Round selector */}
-      <div style={{ marginBottom: 16 }}>
+      <div className="mb-4">
         <label className="ah-label">Round: </label>
         <select value={selectedRound} onChange={e => setSelectedRound(e.target.value)} className="ah-select">
           <option value="">— select round —</option>
@@ -865,14 +880,14 @@ function ResultsTab({ gameId, api, isReadOnly }: {
       </div>
 
       {selectedRound && matches.length === 0 && (
-        <div className="ah-card"><p style={{ color: '#666' }}>No matches in the Round {selectedRound} date window. Check the fixture file is uploaded with dates in that range.</p></div>
+        <div className="ah-card"><p className="ah-meta">No matches in the Round {selectedRound} date window. Check the fixture file is uploaded with dates in that range.</p></div>
       )}
 
       {matches.length > 0 && (
         <>
           {matches.map(match => (
             <div key={match.id} className="ah-card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div className="ah-flex-between" style={{ alignItems: 'flex-start' }}>
                 <div style={{ flex: 1 }}>
                   <strong>#{match.matchNumber}: {match.homeTeam} vs {match.awayTeam}</strong>
                   <p className="ah-meta">{match.date} · {match.location}</p>
@@ -977,7 +992,7 @@ function PredictionsTab({ gameId, api }: { gameId: string; api: ReturnType<typeo
       </div>
 
       {predictions.length === 0 ? (
-        <div className="ah-card"><p style={{ color: '#666' }}>No predictions found.</p></div>
+        <div className="ah-card"><p className="ah-meta">No predictions found.</p></div>
       ) : (
         <div className="ah-table">
           <div className="ah-table-header">
@@ -1123,11 +1138,11 @@ function SweepCompetitionsTab({ api, isReadOnly, onSelectComp }: {
 
       <h3 className="ah-section-title">All Competitions</h3>
       {comps.length === 0 ? (
-        <div className="ah-card"><p style={{ color: '#666' }}>No competitions yet.</p></div>
+        <div className="ah-card"><p className="ah-meta">No competitions yet.</p></div>
       ) : (
         comps.map(comp => (
           <div key={comp.id} className="ah-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div className="ah-flex-between" style={{ alignItems: 'flex-start' }}>
               <div>
                 <strong>{comp.name}</strong>
                 <p className="ah-meta">
@@ -1266,7 +1281,7 @@ function SweepEntriesTab({ api, isReadOnly }: {
       {error && <div className="ah-banner ah-banner--error" onClick={() => setError(null)}>{error}</div>}
       <Toast message={success} />
 
-      <div style={{ marginBottom: 16 }}>
+      <div className="mb-4">
         <label className="ah-label">Competition: </label>
         <select value={selectedCompId} onChange={e => selectComp(e.target.value)} className="ah-select">
           <option value="">— select —</option>
@@ -1297,7 +1312,7 @@ function SweepEntriesTab({ api, isReadOnly }: {
 
           {!showDraws && (
             entries.length === 0 ? (
-              <div className="ah-card"><p style={{ color: '#666' }}>No entries yet. Upload a CSV above.</p></div>
+              <div className="ah-card"><p className="ah-meta">No entries yet. Upload a CSV above.</p></div>
             ) : (
               <div className="ah-table">
                 <div className="ah-table-header">
@@ -1343,7 +1358,7 @@ function SweepEntriesTab({ api, isReadOnly }: {
 
           {showDraws && (
             draws.length === 0 ? (
-              <div className="ah-card"><p style={{ color: '#666' }}>No draws yet.</p></div>
+              <div className="ah-card"><p className="ah-meta">No draws yet.</p></div>
             ) : (
               <div className="ah-table">
                 <div className="ah-table-header">
@@ -1583,7 +1598,7 @@ function QuizMediaTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isR
       </div>
 
       {files.length === 0 ? (
-        <div className="ah-card"><p style={{ color: '#666' }}>No media files yet.</p></div>
+        <div className="ah-card"><p className="ah-meta">No media files yet.</p></div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
           {files.map(f => {
@@ -1879,20 +1894,20 @@ function QuizQuestionsTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>;
       </div>
 
       {questions.length === 0 ? (
-        <div className="ah-card"><p style={{ color: '#666' }}>No questions yet.</p></div>
+        <div className="ah-card"><p className="ah-meta">No questions yet.</p></div>
       ) : (
         questions.map(q => (
           <div key={q.id} className="ah-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div className="ah-flex-between" style={{ alignItems: 'flex-start' }}>
               <div style={{ flex: 1 }}>
                 <p style={{ fontWeight: 500, fontSize: 14 }}>{q.text}</p>
                 <p className="ah-meta">Answer: <strong>{q.answer}</strong> · {q.type} · {q.difficulty} {q.category && `· ${q.category}`}</p>
                 {q.imagePath && <p className="ah-meta" style={{ color: '#1565C0' }}>Image attached</p>}
                 {q.audioPath && <p className="ah-meta" style={{ color: '#E65100' }}>Audio attached</p>}
                 {q.requiresMedia && !q.imageClipId && !q.audioClipId && (
-                  <span style={{ ...s.currentBadge, backgroundColor: '#FFEBEE', color: '#C62828', marginLeft: 0 }}>NEEDS CLIP</span>
+                  <span className="ah-badge" style={{ backgroundColor: '#FFEBEE', color: '#C62828' }}>NEEDS CLIP</span>
                 )}
-                {q.isTestContent && <span style={{ ...s.currentBadge, backgroundColor: '#E8F5E9', color: '#2E7D32' }}>TEST</span>}
+                {q.isTestContent && <span className="ah-badge" style={{ backgroundColor: '#E8F5E9', color: '#2E7D32', marginLeft: 8 }}>TEST</span>}
               </div>
               {!isReadOnly && (
                 <div style={{ display: 'flex', gap: 6, flexShrink: 0, marginLeft: 12 }}>
@@ -2039,13 +2054,13 @@ function QuizPacksTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isR
         <div style={{ flex: '1 1 220px' }}>
           <h3 className="ah-section-title">Packs</h3>
           {packs.length === 0 ? (
-            <div className="ah-card"><p style={{ color: '#666' }}>No packs yet.</p></div>
+            <div className="ah-card"><p className="ah-meta">No packs yet.</p></div>
           ) : (
             packs.map(p => (
               <div key={p.id} className="ah-card"
                 style={{ borderLeft: selectedPackId === p.id ? '4px solid #1565C0' : undefined, cursor: 'pointer' }}
                 onClick={() => setSelectedPackId(p.id)}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div className="ah-flex-between">
                   <div>
                     <strong>{p.name}</strong>
                     <p className="ah-meta">{p.roundCount} round{p.roundCount !== 1 ? 's' : ''}</p>
@@ -2085,11 +2100,11 @@ function QuizPacksTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isR
             )}
 
             {rounds.length === 0 ? (
-              <div className="ah-card"><p style={{ color: '#666' }}>No rounds yet.</p></div>
+              <div className="ah-card"><p className="ah-meta">No rounds yet.</p></div>
             ) : (
               rounds.map(rd => (
                 <div key={rd.id} className="ah-card">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div className="ah-flex-between">
                     <div>
                       <strong>Round {rd.roundNumber}: {rd.name}</strong>
                       <p className="ah-meta">{rd.type} · {rd.questionCount} questions{rd.timeLimitSeconds ? ` · ${rd.timeLimitSeconds}s` : ''}</p>
@@ -2122,7 +2137,7 @@ function QuizPacksTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isR
                               <input type="checkbox" checked={roundQuestionIds.includes(q.id)} onChange={() => toggleQuestion(q.id)} />
                               <span>
                                 <strong>{q.text.length > 60 ? q.text.slice(0, 60) + '...' : q.text}</strong>
-                                <span style={{ color: '#666' }}> — {q.answer} ({q.type})</span>
+                                <span className="ah-meta"> — {q.answer} ({q.type})</span>
                               </span>
                             </label>
                           ))}
@@ -2146,28 +2161,194 @@ function QuizPacksTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isR
   );
 }
 
-// --- App-specific styles (shared styles use .ah-* classes) ---
+// --- SetupTab ---
 
-const s: Record<string, React.CSSProperties> = {
-  readOnlyBadge: {
-    backgroundColor: '#FFF3E0',
-    color: '#E65100',
-    padding: '4px 10px',
-    borderRadius: 12,
-    fontSize: 12,
-    fontWeight: 600,
-    border: '1px solid #FFE0B2',
-  },
-  currentBadge: {
-    backgroundColor: '#E3F2FD',
-    color: '#1565C0',
-    padding: '2px 8px',
-    borderRadius: 10,
-    fontSize: 11,
-    fontWeight: 700,
-    marginLeft: 8,
-  },
-  statusDot: { fontSize: 13, fontWeight: 500 },
-};
+function SetupTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isReadOnly: boolean }) {
+  const [players, setPlayers] = useState<ManagedPlayer[]>([]);
+  const [groups, setGroups] = useState<ManagedGroup[]>([]);
+  const [newPlayerName, setNewPlayerName] = useState('');
+  const [newGroupName, setNewGroupName] = useState('');
+  const [newGroupDescription, setNewGroupDescription] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const loadPlayers = useCallback(() => {
+    api('/api/setup/players')
+      .then(data => setPlayers(data.players || []))
+      .catch(err => setError(err.message));
+  }, [api]);
+
+  const loadGroups = useCallback(() => {
+    api('/api/setup/groups')
+      .then(data => setGroups(data.groups || []))
+      .catch(err => setError(err.message));
+  }, [api]);
+
+  useEffect(() => {
+    loadPlayers();
+    loadGroups();
+  }, [loadPlayers, loadGroups]);
+
+  const addPlayer = async () => {
+    if (!newPlayerName.trim()) return;
+    try {
+      await api('/api/setup/players', {
+        method: 'POST',
+        body: JSON.stringify({ name: newPlayerName.trim() }),
+      });
+      setSuccess(`Added player: ${newPlayerName}`);
+      setNewPlayerName('');
+      loadPlayers();
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to add player');
+    }
+  };
+
+  const deletePlayer = async (id: number, name: string) => {
+    if (!confirm(`Delete player "${name}"?`)) return;
+    try {
+      await api(`/api/setup/players/${id}`, { method: 'DELETE' });
+      setSuccess(`Deleted player: ${name}`);
+      loadPlayers();
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete player');
+    }
+  };
+
+  const addGroup = async () => {
+    if (!newGroupName.trim()) return;
+    try {
+      await api('/api/setup/groups', {
+        method: 'POST',
+        body: JSON.stringify({ name: newGroupName.trim(), description: newGroupDescription.trim() }),
+      });
+      setSuccess(`Added group: ${newGroupName}`);
+      setNewGroupName('');
+      setNewGroupDescription('');
+      loadGroups();
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to add group');
+    }
+  };
+
+  const deleteGroup = async (id: number, name: string) => {
+    if (!confirm(`Delete group "${name}"?`)) return;
+    try {
+      await api(`/api/setup/groups/${id}`, { method: 'DELETE' });
+      setSuccess(`Deleted group: ${name}`);
+      loadGroups();
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete group');
+    }
+  };
+
+  return (
+    <div>
+      {error && <div className="ah-banner ah-banner--error" onClick={() => setError(null)}>{error}</div>}
+      <Toast message={success} />
+
+      {/* Info Section */}
+      <div className="ah-card" style={{ backgroundColor: '#E3F2FD', borderColor: '#90CAF9' }}>
+        <h3 className="ah-section-title" style={{ color: '#1565C0', marginBottom: 12 }}>Players & Groups Registry</h3>
+        <p className="ah-meta" style={{ margin: 0 }}>
+          Create reusable players and groups here. LMS Manager and Sweepstakes can import from this registry
+          (feature coming soon). Players are global (not tied to groups). Groups are organizational containers.
+        </p>
+      </div>
+
+      {/* Players Section */}
+      <div className="ah-card">
+        <h3 className="ah-section-title">Players ({players.length})</h3>
+
+        {!isReadOnly && (
+          <div className="ah-inline-form">
+            <input
+              className="ah-input"
+              placeholder="Player name"
+              value={newPlayerName}
+              onChange={e => setNewPlayerName(e.target.value)}
+              onKeyPress={e => e.key === 'Enter' && addPlayer()}
+            />
+            <button className="ah-btn-primary" onClick={addPlayer} disabled={!newPlayerName.trim()}>
+              Add Player
+            </button>
+          </div>
+        )}
+
+        <div className="ah-list">
+          {players.length === 0 ? (
+            <p className="ah-meta">No players yet. Add one above.</p>
+          ) : (
+            players.map(p => (
+              <div key={p.id} className="ah-list-item">
+                <div>
+                  <strong>{p.name}</strong>
+                  <p className="ah-meta" style={{ margin: 0 }}>Added {new Date(p.createdAt).toLocaleDateString()}</p>
+                </div>
+                {!isReadOnly && (
+                  <button className="ah-btn-danger-sm" onClick={() => deletePlayer(p.id, p.name)}>
+                    Delete
+                  </button>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Groups Section */}
+      <div className="ah-card">
+        <h3 className="ah-section-title">Groups ({groups.length})</h3>
+
+        {!isReadOnly && (
+          <div>
+            <div className="ah-inline-form">
+              <input
+                className="ah-input"
+                placeholder="Group name"
+                value={newGroupName}
+                onChange={e => setNewGroupName(e.target.value)}
+              />
+              <input
+                className="ah-input"
+                placeholder="Description (optional)"
+                value={newGroupDescription}
+                onChange={e => setNewGroupDescription(e.target.value)}
+              />
+              <button className="ah-btn-primary" onClick={addGroup} disabled={!newGroupName.trim()}>
+                Add Group
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="ah-list">
+          {groups.length === 0 ? (
+            <p className="ah-meta">No groups yet. Add one above.</p>
+          ) : (
+            groups.map(g => (
+              <div key={g.id} className="ah-list-item">
+                <div>
+                  <strong>{g.name}</strong>
+                  {g.description && <p className="ah-meta" style={{ margin: 0 }}>{g.description}</p>}
+                  <p className="ah-meta" style={{ margin: 0 }}>Added {new Date(g.createdAt).toLocaleDateString()}</p>
+                </div>
+                {!isReadOnly && (
+                  <button className="ah-btn-danger-sm" onClick={() => deleteGroup(g.id, g.name)}>
+                    Delete
+                  </button>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default App;
