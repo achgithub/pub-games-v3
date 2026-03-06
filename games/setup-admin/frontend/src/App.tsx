@@ -645,7 +645,6 @@ function App() {
                 </tr>
                 );
               })}
-              ))}
             </tbody>
           </table>
         </div>
