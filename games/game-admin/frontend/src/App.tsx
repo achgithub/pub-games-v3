@@ -349,7 +349,7 @@ function FixturesTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isRe
           <div className="ah-flex flex-wrap gap-2 mt-2">
             <input
               className="ah-input"
-              style={{ flex: 1, minWidth: 180 }}
+              className="flex-1" style={{ minWidth: 180 }}
               placeholder="Fixture file name (e.g. Premier League 2025/26)"
               value={uploadName}
               onChange={e => setUploadName(e.target.value)}
@@ -387,12 +387,12 @@ function FixturesTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isRe
               <div className="mt-3">
                 {roundNumbers.map(roundNum => (
                   <div key={roundNum}>
-                    <p className="ah-section-title" className="mt-2">Round {roundNum}</p>
+                    <p className="ah-section-title mt-2">Round {roundNum}</p>
                     {byRound[roundNum].map(m => (
                       <div key={m.id} style={{ fontSize: 13, padding: '4px 0', borderBottom: '1px solid #f0f0f0' }}>
                         <strong>#{m.matchNumber}</strong> {m.homeTeam} vs {m.awayTeam}
-                        <span className="ah-label" className="ml-2">{m.date} · {m.location}</span>
-                        {m.result && <span style={{ marginLeft: 8, color: '#4CAF50', fontWeight: 600 }}>{m.result}</span>}
+                        <span className="ah-label ml-2">{m.date} · {m.location}</span>
+                        {m.result && <span className="ml-2 text-green-600 font-semibold">{m.result}</span>}
                       </div>
                     ))}
                   </div>
@@ -546,7 +546,7 @@ function GamesTab({ api, isReadOnly, onGameSelect }: {
                 <p className="ah-meta">Status: {game.status} · Fixture: {game.fixtureName || '—'}</p>
               </div>
               {!isReadOnly && (
-                <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                <div className="ah-flex flex-wrap flex-shrink-0 gap-2 justify-end">
                   {String(game.id) !== currentGameId && (
                     <button className="ah-btn-outline" onClick={() => setCurrent(game.id)}>Set Current</button>
                   )}
@@ -758,7 +758,7 @@ function RoundsTab({ gameId, api, isReadOnly }: {
                 <span style={{ color: statusColor(round.status), fontSize: 13, fontWeight: 500 }}> {round.status}</span>
                 <p className="ah-meta">{round.startDate} → {round.endDate} · {round.predCount} picks</p>
                 {round.submissionDeadline && (
-                  <p className="ah-meta" style={{ color: '#E65100' }}>
+                  <p className="ah-meta" className="text-orange-700">
                     Deadline: {new Date(round.submissionDeadline).toLocaleString()}
                   </p>
                 )}
@@ -892,7 +892,7 @@ function ResultsTab({ gameId, api, isReadOnly }: {
                   <strong>#{match.matchNumber}: {match.homeTeam} vs {match.awayTeam}</strong>
                   <p className="ah-meta">{match.date} · {match.location}</p>
                   {match.result && (
-                    <p className="ah-meta" style={{ fontWeight: 600, color: '#333' }}>Result: {match.result}</p>
+                    <p className="ah-meta" className="font-semibold text-gray-800">Result: {match.result}</p>
                   )}
                   {match.status !== 'upcoming' && (
                     <p className="ah-meta" style={{ color: statusColor(match.status), fontWeight: 500 }}>
@@ -925,7 +925,7 @@ function ResultsTab({ gameId, api, isReadOnly }: {
           {!isReadOnly && (
             <div className="ah-card" className="mt-2">
               {missingResults > 0 && (
-                <p className="ah-meta" style={{ color: '#E65100', marginBottom: 8 }}>
+                <p className="ah-meta" className="text-orange-700 mb-2">
                   {missingResults} match{missingResults > 1 ? 'es' : ''} still need{missingResults === 1 ? 's' : ''} a result before processing.
                 </p>
               )}
@@ -937,7 +937,7 @@ function ResultsTab({ gameId, api, isReadOnly }: {
                 Process Round {selectedRound}
               </button>
               {processResult && (
-                <p className="ah-meta" style={{ marginTop: 8, color: '#333' }}>
+                <p className="ah-meta" className="mt-2 text-gray-800">
                   ✅ {processResult.survived} survived · ❌ {processResult.eliminated} eliminated
                   {processResult.autoPicked > 0 && ` · 🤖 ${processResult.autoPicked} auto-picked`}
                 </p>
@@ -968,11 +968,11 @@ function PredictionsTab({ gameId, api }: { gameId: string; api: ReturnType<typeo
   useEffect(() => { load(); }, [load]);
 
   const statusIcon = (p: any) => {
-    if (p.bye) return <span style={{ color: '#2196F3' }}>Bye</span>;
-    if (p.voided) return <span style={{ color: '#FF9800' }}>Voided</span>;
-    if (p.isCorrect === null) return <span style={{ color: '#999' }}>Pending</span>;
-    if (p.isCorrect) return <span style={{ color: '#4CAF50' }}>✅ Survived</span>;
-    return <span style={{ color: '#F44336' }}>❌ Eliminated</span>;
+    if (p.bye) return <span className="text-blue-600">Bye</span>;
+    if (p.voided) return <span className="text-orange-600">Voided</span>;
+    if (p.isCorrect === null) return <span className="text-gray-500">Pending</span>;
+    if (p.isCorrect) return <span className="text-green-600">✅ Survived</span>;
+    return <span className="text-red-600">❌ Eliminated</span>;
   };
 
   return (
@@ -1152,7 +1152,7 @@ function SweepCompetitionsTab({ api, isReadOnly, onSelectComp }: {
                 {comp.description && <p className="ah-meta">{comp.description}</p>}
               </div>
               {!isReadOnly && (
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end', flexShrink: 0, marginLeft: 12 }}>
+                <div className="ah-flex flex-wrap flex-shrink-0 gap-1 justify-end ml-3">
                   {comp.status === 'draft' && (
                     <button className="ah-btn-outline" style={{ color: '#4CAF50', borderColor: '#4CAF50' }} onClick={() => updateStatus(comp, 'open')}>Open</button>
                   )}
@@ -1316,7 +1316,7 @@ function SweepEntriesTab({ api, isReadOnly }: {
             ) : (
               <div className="ah-table">
                 <div className="ah-table-header">
-                  <span style={{ flex: 3 }}>Name</span>
+                  <span className="flex-grow">Name</span>
                   <span className="flex-1">Seed/No.</span>
                   <span className="flex-1">Status</span>
                   <span className="flex-1">Position</span>
@@ -1880,7 +1880,7 @@ function QuizQuestionsTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>;
             </a>
           </div>
           {importResult && (
-            <p className="ah-meta" style={{ marginTop: 8, color: '#333' }}>{importResult}</p>
+            <p className="ah-meta" className="mt-2 text-gray-800">{importResult}</p>
           )}
         </div>
       )}
@@ -1903,14 +1903,14 @@ function QuizQuestionsTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>;
                 <p style={{ fontWeight: 500, fontSize: 14 }}>{q.text}</p>
                 <p className="ah-meta">Answer: <strong>{q.answer}</strong> · {q.type} · {q.difficulty} {q.category && `· ${q.category}`}</p>
                 {q.imagePath && <p className="ah-meta" style={{ color: '#1565C0' }}>Image attached</p>}
-                {q.audioPath && <p className="ah-meta" style={{ color: '#E65100' }}>Audio attached</p>}
+                {q.audioPath && <p className="ah-meta" className="text-orange-700">Audio attached</p>}
                 {q.requiresMedia && !q.imageClipId && !q.audioClipId && (
                   <span className="ah-badge" style={{ backgroundColor: '#FFEBEE', color: '#C62828' }}>NEEDS CLIP</span>
                 )}
-                {q.isTestContent && <span className="ah-badge" style={{ backgroundColor: '#E8F5E9', color: '#2E7D32', marginLeft: 8 }}>TEST</span>}
+                {q.isTestContent && <span className="ah-badge ml-2" style={{ backgroundColor: '#E8F5E9', color: '#2E7D32' }}>TEST</span>}
               </div>
               {!isReadOnly && (
-                <div style={{ display: 'flex', gap: 6, flexShrink: 0, marginLeft: 12 }}>
+                <div className="ah-flex gap-1 flex-shrink-0 ml-3">
                   <button className="ah-btn-outline" onClick={() => startEdit(q)}>Edit</button>
                   <button className="ah-btn-danger" onClick={() => deleteQ(q.id)}>Delete</button>
                 </div>
@@ -2043,7 +2043,7 @@ function QuizPacksTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isR
           <h3 className="ah-section-title">Create Pack</h3>
           <div style={{ display: 'flex', gap: 8 }}>
             <input className="ah-input" className="flex-2" placeholder="Pack name" value={newPackName} onChange={e => setNewPackName(e.target.value)} />
-            <input className="ah-input" style={{ flex: 3 }} placeholder="Description (optional)" value={newPackDesc} onChange={e => setNewPackDesc(e.target.value)} />
+            <input className="ah-input" className="flex-grow" placeholder="Description (optional)" value={newPackDesc} onChange={e => setNewPackDesc(e.target.value)} />
             <button className="ah-btn-primary" onClick={createPack} disabled={!newPackName.trim()}>Create</button>
           </div>
         </div>
