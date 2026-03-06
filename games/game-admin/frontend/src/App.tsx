@@ -359,7 +359,7 @@ function FixturesTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isRe
               accept=".csv"
               disabled={!uploadName.trim()}
               onChange={uploadFixture}
-              style={{ alignSelf: 'center' }}
+              className="self-center"
             />
           </div>
         </div>
@@ -387,11 +387,11 @@ function FixturesTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isRe
               <div className="mt-3">
                 {roundNumbers.map(roundNum => (
                   <div key={roundNum}>
-                    <p className="ah-section-title" style={{ marginTop: 8 }}>Round {roundNum}</p>
+                    <p className="ah-section-title" className="mt-2">Round {roundNum}</p>
                     {byRound[roundNum].map(m => (
                       <div key={m.id} style={{ fontSize: 13, padding: '4px 0', borderBottom: '1px solid #f0f0f0' }}>
                         <strong>#{m.matchNumber}</strong> {m.homeTeam} vs {m.awayTeam}
-                        <span className="ah-label" style={{ marginLeft: 8 }}>{m.date} · {m.location}</span>
+                        <span className="ah-label" className="ml-2">{m.date} · {m.location}</span>
                         {m.result && <span style={{ marginLeft: 8, color: '#4CAF50', fontWeight: 600 }}>{m.result}</span>}
                       </div>
                     ))}
@@ -500,12 +500,12 @@ function GamesTab({ api, isReadOnly, onGameSelect }: {
             <>
               <input
                 className="ah-input"
-                style={{ width: '100%' }}
+                className="w-full"
                 placeholder="Game name (e.g. Andy's Friends 2025)"
                 value={newName}
                 onChange={e => setNewName(e.target.value)}
               />
-              <div style={{ marginTop: 8 }}>
+              <div className="mt-2">
                 <label className="ah-label">Fixture file: </label>
                 <select
                   value={newFixtureId}
@@ -542,7 +542,7 @@ function GamesTab({ api, isReadOnly, onGameSelect }: {
             <div className="ah-flex-between" style={{ alignItems: 'flex-start' }}>
               <div>
                 <strong>{game.name}</strong>
-                {String(game.id) === currentGameId && <span className="ah-badge--info" style={{ marginLeft: 8 }}>CURRENT</span>}
+                {String(game.id) === currentGameId && <span className="ah-badge--info" className="ml-2">CURRENT</span>}
                 <p className="ah-meta">Status: {game.status} · Fixture: {game.fixtureName || '—'}</p>
               </div>
               {!isReadOnly && (
@@ -695,7 +695,7 @@ function RoundsTab({ gameId, api, isReadOnly }: {
         <div className="ah-card">
           <h3 className="ah-section-title">Create Round</h3>
           <p className="ah-meta">Matches whose date falls within the window are automatically included.</p>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+          <div className="ah-flex flex-wrap gap-2 mt-2">
             <div>
               <label className="ah-label">Round #</label>
               <input
@@ -737,7 +737,7 @@ function RoundsTab({ gameId, api, isReadOnly }: {
           </div>
           <button
             className="ah-btn-primary"
-            style={{ marginTop: 10 }}
+            className="mt-2"
             onClick={createRound}
             disabled={!newLabel || !newStartDate || !newEndDate}
           >
@@ -755,7 +755,7 @@ function RoundsTab({ gameId, api, isReadOnly }: {
             <div className="ah-flex-between">
               <div>
                 <strong>Round {round.label}</strong>
-                <span style={{ ...s.statusDot, color: statusColor(round.status) }}> {round.status}</span>
+                <span style={{ color: statusColor(round.status), fontSize: 13, fontWeight: 500 }}> {round.status}</span>
                 <p className="ah-meta">{round.startDate} → {round.endDate} · {round.predCount} picks</p>
                 {round.submissionDeadline && (
                   <p className="ah-meta" style={{ color: '#E65100' }}>
@@ -764,7 +764,7 @@ function RoundsTab({ gameId, api, isReadOnly }: {
                 )}
               </div>
               {!isReadOnly && (
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                <div className="ah-flex flex-wrap gap-2 justify-end">
                   {round.status !== 'open' && (
                     <button className="ah-btn-outline" style={{ color: '#4CAF50', borderColor: '#4CAF50' }}
                       onClick={() => updateStatus(round.label, 'open')}>
@@ -888,7 +888,7 @@ function ResultsTab({ gameId, api, isReadOnly }: {
           {matches.map(match => (
             <div key={match.id} className="ah-card">
               <div className="ah-flex-between" style={{ alignItems: 'flex-start' }}>
-                <div style={{ flex: 1 }}>
+                <div className="flex-1">
                   <strong>#{match.matchNumber}: {match.homeTeam} vs {match.awayTeam}</strong>
                   <p className="ah-meta">{match.date} · {match.location}</p>
                   {match.result && (
@@ -901,7 +901,7 @@ function ResultsTab({ gameId, api, isReadOnly }: {
                   )}
                 </div>
                 {!isReadOnly && (
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0, marginLeft: 12 }}>
+                  <div className="ah-flex-center gap-2 flex-shrink-0 ml-3">
                     <input
                       className="ah-input"
                       style={{ width: 90 }}
@@ -923,7 +923,7 @@ function ResultsTab({ gameId, api, isReadOnly }: {
           ))}
 
           {!isReadOnly && (
-            <div className="ah-card" style={{ marginTop: 8 }}>
+            <div className="ah-card" className="mt-2">
               {missingResults > 0 && (
                 <p className="ah-meta" style={{ color: '#E65100', marginBottom: 8 }}>
                   {missingResults} match{missingResults > 1 ? 'es' : ''} still need{missingResults === 1 ? 's' : ''} a result before processing.
@@ -979,7 +979,7 @@ function PredictionsTab({ gameId, api }: { gameId: string; api: ReturnType<typeo
     <div>
       {error && <div className="ah-banner ah-banner--error" onClick={() => setError(null)}>{error}</div>}
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+      <div className="ah-flex-center gap-3 mb-4">
         <label className="ah-label">Round: </label>
         <input
           className="ah-input"
@@ -996,12 +996,12 @@ function PredictionsTab({ gameId, api }: { gameId: string; api: ReturnType<typeo
       ) : (
         <div className="ah-table">
           <div className="ah-table-header">
-            <span style={{ flex: 2 }}>Player</span>
-            <span style={{ flex: 1 }}>Round</span>
-            <span style={{ flex: 2 }}>Pick</span>
-            <span style={{ flex: 2 }}>Match</span>
-            <span style={{ flex: 1 }}>Result</span>
-            <span style={{ flex: 1 }}>Status</span>
+            <span className="flex-2">Player</span>
+            <span className="flex-1">Round</span>
+            <span className="flex-2">Pick</span>
+            <span className="flex-2">Match</span>
+            <span className="flex-1">Result</span>
+            <span className="flex-1">Status</span>
           </div>
           {predictions.map((p, idx) => (
             <div key={idx} className="ah-table-row">
@@ -1109,12 +1109,12 @@ function SweepCompetitionsTab({ api, isReadOnly, onSelectComp }: {
           <h3 className="ah-section-title">Create Competition</h3>
           <input
             className="ah-input"
-            style={{ width: '100%' }}
+            className="w-full"
             placeholder="Competition name (e.g. World Cup 2026)"
             value={newName}
             onChange={e => setNewName(e.target.value)}
           />
-          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+          <div className="ah-flex gap-2 mt-2">
             <div>
               <label className="ah-label">Type: </label>
               <select value={newType} onChange={e => setNewType(e.target.value)} className="ah-select">
@@ -1124,13 +1124,13 @@ function SweepCompetitionsTab({ api, isReadOnly, onSelectComp }: {
             </div>
             <input
               className="ah-input"
-              style={{ flex: 1 }}
+              className="flex-1"
               placeholder="Description (optional)"
               value={newDesc}
               onChange={e => setNewDesc(e.target.value)}
             />
           </div>
-          <button className="ah-btn-primary" style={{ marginTop: 10 }} onClick={createComp} disabled={!newName.trim()}>
+          <button className="ah-btn-primary" className="mt-2" onClick={createComp} disabled={!newName.trim()}>
             Create
           </button>
         </div>
@@ -1295,13 +1295,13 @@ function SweepEntriesTab({ api, isReadOnly }: {
         <div className="ah-card">
           <h3 className="ah-section-title">Upload Entries (CSV)</h3>
           <p className="ah-meta">Format: Name[, seed or number]. Re-uploading skips existing names.</p>
-          <input type="file" accept=".csv" onChange={uploadEntries} style={{ marginTop: 8 }} />
+          <input type="file" accept=".csv" onChange={uploadEntries} className="mt-2" />
         </div>
       )}
 
       {selectedCompId && (
-        <div style={{ marginTop: 8 }}>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+        <div className="mt-2">
+          <div className="ah-flex gap-2 mb-3">
             <button className={`ah-tab${!showDraws ? ' active' : ''}`} onClick={() => setShowDraws(false)}>
               Entries ({entries.length})
             </button>
@@ -1317,17 +1317,17 @@ function SweepEntriesTab({ api, isReadOnly }: {
               <div className="ah-table">
                 <div className="ah-table-header">
                   <span style={{ flex: 3 }}>Name</span>
-                  <span style={{ flex: 1 }}>Seed/No.</span>
-                  <span style={{ flex: 1 }}>Status</span>
-                  <span style={{ flex: 1 }}>Position</span>
-                  {!isReadOnly && <span style={{ flex: 1 }}>Actions</span>}
+                  <span className="flex-1">Seed/No.</span>
+                  <span className="flex-1">Status</span>
+                  <span className="flex-1">Position</span>
+                  {!isReadOnly && <span className="flex-1">Actions</span>}
                 </div>
                 {entries.map(entry => (
                   <div key={entry.id} className="ah-table-row">
                     <span style={{ flex: 3, fontSize: 13 }}>{entry.name}</span>
                     <span style={{ flex: 1, fontSize: 13 }}>{entry.seed ?? entry.number ?? '—'}</span>
                     <span style={{ flex: 1, fontSize: 12, color: entry.status === 'taken' ? '#4CAF50' : '#666' }}>{entry.status}</span>
-                    <span style={{ flex: 1 }}>
+                    <span className="flex-1">
                       {!isReadOnly ? (
                         <select
                           value={entry.position ?? ''}
@@ -1344,7 +1344,7 @@ function SweepEntriesTab({ api, isReadOnly }: {
                       )}
                     </span>
                     {!isReadOnly && (
-                      <span style={{ flex: 1 }}>
+                      <span className="flex-1">
                         <button className="ah-btn-danger" style={{ padding: '3px 8px', fontSize: 11 }} onClick={() => deleteEntry(entry.id)}>
                           Delete
                         </button>
@@ -1362,10 +1362,10 @@ function SweepEntriesTab({ api, isReadOnly }: {
             ) : (
               <div className="ah-table">
                 <div className="ah-table-header">
-                  <span style={{ flex: 2 }}>User</span>
-                  <span style={{ flex: 2 }}>Entry</span>
-                  <span style={{ flex: 1 }}>Position</span>
-                  <span style={{ flex: 1 }}>Drawn</span>
+                  <span className="flex-2">User</span>
+                  <span className="flex-2">Entry</span>
+                  <span className="flex-1">Position</span>
+                  <span className="flex-1">Drawn</span>
                 </div>
                 {draws.map((d, idx) => (
                   <div key={idx} className="ah-table-row">
@@ -1574,11 +1574,11 @@ function QuizMediaTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isR
           <h3 className="ah-section-title">Upload Media</h3>
           <p className="ah-meta">Images: JPG, PNG, GIF, WebP (max 10MB). Audio: MP3, OGG, WAV, M4A (max 20MB).</p>
           <p className="ah-meta">Duplicate files are detected by content hash — re-uploading an identical file reuses the existing record.</p>
-          <input type="file" accept="image/*,audio/*,.mp3,.ogg,.wav,.m4a" onChange={upload} style={{ marginTop: 8 }} />
+          <input type="file" accept="image/*,audio/*,.mp3,.ogg,.wav,.m4a" onChange={upload} className="mt-2" />
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12, marginTop: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+      <div className="ah-flex-center flex-wrap gap-2 mb-3 mt-2">
         {(['all', 'image', 'audio'] as const).map(f => (
           <button
             key={f}
@@ -1604,7 +1604,7 @@ function QuizMediaTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isR
           {files.map(f => {
             const fileClips = clipsByFile[f.id] || [];
             return (
-              <div key={f.id} className="ah-card" style={{ padding: 10 }}>
+              <div key={f.id} className="ah-card p-2">
                 {f.type === 'image' ? (
                   <img
                     src={f.filePath}
@@ -1660,10 +1660,10 @@ function QuizMediaTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isR
                         placeholder="Clip label" value={clipForm.label}
                         onChange={e => setClipForm(cf => ({ ...cf, label: e.target.value }))} />
                       <div style={{ display: 'flex', gap: 4 }}>
-                        <input className="ah-input" style={{ flex: 1 }} placeholder="Start (s)" type="number" step="0.1"
+                        <input className="ah-input" className="flex-1" placeholder="Start (s)" type="number" step="0.1"
                           value={clipForm.audioStartSec}
                           onChange={e => setClipForm(cf => ({ ...cf, audioStartSec: e.target.value }))} />
-                        <input className="ah-input" style={{ flex: 1 }} placeholder="Dur (s)" type="number" step="0.1"
+                        <input className="ah-input" className="flex-1" placeholder="Dur (s)" type="number" step="0.1"
                           value={clipForm.audioDurationSec}
                           onChange={e => setClipForm(cf => ({ ...cf, audioDurationSec: e.target.value }))} />
                       </div>
@@ -1815,9 +1815,9 @@ function QuizQuestionsTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>;
             value={form.text}
             onChange={e => setForm(f => ({ ...f, text: e.target.value }))}
           />
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
-            <input className="ah-input" style={{ flex: 2 }} placeholder="Answer" value={form.answer} onChange={e => setForm(f => ({ ...f, answer: e.target.value }))} />
-            <input className="ah-input" style={{ flex: 1 }} placeholder="Category" value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} />
+          <div className="ah-flex flex-wrap gap-2 mt-2">
+            <input className="ah-input" className="flex-2" placeholder="Answer" value={form.answer} onChange={e => setForm(f => ({ ...f, answer: e.target.value }))} />
+            <input className="ah-input" className="flex-1" placeholder="Category" value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} />
             <select className="ah-select" value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
               <option value="text">Text</option>
               <option value="picture">Picture</option>
@@ -1829,7 +1829,7 @@ function QuizQuestionsTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>;
               <option value="hard">Hard</option>
             </select>
           </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+          <div className="ah-flex flex-wrap gap-2 mt-2">
             {(form.type === 'picture' || form.type === 'text') && (
               <div>
                 <label className="ah-label">Image clip: </label>
@@ -1848,11 +1848,11 @@ function QuizQuestionsTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>;
                 </select>
               </div>
             )}
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}>
+            <label className="ah-flex-center gap-1 text-sm cursor-pointer">
               <input type="checkbox" checked={form.requiresMedia} onChange={e => setForm(f => ({ ...f, requiresMedia: e.target.checked }))} />
               Requires media
             </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}>
+            <label className="ah-flex-center gap-1 text-sm cursor-pointer">
               <input type="checkbox" checked={form.isTestContent} onChange={e => setForm(f => ({ ...f, isTestContent: e.target.checked }))} />
               Test content
             </label>
@@ -1885,7 +1885,7 @@ function QuizQuestionsTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>;
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+      <div className="ah-flex gap-2 mb-3">
         {['', 'text', 'picture', 'music'].map(t => (
           <button key={t} className={`ah-tab${filterType === t ? ' active' : ''}`} onClick={() => setFilterType(t)}>
             {t === '' ? 'All' : t.charAt(0).toUpperCase() + t.slice(1)}
@@ -1899,7 +1899,7 @@ function QuizQuestionsTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>;
         questions.map(q => (
           <div key={q.id} className="ah-card">
             <div className="ah-flex-between" style={{ alignItems: 'flex-start' }}>
-              <div style={{ flex: 1 }}>
+              <div className="flex-1">
                 <p style={{ fontWeight: 500, fontSize: 14 }}>{q.text}</p>
                 <p className="ah-meta">Answer: <strong>{q.answer}</strong> · {q.type} · {q.difficulty} {q.category && `· ${q.category}`}</p>
                 {q.imagePath && <p className="ah-meta" style={{ color: '#1565C0' }}>Image attached</p>}
@@ -2042,14 +2042,14 @@ function QuizPacksTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isR
         <div className="ah-card">
           <h3 className="ah-section-title">Create Pack</h3>
           <div style={{ display: 'flex', gap: 8 }}>
-            <input className="ah-input" style={{ flex: 2 }} placeholder="Pack name" value={newPackName} onChange={e => setNewPackName(e.target.value)} />
+            <input className="ah-input" className="flex-2" placeholder="Pack name" value={newPackName} onChange={e => setNewPackName(e.target.value)} />
             <input className="ah-input" style={{ flex: 3 }} placeholder="Description (optional)" value={newPackDesc} onChange={e => setNewPackDesc(e.target.value)} />
             <button className="ah-btn-primary" onClick={createPack} disabled={!newPackName.trim()}>Create</button>
           </div>
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+      <div className="ah-flex flex-wrap gap-3">
         {/* Pack list */}
         <div style={{ flex: '1 1 220px' }}>
           <h3 className="ah-section-title">Packs</h3>
@@ -2084,10 +2084,10 @@ function QuizPacksTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isR
             <h3 className="ah-section-title">Rounds in {packs.find(p => p.id === selectedPackId)?.name}</h3>
 
             {!isReadOnly && (
-              <div className="ah-card" style={{ marginBottom: 12 }}>
+              <div className="ah-card mb-3">
                 <h4 style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Add Round</h4>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <input className="ah-input" style={{ flex: 2 }} placeholder="Round name" value={newRoundName} onChange={e => setNewRoundName(e.target.value)} />
+                <div className="ah-flex flex-wrap gap-2">
+                  <input className="ah-input" className="flex-2" placeholder="Round name" value={newRoundName} onChange={e => setNewRoundName(e.target.value)} />
                   <select className="ah-select" value={newRoundType} onChange={e => setNewRoundType(e.target.value)}>
                     <option value="text">Text</option>
                     <option value="picture">Picture</option>
@@ -2143,7 +2143,7 @@ function QuizPacksTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isR
                           ))}
                         </div>
                         <p className="ah-meta" style={{ marginTop: 4 }}>{roundQuestionIds.length} selected (order = selection order)</p>
-                        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                        <div className="ah-flex gap-2 mt-2">
                           <button className="ah-btn-primary" onClick={saveRoundQuestions}>Save</button>
                           <button className="ah-btn-outline" onClick={() => setEditRoundId(null)}>Cancel</button>
                         </div>
@@ -2254,7 +2254,7 @@ function SetupTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isReadO
       {/* Info Section */}
       <div className="ah-card" style={{ backgroundColor: '#E3F2FD', borderColor: '#90CAF9' }}>
         <h3 className="ah-section-title" style={{ color: '#1565C0', marginBottom: 12 }}>Players & Groups Registry</h3>
-        <p className="ah-meta" style={{ margin: 0 }}>
+        <p className="ah-meta" className="m-0">
           Create reusable players and groups here. LMS Manager and Sweepstakes can import from this registry
           (feature coming soon). Players are global (not tied to groups). Groups are organizational containers.
         </p>
@@ -2287,7 +2287,7 @@ function SetupTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isReadO
               <div key={p.id} className="ah-list-item">
                 <div>
                   <strong>{p.name}</strong>
-                  <p className="ah-meta" style={{ margin: 0 }}>Added {new Date(p.createdAt).toLocaleDateString()}</p>
+                  <p className="ah-meta" className="m-0">Added {new Date(p.createdAt).toLocaleDateString()}</p>
                 </div>
                 {!isReadOnly && (
                   <button className="ah-btn-danger-sm" onClick={() => deletePlayer(p.id, p.name)}>
@@ -2334,8 +2334,8 @@ function SetupTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isReadO
               <div key={g.id} className="ah-list-item">
                 <div>
                   <strong>{g.name}</strong>
-                  {g.description && <p className="ah-meta" style={{ margin: 0 }}>{g.description}</p>}
-                  <p className="ah-meta" style={{ margin: 0 }}>Added {new Date(g.createdAt).toLocaleDateString()}</p>
+                  {g.description && <p className="ah-meta" className="m-0">{g.description}</p>}
+                  <p className="ah-meta" className="m-0">Added {new Date(g.createdAt).toLocaleDateString()}</p>
                 </div>
                 {!isReadOnly && (
                   <button className="ah-btn-danger-sm" onClick={() => deleteGroup(g.id, g.name)}>
