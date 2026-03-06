@@ -735,8 +735,7 @@ function RoundsTab({ gameId, api, isReadOnly }: {
             </div>
           </div>
           <button
-            className="ah-btn-primary"
-            className="mt-2"
+            className="ah-btn-primary mt-2"
             onClick={createRound}
             disabled={!newLabel || !newStartDate || !newEndDate}
           >
@@ -1107,8 +1106,7 @@ function SweepCompetitionsTab({ api, isReadOnly, onSelectComp }: {
         <div className="ah-card">
           <h3 className="ah-section-title">Create Competition</h3>
           <input
-            className="ah-input"
-            className="w-full"
+            className="ah-input w-full"
             placeholder="Competition name (e.g. World Cup 2026)"
             value={newName}
             onChange={e => setNewName(e.target.value)}
@@ -1122,8 +1120,7 @@ function SweepCompetitionsTab({ api, isReadOnly, onSelectComp }: {
               </select>
             </div>
             <input
-              className="ah-input"
-              className="flex-1"
+              className="ah-input flex-1"
               placeholder="Description (optional)"
               value={newDesc}
               onChange={e => setNewDesc(e.target.value)}
