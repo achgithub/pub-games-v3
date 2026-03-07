@@ -68,6 +68,10 @@ func main() {
 	api.HandleFunc("/setup/groups", handleCreateGroup).Methods("POST")
 	api.HandleFunc("/setup/groups/{id}", handleDeleteGroup).Methods("DELETE")
 
+	api.HandleFunc("/setup/groups/{groupId}/teams", handleGetTeams).Methods("GET")
+	api.HandleFunc("/setup/groups/{groupId}/teams", handleCreateTeam).Methods("POST")
+	api.HandleFunc("/setup/teams/{id}", handleDeleteTeam).Methods("DELETE")
+
 	// LMS game management
 	api.HandleFunc("/lms/games", handleGetLMSGames).Methods("GET")
 	api.HandleFunc("/lms/games", handleCreateLMSGame).Methods("POST")
