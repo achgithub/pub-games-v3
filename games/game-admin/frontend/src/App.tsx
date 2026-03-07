@@ -1588,8 +1588,7 @@ function QuizMediaTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isR
           </button>
         ))}
         <button
-          className="ah-btn-outline"
-          className="ml-auto text-xs"
+          className="ah-btn-outline ml-auto text-xs"
           onClick={() => window.open('/api/quiz/clips/export', '_blank')}
         >
           Export Reference Sheet (CSV)
