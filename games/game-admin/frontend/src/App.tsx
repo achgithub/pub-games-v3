@@ -357,7 +357,7 @@ function FixturesTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isRe
           <div className="ah-flex flex-wrap gap-2 mt-2">
             <input
               className="ah-input flex-1"
-              style={{ minWidth: 180 }}
+              className="min-w-[180px]"
               placeholder="Fixture file name (e.g. Premier League 2025/26)"
               value={uploadName}
               onChange={e => setUploadName(e.target.value)}
@@ -397,7 +397,7 @@ function FixturesTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isRe
                   <div key={roundNum}>
                     <p className="ah-section-title mt-2">Round {roundNum}</p>
                     {byRound[roundNum].map(m => (
-                      <div key={m.id} style={{ fontSize: 13, padding: '4px 0', borderBottom: '1px solid #f0f0f0' }}>
+                      <div key={m.id} className="text-sm py-1 border-b border-stone-200">
                         <strong>#{m.matchNumber}</strong> {m.homeTeam} vs {m.awayTeam}
                         <span className="ah-label ml-2">{m.date} · {m.location}</span>
                         {m.result && <span className="ml-2 text-green-600 font-semibold">{m.result}</span>}
@@ -545,7 +545,7 @@ function GamesTab({ api, isReadOnly, onGameSelect }: {
           <div key={game.id} className="ah-card" style={{
             borderLeft: String(game.id) === currentGameId ? '4px solid #2196F3' : undefined,
           }}>
-            <div className="ah-flex-between" style={{ alignItems: 'flex-start' }}>
+            <div className="flex justify-between items-start">
               <div>
                 <strong>{game.name}</strong>
                 {String(game.id) === currentGameId && <span className="ah-badge--info ml-2">CURRENT</span>}
@@ -705,8 +705,7 @@ function RoundsTab({ gameId, api, isReadOnly }: {
             <div>
               <label className="ah-label">Round #</label>
               <input
-                className="ah-input"
-                style={{ width: 72 }}
+                className="ah-input w-18"
                 type="number"
                 min="1"
                 value={newLabel}
@@ -892,7 +891,7 @@ function ResultsTab({ gameId, api, isReadOnly }: {
         <>
           {matches.map(match => (
             <div key={match.id} className="ah-card">
-              <div className="ah-flex-between" style={{ alignItems: 'flex-start' }}>
+              <div className="flex justify-between items-start">
                 <div className="flex-1">
                   <strong>#{match.matchNumber}: {match.homeTeam} vs {match.awayTeam}</strong>
                   <p className="ah-meta">{match.date} · {match.location}</p>
@@ -908,8 +907,7 @@ function ResultsTab({ gameId, api, isReadOnly }: {
                 {!isReadOnly && (
                   <div className="ah-flex-center gap-2 flex-shrink-0 ml-3">
                     <input
-                      className="ah-input"
-                      style={{ width: 90 }}
+                      className="ah-input w-[90px]"
                       placeholder="2 - 1"
                       value={resultInputs[match.id] || ''}
                       onChange={e => setResultInputs(prev => ({ ...prev, [match.id]: e.target.value }))}
@@ -987,8 +985,7 @@ function PredictionsTab({ gameId, api }: { gameId: string; api: ReturnType<typeo
       <div className="ah-flex-center gap-3 mb-4">
         <label className="ah-label">Round: </label>
         <input
-          className="ah-input"
-          style={{ width: 80 }}
+          className="ah-input w-20"
           placeholder="All"
           value={filterRound}
           onChange={e => setFilterRound(e.target.value)}
@@ -1010,12 +1007,12 @@ function PredictionsTab({ gameId, api }: { gameId: string; api: ReturnType<typeo
           </div>
           {predictions.map((p, idx) => (
             <div key={idx} className="ah-table-row">
-              <span style={{ flex: 2, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.userId}</span>
-              <span style={{ flex: 1, fontSize: 13 }}>{p.roundNumber}</span>
-              <span style={{ flex: 2, fontSize: 13, fontWeight: 500 }}>{p.predictedTeam}</span>
-              <span style={{ flex: 2, fontSize: 12, color: '#666' }}>{p.homeTeam} v {p.awayTeam}</span>
-              <span style={{ flex: 1, fontSize: 12, color: '#666' }}>{p.result || '—'}</span>
-              <span style={{ flex: 1, fontSize: 12 }}>{statusIcon(p)}</span>
+              <span className="flex-[2] text-xs overflow-hidden text-ellipsis">{p.userId}</span>
+              <span className="flex-1 text-sm">{p.roundNumber}</span>
+              <span className="flex-[2] text-sm font-medium">{p.predictedTeam}</span>
+              <span className="flex-[2] text-xs text-stone-500">{p.homeTeam} v {p.awayTeam}</span>
+              <span className="flex-1 text-xs text-stone-500">{p.result || '—'}</span>
+              <span className="flex-1 text-xs">{statusIcon(p)}</span>
             </div>
           ))}
         </div>
@@ -1145,7 +1142,7 @@ function SweepCompetitionsTab({ api, isReadOnly, onSelectComp }: {
       ) : (
         comps.map(comp => (
           <div key={comp.id} className="ah-card">
-            <div className="ah-flex-between" style={{ alignItems: 'flex-start' }}>
+            <div className="flex justify-between items-start">
               <div>
                 <strong>{comp.name}</strong>
                 <p className="ah-meta">
@@ -1327,15 +1324,15 @@ function SweepEntriesTab({ api, isReadOnly }: {
                 </div>
                 {entries.map(entry => (
                   <div key={entry.id} className="ah-table-row">
-                    <span style={{ flex: 3, fontSize: 13 }}>{entry.name}</span>
-                    <span style={{ flex: 1, fontSize: 13 }}>{entry.seed ?? entry.number ?? '—'}</span>
+                    <span className="flex-[3] text-sm">{entry.name}</span>
+                    <span className="flex-1 text-sm">{entry.seed ?? entry.number ?? '—'}</span>
                     <span style={{ flex: 1, fontSize: 12, color: entry.status === 'taken' ? '#4CAF50' : '#666' }}>{entry.status}</span>
                     <span className="flex-1">
                       {!isReadOnly ? (
                         <select
                           value={entry.position ?? ''}
                           onChange={e => updatePosition(entry.id, e.target.value ? parseInt(e.target.value) : null)}
-                          style={{ padding: '3px 6px', fontSize: 12 }}
+                          className="py-1 px-1.5 text-xs"
                         >
                           <option value="">—</option>
                           {[1,2,3,4,5,6,7,8,999].map(p => (
@@ -1343,12 +1340,12 @@ function SweepEntriesTab({ api, isReadOnly }: {
                           ))}
                         </select>
                       ) : (
-                        <span style={{ fontSize: 12, color: '#666' }}>{entry.position ?? '—'}</span>
+                        <span className="text-xs text-stone-500">{entry.position ?? '—'}</span>
                       )}
                     </span>
                     {!isReadOnly && (
                       <span className="flex-1">
-                        <button className="ah-btn-danger" style={{ padding: '3px 8px', fontSize: 11 }} onClick={() => deleteEntry(entry.id)}>
+                        <button className="ah-btn-danger py-1 px-2 text-xs" onClick={() => deleteEntry(entry.id)}>
                           Delete
                         </button>
                       </span>
@@ -1372,10 +1369,10 @@ function SweepEntriesTab({ api, isReadOnly }: {
                 </div>
                 {draws.map((d, idx) => (
                   <div key={idx} className="ah-table-row">
-                    <span style={{ flex: 2, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.user_id}</span>
-                    <span style={{ flex: 2, fontSize: 13, fontWeight: 500 }}>{d.entry_name}</span>
-                    <span style={{ flex: 1, fontSize: 12, color: '#666' }}>{d.position ?? '—'}</span>
-                    <span style={{ flex: 1, fontSize: 12, color: '#666' }}>{new Date(d.drawn_at).toLocaleDateString()}</span>
+                    <span className="flex-[2] text-xs overflow-hidden text-ellipsis">{d.user_id}</span>
+                    <span className="flex-[2] text-sm font-medium">{d.entry_name}</span>
+                    <span className="flex-1 text-xs text-stone-500">{d.position ?? '—'}</span>
+                    <span className="flex-1 text-xs text-stone-500">{new Date(d.drawn_at).toLocaleDateString()}</span>
                   </div>
                 ))}
               </div>
@@ -1593,7 +1590,7 @@ function QuizMediaTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isR
         ))}
         <button
           className="ah-btn-outline"
-          style={{ marginLeft: 'auto', fontSize: 12 }}
+          className="ml-auto text-xs"
           onClick={() => window.open('/api/quiz/clips/export', '_blank')}
         >
           Export Reference Sheet (CSV)
@@ -1618,21 +1615,21 @@ function QuizMediaTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isR
                 ) : (
                   <div style={{ height: 80, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                     backgroundColor: '#f5f5f5', borderRadius: 4, marginBottom: 8, gap: 4 }}>
-                    <span style={{ fontSize: 24 }}>🎵</span>
-                    <audio controls src={f.filePath} style={{ width: '95%' }} />
+                    <span className="text-2xl">🎵</span>
+                    <audio controls src={f.filePath} className="w-[95%]" />
                   </div>
                 )}
-                <p style={{ fontSize: 12, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={f.originalName}>
+                <p className="text-xs font-medium overflow-hidden text-ellipsis whitespace-nowrap" title={f.originalName}>
                   {f.originalName}
                 </p>
                 <p className="ah-meta">{(f.sizeBytes / 1024).toFixed(0)} KB</p>
 
                 {/* Clips list */}
                 {fileClips.length > 0 && (
-                  <div style={{ marginTop: 6, borderTop: '1px solid #f0f0f0', paddingTop: 6 }}>
+                  <div className="mt-1.5 border-t border-stone-200 pt-1.5">
                     {fileClips.map(c => (
                       <div key={c.id} className="ah-flex-center gap-1 mb-1">
-                        <span style={{ fontSize: 11, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={c.guid}>
+                        <span className="text-xs flex-1 overflow-hidden text-ellipsis whitespace-nowrap" title={c.guid}>
                           {c.label}
                         </span>
                         <button
@@ -1658,8 +1655,8 @@ function QuizMediaTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isR
                 {/* Add clip form (audio only) */}
                 {!isReadOnly && f.type === 'audio' && (
                   addClipFor === f.id ? (
-                    <div style={{ marginTop: 6, borderTop: '1px solid #f0f0f0', paddingTop: 6 }}>
-                      <input className="ah-input" style={{ width: '100%', marginBottom: 4 }}
+                    <div className="mt-1.5 border-t border-stone-200 pt-1.5">
+                      <input className="ah-input w-full mb-1"
                         placeholder="Clip label" value={clipForm.label}
                         onChange={e => setClipForm(cf => ({ ...cf, label: e.target.value }))} />
                       <div className="ah-flex gap-1">
@@ -1671,12 +1668,12 @@ function QuizMediaTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isR
                           onChange={e => setClipForm(cf => ({ ...cf, audioDurationSec: e.target.value }))} />
                       </div>
                       <div className="ah-flex gap-1 mt-1">
-                        <button className="ah-btn-primary" style={{ flex: 1, fontSize: 11, padding: '4px 0' }} onClick={() => addClip(f.id)}>Add</button>
-                        <button className="ah-btn-outline" style={{ flex: 1, fontSize: 11, padding: '4px 0' }} onClick={() => setAddClipFor(null)}>Cancel</button>
+                        <button className="ah-btn-primary flex-1 text-xs py-1 px-0" onClick={() => addClip(f.id)}>Add</button>
+                        <button className="ah-btn-outline flex-1 text-xs py-1 px-0" onClick={() => setAddClipFor(null)}>Cancel</button>
                       </div>
                     </div>
                   ) : (
-                    <button className="ah-btn-outline" style={{ marginTop: 6, width: '100%', fontSize: 11 }}
+                    <button className="ah-btn-outline mt-1.5 w-full text-xs"
                       onClick={() => { setAddClipFor(f.id); setClipForm({ label: '', audioStartSec: '0', audioDurationSec: '' }); }}>
                       + Add Clip
                     </button>
@@ -1684,7 +1681,7 @@ function QuizMediaTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isR
                 )}
 
                 {!isReadOnly && (
-                  <button className="ah-btn-danger" style={{ marginTop: 6, width: '100%', padding: '4px 8px', fontSize: 12 }}
+                  <button className="ah-btn-danger mt-1.5 w-full py-1 px-2 text-xs"
                     onClick={() => deleteFile(f.id, f.originalName)}>
                     Delete File
                   </button>
@@ -1813,7 +1810,7 @@ function QuizQuestionsTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>;
           <h3 className="ah-section-title">{editingId ? 'Edit Question' : 'Add Question'}</h3>
           <textarea
             className="ah-input"
-            style={{ width: '100%', height: 60, resize: 'vertical' }}
+            className="w-full h-15 resize-y"
             placeholder="Question text"
             value={form.text}
             onChange={e => setForm(f => ({ ...f, text: e.target.value }))}
@@ -1878,7 +1875,7 @@ function QuizQuestionsTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>;
           </p>
           <div className="ah-flex-center flex-wrap gap-2 mt-2">
             <input type="file" accept=".csv" onChange={importCSV} />
-            <a href={templateHref} download="quiz-questions-template.csv" className="ah-btn-outline" style={{ fontSize: 12, textDecoration: 'none', padding: '5px 10px' }}>
+            <a href={templateHref} download="quiz-questions-template.csv" className="ah-btn-outline text-xs no-underline py-1.5 px-2.5">
               Download Template
             </a>
           </div>
@@ -1901,9 +1898,9 @@ function QuizQuestionsTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>;
       ) : (
         questions.map(q => (
           <div key={q.id} className="ah-card">
-            <div className="ah-flex-between" style={{ alignItems: 'flex-start' }}>
+            <div className="flex justify-between items-start">
               <div className="flex-1">
-                <p style={{ fontWeight: 500, fontSize: 14 }}>{q.text}</p>
+                <p className="font-medium text-sm">{q.text}</p>
                 <p className="ah-meta">Answer: <strong>{q.answer}</strong> · {q.type} · {q.difficulty} {q.category && `· ${q.category}`}</p>
                 {q.imagePath && <p className="ah-meta" style={{ color: '#1565C0' }}>Image attached</p>}
                 {q.audioPath && <p className="ah-meta text-orange-700">Audio attached</p>}
@@ -2070,7 +2067,7 @@ function QuizPacksTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isR
                     {p.description && <p className="ah-meta">{p.description}</p>}
                   </div>
                   {!isReadOnly && (
-                    <button className="ah-btn-danger" style={{ fontSize: 11, padding: '3px 8px' }}
+                    <button className="ah-btn-danger text-xs py-1 px-2"
                       onClick={e => { e.stopPropagation(); deletePack(p.id, p.name); }}>
                       Delete
                     </button>
@@ -2088,7 +2085,7 @@ function QuizPacksTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isR
 
             {!isReadOnly && (
               <div className="ah-card mb-3">
-                <h4 style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Add Round</h4>
+                <h4 className="text-sm font-semibold mb-2">Add Round</h4>
                 <div className="ah-flex flex-wrap gap-2">
                   <input className="ah-input flex-2" placeholder="Round name" value={newRoundName} onChange={e => setNewRoundName(e.target.value)} />
                   <select className="ah-select" value={newRoundType} onChange={e => setNewRoundType(e.target.value)}>
@@ -2096,7 +2093,7 @@ function QuizPacksTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isR
                     <option value="picture">Picture</option>
                     <option value="music">Music</option>
                   </select>
-                  <input className="ah-input" style={{ width: 90 }} placeholder="Time (s)" type="number" value={newRoundTimeLimit} onChange={e => setNewRoundTimeLimit(e.target.value)} />
+                  <input className="ah-input w-[90px]" placeholder="Time (s)" type="number" value={newRoundTimeLimit} onChange={e => setNewRoundTimeLimit(e.target.value)} />
                   <button className="ah-btn-primary" onClick={createRound} disabled={!newRoundName.trim()}>Add</button>
                 </div>
               </div>
@@ -2114,10 +2111,10 @@ function QuizPacksTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isR
                     </div>
                     {!isReadOnly && (
                       <div className="ah-flex gap-1">
-                        <button className="ah-btn-outline" style={{ fontSize: 11 }} onClick={() => openRoundEdit(rd)}>
+                        <button className="ah-btn-outline text-xs" onClick={() => openRoundEdit(rd)}>
                           {editRoundId === rd.id ? 'Editing' : 'Edit Q'}
                         </button>
-                        <button className="ah-btn-danger" style={{ fontSize: 11 }} onClick={() => deleteRound(rd.id)}>Del</button>
+                        <button className="ah-btn-danger text-xs" onClick={() => deleteRound(rd.id)}>Del</button>
                       </div>
                     )}
                   </div>
@@ -2127,10 +2124,10 @@ function QuizPacksTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isR
                     const usableQuestions = questions.filter(q => !(q.requiresMedia && !q.imageClipId && !q.audioClipId));
                     const excludedCount = questions.length - usableQuestions.length;
                     return (
-                      <div style={{ marginTop: 12, borderTop: '1px solid #e0e0e0', paddingTop: 10 }}>
-                        <p style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Select questions (in order):</p>
+                      <div className="mt-3 border-t border-stone-300 pt-2.5">
+                        <p className="text-xs font-semibold mb-1.5">Select questions (in order):</p>
                         {excludedCount > 0 && (
-                          <p className="ah-meta" style={{ color: '#E65100', marginBottom: 6 }}>
+                          <p className="ah-meta text-orange-700 mb-1.5">
                             {excludedCount} question{excludedCount !== 1 ? 's' : ''} hidden — marked as requiring media but no clip assigned.
                           </p>
                         )}
@@ -2311,8 +2308,8 @@ function SetupTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isReadO
       <Toast message={success} />
 
       {/* Info Section */}
-      <div className="ah-card" style={{ backgroundColor: '#E3F2FD', borderColor: '#90CAF9' }}>
-        <h3 className="ah-section-title" style={{ color: '#1565C0', marginBottom: 12 }}>Players & Groups Registry</h3>
+      <div className="ah-banner--info">
+        <h3 className="ah-section-title text-blue-700 mb-3">Players & Groups Registry</h3>
         <p className="ah-meta m-0">
           Create reusable players and groups here. LMS Manager and Sweepstakes can import from this registry
           (feature coming soon). Players are global (not tied to groups). Groups contain teams (e.g., "Premier League 2026" → Arsenal, Liverpool, etc.).
