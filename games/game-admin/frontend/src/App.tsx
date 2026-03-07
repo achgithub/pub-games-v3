@@ -356,8 +356,7 @@ function FixturesTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isRe
           <p className="ah-meta">Re-uploading with the same name updates existing matches. Results in the CSV are stored but status is only set to Completed when you confirm results in the Results tab.</p>
           <div className="ah-flex flex-wrap gap-2 mt-2">
             <input
-              className="ah-input flex-1"
-              className="min-w-[180px]"
+              className="ah-input flex-1 min-w-[180px]"
               placeholder="Fixture file name (e.g. Premier League 2025/26)"
               value={uploadName}
               onChange={e => setUploadName(e.target.value)}
