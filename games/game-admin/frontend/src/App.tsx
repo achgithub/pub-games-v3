@@ -2358,7 +2358,7 @@ function SetupTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isReadO
         <h3 className="ah-section-title">Groups ({groups.length})</h3>
 
         {!isReadOnly && (
-          <div className="ah-inline-form">
+          <div className="ah-inline-form mb-4">
             <input
               className="ah-input"
               placeholder="Group name"
