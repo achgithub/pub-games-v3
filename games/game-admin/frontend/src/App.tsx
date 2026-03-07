@@ -60,6 +60,13 @@ interface ManagedGroup {
   createdAt: string;
 }
 
+interface ManagedTeam {
+  id: number;
+  groupId: number;
+  name: string;
+  createdAt: string;
+}
+
 // --- Hooks ---
 
 function useUrlParams() {
@@ -2161,9 +2168,12 @@ function QuizPacksTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isR
 function SetupTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isReadOnly: boolean }) {
   const [players, setPlayers] = useState<ManagedPlayer[]>([]);
   const [groups, setGroups] = useState<ManagedGroup[]>([]);
+  const [expandedGroupId, setExpandedGroupId] = useState<number | null>(null);
+  const [groupTeams, setGroupTeams] = useState<Record<number, ManagedTeam[]>>({});
   const [newPlayerName, setNewPlayerName] = useState('');
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupDescription, setNewGroupDescription] = useState('');
+  const [newTeamNames, setNewTeamNames] = useState<Record<number, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -2179,10 +2189,29 @@ function SetupTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isReadO
       .catch(err => setError(err.message));
   }, [api]);
 
+  const loadTeams = useCallback((groupId: number) => {
+    api(`/api/setup/groups/${groupId}/teams`)
+      .then(data => {
+        setGroupTeams(prev => ({ ...prev, [groupId]: data.teams || [] }));
+      })
+      .catch(err => setError(err.message));
+  }, [api]);
+
   useEffect(() => {
     loadPlayers();
     loadGroups();
   }, [loadPlayers, loadGroups]);
+
+  const toggleGroup = (groupId: number) => {
+    if (expandedGroupId === groupId) {
+      setExpandedGroupId(null);
+    } else {
+      setExpandedGroupId(groupId);
+      if (!groupTeams[groupId]) {
+        loadTeams(groupId);
+      }
+    }
+  };
 
   const addPlayer = async () => {
     if (!newPlayerName.trim()) return;
@@ -2234,10 +2263,45 @@ function SetupTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isReadO
     try {
       await api(`/api/setup/groups/${id}`, { method: 'DELETE' });
       setSuccess(`Deleted group: ${name}`);
+      setGroupTeams(prev => {
+        const updated = { ...prev };
+        delete updated[id];
+        return updated;
+      });
+      if (expandedGroupId === id) setExpandedGroupId(null);
       loadGroups();
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete group');
+    }
+  };
+
+  const addTeam = async (groupId: number) => {
+    const teamName = newTeamNames[groupId]?.trim();
+    if (!teamName) return;
+    try {
+      await api(`/api/setup/groups/${groupId}/teams`, {
+        method: 'POST',
+        body: JSON.stringify({ name: teamName }),
+      });
+      setSuccess(`Added team: ${teamName}`);
+      setNewTeamNames(prev => ({ ...prev, [groupId]: '' }));
+      loadTeams(groupId);
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to add team');
+    }
+  };
+
+  const deleteTeam = async (groupId: number, teamId: number, teamName: string) => {
+    if (!window.confirm(`Delete team "${teamName}"?`)) return;
+    try {
+      await api(`/api/setup/teams/${teamId}`, { method: 'DELETE' });
+      setSuccess(`Deleted team: ${teamName}`);
+      loadTeams(groupId);
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete team');
     }
   };
 
@@ -2251,7 +2315,7 @@ function SetupTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isReadO
         <h3 className="ah-section-title" style={{ color: '#1565C0', marginBottom: 12 }}>Players & Groups Registry</h3>
         <p className="ah-meta m-0">
           Create reusable players and groups here. LMS Manager and Sweepstakes can import from this registry
-          (feature coming soon). Players are global (not tied to groups). Groups are organizational containers.
+          (feature coming soon). Players are global (not tied to groups). Groups contain teams (e.g., "Premier League 2026" → Arsenal, Liverpool, etc.).
         </p>
       </div>
 
@@ -2300,47 +2364,104 @@ function SetupTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isReadO
         <h3 className="ah-section-title">Groups ({groups.length})</h3>
 
         {!isReadOnly && (
-          <div>
-            <div className="ah-inline-form">
-              <input
-                className="ah-input"
-                placeholder="Group name"
-                value={newGroupName}
-                onChange={e => setNewGroupName(e.target.value)}
-              />
-              <input
-                className="ah-input"
-                placeholder="Description (optional)"
-                value={newGroupDescription}
-                onChange={e => setNewGroupDescription(e.target.value)}
-              />
-              <button className="ah-btn-primary" onClick={addGroup} disabled={!newGroupName.trim()}>
-                Add Group
-              </button>
-            </div>
+          <div className="ah-inline-form">
+            <input
+              className="ah-input"
+              placeholder="Group name"
+              value={newGroupName}
+              onChange={e => setNewGroupName(e.target.value)}
+            />
+            <input
+              className="ah-input"
+              placeholder="Description (optional)"
+              value={newGroupDescription}
+              onChange={e => setNewGroupDescription(e.target.value)}
+            />
+            <button className="ah-btn-primary" onClick={addGroup} disabled={!newGroupName.trim()}>
+              Add Group
+            </button>
           </div>
         )}
 
-        <div className="ah-list">
-          {groups.length === 0 ? (
-            <p className="ah-meta">No groups yet. Add one above.</p>
-          ) : (
-            groups.map(g => (
-              <div key={g.id} className="ah-list-item">
-                <div>
-                  <strong>{g.name}</strong>
-                  {g.description && <p className="ah-meta m-0">{g.description}</p>}
-                  <p className="ah-meta m-0">Added {new Date(g.createdAt).toLocaleDateString()}</p>
+        {groups.length === 0 ? (
+          <p className="ah-meta">No groups yet. Add one above.</p>
+        ) : (
+          groups.map(g => {
+            const isExpanded = expandedGroupId === g.id;
+            const teams = groupTeams[g.id] || [];
+
+            return (
+              <div key={g.id} className="ah-section">
+                <div className="ah-section-header" onClick={() => toggleGroup(g.id)}>
+                  <div className="ah-flex-center">
+                    <span className={`ah-section-toggle ${!isExpanded ? 'collapsed' : ''}`}>▼</span>
+                    <h3 className="ah-section-title">{g.name}</h3>
+                    <span className="ah-badge">{teams.length} teams</span>
+                  </div>
+                  {!isReadOnly && (
+                    <button
+                      className="ah-btn-danger-sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteGroup(g.id, g.name);
+                      }}
+                    >
+                      Delete
+                    </button>
+                  )}
                 </div>
-                {!isReadOnly && (
-                  <button className="ah-btn-danger-sm" onClick={() => deleteGroup(g.id, g.name)}>
-                    Delete
-                  </button>
+
+                {g.description && <p className="ah-meta">{g.description}</p>}
+                <p className="ah-meta">Added {new Date(g.createdAt).toLocaleDateString()}</p>
+
+                {isExpanded && (
+                  <div className="ah-card">
+                    <h4 className="ah-section-title">Teams in {g.name}</h4>
+
+                    {!isReadOnly && (
+                      <div className="ah-inline-form">
+                        <input
+                          className="ah-input"
+                          placeholder="Team name"
+                          value={newTeamNames[g.id] || ''}
+                          onChange={e => setNewTeamNames(prev => ({ ...prev, [g.id]: e.target.value }))}
+                          onKeyPress={e => e.key === 'Enter' && addTeam(g.id)}
+                        />
+                        <button
+                          className="ah-btn-primary"
+                          onClick={() => addTeam(g.id)}
+                          disabled={!newTeamNames[g.id]?.trim()}
+                        >
+                          Add Team
+                        </button>
+                      </div>
+                    )}
+
+                    <div className="ah-list">
+                      {teams.length === 0 ? (
+                        <p className="ah-meta">No teams yet. Add one above.</p>
+                      ) : (
+                        teams.map(t => (
+                          <div key={t.id} className="ah-list-item">
+                            <div>
+                              <strong>{t.name}</strong>
+                              <p className="ah-meta m-0">Added {new Date(t.createdAt).toLocaleDateString()}</p>
+                            </div>
+                            {!isReadOnly && (
+                              <button className="ah-btn-danger-sm" onClick={() => deleteTeam(g.id, t.id, t.name)}>
+                                Delete
+                              </button>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
-            ))
-          )}
-        </div>
+            );
+          })
+        )}
       </div>
     </div>
   );
