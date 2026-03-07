@@ -2377,7 +2377,7 @@ function SetupTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isReadO
           </div>
         )}
 
-        <div>
+        <div className="mt-3">
           {groups.length === 0 ? (
             <p className="ah-meta">No groups yet. Add one above.</p>
           ) : (
