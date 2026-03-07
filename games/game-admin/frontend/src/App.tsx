@@ -2383,10 +2383,11 @@ function SetupTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isReadO
           </div>
         )}
 
-        {groups.length === 0 ? (
-          <p className="ah-meta">No groups yet. Add one above.</p>
-        ) : (
-          groups.map(g => {
+        <div>
+          {groups.length === 0 ? (
+            <p className="ah-meta">No groups yet. Add one above.</p>
+          ) : (
+            groups.map(g => {
             const isExpanded = expandedGroupId === g.id;
             const teams = groupTeams[g.id] || [];
 
@@ -2461,7 +2462,8 @@ function SetupTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isReadO
               </div>
             );
           })
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
