@@ -14,15 +14,15 @@ function DataDisplaySection({ token }: Props) {
         </p>
       </div>
 
-      {/* Table */}
+      {/* Flex Table */}
       <div className="component-section">
         <div className="component-demo">
           <div className="component-header">
-            <span className="component-name">Table</span>
+            <span className="component-name">Flex Table</span>
             <code className="component-class">.ah-table</code>
           </div>
           <p className="component-purpose">
-            Data table with header and row styling
+            Flex-based table with header and row styling (for flex layouts)
           </p>
           <div className="component-preview">
             <table className="ah-table">
@@ -68,6 +68,94 @@ function DataDisplaySection({ token }: Props) {
   </tbody>
 </table>`}</code></pre>
           </div>
+        </div>
+      </div>
+
+      {/* HTML Table */}
+      <div className="component-section">
+        <div className="component-demo">
+          <div className="component-header">
+            <span className="component-name">HTML Table</span>
+            <code className="component-class">.ah-html-table</code>
+          </div>
+          <p className="component-purpose">
+            Traditional HTML table with striped rows and hover effects. Use for data-heavy views.
+          </p>
+          <div className="component-preview">
+            <table className="ah-html-table">
+              <thead>
+                <tr>
+                  <th>App Name</th>
+                  <th>URL</th>
+                  <th>Port</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Tic-Tac-Toe</td>
+                  <td>/games/tic-tac-toe</td>
+                  <td>4001</td>
+                  <td>Active</td>
+                </tr>
+                <tr>
+                  <td>Dots</td>
+                  <td>/games/dots</td>
+                  <td>4011</td>
+                  <td>Active</td>
+                </tr>
+                <tr>
+                  <td>LMS Manager</td>
+                  <td>/games/lms-manager</td>
+                  <td>4021</td>
+                  <td>Active</td>
+                </tr>
+                <tr>
+                  <td>Sweepstakes</td>
+                  <td>/games/sweepstakes-knockout</td>
+                  <td>4031</td>
+                  <td>Active</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div className="component-code">
+            <pre><code>{`<table className="ah-html-table">
+  <thead>
+    <tr>
+      <th>Column 1</th>
+      <th>Column 2</th>
+      <th>Column 3</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Data 1</td>
+      <td>Data 2</td>
+      <td>Data 3</td>
+    </tr>
+    <tr>
+      <td>Data 4</td>
+      <td>Data 5</td>
+      <td>Data 6</td>
+    </tr>
+  </tbody>
+</table>
+
+/* Optional: Icon column */
+<table className="ah-html-table">
+  <tbody>
+    <tr>
+      <td className="icon">🎮</td>
+      <td>Content here</td>
+    </tr>
+  </tbody>
+</table>`}</code></pre>
+          </div>
+          <p className="component-purpose mt-3 text-sm">
+            <strong>Features:</strong> Striped rows (alternating background), hover effects,
+            proper spacing, responsive. Optional <code>.icon</code> class for icon columns (50px width, centered).
+          </p>
         </div>
       </div>
 
