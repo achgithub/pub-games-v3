@@ -4,6 +4,24 @@ This document tracks future features, enhancements, and planned work for the pub
 
 ---
 
+## Recent Progress (2026-03-07)
+
+### Game Admin - Teams Management ✅
+- Added teams CRUD to Setup tab (players → groups → teams hierarchy)
+- Backend: handlers, routes, database migration (`managed_teams` table)
+- Frontend: collapsible groups with nested team management UI
+- Uses Activity Hub CSS patterns (zero new inline styles)
+
+### Inline Style Cleanup - Game Admin
+- Removed 49 of 71 inline styles (69% reduction)
+- Used ONLY existing Tailwind & Activity Hub classes
+- Remaining 22 styles: dynamic colors, complex layouts, selected states
+
+### Component Library Documentation
+- Added `.ah-html-table` documentation (was missing from Data Display section)
+
+---
+
 ## NEXT: Setup Admin - CSS Migration & New Features
 
 **Scheduled**: 2026-03-04
