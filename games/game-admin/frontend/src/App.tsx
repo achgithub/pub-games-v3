@@ -1807,8 +1807,7 @@ function QuizQuestionsTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>;
         <div className="ah-card">
           <h3 className="ah-section-title">{editingId ? 'Edit Question' : 'Add Question'}</h3>
           <textarea
-            className="ah-input"
-            className="w-full h-15 resize-y"
+            className="ah-input w-full h-15 resize-y"
             placeholder="Question text"
             value={form.text}
             onChange={e => setForm(f => ({ ...f, text: e.target.value }))}
