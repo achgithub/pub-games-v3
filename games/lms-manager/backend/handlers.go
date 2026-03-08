@@ -3,8 +3,10 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 
 	authlib "github.com/achgithub/activity-hub-common/auth"
@@ -158,6 +160,135 @@ func HandleDeleteGroup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// HandleImportGroups imports groups from Game Admin registry
+func HandleImportGroups(w http.ResponseWriter, r *http.Request) {
+	managerEmail, ok := getManagerEmail(r)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Parse request body (group IDs to import)
+	var req struct {
+		GroupIDs []int `json:"groupIds"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, `{"error":"invalid request"}`, http.StatusBadRequest)
+		return
+	}
+
+	// Fetch groups from Game Admin
+	resp, err := http.Get(fmt.Sprintf("http://192.168.1.29:5070/api/export/groups?manager_email=%s",
+		url.QueryEscape(managerEmail)))
+	if err != nil {
+		log.Printf("Failed to fetch from Game Admin: %v", err)
+		http.Error(w, `{"error":"failed to fetch groups from Game Admin"}`, http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	var exportData struct {
+		Groups []struct {
+			ID   int    `json:"id"`
+			Name string `json:"name"`
+			Teams []struct {
+				Name string `json:"name"`
+			} `json:"teams"`
+		} `json:"groups"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&exportData); err != nil {
+		log.Printf("Failed to decode Game Admin response: %v", err)
+		http.Error(w, `{"error":"invalid response from Game Admin"}`, http.StatusInternalServerError)
+		return
+	}
+
+	// Filter to requested groups
+	type GroupToImport struct {
+		ID    int
+		Name  string
+		Teams []struct {
+			Name string
+		}
+	}
+	groupsToImport := []GroupToImport{}
+	for _, g := range exportData.Groups {
+		for _, id := range req.GroupIDs {
+			if g.ID == id {
+				groupsToImport = append(groupsToImport, GroupToImport{
+					ID:    g.ID,
+					Name:  g.Name,
+					Teams: g.Teams,
+				})
+				break
+			}
+		}
+	}
+
+	// Begin transaction
+	tx, err := db.Begin()
+	if err != nil {
+		log.Printf("Failed to begin transaction: %v", err)
+		http.Error(w, `{"error":"database error"}`, http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	groupsCreated := 0
+	membersAdded := 0
+
+	// Import each group
+	for _, g := range groupsToImport {
+		// Check if group already exists
+		var existingID int
+		err := tx.QueryRow(`SELECT id FROM managed_groups WHERE manager_email=$1 AND name=$2`,
+			managerEmail, g.Name).Scan(&existingID)
+
+		if err == sql.ErrNoRows {
+			// Create group
+			var groupID int
+			err = tx.QueryRow(`
+				INSERT INTO managed_groups (manager_email, name)
+				VALUES ($1, $2)
+				RETURNING id
+			`, managerEmail, g.Name).Scan(&groupID)
+
+			if err != nil {
+				log.Printf("Failed to create group %s: %v", g.Name, err)
+				continue // Skip this group
+			}
+			groupsCreated++
+
+			// Add teams
+			for _, t := range g.Teams {
+				_, err = tx.Exec(`
+					INSERT INTO managed_teams (group_id, name)
+					VALUES ($1, $2)
+					ON CONFLICT (group_id, name) DO NOTHING
+				`, groupID, t.Name)
+
+				if err == nil {
+					membersAdded++
+				}
+			}
+		}
+		// Skip if group already exists
+	}
+
+	// Commit
+	if err := tx.Commit(); err != nil {
+		log.Printf("Failed to commit: %v", err)
+		http.Error(w, `{"error":"failed to commit"}`, http.StatusInternalServerError)
+		return
+	}
+
+	// Return result
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"groups_created": groupsCreated,
+		"members_added":  membersAdded,
+	})
 }
 
 // ============================================

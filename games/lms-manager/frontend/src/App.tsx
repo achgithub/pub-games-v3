@@ -143,6 +143,13 @@ function App() {
   // Card collapse state
   const [collapsedCards, setCollapsedCards] = useState<Record<string, boolean>>({});
 
+  // Import state
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [availableGroups, setAvailableGroups] = useState<any[]>([]);
+  const [selectedGroupIds, setSelectedGroupIds] = useState<number[]>([]);
+  const [importResult, setImportResult] = useState<string>('');
+  const [loadingGroups, setLoadingGroups] = useState(false);
+
   const [loading, setLoading] = useState(true);
 
   const toggleCard = (cardName: string) => {
@@ -497,6 +504,75 @@ function App() {
       }
     } catch (err) {
       console.error('Failed to delete group:', err);
+    }
+  };
+
+  const handleShowImportModal = async () => {
+    setShowImportModal(true);
+    setLoadingGroups(true);
+    setSelectedGroupIds([]);
+    setImportResult('');
+
+    try {
+      const res = await fetch(`http://${window.location.hostname}:5070/api/export/groups?manager_email=${userId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setAvailableGroups(data.groups || []);
+      } else {
+        setImportResult('Failed to fetch groups from Game Admin');
+      }
+    } catch (err) {
+      console.error('Failed to fetch groups:', err);
+      setImportResult('Failed to fetch groups from Game Admin');
+    } finally {
+      setLoadingGroups(false);
+    }
+  };
+
+  const handleToggleGroupSelection = (groupId: number, checked: boolean) => {
+    if (checked) {
+      setSelectedGroupIds([...selectedGroupIds, groupId]);
+    } else {
+      setSelectedGroupIds(selectedGroupIds.filter(id => id !== groupId));
+    }
+  };
+
+  const handleImportGroups = async () => {
+    if (selectedGroupIds.length === 0) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/api/groups/import`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ groupIds: selectedGroupIds }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setShowImportModal(false);
+
+        // Refresh groups list
+        const groupsRes = await fetch(`${API_BASE}/api/groups`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const groupsData = await groupsRes.json();
+        setGroups(groupsData.groups || []);
+
+        // Show success message
+        const message = `Imported ${data.groups_created} groups with ${data.members_added} members from Game Admin`;
+        setImportResult(message);
+
+        // Auto-dismiss after 10 seconds
+        setTimeout(() => setImportResult(''), 10000);
+      } else {
+        setImportResult('Failed to import groups');
+      }
+    } catch (err) {
+      console.error('Failed to import groups:', err);
+      setImportResult('Failed to import groups');
     }
   };
 
@@ -1191,7 +1267,16 @@ function App() {
                 <button className="ah-btn-primary" onClick={handleCreateGroup}>
                   Create Group
                 </button>
+                <button className="ah-btn-outline" onClick={handleShowImportModal}>
+                  Import from Game Admin
+                </button>
               </div>
+
+              {importResult && (
+                <div className="ah-banner ah-banner--success mt-4">
+                  {importResult}
+                </div>
+              )}
 
               <div className="ah-list mt-4">
                 {groups.length === 0 && (
@@ -1263,6 +1348,50 @@ function App() {
               </>
               )}
             </div>
+
+            {/* Import Modal */}
+            {showImportModal && (
+              <div className="ah-modal-backdrop" onClick={() => setShowImportModal(false)}>
+                <div className="ah-modal" onClick={e => e.stopPropagation()}>
+                  <div className="ah-modal-header">
+                    <h2>Import Groups from Game Admin</h2>
+                    <button onClick={() => setShowImportModal(false)}>×</button>
+                  </div>
+                  <div className="ah-modal-body">
+                    {loadingGroups && <p>Loading groups...</p>}
+                    {!loadingGroups && availableGroups.length === 0 && (
+                      <p className="ah-meta">No groups found in Game Admin</p>
+                    )}
+                    {!loadingGroups && availableGroups.length > 0 && (
+                      <div className="ah-list">
+                        {availableGroups.map(g => (
+                          <label key={g.id} className="ah-list-item cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={selectedGroupIds.includes(g.id)}
+                              onChange={e => handleToggleGroupSelection(g.id, e.target.checked)}
+                            />
+                            <span>{g.name} ({g.teams.length} teams)</span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="ah-modal-footer">
+                    <button className="ah-btn-outline" onClick={() => setShowImportModal(false)}>
+                      Cancel
+                    </button>
+                    <button
+                      className="ah-btn-primary"
+                      onClick={handleImportGroups}
+                      disabled={selectedGroupIds.length === 0}
+                    >
+                      Import Selected ({selectedGroupIds.length})
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

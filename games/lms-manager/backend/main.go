@@ -47,6 +47,7 @@ func main() {
 	// Setup endpoints (groups, teams, players)
 	r.Handle("/api/groups", authMiddleware(http.HandlerFunc(HandleListGroups))).Methods("GET")
 	r.Handle("/api/groups", authMiddleware(http.HandlerFunc(HandleCreateGroup))).Methods("POST")
+	r.Handle("/api/groups/import", authMiddleware(http.HandlerFunc(HandleImportGroups))).Methods("POST")
 	r.Handle("/api/groups/{id}", authMiddleware(http.HandlerFunc(HandleDeleteGroup))).Methods("DELETE")
 
 	r.Handle("/api/groups/{id}/teams", authMiddleware(http.HandlerFunc(HandleListTeams))).Methods("GET")

@@ -63,6 +63,7 @@ func main() {
 	// Setup tab - Groups
 	api.HandleFunc("/groups", handleGetGroups).Methods("GET")
 	api.HandleFunc("/groups", handleCreateGroup).Methods("POST")
+	api.HandleFunc("/groups/import", handleImportGroups).Methods("POST")
 	api.HandleFunc("/groups/{id}", handleDeleteGroup).Methods("DELETE")
 
 	// Setup tab - Competitors (within groups)
