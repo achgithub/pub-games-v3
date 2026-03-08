@@ -271,22 +271,17 @@ func handleImportGroups(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Filter to requested groups
-	type GroupToImport struct {
+	groupsToImport := []struct {
 		ID    int
 		Name  string
 		Teams []struct {
-			Name string
+			Name string `json:"name"`
 		}
-	}
-	groupsToImport := []GroupToImport{}
+	}{}
 	for _, g := range exportData.Groups {
 		for _, id := range req.GroupIDs {
 			if g.ID == id {
-				groupsToImport = append(groupsToImport, GroupToImport{
-					ID:    g.ID,
-					Name:  g.Name,
-					Teams: g.Teams,
-				})
+				groupsToImport = append(groupsToImport, g)
 				break
 			}
 		}
