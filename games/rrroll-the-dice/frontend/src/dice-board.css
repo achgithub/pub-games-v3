@@ -80,6 +80,9 @@
   margin-bottom: 2rem;
   min-height: 150px;
   align-items: center;
+  max-width: 408px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .dice-total {
