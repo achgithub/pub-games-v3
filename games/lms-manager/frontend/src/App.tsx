@@ -1351,7 +1351,7 @@ function App() {
 
             {/* Import Modal */}
             {showImportModal && (
-              <div className="ah-modal-backdrop" onClick={() => setShowImportModal(false)}>
+              <div className="ah-modal-overlay" onClick={() => setShowImportModal(false)}>
                 <div className="ah-modal" onClick={e => e.stopPropagation()}>
                   <div className="ah-modal-header">
                     <h2>Import Groups from Game Admin</h2>
