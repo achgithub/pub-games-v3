@@ -551,7 +551,6 @@ function App() {
       });
 
       if (res.ok) {
-        const data = await res.json();
         setShowImportModal(false);
 
         // Refresh groups list
@@ -560,13 +559,6 @@ function App() {
         });
         const groupsData = await groupsRes.json();
         setGroups(groupsData.groups || []);
-
-        // Show success message
-        const message = `Imported ${data.groups_created} groups with ${data.members_added} members from Game Admin`;
-        setImportResult(message);
-
-        // Auto-dismiss after 10 seconds
-        setTimeout(() => setImportResult(''), 10000);
       } else {
         setImportResult('Failed to import groups');
       }
@@ -1272,12 +1264,6 @@ function App() {
                 </button>
               </div>
 
-              {importResult && (
-                <div className="ah-banner ah-banner--success mt-4">
-                  {importResult}
-                </div>
-              )}
-
               <div className="ah-list mt-4">
                 {groups.length === 0 && (
                   <p className="ah-meta">No groups yet. Create one to get started.</p>
@@ -1358,8 +1344,13 @@ function App() {
                     <button onClick={() => setShowImportModal(false)}>×</button>
                   </div>
                   <div className="ah-modal-body">
+                    {importResult && (
+                      <div className="ah-banner ah-banner--error mb-4">
+                        {importResult}
+                      </div>
+                    )}
                     {loadingGroups && <p>Loading groups...</p>}
-                    {!loadingGroups && availableGroups.length === 0 && (
+                    {!loadingGroups && availableGroups.length === 0 && !importResult && (
                       <p className="ah-meta">No groups found in Game Admin</p>
                     )}
                     {!loadingGroups && availableGroups.length > 0 && (
