@@ -4,7 +4,17 @@ This document tracks future features, enhancements, and planned work for the pub
 
 ---
 
-## Recent Progress (2026-03-07)
+## Recent Progress (2026-03-08)
+
+### Group Import from Game Admin ✅
+- LMS Manager and Sweepstakes can now import groups from centralized Game Admin registry
+- Backend: POST /api/groups/import endpoint with transaction-based imports
+- Frontend: Modal dialog with checkbox group selection, success banners
+- Imports groups as local copies (can be edited/deleted independently)
+- Fetches from Game Admin export endpoint (http://{host}:5070/api/export/groups)
+- Uses `.ah-modal-overlay` for proper centered modal positioning
+- Duplicate detection skips groups that already exist
+- Returns counts: `groups_created` and `members_added`
 
 ### Game Admin - Teams Management ✅
 - Added teams CRUD to Setup tab (players → groups → teams hierarchy)

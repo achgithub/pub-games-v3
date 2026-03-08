@@ -1,6 +1,15 @@
 # Pub Games v3 - Project Guide
 
-## Recent Updates (2026-03-03)
+## Recent Updates (2026-03-08)
+
+**Group Import Feature (NEW):**
+- ✅ **Import from Game Admin** - LMS Manager and Sweepstakes can now import groups from centralized registry
+- ✅ Modal dialog with group selection (checkboxes for multi-select)
+- ✅ Shows group names with member/competitor counts
+- ✅ Imports as local copies (can be edited/deleted independently)
+- ✅ Success banner with import counts (auto-dismisses after 10 seconds)
+- ✅ Backend: Transaction-based imports with duplicate detection
+- ✅ Uses `.ah-modal-overlay` for proper centered modal positioning
 
 **Sweepstakes Knockout & LMS Manager Enhancements:**
 - ✅ Sweepstakes migrated to Groups/Competitors pattern (matches LMS Groups/Teams)

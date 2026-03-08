@@ -2,15 +2,25 @@
 
 Manager-controlled sweepstakes for single-event competitions like horse races, greyhounds, athletics, etc.
 
+## Recent Updates (2026-03-08)
+
+**Group Import Feature**:
+- Import groups with competitors from Game Admin registry
+- Modal dialog with checkbox group selection
+- Imports as local copies (can be edited/deleted independently)
+- Success banner showing import results
+- Accessible from Setup tab via "Import from Game Admin" button
+
 ## Overview
 
 This app allows a game manager to:
-1. Create events (e.g., "Grand National 2026")
-2. Add horses/entrants
-3. Add players and assign each player a horse
-4. Configure winning positions (1st, 2nd, 3rd, last, etc.)
-5. Enter results by assigning positions to horses
-6. View winners report
+1. Create/import groups of competitors (e.g., "Grand National 2026")
+2. Add competitors to groups (horses, greyhounds, athletes, etc.)
+3. Add players to player pool
+4. Create events and assign competitors to players
+5. Configure winning positions (1st, 2nd, 3rd, last, etc.)
+6. Enter results by assigning positions to competitors
+7. View winners report
 
 ## Access Control
 
@@ -31,16 +41,29 @@ This app allows a game manager to:
 
 ## Workflow
 
-### 1. Create Event
-Create a new event with name and optional description.
+### 1. Setup Tab
+- **Player Pool**: Add participants who will join games
+- **Groups & Competitors**:
+  - Create groups (e.g., "Grand National 2026", "Greyhound Derby")
+  - Add competitors to groups (horses, greyhounds, athletes, etc.)
+  - **OR** Import groups from Game Admin:
+    - Click "Import from Game Admin" button
+    - Select groups from centralized registry
+    - Imports groups with all competitors as local copies
+    - Can edit/delete imported groups independently
 
-### 2. Setup Tab
-- **Add Horses**: Add all entrants (horses, greyhounds, athletes, etc.)
-- **Add Players**: Add participants with email and name
-- **Assign Horses**: Use dropdown to assign each player a horse
-- **Configure Winning Positions**: Add positions that will pay out
-  - Accepts numbers: "1", "2", "3", etc.
-  - Accepts "last" (case-insensitive: LAST, Last, lAsT, etc.)
+### 2. Create Event
+- Select a group (source of competitors for this event)
+- Select players from pool
+- Configure winning positions (e.g., "1,2,3,last")
+- Enable spinner for randomized assignment (optional)
+
+### 3. Games Tab - Assignment
+- **Manual Assignment**: Use dropdown to assign each player a competitor
+- **Spinner Assignment**: Click spin button for randomized assignment
+  - Privacy reveal button (press & hold) to hide selections
+  - Clear/reset button for corrections
+  - Auto-saves on each selection
 
 ### 3. Results Tab
 - Assign each horse to a finishing position using dropdowns
@@ -75,35 +98,40 @@ Create a new event with name and optional description.
 
 All endpoints require `game_manager` role.
 
+### Setup - Players
+- `GET /api/players` - List players in manager's pool
+- `POST /api/players` - Add player to pool
+- `DELETE /api/players/{id}` - Delete player from pool
+
+### Setup - Groups
+- `GET /api/groups` - List manager's groups
+- `POST /api/groups` - Create group
+- `POST /api/groups/import` - Import groups from Game Admin
+- `DELETE /api/groups/{id}` - Delete group
+
+### Setup - Competitors
+- `GET /api/groups/{groupId}/competitors` - List competitors in group
+- `POST /api/groups/{groupId}/competitors` - Add competitor to group
+- `DELETE /api/competitors/{id}` - Delete competitor
+
 ### Events
 - `GET /api/events` - List manager's events
 - `POST /api/events` - Create event
 - `GET /api/events/{id}` - Get event details
-- `PUT /api/events/{id}` - Update event status
 - `DELETE /api/events/{id}` - Delete event
 
-### Horses
-- `GET /api/events/{eventId}/horses` - List horses
-- `POST /api/events/{eventId}/horses` - Add horse
-- `DELETE /api/horses/{id}` - Delete horse
-
-### Players
-- `GET /api/events/{eventId}/players` - List players
-- `POST /api/events/{eventId}/players` - Add player
-- `PUT /api/players/{id}` - Update player (assign horse)
-- `DELETE /api/players/{id}` - Delete player
-
-### Winning Positions
-- `GET /api/events/{eventId}/positions` - List positions
-- `POST /api/events/{eventId}/positions` - Add position
-- `DELETE /api/positions/{id}` - Delete position
+### Participants
+- `PUT /api/participants/{id}` - Assign competitor to participant
+- `DELETE /api/participants/{id}` - Remove participant from event
 
 ### Results
 - `GET /api/events/{eventId}/results` - Get results
-- `POST /api/events/{eventId}/results` - Save results (completes event)
+- `PUT /api/events/{eventId}/results` - Update results
+- `POST /api/events/{eventId}/results` - Save final results
 
-### Report
-- `GET /api/events/{eventId}/report` - Get winners
+### Reports
+- `GET /api/events/{eventId}/report` - Get winners for manager
+- `GET /api/report/{eventId}` - Public report (no auth required)
 
 ## Deployment
 
