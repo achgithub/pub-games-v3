@@ -49,10 +49,26 @@ const DiceRoller: React.FC<DiceRollerProps> = ({ maxDice = 6 }) => {
   };
 
   return (
-    <div className="ah-container--narrow dice-roller-container">
-      <h1 className="dice-roller-title">🎲 Rrroll the Dice</h1>
+    <>
+      {/* App Header Bar */}
+      <div className="ah-app-header">
+        <div className="ah-app-header-left">
+          <h1 className="ah-app-title">🎲 Rrroll the Dice</h1>
+        </div>
+        <div className="ah-app-header-right">
+          <button
+            className="ah-lobby-btn"
+            onClick={() => {
+              window.location.href = `http://${window.location.hostname}:3001`;
+            }}
+          >
+            ← Lobby
+          </button>
+        </div>
+      </div>
 
-      {/* Number of dice controls */}
+      <div className="ah-container--narrow dice-roller-container">
+        {/* Number of dice controls */}
       <div className="dice-controls">
         <div className="dice-control-buttons">
           <button
@@ -97,13 +113,6 @@ const DiceRoller: React.FC<DiceRollerProps> = ({ maxDice = 6 }) => {
         ))}
       </div>
 
-      {/* Total */}
-      {!isRolling && (
-        <div className="dice-total">
-          Total: {diceValues.reduce((a, b) => a + b, 0)}
-        </div>
-      )}
-
       {/* Roll button */}
       <button
         className="ah-btn-primary dice-roll-button"
@@ -112,7 +121,15 @@ const DiceRoller: React.FC<DiceRollerProps> = ({ maxDice = 6 }) => {
       >
         {isRolling ? 'Rolling...' : '🎲 Roll!'}
       </button>
-    </div>
+
+      {/* Total */}
+      {!isRolling && (
+        <div className="dice-total">
+          Total: {diceValues.reduce((a, b) => a + b, 0)}
+        </div>
+      )}
+      </div>
+    </>
   );
 };
 
