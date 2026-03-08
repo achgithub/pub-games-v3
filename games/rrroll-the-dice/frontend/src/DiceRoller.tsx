@@ -67,7 +67,7 @@ const DiceRoller: React.FC<DiceRollerProps> = ({ maxDice = 6 }) => {
         </div>
       </div>
 
-      <div className="ah-container--narrow dice-roller-container">
+      <div className="ah-container ah-container--narrow dice-roller-container">
         {/* Number of dice controls */}
       <div className="dice-controls">
         <div className="dice-control-buttons">
