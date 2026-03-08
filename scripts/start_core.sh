@@ -1,5 +1,5 @@
 #!/bin/bash
-# Start core services: identity-shell, setup-admin, game-admin, tic-tac-toe, dots, last-man-standing, lms-manager, sweepstakes, sweepstakes-knockout, quiz-player, quiz-master, quiz-display, mobile-test, component-library, leaderboard
+# Start core services: identity-shell, setup-admin, game-admin, tic-tac-toe, dots, last-man-standing, lms-manager, sweepstakes, sweepstakes-knockout, quiz-player, quiz-master, quiz-display, mobile-test, component-library, leaderboard, rrroll-the-dice
 
 # Check if tmux session exists
 if tmux has-session -t core 2>/dev/null; then
@@ -72,6 +72,10 @@ tmux send-keys -t core:component-library "cd ~/pub-games-v3/games/component-libr
 tmux new-window -t core -n leaderboard
 tmux send-keys -t core:leaderboard "cd ~/pub-games-v3/games/leaderboard/backend && go run *.go" C-m
 
+# Rrroll the Dice (port 4071)
+tmux new-window -t core -n rrroll-the-dice
+tmux send-keys -t core:rrroll-the-dice "cd ~/pub-games-v3/games/rrroll-the-dice/backend && go run *.go" C-m
+
 echo "Core services starting in tmux session 'core'..."
 echo "Waiting for services to be ready..."
 echo ""
@@ -93,6 +97,7 @@ declare -A SERVICES=(
     ["mobile-test"]="4061"
     ["component-library"]="5010"
     ["leaderboard"]="5030"
+    ["rrroll-the-dice"]="4071"
 )
 
 # Wait for services to start (max 30 seconds)
