@@ -27,7 +27,7 @@
 }
 
 .dice.rolling img {
-  filter: blur(2px);
+  filter: blur(1px);
 }
 
 /* Smooth settle */

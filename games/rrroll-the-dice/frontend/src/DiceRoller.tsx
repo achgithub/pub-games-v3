@@ -13,7 +13,7 @@ const DiceRoller: React.FC<DiceRollerProps> = ({ maxDice = 6 }) => {
     setIsRolling(true);
 
     // Animation: cycle through random values
-    const duration = 1500; // 1.5 seconds
+    const duration = 2000; // 2 seconds
     const interval = 100; // Change every 100ms
     const cycles = duration / interval;
     let count = 0;
