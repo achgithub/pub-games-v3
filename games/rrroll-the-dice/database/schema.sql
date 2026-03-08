@@ -17,7 +17,8 @@ INSERT INTO applications (
     max_players,
     required_roles,
     enabled,
-    display_order
+    display_order,
+    guest_accessible
 ) VALUES (
     'rrroll-the-dice',
     'Rrroll the Dice',
@@ -30,9 +31,10 @@ INSERT INTO applications (
     'none',
     0,
     0,
-    '{}',  -- Public app (guest accessible)
+    '{}',  -- Public app (no role requirements)
     true,
-    50
+    50,
+    true   -- Guest accessible
 )
 ON CONFLICT (id) DO UPDATE SET
     name = EXCLUDED.name,
@@ -40,4 +42,5 @@ ON CONFLICT (id) DO UPDATE SET
     description = EXCLUDED.description,
     url = EXCLUDED.url,
     backend_port = EXCLUDED.backend_port,
+    guest_accessible = EXCLUDED.guest_accessible,
     updated_at = CURRENT_TIMESTAMP;
