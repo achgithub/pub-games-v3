@@ -149,6 +149,8 @@ const SudokuGame: React.FC<SudokuGameProps> = ({ userId, userName }) => {
   const [notesMode, setNotesMode] = useState(false);
   const [notes, setNotes] = useState<CellNotes>({});
   const [showNumberPicker, setShowNumberPicker] = useState(false);
+  const [difficultyFilter, setDifficultyFilter] = useState<'all' | 'easy' | 'medium' | 'hard'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'not-started' | 'in-progress' | 'completed'>('all');
 
   // Check completion whenever board changes
   useEffect(() => {
@@ -284,7 +286,8 @@ const SudokuGame: React.FC<SudokuGameProps> = ({ userId, userName }) => {
       return <div className="sudoku-cell-value">{cellValue}</div>;
     }
 
-    if (cellNotes && cellNotes.size > 0 && !notesMode) {
+    // Show notes if any exist (regardless of current mode)
+    if (cellNotes && cellNotes.size > 0) {
       return (
         <div className="sudoku-cell-notes">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => (
@@ -301,38 +304,67 @@ const SudokuGame: React.FC<SudokuGameProps> = ({ userId, userName }) => {
 
   // If no puzzle selected, show library
   if (!currentPuzzle) {
+    // Filter puzzles
+    const filteredPuzzles = PUZZLE_LIBRARY.filter(p => {
+      if (difficultyFilter !== 'all' && p.difficulty !== difficultyFilter) return false;
+      // Status filter would check against saved progress (future feature)
+      // For now, all puzzles are "not-started"
+      if (statusFilter !== 'all' && statusFilter !== 'not-started') return false;
+      return true;
+    });
+
     return (
       <div className="sudoku-container">
-        <h2 className="sudoku-library-title">Puzzle Library</h2>
-        <p className="sudoku-library-subtitle">Select a puzzle to play</p>
+        <h2 className="sudoku-library-title">Sudoku Library</h2>
 
-        <div className="sudoku-library-grid">
-          {PUZZLE_LIBRARY.map(puzzleData => (
-            <div
-              key={puzzleData.id}
-              className="sudoku-puzzle-card"
-              onClick={() => handleSelectPuzzle(puzzleData)}
+        {/* Filters */}
+        <div className="sudoku-filters">
+          <div className="sudoku-filter-group">
+            <label>Difficulty:</label>
+            <select
+              className="ah-select-fixed"
+              value={difficultyFilter}
+              onChange={(e) => setDifficultyFilter(e.target.value as any)}
             >
-              <div className="sudoku-puzzle-icon">🔢</div>
-              <h3 className="sudoku-puzzle-name">{puzzleData.name}</h3>
-              <span className={`sudoku-puzzle-difficulty ${puzzleData.difficulty}`}>
-                {puzzleData.difficulty.toUpperCase()}
-              </span>
-            </div>
-          ))}
+              <option value="all">All</option>
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="hard">Hard</option>
+            </select>
+          </div>
+          <div className="sudoku-filter-group">
+            <label>Status:</label>
+            <select
+              className="ah-select-fixed"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as any)}
+            >
+              <option value="all">All</option>
+              <option value="not-started">Not Started</option>
+              <option value="in-progress">In Progress</option>
+              <option value="completed">Completed</option>
+            </select>
+          </div>
         </div>
 
-        <div className="ah-card sudoku-instructions">
-          <h3>About Sudoku</h3>
-          <p>
-            Sudoku is a logic-based number puzzle. Fill the 9×9 grid so that each row,
-            column, and 3×3 box contains the numbers 1-9 without repetition.
-          </p>
-          <ul>
-            <li><strong>Easy:</strong> More numbers filled in, good for beginners</li>
-            <li><strong>Medium:</strong> Moderate challenge, requires some strategy</li>
-            <li><strong>Hard:</strong> Fewer clues, requires advanced techniques</li>
-          </ul>
+        {/* Puzzle List */}
+        <div className="sudoku-library-list">
+          {filteredPuzzles.map(puzzleData => (
+            <div
+              key={puzzleData.id}
+              className="sudoku-puzzle-row"
+              onClick={() => handleSelectPuzzle(puzzleData)}
+            >
+              <div className="sudoku-puzzle-number">#{puzzleData.id}</div>
+              <div className="sudoku-puzzle-info">
+                <span className="sudoku-puzzle-name">{puzzleData.name}</span>
+                <span className={`sudoku-puzzle-difficulty ${puzzleData.difficulty}`}>
+                  {puzzleData.difficulty.toUpperCase()}
+                </span>
+              </div>
+              <div className="sudoku-puzzle-status">Not Started</div>
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -377,39 +409,27 @@ const SudokuGame: React.FC<SudokuGameProps> = ({ userId, userName }) => {
 
       {/* Number Picker Popup */}
       {showNumberPicker && selectedCell && (
-        <div className="sudoku-number-picker-overlay" onClick={() => setShowNumberPicker(false)}>
-          <div className="sudoku-number-picker" onClick={(e) => e.stopPropagation()}>
-            <div className="sudoku-picker-title">
-              {notesMode ? 'Select Note' : 'Select Number'}
-            </div>
-            <div className="sudoku-picker-grid">
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => {
-                const [row, col] = selectedCell;
-                const isUsedInRow = board[row].includes(num);
-                const isUsedInCol = board.some(r => r[col] === num);
-                const boxRow = Math.floor(row / 3) * 3;
-                const boxCol = Math.floor(col / 3) * 3;
-                const isUsedInBox = [0, 1, 2].some(r =>
-                  [0, 1, 2].some(c => board[boxRow + r][boxCol + c] === num)
-                );
-                const isDisabled = isUsedInRow || isUsedInCol || isUsedInBox;
-
-                return (
-                  <button
-                    key={num}
-                    className={`sudoku-picker-btn ${isDisabled ? 'disabled' : ''}`}
-                    onClick={() => handleNumberSelect(num)}
-                    disabled={isDisabled && !notesMode}
-                  >
-                    {num}
-                  </button>
-                );
-              })}
-            </div>
-            <button className="ah-btn-outline sudoku-picker-clear" onClick={handleClearCell}>
-              Clear
-            </button>
+        <div className="sudoku-number-picker">
+          <div className="sudoku-picker-title">
+            {notesMode ? 'Select Note' : 'Select Number'}
           </div>
+          <div className="sudoku-picker-grid">
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
+              <button
+                key={num}
+                className="sudoku-picker-btn"
+                onClick={() => handleNumberSelect(num)}
+              >
+                {num}
+              </button>
+            ))}
+          </div>
+          <button className="ah-btn-outline sudoku-picker-clear" onClick={handleClearCell}>
+            Clear
+          </button>
+          <button className="ah-btn-outline sudoku-picker-close" onClick={() => setShowNumberPicker(false)}>
+            Close
+          </button>
         </div>
       )}
 
@@ -427,20 +447,6 @@ const SudokuGame: React.FC<SudokuGameProps> = ({ userId, userName }) => {
         >
           Reset Puzzle
         </button>
-      </div>
-
-      {/* Instructions */}
-      <div className="ah-card sudoku-instructions">
-        <h3>How to Play</h3>
-        <ul>
-          <li>Tap a cell to select a number from the popup</li>
-          <li>Each row must contain 1-9 without repeating</li>
-          <li>Each column must contain 1-9 without repeating</li>
-          <li>Each 3×3 box must contain 1-9 without repeating</li>
-          <li>Used numbers in the popup are greyed out</li>
-          <li>Toggle Notes Mode to add small reminder numbers</li>
-          <li>Conflicting numbers are highlighted in red</li>
-        </ul>
       </div>
     </div>
   );

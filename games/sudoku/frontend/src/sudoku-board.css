@@ -9,52 +9,79 @@
 
 /* Puzzle Library */
 .sudoku-library-title {
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 1.5rem 0;
   font-size: 2rem;
 }
 
-.sudoku-library-subtitle {
-  color: #666;
-  margin: 0 0 2rem 0;
+/* Filters */
+.sudoku-filters {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
 }
 
-.sudoku-library-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
+.sudoku-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sudoku-filter-group label {
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+/* Puzzle List (compact rows) */
+.sudoku-library-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
   margin-bottom: 2rem;
 }
 
-.sudoku-puzzle-card {
+.sudoku-puzzle-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
   background: white;
   border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 1.5rem;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.sudoku-puzzle-card:hover {
+.sudoku-puzzle-row:hover {
   border-color: #0066cc;
-  box-shadow: 0 4px 12px rgba(0, 102, 204, 0.15);
-  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0, 102, 204, 0.15);
 }
 
-.sudoku-puzzle-icon {
-  font-size: 3rem;
-  margin-bottom: 0.5rem;
+.sudoku-puzzle-number {
+  font-weight: bold;
+  color: #666;
+  min-width: 40px;
+}
+
+.sudoku-puzzle-info {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-align: left;
 }
 
 .sudoku-puzzle-name {
-  margin: 0.5rem 0;
-  font-size: 1.25rem;
+  font-weight: bold;
+  font-size: 1rem;
 }
 
 .sudoku-puzzle-difficulty {
   display: inline-block;
-  padding: 0.25rem 0.75rem;
-  border-radius: 12px;
-  font-size: 0.875rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 10px;
+  font-size: 0.75rem;
   font-weight: bold;
 }
 
@@ -71,6 +98,13 @@
 .sudoku-puzzle-difficulty.hard {
   background: #f8d7da;
   color: #721c24;
+}
+
+.sudoku-puzzle-status {
+  color: #666;
+  font-size: 0.9rem;
+  min-width: 100px;
+  text-align: right;
 }
 
 /* Puzzle Header */
@@ -112,7 +146,7 @@
 
 .sudoku-cell {
   aspect-ratio: 1;
-  border: 1px solid #999;
+  border: 1px solid #666;
   background: #fff;
   font-size: clamp(1rem, 4vw, 1.5rem);
   font-weight: bold;
@@ -182,103 +216,77 @@
   visibility: hidden;
 }
 
-/* Thicker borders for 3x3 boxes - FIXED */
-/* Right border for columns 3 and 6 */
-.sudoku-cell:nth-child(3),
-.sudoku-cell:nth-child(6),
-.sudoku-cell:nth-child(12),
-.sudoku-cell:nth-child(15),
-.sudoku-cell:nth-child(21),
-.sudoku-cell:nth-child(24),
-.sudoku-cell:nth-child(30),
-.sudoku-cell:nth-child(33),
-.sudoku-cell:nth-child(39),
-.sudoku-cell:nth-child(42),
-.sudoku-cell:nth-child(48),
-.sudoku-cell:nth-child(51),
-.sudoku-cell:nth-child(57),
-.sudoku-cell:nth-child(60),
-.sudoku-cell:nth-child(66),
-.sudoku-cell:nth-child(69),
-.sudoku-cell:nth-child(75),
-.sudoku-cell:nth-child(78) {
+/* Thicker borders for 3x3 boxes - ALL BORDERS BLACK */
+/* Vertical thick borders after columns 3 and 6 (cells 3, 6, 12, 15, ...) */
+.sudoku-cell:nth-child(9n+3),
+.sudoku-cell:nth-child(9n+6) {
   border-right: 3px solid #000;
 }
 
-/* Bottom border for rows 3 and 6 */
-.sudoku-cell:nth-child(n+19):nth-child(-n+27),
+/* Horizontal thick borders after rows 3 and 6 */
+/* Row 3: cells 19-27 */
+.sudoku-cell:nth-child(n+19):nth-child(-n+27) {
+  border-bottom: 3px solid #000;
+}
+/* Row 6: cells 46-54 */
 .sudoku-cell:nth-child(n+46):nth-child(-n+54) {
   border-bottom: 3px solid #000;
 }
 
-/* Number Picker Popup */
-.sudoku-number-picker-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
+/* Number Picker Popup - NO OVERLAY */
 .sudoku-number-picker {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   background: white;
   border-radius: 8px;
-  padding: 1.5rem;
+  padding: 1rem;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-  max-width: 90vw;
-  max-width: 320px;
+  z-index: 1000;
+  border: 3px solid #0066cc;
 }
 
 .sudoku-picker-title {
-  font-size: 1.2rem;
+  font-size: 1rem;
   font-weight: bold;
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
   text-align: center;
 }
 
 .sudoku-picker-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 0.75rem;
-  margin-bottom: 1rem;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
 }
 
 .sudoku-picker-btn {
   aspect-ratio: 1;
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   font-weight: bold;
   border: 2px solid #0066cc;
   background: white;
   color: #0066cc;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
-  min-height: 60px;
+  min-height: 50px;
+  width: 50px;
 }
 
-.sudoku-picker-btn:hover:not(.disabled) {
+.sudoku-picker-btn:hover {
   background: #0066cc;
   color: white;
   transform: scale(1.05);
 }
 
-.sudoku-picker-btn:active:not(.disabled) {
+.sudoku-picker-btn:active {
   transform: scale(0.95);
 }
 
-.sudoku-picker-btn.disabled {
-  border-color: #ccc;
-  color: #ccc;
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-.sudoku-picker-clear {
+.sudoku-picker-clear,
+.sudoku-picker-close {
   width: 100%;
   margin-top: 0.5rem;
 }
@@ -309,20 +317,6 @@
   border-radius: 8px;
 }
 
-/* Instructions card */
-.sudoku-instructions {
-  margin-top: 2rem;
-  text-align: left;
-}
-
-.sudoku-instructions h3 {
-  margin-top: 0;
-}
-
-.sudoku-instructions ul {
-  margin-bottom: 0;
-}
-
 /* Mobile optimizations */
 @media (max-width: 600px) {
   .sudoku-container {
@@ -330,15 +324,26 @@
   }
 
   .sudoku-picker-grid {
-    gap: 0.5rem;
+    gap: 0.4rem;
   }
 
   .sudoku-picker-btn {
-    min-height: 50px;
-    font-size: 1.25rem;
+    min-height: 45px;
+    width: 45px;
+    font-size: 1.1rem;
   }
 
   .sudoku-number-picker {
-    padding: 1rem;
+    padding: 0.75rem;
+  }
+
+  .sudoku-puzzle-row {
+    padding: 0.5rem 0.75rem;
+  }
+
+  .sudoku-puzzle-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
   }
 }
