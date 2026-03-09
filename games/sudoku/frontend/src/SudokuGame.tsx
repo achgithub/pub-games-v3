@@ -426,7 +426,7 @@ const SudokuGame: React.FC<SudokuGameProps> = ({ userId, userName, token }) => {
           ← Library
         </button>
         <div className="sudoku-current-puzzle">
-          <h2>{currentPuzzle.name}</h2>
+          <h2>Puzzle #{currentPuzzle.puzzleNumber}</h2>
           <span className={`sudoku-puzzle-difficulty ${currentPuzzle.difficulty}`}>
             {currentPuzzle.difficulty.toUpperCase()}
           </span>
