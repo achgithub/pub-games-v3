@@ -152,13 +152,17 @@ const SudokuGame: React.FC<SudokuGameProps> = ({ userId, userName }) => {
 
   // Check completion whenever board changes
   useEffect(() => {
-    if (isComplete(board)) {
+    // Only check if we have a valid board (9x9)
+    if (board.length === 9 && board[0]?.length === 9 && isComplete(board)) {
       setIsPuzzleComplete(true);
       // TODO: Save completion to backend
     }
   }, [board]);
 
   const handleCellClick = (row: number, col: number) => {
+    // Guard against invalid board access
+    if (!puzzle[row]) return;
+
     // Ignore if cell is prefilled
     if (puzzle[row][col] !== 0) return;
 
@@ -247,6 +251,9 @@ const SudokuGame: React.FC<SudokuGameProps> = ({ userId, userName }) => {
   const getCellClass = (row: number, col: number): string => {
     const classes = ['sudoku-cell'];
 
+    // Guard against invalid board access
+    if (!puzzle[row] || !board[row]) return classes.join(' ');
+
     if (puzzle[row][col] !== 0) {
       classes.push('prefilled');
     } else if (board[row][col] !== 0) {
@@ -266,6 +273,9 @@ const SudokuGame: React.FC<SudokuGameProps> = ({ userId, userName }) => {
   };
 
   const renderCellContent = (row: number, col: number) => {
+    // Guard against invalid board access
+    if (!board[row]) return null;
+
     const cellValue = board[row][col];
     const key = `${row}-${col}`;
     const cellNotes = notes[key];
