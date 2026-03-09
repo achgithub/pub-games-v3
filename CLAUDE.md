@@ -1,5 +1,17 @@
 # Pub Games v3 - Project Guide
 
+## Recent Updates (2026-03-09)
+
+**Sudoku Puzzle Management System (NEW):**
+- ✅ **Complete Backend Implementation** - Pure Go generator with backtracking algorithm
+- ✅ **7 API Endpoints** - Puzzle CRUD, progress tracking, auto-generation (admin only)
+- ✅ **Database Schema** - PostgreSQL with JSONB grid storage, 28-day auto-cleanup
+- ✅ **Game Admin Integration** - Manual create, generator, and library tabs
+- ✅ **Progress Tracking** - Auto-save (debounced 2s), resume games, status filtering
+- ✅ **Single-Solution Validation** - Ensures puzzle quality
+- ✅ **Admin Controls** - Create puzzles manually or generate by difficulty
+- ✅ **Public Play** - Anyone can play, authenticated users get progress saved
+
 ## Recent Updates (2026-03-08)
 
 **Group Import Feature (NEW):**
@@ -71,11 +83,11 @@
 
 **Port Allocation:**
 - Identity Shell: 3001
-- Games (4xxx): tic-tac-toe: 4001, dots: 4011, sweepstakes: 4031, lms: 4021, quiz-player: 4041, spoof: 4051, mobile-test: 4061
+- Games (4xxx): tic-tac-toe: 4001, dots: 4011, sweepstakes: 4031, lms: 4021, quiz-player: 4041, spoof: 4051, mobile-test: 4061, sudoku: 4081
 - Admin/Support (5xxx): component-library: 5010, setup-admin: 5020, leaderboard: 5030, display-admin: 5050, display-runtime: 5051, game-admin: 5070, quiz-master: 5080, quiz-display: 5081
 
 **CSS Migration Status:**
-- ✅ Completed: sweepstakes-knockout, lms-manager, dots, tic-tac-toe, component-library
+- ✅ Completed: sweepstakes-knockout, lms-manager, dots, tic-tac-toe, sudoku, component-library
 - ⏳ Remaining: quiz-player, quiz-master, quiz-display, mobile-test (4 apps)
 
 **Known Issues:**
