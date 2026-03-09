@@ -6,7 +6,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/andrew/pub-games-v3/lib/activity-hub-common/auth"
+	"github.com/achgithub/activity-hub-common/auth"
 	"github.com/gorilla/mux"
 )
 
