@@ -215,46 +215,54 @@ const SudokuGame: React.FC<SudokuGameProps> = ({ userId, userName, token }) => {
   };
 
   const handleSelectPuzzle = async (puzzleData: Puzzle) => {
-    // Check if user has saved progress
-    const savedProgress = userProgress.get(puzzleData.id);
+    try {
+      // First, fetch the full puzzle data (including grid)
+      const puzzleRes = await fetch(`/api/puzzles/${puzzleData.id}`);
+      const fullPuzzle = await puzzleRes.json();
 
-    if (savedProgress && !savedProgress.completed) {
-      // Load saved state from backend
-      try {
-        const res = await fetch(`/api/progress?puzzleId=${puzzleData.id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const data = await res.json();
+      // Check if user has saved progress
+      const savedProgress = userProgress.get(puzzleData.id);
 
-        setCurrentPuzzle(puzzleData);
-        setPuzzle(puzzleData.puzzleGrid);
-        setBoard(data.currentState || puzzleData.puzzleGrid);
-        setNotes(
-          data.notes
-            ? Object.fromEntries(
-                Object.entries(data.notes).map(([key, arr]) => [key, new Set(arr as number[])])
-              )
-            : {}
-        );
-        setIsPuzzleComplete(false);
-      } catch (err) {
-        console.error('Failed to load progress:', err);
-        // Fall back to fresh puzzle
-        setCurrentPuzzle(puzzleData);
-        setPuzzle(puzzleData.puzzleGrid);
-        setBoard(puzzleData.puzzleGrid.map(row => [...row]));
+      if (savedProgress && !savedProgress.completed) {
+        // Load saved state from backend
+        try {
+          const res = await fetch(`/api/progress?puzzleId=${puzzleData.id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const data = await res.json();
+
+          setCurrentPuzzle(fullPuzzle);
+          setPuzzle(fullPuzzle.puzzleGrid);
+          setBoard(data.currentState || fullPuzzle.puzzleGrid);
+          setNotes(
+            data.notes
+              ? Object.fromEntries(
+                  Object.entries(data.notes).map(([key, arr]) => [key, new Set(arr as number[])])
+                )
+              : {}
+          );
+          setIsPuzzleComplete(false);
+        } catch (err) {
+          console.error('Failed to load progress:', err);
+          // Fall back to fresh puzzle
+          setCurrentPuzzle(fullPuzzle);
+          setPuzzle(fullPuzzle.puzzleGrid);
+          setBoard(fullPuzzle.puzzleGrid.map((row: number[]) => [...row]));
+          setNotes({});
+        }
+      } else {
+        // Start fresh
+        setCurrentPuzzle(fullPuzzle);
+        setPuzzle(fullPuzzle.puzzleGrid);
+        setBoard(fullPuzzle.puzzleGrid.map((row: number[]) => [...row]));
         setNotes({});
+        setIsPuzzleComplete(savedProgress?.completed || false);
       }
-    } else {
-      // Start fresh
-      setCurrentPuzzle(puzzleData);
-      setPuzzle(puzzleData.puzzleGrid);
-      setBoard(puzzleData.puzzleGrid.map(row => [...row]));
-      setNotes({});
-      setIsPuzzleComplete(savedProgress?.completed || false);
-    }
 
-    setSelectedCell(null);
+      setSelectedCell(null);
+    } catch (err) {
+      console.error('Failed to load puzzle:', err);
+    }
   };
 
   const handleBackToLibrary = () => {
