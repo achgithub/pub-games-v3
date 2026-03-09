@@ -3,16 +3,20 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
 
+	authlib "github.com/achgithub/activity-hub-common/auth"
+	"github.com/achgithub/activity-hub-common/database"
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
 )
 
 var db *sql.DB
+
+const APP_NAME = "Sudoku"
 
 type Config struct {
 	AppName string `json:"appName"`
@@ -20,42 +24,60 @@ type Config struct {
 }
 
 func main() {
-	// Database connection (optional - remove if not needed)
-	dbHost := getEnv("DB_HOST", "localhost")
-	dbPort := getEnv("DB_PORT", "5555")
-	dbUser := getEnv("DB_USER", "activityhub")
-	dbPass := getEnv("DB_PASS", "pubgames")
-	dbName := getEnv("DB_NAME", "sudoku_db")
+	log.Printf("🎯 %s Backend Starting", APP_NAME)
 
-	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		dbHost, dbPort, dbUser, dbPass, dbName)
-
+	// Initialize app database
 	var err error
-	db, err = sql.Open("postgres", connStr)
+	db, err = database.InitDatabase("sudoku_db")
 	if err != nil {
-		log.Printf("Warning: Database connection failed: %v", err)
-		log.Println("Continuing without database...")
-	} else {
-		defer db.Close()
-		if err = db.Ping(); err != nil {
-			log.Printf("Warning: Database ping failed: %v", err)
-		} else {
-			log.Println("Database connected successfully")
-		}
+		log.Fatal("Failed to connect to app database:", err)
 	}
+	defer db.Close()
 
+	// Initialize identity database (for authentication)
+	identityDB, err := database.InitIdentityDatabase()
+	if err != nil {
+		log.Fatal("Failed to connect to identity database:", err)
+	}
+	defer identityDB.Close()
+
+	// Run cleanup of stale progress on startup
+	go cleanupStaleProgress()
+
+	// Build authentication middleware
+	authMiddleware := authlib.Middleware(identityDB)
+
+	// Setup router
 	r := mux.NewRouter()
 
-	// API routes
+	// Public endpoints
 	r.HandleFunc("/api/config", handleConfig).Methods("GET")
 	r.HandleFunc("/api/ping", handlePing).Methods("GET")
+	r.HandleFunc("/api/puzzles", handleListPuzzles).Methods("GET")
+	r.HandleFunc("/api/puzzles/{id}", handleGetPuzzle).Methods("GET")
+
+	// Authenticated endpoints
+	r.Handle("/api/progress", authMiddleware(http.HandlerFunc(handleGetProgress))).Methods("GET")
+	r.Handle("/api/progress", authMiddleware(http.HandlerFunc(handleSaveProgress))).Methods("POST")
+
+	// Admin endpoints (puzzle creation/generation)
+	r.Handle("/api/puzzles", authMiddleware(http.HandlerFunc(handleCreatePuzzle))).Methods("POST")
+	r.Handle("/api/puzzles/generate", authMiddleware(http.HandlerFunc(handleGeneratePuzzle))).Methods("POST")
 
 	// Serve static frontend files
-	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./static")))
+	staticDir := "./static"
+	r.PathPrefix("/").Handler(http.FileServer(http.Dir(staticDir)))
+
+	// CORS for local development
+	corsHandler := handlers.CORS(
+		handlers.AllowedOrigins([]string{"*"}),
+		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
+		handlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
+	)(r)
 
 	port := getEnv("PORT", "4081")
-	log.Printf("sudoku server starting on port %s", port)
-	log.Fatal(http.ListenAndServe(":"+port, r))
+	log.Printf("✅ %s server running on port %s", APP_NAME, port)
+	log.Fatal(http.ListenAndServe(":"+port, corsHandler))
 }
 
 func handleConfig(w http.ResponseWriter, r *http.Request) {

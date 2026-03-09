@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 interface SudokuGameProps {
   userId: string;
   userName: string;
+  token: string;
 }
 
 interface CellNotes {
@@ -52,95 +53,20 @@ function isComplete(board: number[][]): boolean {
 // Puzzle library with different difficulties
 interface Puzzle {
   id: number;
-  name: string;
+  puzzleNumber: number;
   difficulty: 'easy' | 'medium' | 'hard';
-  grid: number[][];
+  puzzleGrid: number[][];
+  clueCount?: number;
 }
 
-const PUZZLE_LIBRARY: Puzzle[] = [
-  {
-    id: 1,
-    name: 'Easy Puzzle 1',
-    difficulty: 'easy',
-    grid: [
-      [5, 3, 0, 0, 7, 0, 0, 0, 0],
-      [6, 0, 0, 1, 9, 5, 0, 0, 0],
-      [0, 9, 8, 0, 0, 0, 0, 6, 0],
-      [8, 0, 0, 0, 6, 0, 0, 0, 3],
-      [4, 0, 0, 8, 0, 3, 0, 0, 1],
-      [7, 0, 0, 0, 2, 0, 0, 0, 6],
-      [0, 6, 0, 0, 0, 0, 2, 8, 0],
-      [0, 0, 0, 4, 1, 9, 0, 0, 5],
-      [0, 0, 0, 0, 8, 0, 0, 7, 9]
-    ]
-  },
-  {
-    id: 2,
-    name: 'Easy Puzzle 2',
-    difficulty: 'easy',
-    grid: [
-      [0, 0, 0, 2, 6, 0, 7, 0, 1],
-      [6, 8, 0, 0, 7, 0, 0, 9, 0],
-      [1, 9, 0, 0, 0, 4, 5, 0, 0],
-      [8, 2, 0, 1, 0, 0, 0, 4, 0],
-      [0, 0, 4, 6, 0, 2, 9, 0, 0],
-      [0, 5, 0, 0, 0, 3, 0, 2, 8],
-      [0, 0, 9, 3, 0, 0, 0, 7, 4],
-      [0, 4, 0, 0, 5, 0, 0, 3, 6],
-      [7, 0, 3, 0, 1, 8, 0, 0, 0]
-    ]
-  },
-  {
-    id: 3,
-    name: 'Medium Puzzle 1',
-    difficulty: 'medium',
-    grid: [
-      [0, 2, 0, 6, 0, 8, 0, 0, 0],
-      [5, 8, 0, 0, 0, 9, 7, 0, 0],
-      [0, 0, 0, 0, 4, 0, 0, 0, 0],
-      [3, 7, 0, 0, 0, 0, 5, 0, 0],
-      [6, 0, 0, 0, 0, 0, 0, 0, 4],
-      [0, 0, 8, 0, 0, 0, 0, 1, 3],
-      [0, 0, 0, 0, 2, 0, 0, 0, 0],
-      [0, 0, 9, 8, 0, 0, 0, 3, 6],
-      [0, 0, 0, 3, 0, 6, 0, 9, 0]
-    ]
-  },
-  {
-    id: 4,
-    name: 'Medium Puzzle 2',
-    difficulty: 'medium',
-    grid: [
-      [0, 0, 0, 0, 0, 0, 6, 8, 0],
-      [0, 0, 0, 0, 7, 3, 0, 0, 9],
-      [3, 0, 9, 0, 0, 0, 0, 4, 5],
-      [4, 9, 0, 0, 0, 0, 0, 0, 0],
-      [8, 0, 3, 0, 5, 0, 9, 0, 2],
-      [0, 0, 0, 0, 0, 0, 0, 3, 6],
-      [9, 6, 0, 0, 0, 0, 3, 0, 8],
-      [7, 0, 0, 6, 8, 0, 0, 0, 0],
-      [0, 2, 8, 0, 0, 0, 0, 0, 0]
-    ]
-  },
-  {
-    id: 5,
-    name: 'Hard Puzzle 1',
-    difficulty: 'hard',
-    grid: [
-      [0, 0, 0, 6, 0, 0, 4, 0, 0],
-      [7, 0, 0, 0, 0, 3, 6, 0, 0],
-      [0, 0, 0, 0, 9, 1, 0, 8, 0],
-      [0, 0, 0, 0, 0, 0, 0, 0, 0],
-      [0, 5, 0, 1, 8, 0, 0, 0, 3],
-      [0, 0, 0, 3, 0, 6, 0, 4, 5],
-      [0, 4, 0, 2, 0, 0, 0, 6, 0],
-      [9, 0, 3, 0, 0, 0, 0, 0, 0],
-      [0, 2, 0, 0, 0, 0, 1, 0, 0]
-    ]
-  }
-];
+interface ProgressData {
+  puzzleId: number;
+  completed: boolean;
+  startedAt: string;
+  lastAccessed: string;
+}
 
-const SudokuGame: React.FC<SudokuGameProps> = ({ userId, userName }) => {
+const SudokuGame: React.FC<SudokuGameProps> = ({ userId, userName, token }) => {
   const [currentPuzzle, setCurrentPuzzle] = useState<Puzzle | null>(null);
   const [puzzle, setPuzzle] = useState<number[][]>([]);
   const [board, setBoard] = useState<number[][]>([]);
@@ -152,14 +78,79 @@ const SudokuGame: React.FC<SudokuGameProps> = ({ userId, userName }) => {
   const [difficultyFilter, setDifficultyFilter] = useState<'all' | 'easy' | 'medium' | 'hard'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'not-started' | 'in-progress' | 'completed'>('all');
 
+  // Backend integration states
+  const [puzzles, setPuzzles] = useState<Puzzle[]>([]);
+  const [userProgress, setUserProgress] = useState<Map<number, ProgressData>>(new Map());
+  const [loading, setLoading] = useState(true);
+
   // Check completion whenever board changes
   useEffect(() => {
     // Only check if we have a valid board (9x9)
     if (board.length === 9 && board[0]?.length === 9 && isComplete(board)) {
       setIsPuzzleComplete(true);
-      // TODO: Save completion to backend
     }
   }, [board]);
+
+  // Load puzzles and user progress on mount
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        // Load all puzzles
+        const puzzlesRes = await fetch('/api/puzzles');
+        const puzzlesData = await puzzlesRes.json();
+
+        // Load user progress
+        const progressRes = await fetch('/api/progress', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const progressData = await progressRes.json();
+
+        // Build progress map
+        const progressMap = new Map<number, ProgressData>();
+        progressData.progress?.forEach((p: ProgressData) => {
+          progressMap.set(p.puzzleId, p);
+        });
+
+        setPuzzles(puzzlesData.puzzles || []);
+        setUserProgress(progressMap);
+      } catch (err) {
+        console.error('Failed to load data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [token]);
+
+  // Auto-save progress (debounced)
+  useEffect(() => {
+    if (!currentPuzzle || board.length === 0) return;
+
+    const timeoutId = setTimeout(async () => {
+      try {
+        await fetch('/api/progress', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            puzzleId: currentPuzzle.id,
+            currentState: board,
+            notes: Object.fromEntries(
+              Object.entries(notes).map(([key, value]) => [key, Array.from(value)])
+            ),
+            completed: isPuzzleComplete,
+          }),
+        });
+      } catch (err) {
+        console.error('Failed to save progress:', err);
+      }
+    }, 2000); // Save 2 seconds after last change
+
+    return () => clearTimeout(timeoutId);
+  }, [board, notes, isPuzzleComplete, currentPuzzle, token]);
 
   const handleCellClick = (row: number, col: number) => {
     // Guard against invalid board access
@@ -223,13 +214,47 @@ const SudokuGame: React.FC<SudokuGameProps> = ({ userId, userName }) => {
     setShowNumberPicker(false);
   };
 
-  const handleSelectPuzzle = (puzzleData: Puzzle) => {
-    setCurrentPuzzle(puzzleData);
-    setPuzzle(puzzleData.grid.map(row => [...row]));
-    setBoard(puzzleData.grid.map(row => [...row]));
-    setIsPuzzleComplete(false);
+  const handleSelectPuzzle = async (puzzleData: Puzzle) => {
+    // Check if user has saved progress
+    const savedProgress = userProgress.get(puzzleData.id);
+
+    if (savedProgress && !savedProgress.completed) {
+      // Load saved state from backend
+      try {
+        const res = await fetch(`/api/progress?puzzleId=${puzzleData.id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+
+        setCurrentPuzzle(puzzleData);
+        setPuzzle(puzzleData.puzzleGrid);
+        setBoard(data.currentState || puzzleData.puzzleGrid);
+        setNotes(
+          data.notes
+            ? Object.fromEntries(
+                Object.entries(data.notes).map(([key, arr]) => [key, new Set(arr as number[])])
+              )
+            : {}
+        );
+        setIsPuzzleComplete(false);
+      } catch (err) {
+        console.error('Failed to load progress:', err);
+        // Fall back to fresh puzzle
+        setCurrentPuzzle(puzzleData);
+        setPuzzle(puzzleData.puzzleGrid);
+        setBoard(puzzleData.puzzleGrid.map(row => [...row]));
+        setNotes({});
+      }
+    } else {
+      // Start fresh
+      setCurrentPuzzle(puzzleData);
+      setPuzzle(puzzleData.puzzleGrid);
+      setBoard(puzzleData.puzzleGrid.map(row => [...row]));
+      setNotes({});
+      setIsPuzzleComplete(savedProgress?.completed || false);
+    }
+
     setSelectedCell(null);
-    setNotes({});
   };
 
   const handleBackToLibrary = () => {
@@ -304,14 +329,28 @@ const SudokuGame: React.FC<SudokuGameProps> = ({ userId, userName }) => {
 
   // If no puzzle selected, show library
   if (!currentPuzzle) {
+    // Get puzzle status
+    const getPuzzleStatus = (puzzleId: number): 'not-started' | 'in-progress' | 'completed' => {
+      const progress = userProgress.get(puzzleId);
+      if (!progress) return 'not-started';
+      return progress.completed ? 'completed' : 'in-progress';
+    };
+
     // Filter puzzles
-    const filteredPuzzles = PUZZLE_LIBRARY.filter(p => {
+    const filteredPuzzles = puzzles.filter(p => {
       if (difficultyFilter !== 'all' && p.difficulty !== difficultyFilter) return false;
-      // Status filter would check against saved progress (future feature)
-      // For now, all puzzles are "not-started"
-      if (statusFilter !== 'all' && statusFilter !== 'not-started') return false;
+      if (statusFilter !== 'all' && getPuzzleStatus(p.id) !== statusFilter) return false;
       return true;
     });
+
+    if (loading) {
+      return (
+        <div className="sudoku-container">
+          <h2 className="sudoku-library-title">Sudoku Library</h2>
+          <p className="ah-meta">Loading puzzles...</p>
+        </div>
+      );
+    }
 
     return (
       <div className="sudoku-container">
@@ -349,20 +388,27 @@ const SudokuGame: React.FC<SudokuGameProps> = ({ userId, userName }) => {
 
         {/* Puzzle List */}
         <div className="sudoku-library-list">
-          {filteredPuzzles.map(puzzleData => (
-            <div
-              key={puzzleData.id}
-              className="sudoku-puzzle-row"
-              onClick={() => handleSelectPuzzle(puzzleData)}
-            >
-              <div className="sudoku-puzzle-number">#{puzzleData.id}</div>
-              <div className="sudoku-puzzle-info">
-                <span className="sudoku-puzzle-name">{puzzleData.name}</span>
-                <span className={`sudoku-puzzle-difficulty ${puzzleData.difficulty}`}>
-                  {puzzleData.difficulty.toUpperCase()}
-                </span>
-              </div>
-              <div className="sudoku-puzzle-status">Not Started</div>
+          {filteredPuzzles.length === 0 ? (
+            <p className="ah-meta">No puzzles found. Adjust filters or ask an admin to create puzzles.</p>
+          ) : (
+            filteredPuzzles.map(puzzleData => {
+              const status = getPuzzleStatus(puzzleData.id);
+              const statusText = status === 'not-started' ? 'Not Started' : status === 'in-progress' ? 'In Progress' : 'Completed';
+
+              return (
+                <div
+                  key={puzzleData.id}
+                  className="sudoku-puzzle-row"
+                  onClick={() => handleSelectPuzzle(puzzleData)}
+                >
+                  <div className="sudoku-puzzle-number">#{puzzleData.puzzleNumber}</div>
+                  <div className="sudoku-puzzle-info">
+                    <span className="sudoku-puzzle-name">Puzzle #{puzzleData.puzzleNumber}</span>
+                    <span className={`sudoku-puzzle-difficulty ${puzzleData.difficulty}`}>
+                      {puzzleData.difficulty.toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="sudoku-puzzle-status">{statusText}</div>
             </div>
           ))}
         </div>

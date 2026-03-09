@@ -38,7 +38,7 @@ function App() {
       </div>
 
       <div className="ah-container ah-container--narrow">
-        <SudokuGame userId={userId} userName={userName} />
+        <SudokuGame userId={userId} userName={userName} token={token} />
       </div>
     </>
   );
