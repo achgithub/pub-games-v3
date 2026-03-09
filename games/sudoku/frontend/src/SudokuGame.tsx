@@ -409,8 +409,10 @@ const SudokuGame: React.FC<SudokuGameProps> = ({ userId, userName, token }) => {
                     </span>
                   </div>
                   <div className="sudoku-puzzle-status">{statusText}</div>
-            </div>
-          ))}
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
     );
