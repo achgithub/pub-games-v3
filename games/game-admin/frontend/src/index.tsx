@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import './sudoku-board.css'; // Sudoku grid rendering (game board CSS)
 
 // Inject shared Activity Hub styles from identity-shell
 const link = document.createElement('link');

@@ -99,11 +99,12 @@ function useApi(token: string) {
 
 // --- Main App ---
 
-type Module = 'setup' | 'lms' | 'sweepstakes' | 'quiz';
+type Module = 'setup' | 'lms' | 'sweepstakes' | 'quiz' | 'sudoku';
 type LMSTab = 'fixtures' | 'games' | 'rounds' | 'results' | 'predictions';
 type SweepTab = 'sw-competitions' | 'sw-entries';
 type QuizTab = 'quiz-media' | 'quiz-questions' | 'quiz-packs';
-type Tab = LMSTab | SweepTab | QuizTab;
+type SudokuTab = 'sudoku-create' | 'sudoku-generate' | 'sudoku-library';
+type Tab = LMSTab | SweepTab | QuizTab | SudokuTab;
 
 function App() {
   const { userId, token } = useUrlParams();
@@ -165,7 +166,7 @@ function App() {
       <div className="ah-container">
         {/* Module switcher */}
         <div className="ah-tabs">
-          {(['setup', 'lms', 'sweepstakes', 'quiz'] as Module[]).map(mod => (
+          {(['setup', 'lms', 'sweepstakes', 'quiz', 'sudoku'] as Module[]).map(mod => (
             <button
               key={mod}
               className={`ah-tab${activeModule === mod ? ' active' : ''}`}
@@ -174,9 +175,10 @@ function App() {
                 if (mod === 'lms') setActiveTab('fixtures');
                 else if (mod === 'sweepstakes') setActiveTab('sw-competitions');
                 else if (mod === 'quiz') setActiveTab('quiz-media');
+                else if (mod === 'sudoku') setActiveTab('sudoku-create');
               }}
             >
-              {mod === 'setup' ? '⚙️ Setup' : mod === 'lms' ? 'Last Man Standing' : mod === 'sweepstakes' ? 'Sweepstakes' : 'Quiz'}
+              {mod === 'setup' ? '⚙️ Setup' : mod === 'lms' ? 'Last Man Standing' : mod === 'sweepstakes' ? 'Sweepstakes' : mod === 'quiz' ? 'Quiz' : 'Sudoku'}
             </button>
           ))}
         </div>
@@ -262,6 +264,27 @@ function App() {
           {activeTab === 'quiz-media' && <QuizMediaTab api={api} isReadOnly={isReadOnly} />}
           {activeTab === 'quiz-questions' && <QuizQuestionsTab api={api} isReadOnly={isReadOnly} />}
           {activeTab === 'quiz-packs' && <QuizPacksTab api={api} isReadOnly={isReadOnly} />}
+        </>
+      )}
+
+      {/* Sudoku module */}
+      {activeModule === 'sudoku' && (
+        <>
+          <div className="ah-tabs">
+            {([['sudoku-create', 'Manual Create'], ['sudoku-generate', 'Generator'], ['sudoku-library', 'Library']] as [SudokuTab, string][]).map(([tab, label]) => (
+              <button
+                key={tab}
+                className={`ah-tab${activeTab === tab ? ' active' : ''}`}
+                onClick={() => setActiveTab(tab)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {activeTab === 'sudoku-create' && <SudokuCreateTab api={api} isReadOnly={isReadOnly} />}
+          {activeTab === 'sudoku-generate' && <SudokuGenerateTab api={api} isReadOnly={isReadOnly} />}
+          {activeTab === 'sudoku-library' && <SudokuLibraryTab api={api} isReadOnly={isReadOnly} />}
         </>
       )}
     </div>
@@ -2458,6 +2481,327 @@ function SetupTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isReadO
           })
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// --- Sudoku Tabs ---
+
+// Simple backtracking Sudoku solver
+function solveSudoku(board: number[][]): number[][] | null {
+  const grid = board.map(row => [...row]);
+
+  function isValid(row: number, col: number, num: number): boolean {
+    // Check row
+    for (let j = 0; j < 9; j++) {
+      if (grid[row][j] === num) return false;
+    }
+    // Check column
+    for (let i = 0; i < 9; i++) {
+      if (grid[i][col] === num) return false;
+    }
+    // Check 3x3 box
+    const boxRow = Math.floor(row / 3) * 3;
+    const boxCol = Math.floor(col / 3) * 3;
+    for (let i = boxRow; i < boxRow + 3; i++) {
+      for (let j = boxCol; j < boxCol + 3; j++) {
+        if (grid[i][j] === num) return false;
+      }
+    }
+    return true;
+  }
+
+  function solve(): boolean {
+    for (let row = 0; row < 9; row++) {
+      for (let col = 0; col < 9; col++) {
+        if (grid[row][col] === 0) {
+          for (let num = 1; num <= 9; num++) {
+            if (isValid(row, col, num)) {
+              grid[row][col] = num;
+              if (solve()) return true;
+              grid[row][col] = 0;
+            }
+          }
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  return solve() ? grid : null;
+}
+
+function SudokuCreateTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isReadOnly: boolean }) {
+  const [puzzleNumber, setPuzzleNumber] = useState('');
+  const [difficulty, setDifficulty] = useState('easy');
+  const [grid, setGrid] = useState<number[][]>(
+    Array(9).fill(null).map(() => Array(9).fill(0))
+  );
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const handleCellChange = (row: number, col: number, value: string) => {
+    const num = value === '' ? 0 : parseInt(value, 10);
+    if (isNaN(num) || num < 0 || num > 9) return;
+
+    const newGrid = grid.map(r => [...r]);
+    newGrid[row][col] = num;
+    setGrid(newGrid);
+  };
+
+  const handleSave = async () => {
+    if (!puzzleNumber || parseInt(puzzleNumber) <= 0) {
+      setError('Puzzle number must be positive');
+      return;
+    }
+
+    // Auto-generate solution using backtracking solver
+    const solution = solveSudoku(grid);
+    if (!solution) {
+      setError('Invalid puzzle - no solution exists');
+      return;
+    }
+
+    try {
+      const data = await api('http://' + window.location.hostname + ':4081/api/puzzles', {
+        method: 'POST',
+        body: JSON.stringify({
+          puzzleNumber: parseInt(puzzleNumber),
+          difficulty,
+          puzzleGrid: grid,
+          solutionGrid: solution,
+        }),
+      });
+
+      setSuccess(`Puzzle #${data.number} created successfully`);
+      setPuzzleNumber('');
+      setGrid(Array(9).fill(null).map(() => Array(9).fill(0)));
+      setTimeout(() => setSuccess(null), 5000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create puzzle');
+    }
+  };
+
+  const handleClear = () => {
+    setGrid(Array(9).fill(null).map(() => Array(9).fill(0)));
+  };
+
+  return (
+    <div>
+      {error && <div className="ah-banner ah-banner--error" onClick={() => setError(null)}>{error}</div>}
+      {success && <div className="ah-banner ah-banner--success">{success}</div>}
+
+      <div className="ah-card">
+        <h3 className="ah-section-title">Manual Puzzle Creation</h3>
+
+        <div className="ah-flex gap-3 mb-3">
+          <div>
+            <label className="ah-label">Puzzle Number:</label>
+            <input
+              type="number"
+              className="ah-input"
+              value={puzzleNumber}
+              onChange={e => setPuzzleNumber(e.target.value)}
+              placeholder="e.g. 101"
+              disabled={isReadOnly}
+            />
+          </div>
+          <div>
+            <label className="ah-label">Difficulty:</label>
+            <select
+              className="ah-select"
+              value={difficulty}
+              onChange={e => setDifficulty(e.target.value)}
+              disabled={isReadOnly}
+            >
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="hard">Hard</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="sudoku-admin-grid-container">
+          <div className="sudoku-admin-grid">
+            {grid.map((row, rowIndex) =>
+              row.map((cell, colIndex) => (
+                <input
+                  key={`${rowIndex}-${colIndex}`}
+                  type="number"
+                  min="0"
+                  max="9"
+                  value={cell === 0 ? '' : cell}
+                  onChange={e => handleCellChange(rowIndex, colIndex, e.target.value)}
+                  disabled={isReadOnly}
+                  className="sudoku-admin-cell"
+                  data-row={rowIndex}
+                  data-col={colIndex}
+                />
+              ))
+            )}
+          </div>
+        </div>
+
+        <div className="ah-flex gap-2">
+          <button
+            className="ah-btn-primary"
+            onClick={handleSave}
+            disabled={isReadOnly || !puzzleNumber}
+          >
+            Save Puzzle
+          </button>
+          <button
+            className="ah-btn-outline"
+            onClick={handleClear}
+            disabled={isReadOnly}
+          >
+            Clear Grid
+          </button>
+        </div>
+
+        <p className="ah-meta mt-3">
+          Enter 0 or leave blank for empty cells. The solution will be auto-generated and validated.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function SudokuGenerateTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isReadOnly: boolean }) {
+  const [difficulty, setDifficulty] = useState('easy');
+  const [generating, setGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const handleGenerate = async () => {
+    setGenerating(true);
+    setError(null);
+
+    try {
+      const data = await api('http://' + window.location.hostname + ':4081/api/puzzles/generate', {
+        method: 'POST',
+        body: JSON.stringify({ difficulty }),
+      });
+
+      setSuccess(`Generated puzzle #${data.puzzleNumber} (${difficulty})`);
+      setTimeout(() => setSuccess(null), 5000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to generate puzzle');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  return (
+    <div>
+      {error && <div className="ah-banner ah-banner--error" onClick={() => setError(null)}>{error}</div>}
+      {success && <div className="ah-banner ah-banner--success">{success}</div>}
+
+      <div className="ah-card">
+        <h3 className="ah-section-title">Puzzle Generator</h3>
+        <p className="ah-meta">Automatically generate valid Sudoku puzzles with guaranteed single solution.</p>
+
+        <div className="mt-3">
+          <label className="ah-label">Difficulty:</label>
+          <select
+            className="ah-select"
+            value={difficulty}
+            onChange={e => setDifficulty(e.target.value)}
+            disabled={isReadOnly || generating}
+          >
+            <option value="easy">Easy (45-50 clues)</option>
+            <option value="medium">Medium (30-40 clues)</option>
+            <option value="hard">Hard (17-30 clues)</option>
+          </select>
+        </div>
+
+        <button
+          className="ah-btn-primary mt-3"
+          onClick={handleGenerate}
+          disabled={isReadOnly || generating}
+        >
+          {generating ? 'Generating...' : 'Generate Puzzle'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+interface Puzzle {
+  id: number;
+  puzzleNumber: number;
+  difficulty: string;
+  clueCount: number;
+  createdAt: string;
+}
+
+function SudokuLibraryTab({ api, isReadOnly }: { api: ReturnType<typeof useApi>; isReadOnly: boolean }) {
+  const [puzzles, setPuzzles] = useState<Puzzle[]>([]);
+  const [difficultyFilter, setDifficultyFilter] = useState('all');
+  const [error, setError] = useState<string | null>(null);
+
+  const loadPuzzles = useCallback(async () => {
+    try {
+      const path = difficultyFilter === 'all'
+        ? 'http://' + window.location.hostname + ':4081/api/puzzles'
+        : 'http://' + window.location.hostname + ':4081/api/puzzles?difficulty=' + difficultyFilter;
+      const data = await fetch(path).then(res => res.json());
+      setPuzzles(data.puzzles || []);
+    } catch (err) {
+      setError('Failed to load puzzles');
+    }
+  }, [difficultyFilter]);
+
+  useEffect(() => {
+    loadPuzzles();
+  }, [loadPuzzles]);
+
+  return (
+    <div>
+      {error && <div className="ah-banner ah-banner--error" onClick={() => setError(null)}>{error}</div>}
+
+      <div className="ah-card">
+        <h3 className="ah-section-title">Puzzle Library</h3>
+
+        <div className="mb-3">
+          <label className="ah-label">Filter by difficulty:</label>
+          <select
+            className="ah-select"
+            value={difficultyFilter}
+            onChange={e => setDifficultyFilter(e.target.value)}
+          >
+            <option value="all">All</option>
+            <option value="easy">Easy</option>
+            <option value="medium">Medium</option>
+            <option value="hard">Hard</option>
+          </select>
+        </div>
+
+        {puzzles.length === 0 ? (
+          <p className="ah-meta">No puzzles found. Create or generate some puzzles first.</p>
+        ) : (
+          <div className="ah-list">
+            {puzzles.map(puzzle => (
+              <div key={puzzle.id} className="ah-list-item">
+                <div>
+                  <strong>#{puzzle.puzzleNumber}</strong>
+                  <span className={`ah-badge ah-badge--${
+                    puzzle.difficulty === 'easy' ? 'success' :
+                    puzzle.difficulty === 'medium' ? 'warning' : 'danger'
+                  }`}>
+                    {puzzle.difficulty.toUpperCase()}
+                  </span>
+                </div>
+                <div className="ah-flex gap-3">
+                  <span className="ah-meta m-0">{puzzle.clueCount} clues</span>
+                  <span className="ah-meta m-0">{new Date(puzzle.createdAt).toLocaleDateString()}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
