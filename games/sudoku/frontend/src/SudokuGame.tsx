@@ -1,8 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface SudokuGameProps {
   userId: string;
   userName: string;
+}
+
+interface CellNotes {
+  [key: string]: Set<number>; // "row-col": Set of note numbers
 }
 
 // Helper: Check if a number is valid in a position
@@ -45,52 +49,106 @@ function isComplete(board: number[][]): boolean {
   return true;
 }
 
-// Sample puzzle (easy difficulty)
-const SAMPLE_PUZZLE = [
-  [5, 3, 0, 0, 7, 0, 0, 0, 0],
-  [6, 0, 0, 1, 9, 5, 0, 0, 0],
-  [0, 9, 8, 0, 0, 0, 0, 6, 0],
-  [8, 0, 0, 0, 6, 0, 0, 0, 3],
-  [4, 0, 0, 8, 0, 3, 0, 0, 1],
-  [7, 0, 0, 0, 2, 0, 0, 0, 6],
-  [0, 6, 0, 0, 0, 0, 2, 8, 0],
-  [0, 0, 0, 4, 1, 9, 0, 0, 5],
-  [0, 0, 0, 0, 8, 0, 0, 7, 9]
+// Puzzle library with different difficulties
+interface Puzzle {
+  id: number;
+  name: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+  grid: number[][];
+}
+
+const PUZZLE_LIBRARY: Puzzle[] = [
+  {
+    id: 1,
+    name: 'Easy Puzzle 1',
+    difficulty: 'easy',
+    grid: [
+      [5, 3, 0, 0, 7, 0, 0, 0, 0],
+      [6, 0, 0, 1, 9, 5, 0, 0, 0],
+      [0, 9, 8, 0, 0, 0, 0, 6, 0],
+      [8, 0, 0, 0, 6, 0, 0, 0, 3],
+      [4, 0, 0, 8, 0, 3, 0, 0, 1],
+      [7, 0, 0, 0, 2, 0, 0, 0, 6],
+      [0, 6, 0, 0, 0, 0, 2, 8, 0],
+      [0, 0, 0, 4, 1, 9, 0, 0, 5],
+      [0, 0, 0, 0, 8, 0, 0, 7, 9]
+    ]
+  },
+  {
+    id: 2,
+    name: 'Easy Puzzle 2',
+    difficulty: 'easy',
+    grid: [
+      [0, 0, 0, 2, 6, 0, 7, 0, 1],
+      [6, 8, 0, 0, 7, 0, 0, 9, 0],
+      [1, 9, 0, 0, 0, 4, 5, 0, 0],
+      [8, 2, 0, 1, 0, 0, 0, 4, 0],
+      [0, 0, 4, 6, 0, 2, 9, 0, 0],
+      [0, 5, 0, 0, 0, 3, 0, 2, 8],
+      [0, 0, 9, 3, 0, 0, 0, 7, 4],
+      [0, 4, 0, 0, 5, 0, 0, 3, 6],
+      [7, 0, 3, 0, 1, 8, 0, 0, 0]
+    ]
+  },
+  {
+    id: 3,
+    name: 'Medium Puzzle 1',
+    difficulty: 'medium',
+    grid: [
+      [0, 2, 0, 6, 0, 8, 0, 0, 0],
+      [5, 8, 0, 0, 0, 9, 7, 0, 0],
+      [0, 0, 0, 0, 4, 0, 0, 0, 0],
+      [3, 7, 0, 0, 0, 0, 5, 0, 0],
+      [6, 0, 0, 0, 0, 0, 0, 0, 4],
+      [0, 0, 8, 0, 0, 0, 0, 1, 3],
+      [0, 0, 0, 0, 2, 0, 0, 0, 0],
+      [0, 0, 9, 8, 0, 0, 0, 3, 6],
+      [0, 0, 0, 3, 0, 6, 0, 9, 0]
+    ]
+  },
+  {
+    id: 4,
+    name: 'Medium Puzzle 2',
+    difficulty: 'medium',
+    grid: [
+      [0, 0, 0, 0, 0, 0, 6, 8, 0],
+      [0, 0, 0, 0, 7, 3, 0, 0, 9],
+      [3, 0, 9, 0, 0, 0, 0, 4, 5],
+      [4, 9, 0, 0, 0, 0, 0, 0, 0],
+      [8, 0, 3, 0, 5, 0, 9, 0, 2],
+      [0, 0, 0, 0, 0, 0, 0, 3, 6],
+      [9, 6, 0, 0, 0, 0, 3, 0, 8],
+      [7, 0, 0, 6, 8, 0, 0, 0, 0],
+      [0, 2, 8, 0, 0, 0, 0, 0, 0]
+    ]
+  },
+  {
+    id: 5,
+    name: 'Hard Puzzle 1',
+    difficulty: 'hard',
+    grid: [
+      [0, 0, 0, 6, 0, 0, 4, 0, 0],
+      [7, 0, 0, 0, 0, 3, 6, 0, 0],
+      [0, 0, 0, 0, 9, 1, 0, 8, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 5, 0, 1, 8, 0, 0, 0, 3],
+      [0, 0, 0, 3, 0, 6, 0, 4, 5],
+      [0, 4, 0, 2, 0, 0, 0, 6, 0],
+      [9, 0, 3, 0, 0, 0, 0, 0, 0],
+      [0, 2, 0, 0, 0, 0, 1, 0, 0]
+    ]
+  }
 ];
 
 const SudokuGame: React.FC<SudokuGameProps> = ({ userId, userName }) => {
-  const [puzzle, setPuzzle] = useState<number[][]>(SAMPLE_PUZZLE);
-  const [board, setBoard] = useState<number[][]>(SAMPLE_PUZZLE.map(row => [...row]));
+  const [currentPuzzle, setCurrentPuzzle] = useState<Puzzle | null>(null);
+  const [puzzle, setPuzzle] = useState<number[][]>([]);
+  const [board, setBoard] = useState<number[][]>([]);
   const [selectedCell, setSelectedCell] = useState<[number, number] | null>(null);
-  const [elapsedTime, setElapsedTime] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
   const [isPuzzleComplete, setIsPuzzleComplete] = useState(false);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Timer logic
-  useEffect(() => {
-    if (!isPaused && !isPuzzleComplete) {
-      timerRef.current = setInterval(() => {
-        setElapsedTime(t => t + 1);
-      }, 1000);
-    }
-
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [isPaused, isPuzzleComplete]);
-
-  // Handle visibility change (pause when tab is hidden or mobile disconnects)
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        setIsPaused(true);
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, []);
+  const [notesMode, setNotesMode] = useState(false);
+  const [notes, setNotes] = useState<CellNotes>({});
+  const [showNumberPicker, setShowNumberPicker] = useState(false);
 
   // Check completion whenever board changes
   useEffect(() => {
@@ -100,47 +158,90 @@ const SudokuGame: React.FC<SudokuGameProps> = ({ userId, userName }) => {
     }
   }, [board]);
 
-  const handleCellChange = (row: number, col: number, value: string) => {
+  const handleCellClick = (row: number, col: number) => {
     // Ignore if cell is prefilled
     if (puzzle[row][col] !== 0) return;
 
-    const num = value === '' ? 0 : parseInt(value, 10);
-    if (num < 0 || num > 9 || isNaN(num)) return;
-
-    const newBoard = board.map(r => [...r]);
-    newBoard[row][col] = num;
-    setBoard(newBoard);
+    setSelectedCell([row, col]);
+    setShowNumberPicker(true);
   };
 
-  const handleCellClick = (row: number, col: number) => {
-    setSelectedCell([row, col]);
+  const handleNumberSelect = (num: number) => {
+    if (!selectedCell) return;
+    const [row, col] = selectedCell;
+
+    if (notesMode) {
+      // Toggle note for this cell
+      const key = `${row}-${col}`;
+      const cellNotes = new Set(notes[key] || []);
+      if (cellNotes.has(num)) {
+        cellNotes.delete(num);
+      } else {
+        cellNotes.add(num);
+      }
+      setNotes({ ...notes, [key]: cellNotes });
+    } else {
+      // Set the number
+      const newBoard = board.map(r => [...r]);
+      newBoard[row][col] = num;
+      setBoard(newBoard);
+
+      // Clear notes for this cell
+      const key = `${row}-${col}`;
+      if (notes[key]) {
+        const newNotes = { ...notes };
+        delete newNotes[key];
+        setNotes(newNotes);
+      }
+    }
+
+    setShowNumberPicker(false);
+  };
+
+  const handleClearCell = () => {
+    if (!selectedCell) return;
+    const [row, col] = selectedCell;
+
+    const newBoard = board.map(r => [...r]);
+    newBoard[row][col] = 0;
+    setBoard(newBoard);
+
+    // Clear notes for this cell
+    const key = `${row}-${col}`;
+    if (notes[key]) {
+      const newNotes = { ...notes };
+      delete newNotes[key];
+      setNotes(newNotes);
+    }
+
+    setShowNumberPicker(false);
+  };
+
+  const handleSelectPuzzle = (puzzleData: Puzzle) => {
+    setCurrentPuzzle(puzzleData);
+    setPuzzle(puzzleData.grid.map(row => [...row]));
+    setBoard(puzzleData.grid.map(row => [...row]));
+    setIsPuzzleComplete(false);
+    setSelectedCell(null);
+    setNotes({});
+  };
+
+  const handleBackToLibrary = () => {
+    setCurrentPuzzle(null);
+    setPuzzle([]);
+    setBoard([]);
+    setIsPuzzleComplete(false);
+    setSelectedCell(null);
+    setNotes({});
   };
 
   const handleReset = () => {
     if (window.confirm('Reset puzzle? All progress will be lost.')) {
       setBoard(puzzle.map(row => [...row]));
-      setElapsedTime(0);
-      setIsPaused(false);
       setIsPuzzleComplete(false);
       setSelectedCell(null);
+      setNotes({});
     }
-  };
-
-  const handleNewGame = () => {
-    // For now, just reset. Later: fetch new puzzle from backend
-    setBoard(SAMPLE_PUZZLE.map(row => [...row]));
-    setPuzzle(SAMPLE_PUZZLE.map(row => [...row]));
-    setElapsedTime(0);
-    setIsPaused(false);
-    setIsPuzzleComplete(false);
-    setSelectedCell(null);
-  };
-
-  const formatTime = (seconds: number): string => {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
-    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
   const getCellClass = (row: number, col: number): string => {
@@ -164,18 +265,88 @@ const SudokuGame: React.FC<SudokuGameProps> = ({ userId, userName }) => {
     return classes.join(' ');
   };
 
+  const renderCellContent = (row: number, col: number) => {
+    const cellValue = board[row][col];
+    const key = `${row}-${col}`;
+    const cellNotes = notes[key];
+
+    if (cellValue !== 0) {
+      return <div className="sudoku-cell-value">{cellValue}</div>;
+    }
+
+    if (cellNotes && cellNotes.size > 0 && !notesMode) {
+      return (
+        <div className="sudoku-cell-notes">
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => (
+            <span key={n} className={cellNotes.has(n) ? 'visible' : 'hidden'}>
+              {n}
+            </span>
+          ))}
+        </div>
+      );
+    }
+
+    return null;
+  };
+
+  // If no puzzle selected, show library
+  if (!currentPuzzle) {
+    return (
+      <div className="sudoku-container">
+        <h2 className="sudoku-library-title">Puzzle Library</h2>
+        <p className="sudoku-library-subtitle">Select a puzzle to play</p>
+
+        <div className="sudoku-library-grid">
+          {PUZZLE_LIBRARY.map(puzzleData => (
+            <div
+              key={puzzleData.id}
+              className="sudoku-puzzle-card"
+              onClick={() => handleSelectPuzzle(puzzleData)}
+            >
+              <div className="sudoku-puzzle-icon">🔢</div>
+              <h3 className="sudoku-puzzle-name">{puzzleData.name}</h3>
+              <span className={`sudoku-puzzle-difficulty ${puzzleData.difficulty}`}>
+                {puzzleData.difficulty.toUpperCase()}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <div className="ah-card sudoku-instructions">
+          <h3>About Sudoku</h3>
+          <p>
+            Sudoku is a logic-based number puzzle. Fill the 9×9 grid so that each row,
+            column, and 3×3 box contains the numbers 1-9 without repetition.
+          </p>
+          <ul>
+            <li><strong>Easy:</strong> More numbers filled in, good for beginners</li>
+            <li><strong>Medium:</strong> Moderate challenge, requires some strategy</li>
+            <li><strong>Hard:</strong> Fewer clues, requires advanced techniques</li>
+          </ul>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="sudoku-container">
-      {/* Timer */}
-      <div className={`sudoku-timer ${isPaused ? 'paused' : ''}`}>
-        {formatTime(elapsedTime)}
-        {isPaused && ' (PAUSED)'}
+      {/* Puzzle Header */}
+      <div className="sudoku-header">
+        <button className="ah-btn-outline" onClick={handleBackToLibrary}>
+          ← Library
+        </button>
+        <div className="sudoku-current-puzzle">
+          <h2>{currentPuzzle.name}</h2>
+          <span className={`sudoku-puzzle-difficulty ${currentPuzzle.difficulty}`}>
+            {currentPuzzle.difficulty.toUpperCase()}
+          </span>
+        </div>
       </div>
 
       {/* Completion message */}
       {isPuzzleComplete && (
         <div className="sudoku-complete">
-          🎉 Puzzle Complete! Time: {formatTime(elapsedTime)}
+          🎉 Puzzle Complete!
         </div>
       )}
 
@@ -188,41 +359,63 @@ const SudokuGame: React.FC<SudokuGameProps> = ({ userId, userName }) => {
               className={getCellClass(rowIndex, colIndex)}
               onClick={() => handleCellClick(rowIndex, colIndex)}
             >
-              <input
-                type="number"
-                min="1"
-                max="9"
-                value={cell === 0 ? '' : cell}
-                onChange={(e) => handleCellChange(rowIndex, colIndex, e.target.value)}
-                disabled={puzzle[rowIndex][colIndex] !== 0 || isPuzzleComplete}
-                readOnly={puzzle[rowIndex][colIndex] !== 0}
-              />
+              {renderCellContent(rowIndex, colIndex)}
             </div>
           ))
         )}
       </div>
 
+      {/* Number Picker Popup */}
+      {showNumberPicker && selectedCell && (
+        <div className="sudoku-number-picker-overlay" onClick={() => setShowNumberPicker(false)}>
+          <div className="sudoku-number-picker" onClick={(e) => e.stopPropagation()}>
+            <div className="sudoku-picker-title">
+              {notesMode ? 'Select Note' : 'Select Number'}
+            </div>
+            <div className="sudoku-picker-grid">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => {
+                const [row, col] = selectedCell;
+                const isUsedInRow = board[row].includes(num);
+                const isUsedInCol = board.some(r => r[col] === num);
+                const boxRow = Math.floor(row / 3) * 3;
+                const boxCol = Math.floor(col / 3) * 3;
+                const isUsedInBox = [0, 1, 2].some(r =>
+                  [0, 1, 2].some(c => board[boxRow + r][boxCol + c] === num)
+                );
+                const isDisabled = isUsedInRow || isUsedInCol || isUsedInBox;
+
+                return (
+                  <button
+                    key={num}
+                    className={`sudoku-picker-btn ${isDisabled ? 'disabled' : ''}`}
+                    onClick={() => handleNumberSelect(num)}
+                    disabled={isDisabled && !notesMode}
+                  >
+                    {num}
+                  </button>
+                );
+              })}
+            </div>
+            <button className="ah-btn-outline sudoku-picker-clear" onClick={handleClearCell}>
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Controls */}
       <div className="sudoku-controls">
-        {!isPuzzleComplete && (
-          <button
-            className="ah-btn-outline"
-            onClick={() => setIsPaused(!isPaused)}
-          >
-            {isPaused ? 'Resume' : 'Pause'}
-          </button>
-        )}
+        <button
+          className={`ah-btn-outline ${notesMode ? 'active' : ''}`}
+          onClick={() => setNotesMode(!notesMode)}
+        >
+          {notesMode ? '✏️ Notes Mode' : '🔢 Number Mode'}
+        </button>
         <button
           className="ah-btn-outline"
           onClick={handleReset}
         >
-          Reset
-        </button>
-        <button
-          className="ah-btn-primary"
-          onClick={handleNewGame}
-        >
-          New Game
+          Reset Puzzle
         </button>
       </div>
 
@@ -230,12 +423,13 @@ const SudokuGame: React.FC<SudokuGameProps> = ({ userId, userName }) => {
       <div className="ah-card sudoku-instructions">
         <h3>How to Play</h3>
         <ul>
-          <li>Fill in the empty cells with numbers 1-9</li>
+          <li>Tap a cell to select a number from the popup</li>
           <li>Each row must contain 1-9 without repeating</li>
           <li>Each column must contain 1-9 without repeating</li>
           <li>Each 3×3 box must contain 1-9 without repeating</li>
+          <li>Used numbers in the popup are greyed out</li>
+          <li>Toggle Notes Mode to add small reminder numbers</li>
           <li>Conflicting numbers are highlighted in red</li>
-          <li>Timer pauses automatically when tab is hidden</li>
         </ul>
       </div>
     </div>
