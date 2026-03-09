@@ -64,12 +64,12 @@ const SudokuGame: React.FC<SudokuGameProps> = ({ userId, userName }) => {
   const [selectedCell, setSelectedCell] = useState<[number, number] | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-  const [isComplete, setIsComplete] = useState(false);
+  const [isPuzzleComplete, setIsPuzzleComplete] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Timer logic
   useEffect(() => {
-    if (!isPaused && !isComplete) {
+    if (!isPaused && !isPuzzleComplete) {
       timerRef.current = setInterval(() => {
         setElapsedTime(t => t + 1);
       }, 1000);
@@ -78,7 +78,7 @@ const SudokuGame: React.FC<SudokuGameProps> = ({ userId, userName }) => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isPaused, isComplete]);
+  }, [isPaused, isPuzzleComplete]);
 
   // Handle visibility change (pause when tab is hidden or mobile disconnects)
   useEffect(() => {
@@ -95,7 +95,7 @@ const SudokuGame: React.FC<SudokuGameProps> = ({ userId, userName }) => {
   // Check completion whenever board changes
   useEffect(() => {
     if (isComplete(board)) {
-      setIsComplete(true);
+      setIsPuzzleComplete(true);
       // TODO: Save completion to backend
     }
   }, [board]);
@@ -121,7 +121,7 @@ const SudokuGame: React.FC<SudokuGameProps> = ({ userId, userName }) => {
       setBoard(puzzle.map(row => [...row]));
       setElapsedTime(0);
       setIsPaused(false);
-      setIsComplete(false);
+      setIsPuzzleComplete(false);
       setSelectedCell(null);
     }
   };
@@ -132,7 +132,7 @@ const SudokuGame: React.FC<SudokuGameProps> = ({ userId, userName }) => {
     setPuzzle(SAMPLE_PUZZLE.map(row => [...row]));
     setElapsedTime(0);
     setIsPaused(false);
-    setIsComplete(false);
+    setIsPuzzleComplete(false);
     setSelectedCell(null);
   };
 
@@ -173,7 +173,7 @@ const SudokuGame: React.FC<SudokuGameProps> = ({ userId, userName }) => {
       </div>
 
       {/* Completion message */}
-      {isComplete && (
+      {isPuzzleComplete && (
         <div className="sudoku-complete">
           🎉 Puzzle Complete! Time: {formatTime(elapsedTime)}
         </div>
@@ -194,7 +194,7 @@ const SudokuGame: React.FC<SudokuGameProps> = ({ userId, userName }) => {
                 max="9"
                 value={cell === 0 ? '' : cell}
                 onChange={(e) => handleCellChange(rowIndex, colIndex, e.target.value)}
-                disabled={puzzle[rowIndex][colIndex] !== 0 || isComplete}
+                disabled={puzzle[rowIndex][colIndex] !== 0 || isPuzzleComplete}
                 readOnly={puzzle[rowIndex][colIndex] !== 0}
               />
             </div>
@@ -204,7 +204,7 @@ const SudokuGame: React.FC<SudokuGameProps> = ({ userId, userName }) => {
 
       {/* Controls */}
       <div className="sudoku-controls">
-        {!isComplete && (
+        {!isPuzzleComplete && (
           <button
             className="ah-btn-outline"
             onClick={() => setIsPaused(!isPaused)}
