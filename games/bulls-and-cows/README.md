@@ -46,118 +46,72 @@ A code-breaking game where players guess a secret combination of colors or numbe
 
 ## Deployment Instructions
 
-### 1. Database Setup (On Pi)
+### Copy-Paste Build Script (On Pi)
 
 ```bash
+# ============================================
+# Bulls and Cows - Complete Build & Deploy
+# ============================================
+
+# 1. Database Setup
+# ============================================
 # Create database
-psql -h localhost -p 5555 -U activityhub -d postgres \
-  -c "CREATE DATABASE bulls_and_cows_db;"
-
+psql -h localhost -p 5555 -U activityhub -d postgres -c "CREATE DATABASE bulls_and_cows_db;"
 # Run schema
-psql -h localhost -p 5555 -U activityhub -d bulls_and_cows_db \
-  -f ~/pub-games-v3/games/bulls-and-cows/database/schema.sql
+psql -h localhost -p 5555 -U activityhub -d bulls_and_cows_db -f ~/pub-games-v3/games/bulls-and-cows/database/schema.sql
+# Verify tables (should show: games, guesses)
+psql -h localhost -p 5555 -U activityhub -d bulls_and_cows_db -c "\dt"
 
-# Verify tables
-psql -h localhost -p 5555 -U activityhub -d bulls_and_cows_db \
-  -c "\dt"
-```
-
-Expected output:
-```
-           List of relations
- Schema |   Name   | Type  |    Owner
---------+----------+-------+--------------
- public | games    | table | activityhub
- public | guesses  | table | activityhub
-```
-
-### 2. Backend Build (On Pi)
-
-```bash
+# 2. Backend Build
+# ============================================
 cd ~/pub-games-v3/games/bulls-and-cows/backend
-
-# Download dependencies
+# Download Go dependencies
 go mod download
-
 # Test compilation
 go build -o bulls-and-cows
-
 # Clean up test binary
 rm bulls-and-cows
-```
 
-### 3. Frontend Build (On Pi)
-
-```bash
+# 3. Frontend Build
+# ============================================
 cd ~/pub-games-v3/games/bulls-and-cows/frontend
-
-# Install dependencies
+# Install npm dependencies
 npm install
-
 # Build for production
 npm run build
-
 # Copy to backend static directory
 mkdir -p ../backend/static
 cp -r build/* ../backend/static/
-
-# Verify
+# Verify (should show: index.html, static/js/, static/css/)
 ls -la ../backend/static/
-```
 
-Expected files: `index.html`, `static/js/`, `static/css/`
+# 4. Register App
+# ============================================
+cd ~/pub-games-v3
+psql -U activityhub -h localhost -p 5555 -d activity_hub -f scripts/migrate_add_bulls_and_cows.sql
+# Verify registration (should show: Bulls and Cows, port 4091, min_players: 1, max_players: 2)
+psql -U activityhub -h localhost -p 5555 -d activity_hub -c "SELECT name, icon, backend_port, min_players, max_players FROM applications WHERE id = 'bulls-and-cows';"
 
-### 4. Start Services (On Pi)
-
-Bulls and Cows is included in the core services:
-
-```bash
+# 5. Start Service
+# ============================================
+# Option A: Start all core services (includes Bulls and Cows)
 cd ~/pub-games-v3/scripts
 ./start_core.sh
-```
 
-Or start manually:
+# Option B: Start Bulls and Cows manually (for testing)
+# cd ~/pub-games-v3/games/bulls-and-cows/backend
+# go run *.go
 
-```bash
-cd ~/pub-games-v3/games/bulls-and-cows/backend
-go run *.go
-```
-
-### 5. Verify Service (On Pi)
-
-```bash
-# Check if service is running
+# 6. Verify Service
+# ============================================
+# Check if service is running on port 4091
 lsof -i :4091
-
-# Test config endpoint
+# Test config endpoint (should return: {"appName":"Bulls and Cows","minPlayers":1,"maxPlayers":2})
 curl http://localhost:4091/api/config
 
-# Expected output:
-# {"appName":"Bulls and Cows","minPlayers":1,"maxPlayers":2}
-```
-
-### 6. Register App (On Pi)
-
-Run the SQL migration script to register Bulls and Cows:
-
-```bash
-cd ~/pub-games-v3
-psql -U activityhub -h localhost -p 5555 -d activity_hub \
-  -f scripts/migrate_add_bulls_and_cows.sql
-```
-
-Verify registration:
-
-```bash
-psql -U activityhub -h localhost -p 5555 -d activity_hub \
-  -c "SELECT name, icon, backend_port, min_players, max_players FROM applications WHERE id = 'bulls-and-cows';"
-```
-
-Expected output:
-```
-      name       | icon  | backend_port | min_players | max_players
------------------+-------+--------------+-------------+-------------
- Bulls and Cows  | 🐂🐄  |         4091 |           1 |           2
+# ============================================
+# Done! Access at http://192.168.1.29:3001
+# ============================================
 ```
 
 ### 7. Test Gameplay
@@ -192,31 +146,21 @@ Access at `http://192.168.1.29:3000` (React dev server)
 ### Testing API Directly
 
 ```bash
-# Get a token first (from identity-shell login)
+# Set your credentials (get token from identity-shell login)
 TOKEN="your-jwt-token-here"
 USER_ID="your-user-id"
 
 # Create 1-player game (colors mode)
-curl -X POST http://localhost:4091/api/game \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-User-ID: $USER_ID" \
-  -H "Content-Type: application/json" \
-  -d '{"mode":"colors","variant":"1player"}'
+curl -X POST http://localhost:4091/api/game -H "Authorization: Bearer $TOKEN" -H "X-User-ID: $USER_ID" -H "Content-Type: application/json" -d '{"mode":"colors","variant":"1player"}'
 
-# Make a guess (replace {gameId} with actual ID from above)
-curl -X POST http://localhost:4091/api/game/{gameId}/guess \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-User-ID: $USER_ID" \
-  -H "Content-Type: application/json" \
-  -d '{"guess":"RBYG"}'
+# Save the gameId from the response above, then make a guess (replace GAME_ID_HERE)
+curl -X POST http://localhost:4091/api/game/GAME_ID_HERE/guess -H "Authorization: Bearer $TOKEN" -H "X-User-ID: $USER_ID" -H "Content-Type: application/json" -d '{"guess":"RBYG"}'
 
-# Get game state
-curl http://localhost:4091/api/game/{gameId} \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-User-ID: $USER_ID"
+# Get game state (replace GAME_ID_HERE)
+curl http://localhost:4091/api/game/GAME_ID_HERE -H "Authorization: Bearer $TOKEN" -H "X-User-ID: $USER_ID"
 
-# Test SSE stream
-curl -N http://localhost:4091/api/game/{gameId}/stream?token=$TOKEN
+# Test SSE stream (replace GAME_ID_HERE)
+curl -N http://localhost:4091/api/game/GAME_ID_HERE/stream?token=$TOKEN
 ```
 
 ## Code Structure
@@ -262,7 +206,6 @@ Bulls and Cows is designed mobile-first:
 ```bash
 # Verify Activity Hub CSS is being served
 curl http://localhost:3001/shared/activity-hub.css | head -20
-
 # Check browser console for CSS 404 errors
 # Hard refresh: Cmd+Shift+R (Mac) or Ctrl+Shift+R (Windows/Linux)
 ```
@@ -271,32 +214,25 @@ curl http://localhost:3001/shared/activity-hub.css | head -20
 ```bash
 # Check PostgreSQL is running
 systemctl status postgresql
-
 # Verify database exists
 psql -h localhost -p 5555 -U activityhub -l | grep bulls_and_cows_db
-
 # Test connection
 psql -h localhost -p 5555 -U activityhub -d bulls_and_cows_db -c "SELECT 1;"
 ```
 
 ### SSE not connecting
 ```bash
-# Check Redis is running
+# Check Redis is running (should return: PONG)
 redis-cli ping
-# Expected: PONG
-
 # Verify port 4091 is accessible
 curl http://localhost:4091/api/config
-
 # Check browser console for SSE errors
 ```
 
 ### Game not appearing in identity-shell
 ```bash
-# Verify app is registered
-psql -h localhost -p 5555 -U activityhub -d identity_shell_db \
-  -c "SELECT app_name, port, is_public FROM apps WHERE app_path = 'bulls-and-cows';"
-
+# Verify app is registered in activity_hub database
+psql -h localhost -p 5555 -U activityhub -d activity_hub -c "SELECT name, backend_port, enabled FROM applications WHERE id = 'bulls-and-cows';"
 # Check if service is running on correct port
 lsof -i :4091
 ```
