@@ -136,22 +136,28 @@ curl http://localhost:4091/api/config
 # {"appName":"Bulls and Cows","minPlayers":1,"maxPlayers":2}
 ```
 
-### 6. Register App (Via Game Admin)
+### 6. Register App (On Pi)
 
-Access game-admin at `http://192.168.1.29:5070` and add:
+Run the SQL migration script to register Bulls and Cows:
 
-```json
-{
-  "app_name": "Bulls and Cows",
-  "app_path": "bulls-and-cows",
-  "icon": "🐂🐄",
-  "category": "Game",
-  "port": 4091,
-  "is_public": true,
-  "requires_auth": true,
-  "min_players": 1,
-  "max_players": 2
-}
+```bash
+cd ~/pub-games-v3
+psql -U activityhub -h localhost -p 5555 -d activity_hub \
+  -f scripts/migrate_add_bulls_and_cows.sql
+```
+
+Verify registration:
+
+```bash
+psql -U activityhub -h localhost -p 5555 -d activity_hub \
+  -c "SELECT name, icon, backend_port, min_players, max_players FROM applications WHERE id = 'bulls-and-cows';"
+```
+
+Expected output:
+```
+      name       | icon  | backend_port | min_players | max_players
+-----------------+-------+--------------+-------------+-------------
+ Bulls and Cows  | 🐂🐄  |         4091 |           1 |           2
 ```
 
 ### 7. Test Gameplay
