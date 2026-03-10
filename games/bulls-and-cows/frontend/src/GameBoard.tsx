@@ -67,6 +67,10 @@ export default function GameBoard({ gameId, token, userId, mode, variant, onExit
       }
 
       const data = await response.json();
+      // Ensure guesses array exists
+      if (!data.guesses) {
+        data.guesses = [];
+      }
       setGame(data);
     } catch (err) {
       console.error('Error fetching game:', err);
