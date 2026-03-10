@@ -115,7 +115,7 @@ func handleAdminGetApps(w http.ResponseWriter, r *http.Request) {
 	rows, err := db.Query(`
 		SELECT id, name, icon, type, description, category,
 		       COALESCE(url, ''), COALESCE(backend_port, 0), COALESCE(realtime, 'none'),
-		       COALESCE(min_players, 0), COALESCE(max_players, 0),
+		       min_players, max_players,
 		       COALESCE(required_roles, '{}'), enabled, display_order,
 		       created_at, updated_at
 		FROM applications
@@ -133,7 +133,8 @@ func handleAdminGetApps(w http.ResponseWriter, r *http.Request) {
 		var (
 			id, name, icon, appType, description, category   string
 			url, realtime                                    string
-			backendPort, minPlayers, maxPlayers, displayOrder int
+			backendPort, displayOrder                        int
+			minPlayers, maxPlayers                            sql.NullInt64
 			requiredRoles                                     pq.StringArray
 			enabled                                           bool
 			createdAt, updatedAt                              sql.NullTime
@@ -161,13 +162,18 @@ func handleAdminGetApps(w http.ResponseWriter, r *http.Request) {
 			"url":           url,
 			"backendPort":   backendPort,
 			"realtime":      realtime,
-			"minPlayers":    minPlayers,
-			"maxPlayers":    maxPlayers,
 			"requiredRoles": requiredRoles,
 			"enabled":       enabled,
 			"displayOrder":  displayOrder,
 		}
 
+		// Add optional fields only if set
+		if minPlayers.Valid {
+			app["minPlayers"] = int(minPlayers.Int64)
+		}
+		if maxPlayers.Valid {
+			app["maxPlayers"] = int(maxPlayers.Int64)
+		}
 		if createdAt.Valid {
 			app["createdAt"] = createdAt.Time
 		}

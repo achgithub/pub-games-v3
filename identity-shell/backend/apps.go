@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"log"
 	"sync"
 
@@ -18,8 +19,8 @@ type AppDefinition struct {
 	URL             string   `json:"url,omitempty"`
 	BackendPort     int      `json:"backendPort,omitempty"`
 	Realtime        string   `json:"realtime,omitempty"`
-	MinPlayers      int      `json:"minPlayers,omitempty"`
-	MaxPlayers      int      `json:"maxPlayers,omitempty"`
+	MinPlayers      *int     `json:"minPlayers,omitempty"`
+	MaxPlayers      *int     `json:"maxPlayers,omitempty"`
 	RequiredRoles   []string `json:"requiredRoles,omitempty"`
 	Enabled         bool     `json:"enabled"`
 	DisplayOrder    int      `json:"displayOrder"`
@@ -43,7 +44,7 @@ func LoadAppRegistry() error {
 	rows, err := db.Query(`
 		SELECT id, name, icon, type, description, category,
 		       COALESCE(url, ''), COALESCE(backend_port, 0), COALESCE(realtime, 'none'),
-		       COALESCE(min_players, 0), COALESCE(max_players, 0),
+		       min_players, max_players,
 		       COALESCE(required_roles, '{}'), enabled, display_order,
 		       COALESCE(guest_accessible, FALSE)
 		FROM applications
@@ -59,16 +60,27 @@ func LoadAppRegistry() error {
 	for rows.Next() {
 		var app AppDefinition
 		var requiredRoles pq.StringArray
+		var minPlayers, maxPlayers sql.NullInt64
 
 		err := rows.Scan(
 			&app.ID, &app.Name, &app.Icon, &app.Type, &app.Description, &app.Category,
 			&app.URL, &app.BackendPort, &app.Realtime,
-			&app.MinPlayers, &app.MaxPlayers,
+			&minPlayers, &maxPlayers,
 			&requiredRoles, &app.Enabled, &app.DisplayOrder,
 			&app.GuestAccessible,
 		)
 		if err != nil {
 			return err
+		}
+
+		// Convert sql.NullInt64 to *int
+		if minPlayers.Valid {
+			val := int(minPlayers.Int64)
+			app.MinPlayers = &val
+		}
+		if maxPlayers.Valid {
+			val := int(maxPlayers.Int64)
+			app.MaxPlayers = &val
 		}
 
 		app.RequiredRoles = requiredRoles
