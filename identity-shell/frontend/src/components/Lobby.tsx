@@ -266,9 +266,10 @@ const Lobby: React.FC<LobbyProps> = ({
         });
 
         if (response.ok) {
-          const game = await response.json();
-          // Launch app with gameId
-          const appUrl = `http://${window.location.hostname}:${app.backendPort}?gameId=${game.id}&userId=${userEmail}&userName=${encodeURIComponent(userName)}&token=${token}`;
+          const result = await response.json();
+          // Launch app with gameId (use gameId from response, or game.id as fallback)
+          const gameId = result.gameId || result.game?.id || result.id;
+          const appUrl = `http://${window.location.hostname}:${app.backendPort}?gameId=${gameId}&userId=${userEmail}&userName=${encodeURIComponent(userName)}&token=${token}`;
           window.location.href = appUrl;
         } else {
           // Fallback: just launch app
