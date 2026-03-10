@@ -30,8 +30,9 @@ const GameChallengeModal: React.FC<GameChallengeModalProps> = ({
 
   // Determine if this is a 1v1 or group game
   const isGroupGame = app.minPlayers && app.minPlayers > 2;
-  const minPlayers = app.minPlayers || 1;
-  const maxPlayers = app.maxPlayers || (isGroupGame ? 6 : 1);
+  const minPlayers = app.minPlayers ?? 1; // Use ?? to properly handle 0
+  const maxPlayers = app.maxPlayers ?? (isGroupGame ? 6 : 1);
+  const supportsSoloPlay = app.minPlayers === 0;
 
   // Filter and sort online users (favorites first)
   const filteredUsers = onlineUsers
@@ -167,8 +168,36 @@ const GameChallengeModal: React.FC<GameChallengeModalProps> = ({
               <p className="challenge-prompt">
                 {isGroupGame
                   ? `Select ${minPlayers} to ${maxPlayers} players`
+                  : supportsSoloPlay
+                  ? 'Play solo or challenge another player'
                   : 'Who are you challenging?'}
               </p>
+
+              {/* Solo play button */}
+              {supportsSoloPlay && (
+                <button
+                  className="gcm-solo-btn"
+                  onClick={() => {
+                    if (config?.gameOptions && config.gameOptions.length > 0) {
+                      // If there are game options, go to options step
+                      setSelectedPlayers([]);
+                      setStep('game-options');
+                    } else {
+                      // No options, launch immediately
+                      onConfirm(app.id, [], {});
+                    }
+                  }}
+                >
+                  🎮 Play Solo
+                </button>
+              )}
+
+              {/* Divider when solo play is available */}
+              {supportsSoloPlay && (
+                <div className="solo-divider">
+                  <span>or</span>
+                </div>
+              )}
 
               {/* Filter input */}
               <input
@@ -177,7 +206,7 @@ const GameChallengeModal: React.FC<GameChallengeModalProps> = ({
                 placeholder="Search players..."
                 value={filterText}
                 onChange={(e) => setFilterText(e.target.value)}
-                autoFocus
+                autoFocus={!supportsSoloPlay}
               />
 
               {/* Player selection */}
@@ -234,11 +263,17 @@ const GameChallengeModal: React.FC<GameChallengeModalProps> = ({
         {step === 'game-options' && (
           <>
             <div className="game-challenge-body">
-              <p className="challenge-prompt">
-                Challenging: <strong>{selectedPlayers.map(email =>
-                  onlineUsers.find(u => u.email === email)?.displayName || email
-                ).join(', ')}</strong>
-              </p>
+              {selectedPlayers.length === 0 ? (
+                <p className="challenge-prompt">
+                  Playing <strong>Solo</strong>
+                </p>
+              ) : (
+                <p className="challenge-prompt">
+                  Challenging: <strong>{selectedPlayers.map(email =>
+                    onlineUsers.find(u => u.email === email)?.displayName || email
+                  ).join(', ')}</strong>
+                </p>
+              )}
 
               {loading ? (
                 <div className="gcm-loading">Loading game options...</div>
@@ -264,7 +299,7 @@ const GameChallengeModal: React.FC<GameChallengeModalProps> = ({
                 onClick={() => onConfirm(app.id, selectedPlayers, options)}
                 disabled={loading}
               >
-                Send Challenge
+                {selectedPlayers.length === 0 ? 'Start Game' : 'Send Challenge'}
               </button>
             </div>
           </>

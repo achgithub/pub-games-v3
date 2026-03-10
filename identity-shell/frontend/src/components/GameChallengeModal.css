@@ -78,6 +78,57 @@
   font-weight: 600;
 }
 
+/* Solo play button */
+.gcm-solo-btn {
+  width: 100%;
+  padding: 1rem 1.5rem;
+  background: #1C1917;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease;
+  margin-bottom: 1rem;
+}
+
+.gcm-solo-btn:hover {
+  background: #333;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.gcm-solo-btn:active {
+  transform: translateY(0);
+}
+
+/* Divider */
+.solo-divider {
+  position: relative;
+  text-align: center;
+  margin: 1.5rem 0;
+}
+
+.solo-divider::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 100%;
+  height: 1px;
+  background: #E0E0E0;
+}
+
+.solo-divider span {
+  position: relative;
+  background: white;
+  padding: 0 1rem;
+  color: #999;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
 /* Player filter */
 .player-filter {
   width: 100%;
