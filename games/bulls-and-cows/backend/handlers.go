@@ -145,10 +145,10 @@ func CreateGame(db *sql.DB, redisClient *redis.Client) http.HandlerFunc {
 		}
 
 
-	// Set max guesses based on mode: Colors = 12, Numbers = 20 (more combinations)
+	// Set max guesses based on mode: Colors = 12, Numbers = 25 (more combinations)
 	maxGuesses := 12
 	if req.Mode == "numbers" {
-		maxGuesses = 20
+		maxGuesses = 25
 	}
 
 	// Create game in database
