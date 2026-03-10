@@ -28,9 +28,7 @@ interface GameBoardProps {
   gameId: string;
   token: string;
   userId: string;
-  mode: string;
-  variant: string;
-  onExit: () => void;
+  userName: string;
 }
 
 const COLORS = [
@@ -44,7 +42,7 @@ const COLORS = [
 
 const NUMBERS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
-export default function GameBoard({ gameId, token, userId, mode, variant, onExit }: GameBoardProps) {
+export default function GameBoard({ gameId, token, userId, userName }: GameBoardProps) {
   const [game, setGame] = useState<Game | null>(null);
   const [currentGuess, setCurrentGuess] = useState<string[]>(['', '', '', '']);
   const [selectedPosition, setSelectedPosition] = useState(0);
@@ -156,74 +154,89 @@ export default function GameBoard({ gameId, token, userId, mode, variant, onExit
     return color ? color.colorClass : '';
   }
 
+  function returnToLobby() {
+    window.location.href = `http://${window.location.hostname}:3001`;
+  }
+
+  // Loading state
   if (!game) {
     return (
-      <div className="ah-container">
-        <div className="ah-card">
-          <p>Loading game...</p>
+      <>
+        <header className="ah-app-header">
+          <div className="ah-app-header-left">
+            <h1 className="ah-app-title">🐂 Bulls and Cows</h1>
+          </div>
+          <div className="ah-app-header-right">
+            <button className="ah-lobby-btn" onClick={returnToLobby}>
+              ← Lobby
+            </button>
+          </div>
+        </header>
+        <div className="ah-loading-container">
+          <div className="ah-spinner ah-spinner--large"></div>
+          <p className="ah-loading-text">Loading game...</p>
         </div>
-      </div>
+      </>
     );
   }
 
   const isGameOver = game.status !== 'active';
+  const mode = game.mode;
 
   return (
-    <div className="ah-container">
-      {/* Header */}
-      <div className="ah-header">
-        <h1>🐂 Bulls and Cows</h1>
-        <button className="ah-btn-outline" onClick={onExit}>Exit</button>
-      </div>
-
-      {/* Connection Status */}
-      {variant === '2player' && (
-        <div className="bc-status">
-          {connected ? (
-            <span className="bc-status-connected">🟢 Connected</span>
-          ) : (
-            <span className="bc-status-disconnected">🔴 Reconnecting...</span>
-          )}
+    <>
+      {/* App Header Bar */}
+      <header className="ah-app-header">
+        <div className="ah-app-header-left">
+          <h1 className="ah-app-title">🐂 Bulls and Cows</h1>
         </div>
-      )}
+        <div className="ah-app-header-right">
+          <button className="ah-lobby-btn" onClick={returnToLobby}>
+            ← Lobby
+          </button>
+        </div>
+      </header>
 
-      {/* Game Info */}
-      <div className="ah-card">
-        <div className="bc-game-info">
-          <div>
-            <strong>Mode:</strong> {mode === 'colors' ? 'Colors' : 'Numbers'}
+      {/* Game Info Bar */}
+      <div style={{ width: '100%', background: 'white', borderBottom: '1px solid #e7e5e4', padding: '12px 16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', maxWidth: '600px', margin: '0 auto', flexWrap: 'wrap' }}>
+          <div className="ah-badge" style={{ fontSize: '14px', fontWeight: 500, padding: '6px 12px' }}>
+            {mode === 'colors' ? 'Colors' : 'Numbers'}
           </div>
-          <div>
-            <strong>Guesses:</strong> {game.guesses.length} / {game.maxGuesses}
+          <div className="ah-badge" style={{ fontSize: '14px', fontWeight: 500, padding: '6px 12px' }}>
+            {game.guesses.length} / {game.maxGuesses} Guesses
           </div>
-          <div>
-            <strong>Status:</strong> {game.status}
-          </div>
+          {game.variant === '2player' && (
+            <div className="ah-badge" style={{ fontSize: '14px', fontWeight: 500, padding: '6px 12px' }}>
+              {connected ? '🟢 Connected' : '🔴 Disconnected'}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Game Over Banner */}
-      {isGameOver && (
-        <div className={`ah-banner ${game.status === 'won' ? 'ah-banner--success' : 'ah-banner--error'}`}>
-          {game.status === 'won' ? (
-            <>🎉 Congratulations! You cracked the code: <strong>{game.secretCode}</strong></>
-          ) : (
-            <>😔 Game Over! The code was: <strong>{game.secretCode}</strong></>
-          )}
-        </div>
-      )}
+      {/* Main Content Area */}
+      <div className="ah-container ah-container--narrow" style={{ paddingTop: '16px', paddingBottom: '16px' }}>
+        {/* Game Over Banner */}
+        {isGameOver && (
+          <div className={`ah-banner ${game.status === 'won' ? 'ah-banner--success' : 'ah-banner--error'}`} style={{ marginBottom: '16px' }}>
+            {game.status === 'won' ? (
+              <>🎉 Congratulations! You cracked the code: <strong>{game.secretCode}</strong></>
+            ) : (
+              <>😔 Game Over! The code was: <strong>{game.secretCode}</strong></>
+            )}
+          </div>
+        )}
 
-      {error && (
-        <div className="ah-banner ah-banner--error">
-          {error}
-        </div>
-      )}
+        {error && (
+          <div className="ah-banner ah-banner--error" style={{ marginBottom: '16px' }}>
+            {error}
+          </div>
+        )}
 
-      {!isGameOver && (
-        <>
-          {/* Current Guess Display */}
-          <div className="ah-card">
-            <h3>Your Guess</h3>
+        {/* Current Guess Input */}
+        {!isGameOver && (
+          <div className="ah-card" style={{ marginBottom: '16px' }}>
+            <h3 style={{ marginTop: 0, marginBottom: '12px', fontSize: '16px', fontWeight: 600 }}>Your Guess</h3>
             <div className="bc-guess-display">
               {currentGuess.map((value, index) => (
                 <div
@@ -238,7 +251,7 @@ export default function GameBoard({ gameId, token, userId, mode, variant, onExit
 
             {/* Selection Interface */}
             {mode === 'colors' ? (
-              <div className="bc-color-grid">
+              <div className="bc-color-grid" style={{ marginTop: '16px' }}>
                 {COLORS.map(color => (
                   <button
                     key={color.code}
@@ -250,7 +263,7 @@ export default function GameBoard({ gameId, token, userId, mode, variant, onExit
                 ))}
               </div>
             ) : (
-              <div className="bc-number-grid">
+              <div className="bc-number-grid" style={{ marginTop: '16px' }}>
                 {NUMBERS.map(num => (
                   <button
                     key={num}
@@ -264,64 +277,67 @@ export default function GameBoard({ gameId, token, userId, mode, variant, onExit
             )}
 
             {/* Action Buttons */}
-            <div className="bc-actions">
+            <div className="bc-actions" style={{ marginTop: '16px' }}>
               <button
                 className="ah-btn-primary"
                 onClick={submitGuess}
                 disabled={loading || currentGuess.some(c => c === '')}
+                style={{ flex: 1 }}
               >
                 {loading ? 'Submitting...' : 'Submit Guess'}
               </button>
-              <button className="ah-btn-outline" onClick={clearGuess}>
+              <button className="ah-btn-outline" onClick={clearGuess} style={{ minWidth: '80px' }}>
                 Clear
               </button>
             </div>
           </div>
-        </>
-      )}
+        )}
 
-      {/* Guess History */}
-      <div className="ah-card">
-        <h3>Guess History</h3>
-        {game.guesses.length === 0 ? (
-          <p className="ah-text-muted">No guesses yet</p>
-        ) : (
-          <div className="bc-history-scroll">
-            {[...game.guesses].reverse().map(guess => (
-              <div key={guess.id} className="ah-list-item">
-                <div className="bc-history-item-content">
-                  <div className="bc-guess-number">
-                    #{guess.guessNumber}
-                  </div>
-                  <div className="bc-history-pegs">
-                    {guess.guessCode.split('').map((char, i) => (
-                      <div
-                        key={i}
-                        className={`bc-history-peg ${mode === 'colors' ? 'color-mode ' + getColorClass(char) : ''}`}
-                      >
-                        {char}
-                      </div>
-                    ))}
-                  </div>
-                  <div className="bc-feedback">
-                    <div className="bc-bulls-badge">
-                      ✓ {guess.bulls}
+        {/* Guess History */}
+        <div className="ah-card">
+          <h3 style={{ marginTop: 0, marginBottom: '12px', fontSize: '16px', fontWeight: 600 }}>Guess History</h3>
+          {game.guesses.length === 0 ? (
+            <p className="ah-meta">No guesses yet</p>
+          ) : (
+            <div className="bc-history-scroll">
+              {[...game.guesses].reverse().map(guess => (
+                <div key={guess.id} className="ah-list-item" style={{ marginBottom: '8px' }}>
+                  <div className="bc-history-item-content">
+                    <div className="bc-guess-number">
+                      #{guess.guessNumber}
                     </div>
-                    <div className="bc-cows-badge">
-                      ~ {guess.cows}
+                    <div className="bc-history-pegs">
+                      {guess.guessCode.split('').map((char, i) => (
+                        <div
+                          key={i}
+                          className={`bc-history-peg ${mode === 'colors' ? 'color-mode ' + getColorClass(char) : ''}`}
+                        >
+                          {char}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="bc-feedback">
+                      <div className="bc-bulls-badge">
+                        ✓ {guess.bulls}
+                      </div>
+                      <div className="bc-cows-badge">
+                        ~ {guess.cows}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+              ))}
+            </div>
+          )}
+        </div>
 
-      {/* Legend */}
-      <div className="ah-card bc-legend">
-        <strong>Legend:</strong> ✓ Bulls (correct position) | ~ Cows (wrong position)
+        {/* Legend */}
+        <div className="ah-card bc-legend" style={{ marginTop: '16px' }}>
+          <p style={{ margin: 0, fontSize: '14px' }}>
+            <strong>Legend:</strong> ✓ Bulls (correct position) | ~ Cows (wrong position)
+          </p>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
