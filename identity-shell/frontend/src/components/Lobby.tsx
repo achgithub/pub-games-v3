@@ -240,6 +240,13 @@ const Lobby: React.FC<LobbyProps> = ({
     const app = apps.find(a => a.id === appId);
     const isGroupGame = app?.minPlayers && app.minPlayers > 2;
 
+    // Solo play - no players selected, just launch the app
+    if (playerIds.length === 0) {
+      setNewChallengeModal(null);
+      onAppClick(appId);
+      return;
+    }
+
     if (isGroupGame) {
       // Multi-player challenge
       const minPlayers = app?.minPlayers || playerIds.length;
@@ -247,9 +254,7 @@ const Lobby: React.FC<LobbyProps> = ({
       await onSendMultiChallenge(playerIds, appId, minPlayers, maxPlayers, options);
     } else {
       // 1v1 challenge (take first player)
-      if (playerIds.length > 0) {
-        await onSendChallenge(playerIds[0], appId, options);
-      }
+      await onSendChallenge(playerIds[0], appId, options);
     }
 
     setNewChallengeModal(null);
