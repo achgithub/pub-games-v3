@@ -144,15 +144,22 @@ func CreateGame(db *sql.DB, redisClient *redis.Client) http.HandlerFunc {
 			gameID = uuid.New().String()
 		}
 
-		// Create game in database
-		query := `
-			INSERT INTO games (id, mode, variant, secret_code, code_maker, code_breaker, max_guesses, status)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-			RETURNING created_at, updated_at
-		`
-		var createdAt, updatedAt time.Time
-		err := db.QueryRow(query, gameID, req.Mode, req.Variant, secretCode, codeMaker, userID, 12, "active").
-			Scan(&createdAt, &updatedAt)
+
+	// Set max guesses based on mode: Colors = 12, Numbers = 20 (more combinations)
+	maxGuesses := 12
+	if req.Mode == "numbers" {
+		maxGuesses = 20
+	}
+
+	// Create game in database
+	query := `
+		INSERT INTO games (id, mode, variant, secret_code, code_maker, code_breaker, max_guesses, status)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		RETURNING created_at, updated_at
+	`
+	var createdAt, updatedAt time.Time
+	err := db.QueryRow(query, gameID, req.Mode, req.Variant, secretCode, codeMaker, userID, maxGuesses, "active").
+		Scan(&createdAt, &updatedAt)
 		if err != nil {
 			log.Printf("Error creating game: %v", err)
 			http.Error(w, "Failed to create game", http.StatusInternalServerError)
@@ -165,7 +172,7 @@ func CreateGame(db *sql.DB, redisClient *redis.Client) http.HandlerFunc {
 			Variant:     req.Variant,
 			CodeMaker:   codeMaker,
 			CodeBreaker: userID,
-			MaxGuesses:  12,
+			MaxGuesses:  maxGuesses,
 			Status:      "active",
 			CreatedAt:   createdAt,
 			UpdatedAt:   updatedAt,
