@@ -10,8 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"activity-hub-common/middleware"
-
+	authlib "github.com/achgithub/activity-hub-common/auth"
 	"github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
@@ -77,11 +76,12 @@ func GetConfig(w http.ResponseWriter, r *http.Request) {
 // CreateGame creates a new game
 func CreateGame(db *sql.DB, redisClient *redis.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		userID := r.Header.Get("X-User-ID")
-		if userID == "" {
-			http.Error(w, "User ID required", http.StatusUnauthorized)
+		user, ok := authlib.GetUserFromContext(r.Context())
+		if !ok {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
+		userID := user.ID
 
 		var req CreateGameRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -160,11 +160,12 @@ func CreateGame(db *sql.DB, redisClient *redis.Client) http.HandlerFunc {
 // GetGame retrieves a game by ID
 func GetGame(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		userID := r.Header.Get("X-User-ID")
-		if userID == "" {
-			http.Error(w, "User ID required", http.StatusUnauthorized)
+		user, ok := authlib.GetUserFromContext(r.Context())
+		if !ok {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
+		userID := user.ID
 
 		vars := mux.Vars(r)
 		gameID := vars["gameId"]
@@ -244,11 +245,12 @@ func GetGame(db *sql.DB) http.HandlerFunc {
 // MakeGuess handles a guess submission
 func MakeGuess(db *sql.DB, redisClient *redis.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		userID := r.Header.Get("X-User-ID")
-		if userID == "" {
-			http.Error(w, "User ID required", http.StatusUnauthorized)
+		user, ok := authlib.GetUserFromContext(r.Context())
+		if !ok {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
+		userID := user.ID
 
 		vars := mux.Vars(r)
 		gameID := vars["gameId"]
@@ -382,23 +384,15 @@ func MakeGuess(db *sql.DB, redisClient *redis.Client) http.HandlerFunc {
 // StreamGame handles SSE connections for game updates
 func StreamGame(redisClient *redis.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		user, ok := authlib.GetUserFromContext(r.Context())
+		if !ok {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
 		vars := mux.Vars(r)
 		gameID := vars["gameId"]
 
-		// Get token from query params
-		token := r.URL.Query().Get("token")
-		if token == "" {
-			http.Error(w, "Token required", http.StatusUnauthorized)
-			return
-		}
-
-		// Verify token
-		userID, err := middleware.VerifyToken(token)
-		if err != nil {
-			http.Error(w, "Invalid token", http.StatusUnauthorized)
-			return
-		}
-
-		StreamGameUpdates(w, r, gameID, userID, redisClient)
+		StreamGameUpdates(w, r, gameID, user.ID, redisClient)
 	}
 }

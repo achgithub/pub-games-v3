@@ -9,8 +9,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"activity-hub-common/middleware"
-
+	authlib "github.com/achgithub/activity-hub-common/auth"
+	"github.com/achgithub/activity-hub-common/database"
 	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
@@ -70,16 +70,31 @@ func main() {
 	}
 	log.Printf("Connected to Redis at %s", redisHost)
 
+	// Connect to identity database for auth
+	identityDB, err := database.InitIdentityDatabase()
+	if err != nil {
+		log.Fatalf("Failed to connect to identity database: %v", err)
+	}
+	defer identityDB.Close()
+	log.Printf("Connected to identity database")
+
+	// Build auth middleware
+	authMiddleware := authlib.Middleware(identityDB)
+	sseMiddleware := authlib.SSEMiddleware(identityDB)
+
 	// Create router
 	r := mux.NewRouter()
 
-	// API routes
-	api := r.PathPrefix("/api").Subrouter()
-	api.HandleFunc("/config", GetConfig).Methods("GET")
-	api.HandleFunc("/game", middleware.AuthMiddleware(CreateGame(db, redisClient))).Methods("POST")
-	api.HandleFunc("/game/{gameId}", middleware.AuthMiddleware(GetGame(db))).Methods("GET")
-	api.HandleFunc("/game/{gameId}/guess", middleware.AuthMiddleware(MakeGuess(db, redisClient))).Methods("POST")
-	api.HandleFunc("/game/{gameId}/stream", StreamGame(redisClient)).Methods("GET")
+	// Public endpoints
+	r.HandleFunc("/api/config", GetConfig).Methods("GET")
+
+	// SSE endpoint (uses query-param auth)
+	r.Handle("/api/game/{gameId}/stream", sseMiddleware(http.HandlerFunc(StreamGame(redisClient)))).Methods("GET")
+
+	// Authenticated endpoints
+	r.Handle("/api/game", authMiddleware(http.HandlerFunc(CreateGame(db, redisClient)))).Methods("POST")
+	r.Handle("/api/game/{gameId}", authMiddleware(http.HandlerFunc(GetGame(db)))).Methods("GET")
+	r.Handle("/api/game/{gameId}/guess", authMiddleware(http.HandlerFunc(MakeGuess(db, redisClient)))).Methods("POST")
 
 	// Serve static files (React build)
 	staticDir := "./static"
