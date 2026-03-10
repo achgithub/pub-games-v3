@@ -35,10 +35,10 @@ func main() {
 		dbHost = "localhost"
 	}
 
-	// Get Redis host from environment or use default
-	redisHost := os.Getenv("REDIS_HOST")
-	if redisHost == "" {
-		redisHost = "localhost:6379"
+	// Get Redis address from environment or use default
+	redisAddr := os.Getenv("REDIS_ADDR")
+	if redisAddr == "" {
+		redisAddr = "127.0.0.1:6379"
 	}
 
 	// Initialize database connection
@@ -58,8 +58,9 @@ func main() {
 
 	// Initialize Redis client
 	redisClient = redis.NewClient(&redis.Options{
-		Addr: redisHost,
-		DB:   0,
+		Addr:     redisAddr,
+		Password: "",
+		DB:       0,
 	})
 	defer redisClient.Close()
 
@@ -68,7 +69,7 @@ func main() {
 	if err := redisClient.Ping(ctx).Err(); err != nil {
 		log.Fatalf("Failed to connect to Redis: %v", err)
 	}
-	log.Printf("Connected to Redis at %s", redisHost)
+	log.Printf("Connected to Redis at %s", redisAddr)
 
 	// Connect to identity database for auth
 	identityDB, err := database.InitIdentityDatabase()
