@@ -58,9 +58,25 @@ type MakeGuessRequest struct {
 
 // ConfigResponse represents the app configuration
 type ConfigResponse struct {
-	AppName    string `json:"appName"`
-	MinPlayers int    `json:"minPlayers"`
-	MaxPlayers int    `json:"maxPlayers"`
+	AppName     string       `json:"appName"`
+	MinPlayers  int          `json:"minPlayers"`
+	MaxPlayers  int          `json:"maxPlayers"`
+	GameOptions []GameOption `json:"gameOptions"`
+}
+
+// GameOption represents a configurable game option
+type GameOption struct {
+	ID      string        `json:"id"`
+	Label   string        `json:"label"`
+	Type    string        `json:"type"`
+	Default interface{}   `json:"default"`
+	Options []OptionValue `json:"options,omitempty"`
+}
+
+// OptionValue represents a value option for select-type game options
+type OptionValue struct {
+	Value interface{} `json:"value"`
+	Label string      `json:"label"`
 }
 
 // GetConfig returns app configuration for the identity shell
@@ -68,8 +84,20 @@ func GetConfig(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(ConfigResponse{
 		AppName:    "Bulls and Cows",
-		MinPlayers: 1,
+		MinPlayers: 0,
 		MaxPlayers: 2,
+		GameOptions: []GameOption{
+			{
+				ID:      "mode",
+				Label:   "Mode",
+				Type:    "select",
+				Default: "colors",
+				Options: []OptionValue{
+					{Value: "colors", Label: "Colors (6 colors)"},
+					{Value: "numbers", Label: "Numbers (0-9)"},
+				},
+			},
+		},
 	})
 }
 

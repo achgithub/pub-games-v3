@@ -240,10 +240,44 @@ const Lobby: React.FC<LobbyProps> = ({
     const app = apps.find(a => a.id === appId);
     const isGroupGame = app?.minPlayers && app.minPlayers > 2;
 
-    // Solo play - no players selected, just launch the app
+    // Solo play - create game with options, then launch
     if (playerIds.length === 0) {
       setNewChallengeModal(null);
-      onAppClick(appId);
+
+      // Create game via backend
+      try {
+        const token = localStorage.getItem('token');
+        if (!token || !app?.backendPort) {
+          onAppClick(appId);
+          return;
+        }
+
+        const response = await fetch(`http://${window.location.hostname}:${app.backendPort}/api/game`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'X-User-ID': userEmail,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            mode: options.mode || 'colors',
+            variant: '1player',
+          }),
+        });
+
+        if (response.ok) {
+          const game = await response.json();
+          // Launch app with gameId
+          const appUrl = `http://${window.location.hostname}:${app.backendPort}?gameId=${game.id}&userId=${userEmail}&userName=${encodeURIComponent(userName)}&token=${token}`;
+          window.location.href = appUrl;
+        } else {
+          // Fallback: just launch app
+          onAppClick(appId);
+        }
+      } catch (error) {
+        console.error('Failed to create solo game:', error);
+        onAppClick(appId);
+      }
       return;
     }
 
