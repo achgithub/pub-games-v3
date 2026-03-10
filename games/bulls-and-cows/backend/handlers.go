@@ -45,10 +45,19 @@ type Guess struct {
 }
 
 // CreateGameRequest represents the request to create a new game
+// Supports both solo play and 2-player challenges
 type CreateGameRequest struct {
+	// Solo play fields
 	Mode    string `json:"mode"`    // "colors" or "numbers"
 	Variant string `json:"variant"` // "1player" or "2player"
 	GameID  string `json:"gameId"`  // Optional: from challenge modal
+
+	// 2-player challenge fields (from identity-shell)
+	ChallengeID string `json:"challengeId"`
+	Player1ID   string `json:"player1Id"`
+	Player1Name string `json:"player1Name"`
+	Player2ID   string `json:"player2Id"`
+	Player2Name string `json:"player2Name"`
 }
 
 // MakeGuessRequest represents a guess submission
@@ -117,29 +126,47 @@ func CreateGame(db *sql.DB, redisClient *redis.Client) http.HandlerFunc {
 			return
 		}
 
+		// Detect if this is a 2-player challenge request (from identity-shell)
+		isChallenge := req.Player1ID != "" && req.Player2ID != ""
+
 		// Validate mode
 		if req.Mode != "colors" && req.Mode != "numbers" {
 			http.Error(w, "Mode must be 'colors' or 'numbers'", http.StatusBadRequest)
 			return
 		}
 
-		// Validate variant
-		if req.Variant != "1player" && req.Variant != "2player" {
-			http.Error(w, "Variant must be '1player' or '2player'", http.StatusBadRequest)
-			return
+		// Determine variant and players
+		var variant, codeMaker, codeBreaker string
+		if isChallenge {
+			// 2-player challenge from identity-shell
+			variant = "2player"
+			codeMaker = req.Player1ID   // Challenger is code maker
+			codeBreaker = req.Player2ID // Accepter is code breaker
+			log.Printf("Creating 2-player challenge game: %s (maker) vs %s (breaker)", req.Player1Name, req.Player2Name)
+		} else {
+			// Solo play request
+			if req.Variant != "1player" && req.Variant != "2player" {
+				http.Error(w, "Variant must be '1player' or '2player'", http.StatusBadRequest)
+				return
+			}
+			variant = req.Variant
+			if variant == "2player" {
+				codeMaker = userID
+				codeBreaker = userID // For non-challenge 2-player, same user plays both roles
+			} else {
+				codeMaker = "AI"
+				codeBreaker = userID
+			}
 		}
 
 		// Generate secret code
 		secretCode := GenerateSecretCode(req.Mode)
 
-		// Determine code maker
-		codeMaker := "AI"
-		if req.Variant == "2player" {
-			codeMaker = userID // In 2-player, current user is code maker
-		}
-
-		// Use provided gameID or generate new one
+		// Use provided gameID or challengeID, or generate new one
 		gameID := req.GameID
+		if gameID == "" && req.ChallengeID != "" {
+			gameID = req.ChallengeID
+		}
 		if gameID == "" {
 			gameID = uuid.New().String()
 		}
@@ -158,7 +185,7 @@ func CreateGame(db *sql.DB, redisClient *redis.Client) http.HandlerFunc {
 		RETURNING created_at, updated_at
 	`
 	var createdAt, updatedAt time.Time
-	err := db.QueryRow(query, gameID, req.Mode, req.Variant, secretCode, codeMaker, userID, maxGuesses, "active").
+	err := db.QueryRow(query, gameID, req.Mode, variant, secretCode, codeMaker, codeBreaker, maxGuesses, "active").
 		Scan(&createdAt, &updatedAt)
 		if err != nil {
 			log.Printf("Error creating game: %v", err)
@@ -169,9 +196,9 @@ func CreateGame(db *sql.DB, redisClient *redis.Client) http.HandlerFunc {
 		game := Game{
 			ID:          gameID,
 			Mode:        req.Mode,
-			Variant:     req.Variant,
+			Variant:     variant,
 			CodeMaker:   codeMaker,
-			CodeBreaker: userID,
+			CodeBreaker: codeBreaker,
 			MaxGuesses:  maxGuesses,
 			Status:      "active",
 			CreatedAt:   createdAt,
