@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useGameSocket, SSEEvent } from './hooks/useGameSocket';
 
 interface Guess {
@@ -51,21 +51,7 @@ export default function GameBoard({ gameId, token, userId, mode, variant, onExit
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { connected, lastEvent } = useGameSocket(gameId, token, handleSSEEvent);
-
-  // Fetch initial game state
-  useEffect(() => {
-    fetchGame();
-  }, [gameId]);
-
-  // Handle SSE events
-  function handleSSEEvent(event: SSEEvent) {
-    if (event.type === 'guess_made') {
-      fetchGame(); // Refresh game state
-    }
-  }
-
-  async function fetchGame() {
+  const fetchGame = useCallback(async () => {
     try {
       const host = window.location.hostname;
       const port = window.location.port || '4091';
@@ -86,7 +72,21 @@ export default function GameBoard({ gameId, token, userId, mode, variant, onExit
       console.error('Error fetching game:', err);
       setError('Failed to load game');
     }
-  }
+  }, [gameId, token, userId]);
+
+  // Handle SSE events
+  const handleSSEEvent = useCallback((event: SSEEvent) => {
+    if (event.type === 'guess_made') {
+      fetchGame(); // Refresh game state
+    }
+  }, [fetchGame]);
+
+  const { connected } = useGameSocket(gameId, token, handleSSEEvent);
+
+  // Fetch initial game state
+  useEffect(() => {
+    fetchGame();
+  }, [fetchGame]);
 
   async function submitGuess() {
     if (currentGuess.some(c => c === '')) {
