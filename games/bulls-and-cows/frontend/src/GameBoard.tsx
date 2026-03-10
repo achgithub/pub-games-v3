@@ -44,7 +44,7 @@ const NUMBERS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
 export default function GameBoard({ gameId, token, userId, userName }: GameBoardProps) {
   const [game, setGame] = useState<Game | null>(null);
-  const [currentGuess, setCurrentGuess] = useState<string[]>(['', '', '', '', '']);
+  const [currentGuess, setCurrentGuess] = useState<string[]>([]);
   const [selectedPosition, setSelectedPosition] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,6 +70,12 @@ export default function GameBoard({ gameId, token, userId, userName }: GameBoard
         data.guesses = [];
       }
       setGame(data);
+
+      // Initialize currentGuess based on mode
+      if (currentGuess.length === 0) {
+        const positions = data.mode === 'colors' ? 4 : 5;
+        setCurrentGuess(new Array(positions).fill(''));
+      }
     } catch (err) {
       console.error('Error fetching game:', err);
       setError('Failed to load game');
@@ -92,7 +98,7 @@ export default function GameBoard({ gameId, token, userId, userName }: GameBoard
 
   async function submitGuess() {
     if (currentGuess.some(c => c === '')) {
-      setError('Please select all 5 positions');
+      setError(`Please select all ${currentGuess.length} positions`);
       return;
     }
 
@@ -119,8 +125,8 @@ export default function GameBoard({ gameId, token, userId, userName }: GameBoard
         throw new Error(errorData || 'Failed to submit guess');
       }
 
-      // Clear current guess
-      setCurrentGuess(['', '', '', '']);
+      // Clear current guess (maintaining same length as before)
+      setCurrentGuess(new Array(currentGuess.length).fill(''));
       setSelectedPosition(0);
 
       // Refresh game state
@@ -145,14 +151,15 @@ export default function GameBoard({ gameId, token, userId, userName }: GameBoard
     newGuess[selectedPosition] = value;
     setCurrentGuess(newGuess);
 
-    // Auto-advance to next position
-    if (selectedPosition < 4) {
+    // Auto-advance to next position (colors: 0-3, numbers: 0-4)
+    const maxPosition = currentGuess.length - 1;
+    if (selectedPosition < maxPosition) {
       setSelectedPosition(selectedPosition + 1);
     }
   }
 
   function clearGuess() {
-    setCurrentGuess(['', '', '', '', '']);
+    setCurrentGuess(new Array(currentGuess.length).fill(''));
     setSelectedPosition(0);
   }
 
