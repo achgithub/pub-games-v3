@@ -40,7 +40,7 @@ const COLORS = [
   { code: 'P', name: 'Purple', colorClass: 'bc-color-purple' },
 ];
 
-const NUMBERS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+const NUMBERS = ['0', '1', '2', '3', '4'];
 
 export default function GameBoard({ gameId, token, userId, userName }: GameBoardProps) {
   const [game, setGame] = useState<Game | null>(null);
@@ -134,6 +134,13 @@ export default function GameBoard({ gameId, token, userId, userName }: GameBoard
   }
 
   function selectOption(value: string) {
+    // Check for duplicates - don't allow same value to be selected twice
+    if (currentGuess.includes(value)) {
+      setError(`Cannot use ${value} more than once`);
+      return;
+    }
+
+    setError(null); // Clear any existing error
     const newGuess = [...currentGuess];
     newGuess[selectedPosition] = value;
     setCurrentGuess(newGuess);

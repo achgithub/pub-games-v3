@@ -12,19 +12,30 @@ var colorOptions = []string{"R", "B", "G", "Y", "O", "P"} // Red, Blue, Green, Y
 
 // GenerateSecretCode creates a random 4-character code based on mode
 // mode: "colors" or "numbers"
+// No duplicates allowed
 func GenerateSecretCode(mode string) string {
 	rand.Seed(time.Now().UnixNano())
 	code := ""
+	used := make(map[string]bool)
 
 	if mode == "colors" {
-		// Generate 4 random colors (duplicates allowed)
-		for i := 0; i < 4; i++ {
-			code += colorOptions[rand.Intn(len(colorOptions))]
+		// Generate 4 random unique colors
+		for len(code) < 4 {
+			color := colorOptions[rand.Intn(len(colorOptions))]
+			if !used[color] {
+				code += color
+				used[color] = true
+			}
 		}
 	} else {
-		// Generate 4 random digits (duplicates allowed)
-		for i := 0; i < 4; i++ {
-			code += fmt.Sprintf("%d", rand.Intn(10))
+		// Generate 4 random unique digits (0-4)
+		numberOptions := []string{"0", "1", "2", "3", "4"}
+		for len(code) < 4 {
+			num := numberOptions[rand.Intn(len(numberOptions))]
+			if !used[num] {
+				code += num
+				used[num] = true
+			}
 		}
 	}
 
@@ -39,6 +50,15 @@ func ValidateGuess(guess, mode string) error {
 	}
 
 	guess = strings.ToUpper(guess)
+
+	// Check for duplicate characters
+	seen := make(map[rune]bool)
+	for _, char := range guess {
+		if seen[char] {
+			return fmt.Errorf("duplicate character not allowed: %c", char)
+		}
+		seen[char] = true
+	}
 
 	if mode == "colors" {
 		// Each character must be a valid color
@@ -55,10 +75,10 @@ func ValidateGuess(guess, mode string) error {
 			}
 		}
 	} else {
-		// Each character must be a digit
+		// Each character must be a digit 0-4
 		for _, char := range guess {
-			if char < '0' || char > '9' {
-				return fmt.Errorf("invalid digit: %c (must be 0-9)", char)
+			if char < '0' || char > '4' {
+				return fmt.Errorf("invalid digit: %c (must be 0-4)", char)
 			}
 		}
 	}

@@ -3,13 +3,21 @@
  * All UI elements use Activity Hub CSS classes
  */
 
-/* Color definitions for game pieces */
-.bc-color-red { background-color: #dc3545; }
-.bc-color-blue { background-color: #0d6efd; }
-.bc-color-green { background-color: #198754; }
-.bc-color-yellow { background-color: #ffc107; }
-.bc-color-orange { background-color: #fd7e14; }
-.bc-color-purple { background-color: #6f42c1; }
+/* Color definitions for game pieces - higher specificity to override default white */
+.bc-peg.bc-color-red, .bc-history-peg.bc-color-red { background-color: #dc3545 !important; }
+.bc-peg.bc-color-blue, .bc-history-peg.bc-color-blue { background-color: #0d6efd !important; }
+.bc-peg.bc-color-green, .bc-history-peg.bc-color-green { background-color: #198754 !important; }
+.bc-peg.bc-color-yellow, .bc-history-peg.bc-color-yellow { background-color: #ffc107 !important; }
+.bc-peg.bc-color-orange, .bc-history-peg.bc-color-orange { background-color: #fd7e14 !important; }
+.bc-peg.bc-color-purple, .bc-history-peg.bc-color-purple { background-color: #6f42c1 !important; }
+
+/* Color button styling */
+.bc-color-btn.bc-color-red { background-color: #dc3545; }
+.bc-color-btn.bc-color-blue { background-color: #0d6efd; }
+.bc-color-btn.bc-color-green { background-color: #198754; }
+.bc-color-btn.bc-color-yellow { background-color: #ffc107; color: #212529; }
+.bc-color-btn.bc-color-orange { background-color: #fd7e14; }
+.bc-color-btn.bc-color-purple { background-color: #6f42c1; }
 
 /* Guess display grid */
 .bc-guess-display {

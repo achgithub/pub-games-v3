@@ -235,8 +235,8 @@ const GameChallengeModal: React.FC<GameChallengeModalProps> = ({
                 )}
               </div>
 
-              {/* Selected count for group games */}
-              {isGroupGame && (
+              {/* Selected count for group games only (not solo-capable games) */}
+              {isGroupGame && !supportsSoloPlay && (
                 <p className="selected-count">
                   Selected: {selectedPlayers.length} / {maxPlayers}
                   {selectedPlayers.length < minPlayers && ` (min ${minPlayers})`}
