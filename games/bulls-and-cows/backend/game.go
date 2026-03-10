@@ -10,16 +10,16 @@ import (
 // Color options for color mode
 var colorOptions = []string{"R", "B", "G", "Y", "O", "P"} // Red, Blue, Green, Yellow, Orange, Purple
 
-// GenerateSecretCode creates a random 4-character code based on mode
-// mode: "colors" or "numbers"
-// No duplicates allowed
+// GenerateSecretCode creates a random code based on mode
+// mode: "colors" - 4 unique colors from 6 options
+// mode: "numbers" - 5 unique digits from 0-9
 func GenerateSecretCode(mode string) string {
 	rand.Seed(time.Now().UnixNano())
 	code := ""
 	used := make(map[string]bool)
 
 	if mode == "colors" {
-		// Generate 4 random unique colors
+		// Generate 4 random unique colors (4 colors from 6 options)
 		for len(code) < 4 {
 			color := colorOptions[rand.Intn(len(colorOptions))]
 			if !used[color] {
@@ -28,9 +28,9 @@ func GenerateSecretCode(mode string) string {
 			}
 		}
 	} else {
-		// Generate 4 random unique digits (0-4)
-		numberOptions := []string{"0", "1", "2", "3", "4"}
-		for len(code) < 4 {
+		// Generate 5 random unique digits (5 digits from 0-9)
+		numberOptions := []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"}
+		for len(code) < 5 {
 			num := numberOptions[rand.Intn(len(numberOptions))]
 			if !used[num] {
 				code += num
@@ -44,12 +44,18 @@ func GenerateSecretCode(mode string) string {
 
 // ValidateGuess checks if a guess is valid for the given mode
 func ValidateGuess(guess, mode string) error {
-	// Must be exactly 4 characters
-	if len(guess) != 4 {
-		return fmt.Errorf("guess must be exactly 4 characters")
-	}
-
 	guess = strings.ToUpper(guess)
+
+	// Check length based on mode
+	if mode == "colors" {
+		if len(guess) != 4 {
+			return fmt.Errorf("guess must be exactly 4 characters for colors mode")
+		}
+	} else {
+		if len(guess) != 5 {
+			return fmt.Errorf("guess must be exactly 5 digits for numbers mode")
+		}
+	}
 
 	// Check for duplicate characters
 	seen := make(map[rune]bool)
@@ -75,10 +81,10 @@ func ValidateGuess(guess, mode string) error {
 			}
 		}
 	} else {
-		// Each character must be a digit 0-4
+		// Each character must be a digit 0-9
 		for _, char := range guess {
-			if char < '0' || char > '4' {
-				return fmt.Errorf("invalid digit: %c (must be 0-4)", char)
+			if char < '0' || char > '9' {
+				return fmt.Errorf("invalid digit: %c (must be 0-9)", char)
 			}
 		}
 	}
@@ -127,6 +133,10 @@ func CalculateBullsAndCows(secret, guess string) (bulls, cows int) {
 }
 
 // CheckWin determines if the guess is a winning guess
-func CheckWin(bulls int) bool {
-	return bulls == 4
+// For colors: bulls == 4, for numbers: bulls == 5
+func CheckWin(bulls int, mode string) bool {
+	if mode == "colors" {
+		return bulls == 4
+	}
+	return bulls == 5
 }

@@ -40,11 +40,11 @@ const COLORS = [
   { code: 'P', name: 'Purple', colorClass: 'bc-color-purple' },
 ];
 
-const NUMBERS = ['0', '1', '2', '3', '4'];
+const NUMBERS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
 export default function GameBoard({ gameId, token, userId, userName }: GameBoardProps) {
   const [game, setGame] = useState<Game | null>(null);
-  const [currentGuess, setCurrentGuess] = useState<string[]>(['', '', '', '']);
+  const [currentGuess, setCurrentGuess] = useState<string[]>(['', '', '', '', '']);
   const [selectedPosition, setSelectedPosition] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -92,7 +92,7 @@ export default function GameBoard({ gameId, token, userId, userName }: GameBoard
 
   async function submitGuess() {
     if (currentGuess.some(c => c === '')) {
-      setError('Please select all 4 positions');
+      setError('Please select all 5 positions');
       return;
     }
 
@@ -146,13 +146,13 @@ export default function GameBoard({ gameId, token, userId, userName }: GameBoard
     setCurrentGuess(newGuess);
 
     // Auto-advance to next position
-    if (selectedPosition < 3) {
+    if (selectedPosition < 4) {
       setSelectedPosition(selectedPosition + 1);
     }
   }
 
   function clearGuess() {
-    setCurrentGuess(['', '', '', '']);
+    setCurrentGuess(['', '', '', '', '']);
     setSelectedPosition(0);
   }
 

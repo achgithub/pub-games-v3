@@ -93,8 +93,8 @@ func GetConfig(w http.ResponseWriter, r *http.Request) {
 				Type:    "select",
 				Default: "colors",
 				Options: []OptionValue{
-					{Value: "colors", Label: "Colors (6 colors)"},
-					{Value: "numbers", Label: "Numbers (0-9)"},
+					{Value: "colors", Label: "Colors (4 pegs, 6 colors)"},
+					{Value: "numbers", Label: "Numbers (5 digits, 0-9)"},
 				},
 			},
 		},
@@ -358,7 +358,7 @@ func MakeGuess(db *sql.DB, redisClient *redis.Client) http.HandlerFunc {
 		var completedAt *time.Time
 		now := time.Now()
 
-		if CheckWin(bulls) {
+		if CheckWin(bulls, game.Mode) {
 			newStatus = "won"
 			winner = &userID
 			completedAt = &now
