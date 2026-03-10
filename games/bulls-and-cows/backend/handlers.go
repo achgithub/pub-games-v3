@@ -81,7 +81,7 @@ func CreateGame(db *sql.DB, redisClient *redis.Client) http.HandlerFunc {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
-		userID := user.ID
+		userID := user.Email
 
 		var req CreateGameRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -165,7 +165,7 @@ func GetGame(db *sql.DB) http.HandlerFunc {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
-		userID := user.ID
+		userID := user.Email
 
 		vars := mux.Vars(r)
 		gameID := vars["gameId"]
@@ -250,7 +250,7 @@ func MakeGuess(db *sql.DB, redisClient *redis.Client) http.HandlerFunc {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
-		userID := user.ID
+		userID := user.Email
 
 		vars := mux.Vars(r)
 		gameID := vars["gameId"]
@@ -393,6 +393,6 @@ func StreamGame(redisClient *redis.Client) http.HandlerFunc {
 		vars := mux.Vars(r)
 		gameID := vars["gameId"]
 
-		StreamGameUpdates(w, r, gameID, user.ID, redisClient)
+		StreamGameUpdates(w, r, gameID, user.Email, redisClient)
 	}
 }
