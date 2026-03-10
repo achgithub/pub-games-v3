@@ -188,7 +188,11 @@ func CreateGame(db *sql.DB, redisClient *redis.Client) http.HandlerFunc {
 		PublishGameEvent(redisClient, gameID, "game_created", game)
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(game)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": true,
+			"gameId":  game.ID,
+			"game":    game,
+		})
 	}
 }
 
