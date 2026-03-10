@@ -1,5 +1,5 @@
 #!/bin/bash
-# Start core services: identity-shell, setup-admin, game-admin, tic-tac-toe, dots, last-man-standing, lms-manager, sweepstakes, sweepstakes-knockout, quiz-player, quiz-master, quiz-display, mobile-test, component-library, leaderboard, rrroll-the-dice, sudoku
+# Start core services: identity-shell, setup-admin, game-admin, tic-tac-toe, dots, last-man-standing, lms-manager, sweepstakes, sweepstakes-knockout, quiz-player, quiz-master, quiz-display, mobile-test, component-library, leaderboard, rrroll-the-dice, sudoku, bulls-and-cows
 
 # Check if tmux session exists
 if tmux has-session -t core 2>/dev/null; then
@@ -80,6 +80,10 @@ tmux send-keys -t core:rrroll-the-dice "cd ~/pub-games-v3/games/rrroll-the-dice/
 tmux new-window -t core -n sudoku
 tmux send-keys -t core:sudoku "cd ~/pub-games-v3/games/sudoku/backend && go run *.go" C-m
 
+# Bulls and Cows (port 4091)
+tmux new-window -t core -n bulls-and-cows
+tmux send-keys -t core:bulls-and-cows "cd ~/pub-games-v3/games/bulls-and-cows/backend && go run *.go" C-m
+
 echo "Core services starting in tmux session 'core'..."
 echo "Waiting for services to be ready..."
 echo ""
@@ -103,6 +107,7 @@ declare -A SERVICES=(
     ["leaderboard"]="5030"
     ["rrroll-the-dice"]="4071"
     ["sudoku"]="4081"
+    ["bulls-and-cows"]="4091"
 )
 
 # Wait for services to start (max 30 seconds)

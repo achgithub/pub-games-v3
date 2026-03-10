@@ -1,0 +1,202 @@
+/* Bulls and Cows Game Board Styles
+ * ONLY game board rendering CSS allowed here per project standards
+ * All UI elements use Activity Hub CSS classes
+ */
+
+/* Color definitions for game pieces */
+.bc-color-red { background-color: #dc3545; }
+.bc-color-blue { background-color: #0d6efd; }
+.bc-color-green { background-color: #198754; }
+.bc-color-yellow { background-color: #ffc107; }
+.bc-color-orange { background-color: #fd7e14; }
+.bc-color-purple { background-color: #6f42c1; }
+
+/* Guess display grid */
+.bc-guess-display {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+/* Individual peg/position */
+.bc-peg {
+  width: 60px;
+  height: 60px;
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: bold;
+  cursor: pointer;
+  background-color: #fff;
+  color: #212529;
+}
+
+.bc-peg.selected {
+  border: 3px solid #0066cc;
+}
+
+.bc-peg.color-mode {
+  color: #fff;
+}
+
+/* Color selection buttons */
+.bc-color-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.bc-color-btn {
+  padding: 0.75rem;
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  min-height: 50px;
+}
+
+/* Number selection grid */
+.bc-number-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.bc-number-btn {
+  min-height: 48px;
+  font-size: 1.125rem;
+}
+
+/* Guess history - small pegs */
+.bc-history-pegs {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.bc-history-peg {
+  width: 32px;
+  height: 32px;
+  border: 2px solid #dee2e6;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: bold;
+  background-color: #fff;
+  color: #212529;
+}
+
+.bc-history-peg.color-mode {
+  color: #fff;
+}
+
+/* Feedback badges */
+.bc-feedback {
+  display: flex;
+  gap: 1rem;
+  margin-left: auto;
+}
+
+.bc-bulls-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  background-color: #d4edda;
+  color: #155724;
+  font-weight: bold;
+}
+
+.bc-cows-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  background-color: #fff3cd;
+  color: #856404;
+  font-weight: bold;
+}
+
+/* Connection status */
+.bc-status-connected {
+  color: #198754;
+}
+
+.bc-status-disconnected {
+  color: #dc3545;
+}
+
+/* Guess history item layout */
+.bc-history-item-content {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.bc-guess-number {
+  font-weight: bold;
+  min-width: 40px;
+}
+
+/* Action buttons layout */
+.bc-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.bc-actions .ah-btn-primary {
+  flex: 1;
+}
+
+/* Game info grid */
+.bc-game-info {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+/* Mode selection */
+.bc-mode-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.bc-mode-btn {
+  padding: 1.5rem;
+  font-size: 1.125rem;
+}
+
+.bc-mode-title {
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+.bc-mode-desc {
+  font-size: 0.875rem;
+  opacity: 0.9;
+}
+
+/* Guess history scrollable container */
+.bc-history-scroll {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+/* Legend text */
+.bc-legend {
+  font-size: 0.875rem;
+  margin-top: 1rem;
+}
+
+/* Status indicator sizing */
+.bc-status {
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+}
