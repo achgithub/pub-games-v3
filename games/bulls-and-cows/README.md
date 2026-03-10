@@ -50,7 +50,7 @@ A code-breaking game where players guess a secret combination of colors or numbe
 
 ```bash
 # ============================================
-# Bulls and Cows - Complete Build & Deploy
+# Bulls and Cows - Complete Deployment
 # ============================================
 
 # 1. Database Setup
@@ -62,15 +62,11 @@ psql -h localhost -p 5555 -U activityhub -d bulls_and_cows_db -f ~/pub-games-v3/
 # Verify tables (should show: games, guesses)
 psql -h localhost -p 5555 -U activityhub -d bulls_and_cows_db -c "\dt"
 
-# 2. Backend Build
+# 2. Backend Dependencies
 # ============================================
 cd ~/pub-games-v3/games/bulls-and-cows/backend
-# Download Go dependencies
-go mod download
-# Test compilation
-go build -o bulls-and-cows
-# Clean up test binary
-rm bulls-and-cows
+# Fix dependencies and generate go.sum
+go mod tidy
 
 # 3. Frontend Build
 # ============================================
@@ -94,13 +90,9 @@ psql -U activityhub -h localhost -p 5555 -d activity_hub -c "SELECT name, icon, 
 
 # 5. Start Service
 # ============================================
-# Option A: Start all core services (includes Bulls and Cows)
+# Start all core services (includes Bulls and Cows)
 cd ~/pub-games-v3/scripts
 ./start_core.sh
-
-# Option B: Start Bulls and Cows manually (for testing)
-# cd ~/pub-games-v3/games/bulls-and-cows/backend
-# go run *.go
 
 # 6. Verify Service
 # ============================================
@@ -112,6 +104,12 @@ curl http://localhost:4091/api/config
 # ============================================
 # Done! Access at http://192.168.1.29:3001
 # ============================================
+```
+
+### Manual Start (for testing/debugging)
+```bash
+cd ~/pub-games-v3/games/bulls-and-cows/backend
+go run *.go
 ```
 
 ### 7. Test Gameplay
