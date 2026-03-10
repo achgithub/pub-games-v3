@@ -334,19 +334,45 @@ The database will be created automatically when the script runs.
 
 ### Step 11: Register in App Registry
 
-Add to `identity-shell/backend/apps.json`:
+Create a SQL migration script at `scripts/migrate_add_your_app.sql`:
 
-```json
-{
-  "id": "your-app",
-  "name": "Your App Name",
-  "icon": "🎮",
-  "type": "iframe",
-  "url": "http://{host}:4XXX",
-  "backendPort": 4XXX,
-  "category": "game",
-  "realtime": "sse"
-}
+```sql
+-- Register your-app in the activity hub
+-- Run on Pi: psql -U activityhub -h localhost -p 5555 -d activity_hub -f scripts/migrate_add_your_app.sql
+
+INSERT INTO applications (id, name, icon, type, category, description, url, backend_port, realtime, min_players, max_players, required_roles, enabled, display_order, guest_accessible)
+VALUES (
+  'your-app',
+  'Your App Name',
+  '🎮',
+  'iframe',
+  'game',
+  'Short description of your app',
+  'http://{host}:4XXX',
+  4XXX,
+  'sse',
+  0,
+  0,
+  '{}',
+  true,
+  100,
+  true
+)
+ON CONFLICT (id) DO UPDATE SET
+  name = EXCLUDED.name,
+  icon = EXCLUDED.icon,
+  type = EXCLUDED.type,
+  category = EXCLUDED.category,
+  description = EXCLUDED.description,
+  url = EXCLUDED.url,
+  backend_port = EXCLUDED.backend_port,
+  realtime = EXCLUDED.realtime,
+  min_players = EXCLUDED.min_players,
+  max_players = EXCLUDED.max_players,
+  required_roles = EXCLUDED.required_roles,
+  enabled = EXCLUDED.enabled,
+  display_order = EXCLUDED.display_order,
+  guest_accessible = EXCLUDED.guest_accessible;
 ```
 
 **Field reference:**
@@ -354,9 +380,14 @@ Add to `identity-shell/backend/apps.json`:
 - `name`: Display name
 - `icon`: Emoji icon
 - `type`: Always `"iframe"`
+- `category`: `"game"`, `"utility"`, or `"admin"`
+- `description`: Short description (shown in app list)
 - `url`: `http://{host}:PORT` (use your chosen port)
-- `backendPort`: Same port as URL
-- `category`: `"game"` or `"activity"`
+- `backend_port`: Same port as URL
+- `realtime`: `"sse"`, `"none"`, etc.
+- `min_players`/`max_players`: For multiplayer games (0 if not applicable)
+- `required_roles`: `'{}'` for public, `ARRAY['admin']` for admin-only
+- `guest_accessible`: `true` if guests can use it
 - `realtime`: `"sse"`, `"websocket"`, or `"none"`
 
 ### Step 12: Update Start Services Script
@@ -439,7 +470,7 @@ go run *.go
 
 - [ ] App reads `userId` from URL parameters
 - [ ] App shows error if `userId` missing
-- [ ] App added to `apps.json`
+- [ ] App registered via SQL migration script
 - [ ] Database added to `setup_databases.sh`
 - [ ] App added to `scripts/start_core.sh`
 - [ ] `/api/config` endpoint implemented
@@ -521,16 +552,13 @@ function App() {
 
 ### ❌ Don't skip the registry
 
-```json
-// BAD: Forgetting to add to apps.json
-// App won't appear in shell
+```bash
+# BAD: Forgetting to register app
+# App won't appear in shell
 
-// GOOD: Always register in identity-shell/backend/apps.json
-{
-  "id": "your-app",
-  "name": "Your App",
-  ...
-}
+# GOOD: Always create and run SQL migration script
+psql -U activityhub -h localhost -p 5555 -d activity_hub \
+  -f scripts/migrate_add_your_app.sql
 ```
 
 ## Testing Your New App
@@ -596,7 +624,11 @@ Choose a port from the available range:
 | 4031-4040 | Social/activity apps |
 | 4041-4050 | Admin/management apps |
 
-Check `identity-shell/backend/apps.json` for used ports.
+Check `scripts/start_core.sh` or query the database for used ports:
+```bash
+psql -U activityhub -h localhost -p 5555 -d activity_hub \
+  -c "SELECT id, name, backend_port FROM applications ORDER BY backend_port;"
+```
 
 ## Getting Help
 

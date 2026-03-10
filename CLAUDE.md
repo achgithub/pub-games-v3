@@ -361,7 +361,7 @@ See `docs/DEPLOYMENT.md` for full deployment procedures.
 1. **TypeScript required** - ALL React frontends use `.tsx` files, NEVER `.js`
 2. **URL parameters required** - Apps MUST read `userId`, `userName`, `token` from URL
 3. **Shared CSS required** - All apps MUST load Activity Hub CSS from identity-shell
-4. **Registry required** - Apps MUST be registered in database (via game-admin)
+4. **Registry required** - Apps MUST be registered in database via SQL migration script
 5. **Reference first** - Check `games/smoke-test/` before creating new patterns
 
 ### TypeScript checklist:
