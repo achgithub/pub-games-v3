@@ -129,10 +129,9 @@ func CreateGame(db *sql.DB, redisClient *redis.Client) http.HandlerFunc {
 		// Detect if this is a 2-player challenge request (from identity-shell)
 		isChallenge := req.Player1ID != "" && req.Player2ID != ""
 
-		// Validate mode
+		// Apply default mode if missing or invalid (like dots handles gridSize)
 		if req.Mode != "colors" && req.Mode != "numbers" {
-			http.Error(w, "Mode must be 'colors' or 'numbers'", http.StatusBadRequest)
-			return
+			req.Mode = "colors"
 		}
 
 		// Determine variant and players
