@@ -98,6 +98,11 @@
   cursor: default;
 }
 
+.bc-peg-disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .bc-peg.color-mode {
   color: #fff;
 }
@@ -389,11 +394,12 @@
   font-size: 1.2rem;
 }
 
-/* Opponent progress summary */
+/* Opponent progress summary - fixed height to prevent shifting */
 .bc-opponent-progress {
   display: flex;
   align-items: center;
   gap: 1rem;
+  min-height: 32px;
 }
 
 /* Code peg placeholder (question mark) */

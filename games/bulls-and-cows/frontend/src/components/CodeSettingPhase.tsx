@@ -38,6 +38,11 @@ export default function CodeSettingPhase({
 
   const options = mode === 'colors' ? COLORS : NUMBERS.map(n => ({ code: n, name: n, colorClass: '' }));
 
+  const getColorClass = (code: string) => {
+    const color = COLORS.find(c => c.code === code);
+    return color ? color.colorClass : '';
+  };
+
   const handleOptionClick = (value: string) => {
     if (myCodeSet) return; // Can't change after submitting
 
@@ -112,49 +117,60 @@ export default function CodeSettingPhase({
   };
 
   return (
-    <div className="ah-container ah-container--narrow">
+    <div className="ah-container ah-container--narrow ah-mt">
       <div className="ah-card">
-        <h2 className="ah-header">
-          <span>Set Your Secret Code</span>
-        </h2>
+        <h2 className="bc-section-title">Set Your Secret Code</h2>
 
         <p className="ah-meta ah-mb-lg">
           Choose a secret code for your opponent to crack. No duplicates allowed.
         </p>
 
         {/* Code display */}
-        <div className="bc-code-row ah-mb-xl">
+        <div className="bc-guess-display">
           {code.map((value, index) => (
-            <button
+            <div
               key={index}
-              className={`bc-code-peg ${selectedPosition === index && !myCodeSet ? 'bc-code-peg--selected' : ''} ${
-                value && mode === 'colors' ? options.find(o => o.code === value)?.colorClass || '' : ''
-              }`}
               onClick={() => handlePositionClick(index)}
-              disabled={myCodeSet}
+              className={`bc-peg ${selectedPosition === index && !myCodeSet ? 'selected' : ''} ${
+                value && mode === 'colors' ? 'color-mode ' + getColorClass(value) : ''
+              } ${myCodeSet ? 'bc-peg-disabled' : ''}`}
             >
-              {mode === 'numbers' && value ? value : ''}
-              {!value && <span className="bc-code-peg-placeholder">?</span>}
-            </button>
+              {value || '?'}
+            </div>
           ))}
         </div>
 
         {/* Option selector */}
         {!myCodeSet && (
-          <div className="bc-options-grid ah-mb-lg">
-            {options.map((option) => (
-              <button
-                key={option.code}
-                className={`bc-option-btn ${mode === 'colors' ? option.colorClass : ''} ${
-                  code.includes(option.code) ? 'bc-option-btn--used' : ''
-                }`}
-                onClick={() => handleOptionClick(option.code)}
-                disabled={code.includes(option.code)}
-              >
-                {mode === 'numbers' ? option.code : ''}
-              </button>
-            ))}
-          </div>
+          <>
+            {mode === 'colors' ? (
+              <div className="bc-color-grid ah-mt">
+                {options.map((option) => (
+                  <button
+                    key={option.code}
+                    onClick={() => handleOptionClick(option.code)}
+                    className={`bc-color-btn ${option.colorClass}`}
+                    disabled={code.includes(option.code)}
+                  >
+                    {option.name}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="bc-number-grid ah-mt">
+                {options.map((option) => (
+                  <button
+                    key={option.code}
+                    onClick={() => handleOptionClick(option.code)}
+                    className="ah-btn-outline bc-number-btn"
+                    disabled={code.includes(option.code)}
+                  >
+                    {option.code}
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
         )}
 
         {/* Error message */}
@@ -166,20 +182,20 @@ export default function CodeSettingPhase({
 
         {/* Status */}
         {myCodeSet ? (
-          <div className="ah-banner ah-banner--success">
+          <div className="ah-banner ah-banner--success ah-mt">
             ✓ Your code is set. {opponentCodeSet ? 'Game starting!' : 'Waiting for opponent...'}
           </div>
         ) : (
-          <div className="ah-btn-group">
-            <button className="ah-btn-outline" onClick={handleClear}>
-              Clear
-            </button>
+          <div className="bc-actions ah-mt">
             <button
               className="ah-btn-primary"
               onClick={handleSubmit}
               disabled={submitting || code.some(c => c === '')}
             >
               {submitting ? 'Submitting...' : 'Set Code'}
+            </button>
+            <button className="ah-btn-outline" onClick={handleClear}>
+              Clear
             </button>
           </div>
         )}

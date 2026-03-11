@@ -194,25 +194,119 @@ export default function TwoPlayerBoard({
           </div>
         </div>
 
-        {/* Opponent's Last Guess */}
-        {opponentLastGuess && (
+        {/* Opponent's Progress - Always visible to prevent shifting */}
+        <div className="ah-card ah-mb">
+          <h3 className="bc-section-title">Opponent's Progress</h3>
+          <div className="bc-opponent-progress">
+            {opponentLastGuess ? (
+              <>
+                <span className="ah-meta">Last guess:</span>
+                {renderFeedback(opponentLastGuess.bulls, opponentLastGuess.cows)}
+              </>
+            ) : (
+              <span className="ah-meta">No guesses yet</span>
+            )}
+          </div>
+        </div>
+
+        {/* Current Guess Input */}
+        {status === 'active' && !hasGuessedThisTurn && (
           <div className="ah-card ah-mb">
-            <h3 className="bc-section-title">Opponent's Progress</h3>
-            <div className="bc-opponent-progress">
-              <span className="ah-meta">Last guess:</span>
-              {renderFeedback(opponentLastGuess.bulls, opponentLastGuess.cows)}
+            <h3 className="bc-section-title">Your Guess</h3>
+
+            <div className="bc-guess-display">
+              {currentGuess.map((value, index) => (
+                <div
+                  key={index}
+                  onClick={() => handlePositionClick(index)}
+                  className={`bc-peg ${selectedPosition === index ? 'selected' : ''} ${
+                    value && mode === 'colors' ? 'color-mode ' + getColorClass(value) : ''
+                  }`}
+                >
+                  {value || '?'}
+                </div>
+              ))}
+            </div>
+
+            {/* Selection Interface */}
+            {mode === 'colors' ? (
+              <div className="bc-color-grid ah-mt">
+                {options.map((option) => (
+                  <button
+                    key={option.code}
+                    onClick={() => handleOptionClick(option.code)}
+                    className={`bc-color-btn ${option.colorClass}`}
+                    disabled={currentGuess.includes(option.code)}
+                  >
+                    {option.name}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="bc-number-grid ah-mt">
+                {options.map((option) => (
+                  <button
+                    key={option.code}
+                    onClick={() => handleOptionClick(option.code)}
+                    className="ah-btn-outline bc-number-btn"
+                    disabled={currentGuess.includes(option.code)}
+                  >
+                    {option.code}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {error && (
+              <div className="ah-banner ah-banner--error ah-mt">
+                {error}
+              </div>
+            )}
+
+            <div className="bc-actions ah-mt">
+              <button
+                className="ah-btn-primary"
+                onClick={handleSubmit}
+                disabled={submitting || currentGuess.some(c => c === '')}
+              >
+                {submitting ? 'Submitting...' : 'Submit Guess'}
+              </button>
+              <button className="ah-btn-outline" onClick={handleClear}>
+                Clear
+              </button>
             </div>
           </div>
         )}
 
-        {/* My Guesses */}
-        <div className="ah-card">
-          <h3 className="bc-section-title">My Guesses</h3>
+        {/* Waiting indicator */}
+        {status === 'active' && hasGuessedThisTurn && (
+          <div className="ah-card ah-mb">
+            <div className="ah-banner bc-waiting-banner">
+              ⏳ Waiting for opponent to guess...
+            </div>
+          </div>
+        )}
 
-          {/* Guess history */}
-          {myGuesses.length > 0 && (
-            <div className="bc-history-scroll ah-mb">
-              {myGuesses.map((guess) => (
+        {/* Game over */}
+        {status !== 'active' && status !== 'code_setting' && (
+          <div className="ah-card ah-mb">
+            <div className={`ah-banner ${status === 'won' && winner === userId ? 'ah-banner--success' : ''}`}>
+              {status === 'won' && winner === userId && '🎉 You won!'}
+              {status === 'won' && winner !== userId && '😞 Opponent won'}
+              {status === 'draw' && '🤝 Draw!'}
+            </div>
+          </div>
+        )}
+
+        {/* Guess History - Below input */}
+        <div className="ah-card">
+          <h3 className="bc-section-title">My Guess History</h3>
+
+          {myGuesses.length === 0 ? (
+            <p className="ah-meta">No guesses yet</p>
+          ) : (
+            <div className="bc-history-scroll">
+              {[...myGuesses].reverse().map((guess) => (
                 <div key={guess.id} className="ah-list-item ah-mb-sm">
                   <div className="bc-history-item-content">
                     <div className="bc-guess-number">#{guess.turnNumber}</div>
@@ -226,89 +320,6 @@ export default function TwoPlayerBoard({
                   </div>
                 </div>
               ))}
-            </div>
-          )}
-
-          {/* Current guess input */}
-          {status === 'active' && !hasGuessedThisTurn && (
-            <>
-              <div className="bc-guess-display">
-                {currentGuess.map((value, index) => (
-                  <div
-                    key={index}
-                    onClick={() => handlePositionClick(index)}
-                    className={`bc-peg ${selectedPosition === index ? 'selected' : ''} ${
-                      value && mode === 'colors' ? 'color-mode ' + getColorClass(value) : ''
-                    }`}
-                  >
-                    {value || '?'}
-                  </div>
-                ))}
-              </div>
-
-              {/* Selection Interface */}
-              {mode === 'colors' ? (
-                <div className="bc-color-grid ah-mt">
-                  {options.map((option) => (
-                    <button
-                      key={option.code}
-                      onClick={() => handleOptionClick(option.code)}
-                      className={`bc-color-btn ${option.colorClass}`}
-                      disabled={currentGuess.includes(option.code)}
-                    >
-                      {option.name}
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <div className="bc-number-grid ah-mt">
-                  {options.map((option) => (
-                    <button
-                      key={option.code}
-                      onClick={() => handleOptionClick(option.code)}
-                      className="ah-btn-outline bc-number-btn"
-                      disabled={currentGuess.includes(option.code)}
-                    >
-                      {option.code}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {error && (
-                <div className="ah-banner ah-banner--error ah-mt">
-                  {error}
-                </div>
-              )}
-
-              <div className="bc-actions ah-mt">
-                <button
-                  className="ah-btn-primary"
-                  onClick={handleSubmit}
-                  disabled={submitting || currentGuess.some(c => c === '')}
-                >
-                  {submitting ? 'Submitting...' : 'Submit Guess'}
-                </button>
-                <button className="ah-btn-outline" onClick={handleClear}>
-                  Clear
-                </button>
-              </div>
-            </>
-          )}
-
-          {/* Waiting indicator */}
-          {status === 'active' && hasGuessedThisTurn && (
-            <div className="ah-banner bc-waiting-banner">
-              ⏳ Waiting for opponent to guess...
-            </div>
-          )}
-
-          {/* Game over */}
-          {status !== 'active' && status !== 'code_setting' && (
-            <div className={`ah-banner ${status === 'won' && winner === userId ? 'ah-banner--success' : ''}`}>
-              {status === 'won' && winner === userId && '🎉 You won!'}
-              {status === 'won' && winner !== userId && '😞 Opponent won'}
-              {status === 'draw' && '🤝 Draw!'}
             </div>
           )}
         </div>
