@@ -86,7 +86,7 @@ export default function GameBoard({ gameId, token, userId, userName }: GameBoard
 
   // Handle SSE events
   const handleSSEEvent = useCallback((event: SSEEvent) => {
-    console.log('SSE event received:', event.type, event.data);
+    console.log('SSE event received:', event.type, event.payload);
 
     if (event.type === 'guess_made') {
       // Solo play guess
