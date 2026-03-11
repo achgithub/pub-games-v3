@@ -17,6 +17,7 @@ interface TwoPlayerBoardProps {
   userId: string;
   mode: string;
   myCode: string;
+  opponentCode: string;
   opponentLastGuess: Guess | null;
   myGuesses: Guess[];
   currentTurn: number;
@@ -44,6 +45,7 @@ export default function TwoPlayerBoard({
   userId,
   mode,
   myCode,
+  opponentCode,
   opponentLastGuess,
   myGuesses,
   currentTurn,
@@ -298,9 +300,25 @@ export default function TwoPlayerBoard({
         {status !== 'active' && status !== 'code_setting' && (
           <div className="ah-card ah-mb">
             <div className={`ah-banner ${status === 'won' && winner === userId ? 'ah-banner--success' : ''}`}>
-              {status === 'won' && winner === userId && '🎉 You won!'}
-              {status === 'won' && winner !== userId && '😞 Opponent won'}
-              {status === 'draw' && '🤝 Draw!'}
+              <div>
+                {status === 'won' && winner === userId && '🎉 You won!'}
+                {status === 'won' && winner !== userId && '😞 Opponent won'}
+                {status === 'draw' && '🤝 Draw!'}
+              </div>
+              <div className="bc-game-over-codes">
+                <div className="bc-code-reveal">
+                  <span className="ah-meta">Your code:</span>
+                  <div className="bc-code-reveal-pegs">
+                    {myCode.split('').map((value, index) => renderCompactCodePeg(value, index))}
+                  </div>
+                </div>
+                <div className="bc-code-reveal">
+                  <span className="ah-meta">Opponent's code:</span>
+                  <div className="bc-code-reveal-pegs">
+                    {opponentCode.split('').map((value, index) => renderCompactCodePeg(value, index))}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}

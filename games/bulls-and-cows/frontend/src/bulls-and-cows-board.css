@@ -45,6 +45,25 @@
   color: #78716c;
 }
 
+/* Game over code reveal */
+.bc-game-over-codes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.bc-code-reveal {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.bc-code-reveal-pegs {
+  display: flex;
+  gap: 0.25rem;
+}
+
 /* Color definitions for game pieces - higher specificity to override default white */
 .bc-peg.bc-color-red, .bc-peg-compact.bc-color-red, .bc-history-peg.bc-color-red, .bc-code-peg.bc-color-red, .bc-option-btn.bc-color-red {
   background-color: #dc3545 !important;
