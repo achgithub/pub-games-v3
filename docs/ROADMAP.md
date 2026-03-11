@@ -4,6 +4,29 @@ This document tracks future features, enhancements, and planned work for the pub
 
 ---
 
+## Recent Progress (2026-03-11)
+
+### Bulls and Cows - 2-Player Mode ✅
+
+**Status**: Complete
+
+**Implementation details**:
+- ✅ Dual-code simultaneous turn-based gameplay
+- ✅ Both players set secret codes (privacy toggle with press & hold)
+- ✅ Turn synchronization (guesses held until both submit)
+- ✅ Win/draw evaluation (win if crack opponent's code first, draw if both crack same turn)
+- ✅ Mobile-optimized UI (compact pegs, inline waiting indicator)
+- ✅ No board shifting (fixed layouts, opponent section always visible)
+- ✅ Database schema v2 with migration script
+- ✅ SSE real-time updates for code setting and turn completion
+- ✅ Visual feedback for waiting state (greyed out inputs)
+
+**Effort**: ~6 hours (across multiple iterations and polish)
+
+**Outcome**: Fully functional 2-player mode maintaining all solo play features.
+
+---
+
 ## Recent Progress (2026-03-08)
 
 ### Group Import from Game Admin ✅
@@ -70,6 +93,102 @@ This document tracks future features, enhancements, and planned work for the pub
 - `docs/STYLE-GUIDE.md` - Complete Activity Hub CSS class reference
 
 **Effort Estimate**: TBD (depends on new features scope)
+
+---
+
+## Generic Connection Handling for Multiplayer Games
+
+**Goal**: Create reusable connection handling system for all multiplayer games (opponent disconnect detection, claim win timer, reconnection handling)
+
+**Current state**:
+- Tic-tac-toe and Dots have custom-built connection handling
+- Bulls and Cows 2-player has no connection handling
+- Each implementation is game-specific and duplicated
+- No standardized UX across games
+
+**Required features**:
+
+1. **Backend - Generic SSE Manager**:
+   - Track active connections per game and player
+   - Detect disconnections (SSE connection closed)
+   - Broadcast `opponent_disconnected` event to remaining player
+   - Broadcast `opponent_reconnected` event when player returns
+   - Configurable timeout (default: 15 seconds)
+   - Generic `/api/game/{gameId}/claim-win` endpoint pattern
+
+2. **Frontend - Reusable Hook**:
+   ```tsx
+   import { useOpponentConnection } from '@/hooks/useOpponentConnection';
+
+   const {
+     opponentDisconnected,
+     claimWinAvailable,
+     claimWinCountdown,
+     claimWin
+   } = useOpponentConnection(gameId, userId, token);
+   ```
+
+3. **UI Components**:
+   - `<ConnectionStatus />` - Shows "Opponent disconnected" indicator
+   - `<ClaimWinButton />` - Appears after timeout expires
+   - `<CountdownTimer />` - Shows remaining seconds until claim win
+   - Consistent styling using Activity Hub CSS
+
+4. **Backend Pattern** (activity-hub-common):
+   ```go
+   // Generic connection tracking
+   type ConnectionManager struct {
+       connections map[string]*PlayerConnection
+       mu sync.RWMutex
+   }
+
+   func (cm *ConnectionManager) TrackConnection(gameId, playerId string)
+   func (cm *ConnectionManager) RemoveConnection(gameId, playerId string)
+   func (cm *ConnectionManager) IsPlayerConnected(gameId, playerId string) bool
+   func (cm *ConnectionManager) NotifyDisconnect(gameId, playerId string, timeout int)
+   ```
+
+5. **Configuration**:
+   - Per-game timeout configuration in app registry
+   - Default: 15 seconds
+   - Overridable by game type (faster for quick games, longer for strategic games)
+
+**Games to migrate**:
+- Bulls and Cows (add connection handling)
+- Tic-tac-toe (migrate to generic system)
+- Dots (migrate to generic system)
+- Future multiplayer games (use generic system from start)
+
+**Implementation phases**:
+
+**Phase 1 - Backend (6 hours)**:
+- [ ] Create `ConnectionManager` in activity-hub-common
+- [ ] Generic SSE event types for disconnect/reconnect
+- [ ] Claim win handler pattern
+- [ ] Connection timeout configuration
+
+**Phase 2 - Frontend (4 hours)**:
+- [ ] Create `useOpponentConnection` hook
+- [ ] Reusable UI components
+- [ ] Activity Hub CSS classes for connection status
+- [ ] Documentation and examples
+
+**Phase 3 - Migration (6 hours)**:
+- [ ] Migrate tic-tac-toe to generic system
+- [ ] Migrate dots to generic system
+- [ ] Add connection handling to bulls-and-cows
+- [ ] Update NEW-APP-GUIDE.md with connection handling docs
+
+**Total effort**: ~16 hours
+
+**Benefits**:
+- Consistent UX across all multiplayer games
+- Reduced code duplication
+- Easier to add multiplayer to new games
+- Single place to fix bugs or improve UX
+- Better testability (mock connection states)
+
+**Reference implementation**: Tic-tac-toe's `useGameSocket` hook (lines 41-54, 63-65, 158-191)
 
 ---
 

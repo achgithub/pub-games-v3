@@ -1,5 +1,24 @@
 # Pub Games v3 - Project Guide
 
+## Recent Updates (2026-03-11)
+
+**Bulls and Cows 2-Player Mode (NEW):**
+- ✅ **Dual-Code Simultaneous Turn-Based Gameplay** - Both players set secret codes and guess simultaneously
+- ✅ **Privacy Toggle** - Press & hold eye button to reveal your secret code (prevents shoulder surfing)
+- ✅ **Turn Synchronization** - Guesses don't register until both players submit (prevents running ahead)
+- ✅ **Win/Draw Evaluation** - Win if you crack opponent's code first, draw if both crack same turn or both exceed max guesses
+- ✅ **Opponent Progress Tracking** - Shows opponent's last guess feedback (bulls/cows) without revealing their full history
+- ✅ **Mobile-Optimized UI** - Compact secret code display (48px pegs + inline eye button saves screen space)
+- ✅ **Visual Waiting State** - Input greyed out (40% opacity) when waiting for opponent, inline "⏳ waiting" indicator
+- ✅ **No Board Shifting** - Fixed layouts, inline indicators, opponent section always visible
+- ✅ **Game Over Display** - Large centered message (1.75rem) with green background for wins
+- ✅ **Database Schema v2** - New columns: player1_code, player2_code, current_turn, turn-based guessing with UNIQUE constraint
+- ✅ **SSE Events** - code_set, both_codes_set, guess_submitted, turn_complete for real-time updates
+- ✅ **Solo Play Maintained** - Traditional solo mode (player vs AI) works alongside 2-player mode
+
+**Port Update:**
+- Bulls and Cows: 4091 (previously unlisted, now documented)
+
 ## Recent Updates (2026-03-09)
 
 **Sudoku Puzzle Management System (NEW):**
@@ -83,11 +102,11 @@
 
 **Port Allocation:**
 - Identity Shell: 3001
-- Games (4xxx): tic-tac-toe: 4001, dots: 4011, sweepstakes: 4031, lms: 4021, quiz-player: 4041, spoof: 4051, mobile-test: 4061, sudoku: 4081
+- Games (4xxx): tic-tac-toe: 4001, dots: 4011, sweepstakes: 4031, lms: 4021, quiz-player: 4041, spoof: 4051, mobile-test: 4061, sudoku: 4081, bulls-and-cows: 4091
 - Admin/Support (5xxx): component-library: 5010, setup-admin: 5020, leaderboard: 5030, display-admin: 5050, display-runtime: 5051, game-admin: 5070, quiz-master: 5080, quiz-display: 5081
 
 **CSS Migration Status:**
-- ✅ Completed: sweepstakes-knockout, lms-manager, dots, tic-tac-toe, sudoku, component-library
+- ✅ Completed: sweepstakes-knockout, lms-manager, dots, tic-tac-toe, sudoku, bulls-and-cows, component-library
 - ⏳ Remaining: quiz-player, quiz-master, quiz-display, mobile-test (4 apps)
 
 **Known Issues:**
