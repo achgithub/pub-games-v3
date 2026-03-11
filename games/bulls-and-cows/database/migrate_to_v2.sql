@@ -3,6 +3,11 @@
 
 BEGIN;
 
+-- Make solo-only columns nullable (2-player games don't use these)
+ALTER TABLE games ALTER COLUMN secret_code DROP NOT NULL;
+ALTER TABLE games ALTER COLUMN code_maker DROP NOT NULL;
+ALTER TABLE games ALTER COLUMN code_breaker DROP NOT NULL;
+
 -- Add new columns to games table
 ALTER TABLE games ADD COLUMN IF NOT EXISTS player1_id VARCHAR(255);
 ALTER TABLE games ADD COLUMN IF NOT EXISTS player1_code VARCHAR(10);
