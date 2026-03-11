@@ -46,6 +46,9 @@ WHERE turn_number IS NULL;
 ALTER TABLE guesses ALTER COLUMN turn_number SET NOT NULL;
 ALTER TABLE guesses ALTER COLUMN player_id SET NOT NULL;
 
+-- Drop old guess_number column (replaced by turn_number)
+ALTER TABLE guesses DROP COLUMN IF EXISTS guess_number;
+
 -- Add unique constraint for turn-based guessing
 ALTER TABLE guesses DROP CONSTRAINT IF EXISTS guesses_game_turn_player_unique;
 ALTER TABLE guesses ADD CONSTRAINT guesses_game_turn_player_unique
