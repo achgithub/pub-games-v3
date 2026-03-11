@@ -225,13 +225,10 @@ export default function TwoPlayerBoard({
         {/* Current Guess Input */}
         {status === 'active' && (
           <div className="ah-card ah-mb">
-            <h3 className="bc-section-title">Your Guess</h3>
-
-            {hasGuessedThisTurn && (
-              <div className="ah-banner bc-waiting-banner ah-mb">
-                ⏳ Waiting for opponent to guess...
-              </div>
-            )}
+            <h3 className="bc-section-title">
+              Your Guess
+              {hasGuessedThisTurn && <span className="bc-waiting-indicator"> ⏳ waiting</span>}
+            </h3>
 
             <div className={`bc-guess-display ${hasGuessedThisTurn ? 'bc-guess-display-disabled' : ''}`}>
               {currentGuess.map((value, index) => (

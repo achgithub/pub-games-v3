@@ -35,6 +35,14 @@
   font-weight: 600;
 }
 
+/* Waiting indicator inline in title */
+.bc-waiting-indicator {
+  font-size: 14px;
+  font-weight: 400;
+  color: #78716c;
+  margin-left: 8px;
+}
+
 /* Color definitions for game pieces - higher specificity to override default white */
 .bc-peg.bc-color-red, .bc-history-peg.bc-color-red, .bc-code-peg.bc-color-red, .bc-option-btn.bc-color-red {
   background-color: #dc3545 !important;
@@ -480,9 +488,4 @@
 /* Code peg placeholder (question mark) */
 .bc-code-peg-placeholder {
   color: #ccc;
-}
-
-/* Waiting for opponent banner */
-.bc-waiting-banner {
-  background-color: #f0f0f0;
 }
