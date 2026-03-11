@@ -258,7 +258,6 @@ export default function GameBoard({ gameId, token, userId, userName }: GameBoard
       // Active gameplay or game over
       const isPlayer1 = game.player1Id === userId;
       const myCode = isPlayer1 ? game.player1Code || '' : game.player2Code || '';
-      const opponentCode = isPlayer1 ? game.player2Code || '' : game.player1Code || '';
       const myGuesses = game.guesses.filter(g => g.playerId === userId);
       const opponentGuesses = game.guesses.filter(g => g.playerId !== userId);
       const opponentLastGuess = opponentGuesses.length > 0 ? opponentGuesses[opponentGuesses.length - 1] : null;
@@ -272,7 +271,6 @@ export default function GameBoard({ gameId, token, userId, userName }: GameBoard
             userId={userId}
             mode={game.mode}
             myCode={myCode}
-            opponentCode={opponentCode}
             opponentLastGuess={opponentLastGuess}
             myGuesses={myGuesses}
             currentTurn={game.currentTurn || 1}
