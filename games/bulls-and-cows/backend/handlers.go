@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strings"
 	"time"
 
 	authlib "github.com/achgithub/activity-hub-common/auth"
@@ -15,78 +14,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 )
-
-// Game represents a Bulls and Cows game
-type Game struct {
-	ID          string     `json:"id"`
-	Mode        string     `json:"mode"`
-	Variant     string     `json:"variant"`
-	SecretCode  string     `json:"secretCode,omitempty"`
-	CodeMaker   string     `json:"codeMaker"`
-	CodeBreaker string     `json:"codeBreaker"`
-	MaxGuesses  int        `json:"maxGuesses"`
-	Status      string     `json:"status"`
-	Winner      *string    `json:"winner,omitempty"`
-	CreatedAt   time.Time  `json:"createdAt"`
-	UpdatedAt   time.Time  `json:"updatedAt"`
-	CompletedAt *time.Time `json:"completedAt,omitempty"`
-	Guesses     []Guess    `json:"guesses,omitempty"`
-}
-
-// Guess represents a single guess in the game
-type Guess struct {
-	ID          int       `json:"id"`
-	GameID      string    `json:"gameId"`
-	GuessNumber int       `json:"guessNumber"`
-	GuessCode   string    `json:"guessCode"`
-	Bulls       int       `json:"bulls"`
-	Cows        int       `json:"cows"`
-	GuessedAt   time.Time `json:"guessedAt"`
-}
-
-// CreateGameRequest represents the request to create a new game
-// Supports both solo play and 2-player challenges
-type CreateGameRequest struct {
-	// Solo play fields
-	Mode    string `json:"mode"`    // "colors" or "numbers"
-	Variant string `json:"variant"` // "1player" or "2player"
-	GameID  string `json:"gameId"`  // Optional: from challenge modal
-
-	// 2-player challenge fields (from identity-shell)
-	ChallengeID string `json:"challengeId"`
-	Player1ID   string `json:"player1Id"`
-	Player1Name string `json:"player1Name"`
-	Player2ID   string `json:"player2Id"`
-	Player2Name string `json:"player2Name"`
-}
-
-// MakeGuessRequest represents a guess submission
-type MakeGuessRequest struct {
-	Guess string `json:"guess"`
-}
-
-// ConfigResponse represents the app configuration
-type ConfigResponse struct {
-	AppName     string       `json:"appName"`
-	MinPlayers  int          `json:"minPlayers"`
-	MaxPlayers  int          `json:"maxPlayers"`
-	GameOptions []GameOption `json:"gameOptions"`
-}
-
-// GameOption represents a configurable game option
-type GameOption struct {
-	ID      string        `json:"id"`
-	Label   string        `json:"label"`
-	Type    string        `json:"type"`
-	Default interface{}   `json:"default"`
-	Options []OptionValue `json:"options,omitempty"`
-}
-
-// OptionValue represents a value option for select-type game options
-type OptionValue struct {
-	Value interface{} `json:"value"`
-	Label string      `json:"label"`
-}
 
 // GetConfig returns app configuration for the identity shell
 func GetConfig(w http.ResponseWriter, r *http.Request) {
@@ -110,7 +37,7 @@ func GetConfig(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// CreateGame creates a new game
+// CreateGame creates a new game (solo or 2-player)
 func CreateGame(db *sql.DB, redisClient *redis.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		user, ok := authlib.GetUserFromContext(r.Context())
@@ -129,75 +56,89 @@ func CreateGame(db *sql.DB, redisClient *redis.Client) http.HandlerFunc {
 		// Detect if this is a 2-player challenge request (from identity-shell)
 		isChallenge := req.Player1ID != "" && req.Player2ID != ""
 
-		// Apply default mode if missing or invalid (like dots handles gridSize)
+		// Apply default mode if missing or invalid
 		if req.Mode != "colors" && req.Mode != "numbers" {
 			req.Mode = "colors"
 		}
 
-		// Determine variant and players
-		var variant, codeMaker, codeBreaker string
-		if isChallenge {
-			// 2-player challenge from identity-shell
-			variant = "2player"
-			codeMaker = req.Player1ID   // Challenger is code maker
-			codeBreaker = req.Player2ID // Accepter is code breaker
-			log.Printf("Creating 2-player challenge game: %s (maker) vs %s (breaker)", req.Player1Name, req.Player2Name)
-		} else {
-			// Solo play request
-			if req.Variant != "1player" && req.Variant != "2player" {
-				http.Error(w, "Variant must be '1player' or '2player'", http.StatusBadRequest)
-				return
-			}
-			variant = req.Variant
-			if variant == "2player" {
-				codeMaker = userID
-				codeBreaker = userID // For non-challenge 2-player, same user plays both roles
-			} else {
-				codeMaker = "AI"
-				codeBreaker = userID
-			}
-		}
-
-		// Generate secret code
-		secretCode := GenerateSecretCode(req.Mode)
-
 		// Always generate a new UUID for gameID (database requires UUID type)
-		// ChallengeID is not a UUID, so we can't use it as gameID
 		gameID := uuid.New().String()
 
-
-	// Set max guesses based on mode: Colors = 12, Numbers = 25 (more combinations)
-	maxGuesses := 12
-	if req.Mode == "numbers" {
-		maxGuesses = 25
-	}
-
-	// Create game in database
-	query := `
-		INSERT INTO games (id, mode, variant, secret_code, code_maker, code_breaker, max_guesses, status)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-		RETURNING created_at, updated_at
-	`
-	var createdAt, updatedAt time.Time
-	err := db.QueryRow(query, gameID, req.Mode, variant, secretCode, codeMaker, codeBreaker, maxGuesses, "active").
-		Scan(&createdAt, &updatedAt)
-		if err != nil {
-			log.Printf("Error creating game: %v", err)
-			http.Error(w, "Failed to create game", http.StatusInternalServerError)
-			return
+		// Set max guesses based on mode
+		maxGuesses := 12
+		if req.Mode == "numbers" {
+			maxGuesses = 25
 		}
 
-		game := Game{
-			ID:          gameID,
-			Mode:        req.Mode,
-			Variant:     variant,
-			CodeMaker:   codeMaker,
-			CodeBreaker: codeBreaker,
-			MaxGuesses:  maxGuesses,
-			Status:      "active",
-			CreatedAt:   createdAt,
-			UpdatedAt:   updatedAt,
-			Guesses:     []Guess{},
+		var game Game
+		var createdAt, updatedAt time.Time
+
+		if isChallenge {
+			// 2-player challenge: dual-code simultaneous mode
+			// Both players must set their codes before gameplay begins
+			log.Printf("Creating 2-player dual-code game: %s vs %s", req.Player1Name, req.Player2Name)
+
+			query := `
+				INSERT INTO games (id, mode, variant, player1_id, player2_id, max_guesses, status, current_turn)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+				RETURNING created_at, updated_at
+			`
+			err := db.QueryRow(query, gameID, req.Mode, "2player", req.Player1ID, req.Player2ID, maxGuesses, "code_setting", 0).
+				Scan(&createdAt, &updatedAt)
+			if err != nil {
+				log.Printf("Error creating 2-player game: %v", err)
+				http.Error(w, "Failed to create game", http.StatusInternalServerError)
+				return
+			}
+
+			game = Game{
+				ID:             gameID,
+				Mode:           req.Mode,
+				Variant:        "2player",
+				Player1ID:      req.Player1ID,
+				Player2ID:      req.Player2ID,
+				Player1CodeSet: false,
+				Player2CodeSet: false,
+				CurrentTurn:    0,
+				MaxGuesses:     maxGuesses,
+				Status:         "code_setting",
+				CreatedAt:      createdAt,
+				UpdatedAt:      updatedAt,
+				Guesses:        []Guess{},
+			}
+		} else {
+			// Solo play: AI-generated code, traditional gameplay
+			if req.Variant != "1player" {
+				http.Error(w, "Only 1player variant supported for solo play", http.StatusBadRequest)
+				return
+			}
+
+			secretCode := GenerateSecretCode(req.Mode)
+
+			query := `
+				INSERT INTO games (id, mode, variant, secret_code, code_breaker, max_guesses, status)
+				VALUES ($1, $2, $3, $4, $5, $6, $7)
+				RETURNING created_at, updated_at
+			`
+			err := db.QueryRow(query, gameID, req.Mode, "1player", secretCode, userID, maxGuesses, "active").
+				Scan(&createdAt, &updatedAt)
+			if err != nil {
+				log.Printf("Error creating solo game: %v", err)
+				http.Error(w, "Failed to create game", http.StatusInternalServerError)
+				return
+			}
+
+			game = Game{
+				ID:          gameID,
+				Mode:        req.Mode,
+				Variant:     "1player",
+				CodeBreaker: userID,
+				MaxGuesses:  maxGuesses,
+				Status:      "active",
+				CreatedAt:   createdAt,
+				UpdatedAt:   updatedAt,
+				Guesses:     []Guess{},
+			}
 		}
 
 		// Store in Redis for quick access (1 hour TTL)
@@ -232,16 +173,23 @@ func GetGame(db *sql.DB) http.HandlerFunc {
 
 		// Fetch game from database
 		var game Game
-		var winner sql.NullString
+		var winner, secretCode, codeBreaker sql.NullString
+		var player1ID, player2ID, player1Code, player2Code sql.NullString
+		var player1CodeSet, player2CodeSet sql.NullBool
 		var completedAt sql.NullTime
+
 		query := `
-			SELECT id, mode, variant, secret_code, code_maker, code_breaker, max_guesses, status, winner, created_at, updated_at, completed_at
-			FROM games
-			WHERE id = $1
+			SELECT id, mode, variant, status, max_guesses, current_turn,
+			       winner, created_at, updated_at, completed_at,
+			       secret_code, code_breaker,
+			       player1_id, player2_id, player1_code, player2_code, player1_code_set, player2_code_set
+			FROM games WHERE id = $1
 		`
 		err := db.QueryRow(query, gameID).Scan(
-			&game.ID, &game.Mode, &game.Variant, &game.SecretCode, &game.CodeMaker, &game.CodeBreaker,
-			&game.MaxGuesses, &game.Status, &winner, &game.CreatedAt, &game.UpdatedAt, &completedAt,
+			&game.ID, &game.Mode, &game.Variant, &game.Status, &game.MaxGuesses, &game.CurrentTurn,
+			&winner, &game.CreatedAt, &game.UpdatedAt, &completedAt,
+			&secretCode, &codeBreaker,
+			&player1ID, &player2ID, &player1Code, &player2Code, &player1CodeSet, &player2CodeSet,
 		)
 		if err == sql.ErrNoRows {
 			http.Error(w, "Game not found", http.StatusNotFound)
@@ -253,25 +201,57 @@ func GetGame(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
+		// Populate nullable fields
 		if winner.Valid {
 			game.Winner = &winner.String
 		}
 		if completedAt.Valid {
 			game.CompletedAt = &completedAt.Time
 		}
+		if secretCode.Valid {
+			game.SecretCode = secretCode.String
+		}
+		if codeBreaker.Valid {
+			game.CodeBreaker = codeBreaker.String
+		}
+		if player1ID.Valid {
+			game.Player1ID = player1ID.String
+		}
+		if player2ID.Valid {
+			game.Player2ID = player2ID.String
+		}
+		if player1Code.Valid {
+			game.Player1Code = player1Code.String
+		}
+		if player2Code.Valid {
+			game.Player2Code = player2Code.String
+		}
+		if player1CodeSet.Valid {
+			game.Player1CodeSet = player1CodeSet.Bool
+		}
+		if player2CodeSet.Valid {
+			game.Player2CodeSet = player2CodeSet.Bool
+		}
 
 		// Verify user is part of this game
-		if game.CodeBreaker != userID && game.CodeMaker != userID {
-			http.Error(w, "Access denied", http.StatusForbidden)
-			return
+		if game.Variant == "1player" {
+			if game.CodeBreaker != userID {
+				http.Error(w, "Access denied", http.StatusForbidden)
+				return
+			}
+		} else if game.Variant == "2player" {
+			if game.Player1ID != userID && game.Player2ID != userID {
+				http.Error(w, "Access denied", http.StatusForbidden)
+				return
+			}
 		}
 
 		// Fetch guesses
 		guessQuery := `
-			SELECT id, game_id, guess_number, guess_code, bulls, cows, guessed_at
+			SELECT id, game_id, turn_number, player_id, guess_code, bulls, cows, guessed_at
 			FROM guesses
 			WHERE game_id = $1
-			ORDER BY guess_number ASC
+			ORDER BY turn_number ASC, player_id ASC
 		`
 		rows, err := db.Query(guessQuery, gameID)
 		if err != nil {
@@ -284,7 +264,7 @@ func GetGame(db *sql.DB) http.HandlerFunc {
 		game.Guesses = []Guess{}
 		for rows.Next() {
 			var guess Guess
-			err := rows.Scan(&guess.ID, &guess.GameID, &guess.GuessNumber, &guess.GuessCode, &guess.Bulls, &guess.Cows, &guess.GuessedAt)
+			err := rows.Scan(&guess.ID, &guess.GameID, &guess.TurnNumber, &guess.PlayerID, &guess.GuessCode, &guess.Bulls, &guess.Cows, &guess.GuessedAt)
 			if err != nil {
 				log.Printf("Error scanning guess: %v", err)
 				continue
@@ -292,152 +272,22 @@ func GetGame(db *sql.DB) http.HandlerFunc {
 			game.Guesses = append(game.Guesses, guess)
 		}
 
-		// Hide secret code if game is still active
-		if game.Status == "active" {
+		// Hide secret codes if game is still active
+		if game.Status == "active" || game.Status == "code_setting" {
 			game.SecretCode = ""
+			// For 2-player, only hide opponent's code
+			if game.Variant == "2player" {
+				if game.Player1ID != userID {
+					game.Player1Code = ""
+				}
+				if game.Player2ID != userID {
+					game.Player2Code = ""
+				}
+			}
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(game)
-	}
-}
-
-// MakeGuess handles a guess submission
-func MakeGuess(db *sql.DB, redisClient *redis.Client) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		user, ok := authlib.GetUserFromContext(r.Context())
-		if !ok {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
-		userID := user.Email
-
-		vars := mux.Vars(r)
-		gameID := vars["gameId"]
-
-		var req MakeGuessRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, "Invalid request body", http.StatusBadRequest)
-			return
-		}
-
-		// Fetch game
-		var game Game
-		query := `SELECT id, mode, variant, secret_code, code_maker, code_breaker, max_guesses, status FROM games WHERE id = $1`
-		err := db.QueryRow(query, gameID).Scan(
-			&game.ID, &game.Mode, &game.Variant, &game.SecretCode, &game.CodeMaker, &game.CodeBreaker, &game.MaxGuesses, &game.Status,
-		)
-		if err == sql.ErrNoRows {
-			http.Error(w, "Game not found", http.StatusNotFound)
-			return
-		}
-		if err != nil {
-			log.Printf("Error fetching game: %v", err)
-			http.Error(w, "Failed to fetch game", http.StatusInternalServerError)
-			return
-		}
-
-		// Verify user is the code breaker
-		if game.CodeBreaker != userID {
-			http.Error(w, "Only the code breaker can make guesses", http.StatusForbidden)
-			return
-		}
-
-		// Check if game is active
-		if game.Status != "active" {
-			http.Error(w, "Game is not active", http.StatusBadRequest)
-			return
-		}
-
-		// Validate guess
-		guess := strings.ToUpper(req.Guess)
-		if err := ValidateGuess(guess, game.Mode); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		// Count existing guesses
-		var guessCount int
-		db.QueryRow("SELECT COUNT(*) FROM guesses WHERE game_id = $1", gameID).Scan(&guessCount)
-
-		if guessCount >= game.MaxGuesses {
-			http.Error(w, "Maximum guesses reached", http.StatusBadRequest)
-			return
-		}
-
-		// Calculate bulls and cows
-		bulls, cows := CalculateBullsAndCows(game.SecretCode, guess)
-
-		// Save guess
-		guessNumber := guessCount + 1
-		var guessID int
-		var guessedAt time.Time
-		insertQuery := `
-			INSERT INTO guesses (game_id, guess_number, guess_code, bulls, cows)
-			VALUES ($1, $2, $3, $4, $5)
-			RETURNING id, guessed_at
-		`
-		err = db.QueryRow(insertQuery, gameID, guessNumber, guess, bulls, cows).Scan(&guessID, &guessedAt)
-		if err != nil {
-			log.Printf("Error saving guess: %v", err)
-			http.Error(w, "Failed to save guess", http.StatusInternalServerError)
-			return
-		}
-
-		// Check for win or loss
-		var newStatus string
-		var winner *string
-		var completedAt *time.Time
-		now := time.Now()
-
-		if CheckWin(bulls, game.Mode) {
-			newStatus = "won"
-			winner = &userID
-			completedAt = &now
-		} else if guessNumber >= game.MaxGuesses {
-			newStatus = "lost"
-			completedAt = &now
-		} else {
-			newStatus = "active"
-		}
-
-		// Update game status if changed
-		if newStatus != "active" {
-			updateQuery := `UPDATE games SET status = $1, winner = $2, completed_at = $3 WHERE id = $4`
-			_, err = db.Exec(updateQuery, newStatus, winner, completedAt, gameID)
-			if err != nil {
-				log.Printf("Error updating game status: %v", err)
-			}
-		}
-
-		// Create response
-		guessResponse := Guess{
-			ID:          guessID,
-			GameID:      gameID,
-			GuessNumber: guessNumber,
-			GuessCode:   guess,
-			Bulls:       bulls,
-			Cows:        cows,
-			GuessedAt:   guessedAt,
-		}
-
-		// Publish SSE event
-		eventPayload := map[string]interface{}{
-			"guess":  guessResponse,
-			"status": newStatus,
-		}
-		if newStatus != "active" {
-			eventPayload["secretCode"] = game.SecretCode
-			eventPayload["winner"] = winner
-		}
-		PublishGameEvent(redisClient, gameID, "guess_made", eventPayload)
-
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"guess":      guessResponse,
-			"status":     newStatus,
-			"secretCode": func() string { if newStatus != "active" { return game.SecretCode }; return "" }(),
-		})
 	}
 }
 

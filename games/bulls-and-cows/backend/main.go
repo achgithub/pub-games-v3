@@ -95,6 +95,7 @@ func main() {
 	// Authenticated endpoints
 	r.Handle("/api/game", authMiddleware(http.HandlerFunc(CreateGame(db, redisClient)))).Methods("POST")
 	r.Handle("/api/game/{gameId}", authMiddleware(http.HandlerFunc(GetGame(db)))).Methods("GET")
+	r.Handle("/api/game/{gameId}/set-code", authMiddleware(http.HandlerFunc(SetCode(db, redisClient)))).Methods("POST")
 	r.Handle("/api/game/{gameId}/guess", authMiddleware(http.HandlerFunc(MakeGuess(db, redisClient)))).Methods("POST")
 
 	// Serve static files (React build)
