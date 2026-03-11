@@ -46,23 +46,23 @@
 }
 
 /* Color definitions for game pieces - higher specificity to override default white */
-.bc-peg.bc-color-red, .bc-history-peg.bc-color-red, .bc-code-peg.bc-color-red, .bc-option-btn.bc-color-red {
+.bc-peg.bc-color-red, .bc-peg-compact.bc-color-red, .bc-history-peg.bc-color-red, .bc-code-peg.bc-color-red, .bc-option-btn.bc-color-red {
   background-color: #dc3545 !important;
 }
-.bc-peg.bc-color-blue, .bc-history-peg.bc-color-blue, .bc-code-peg.bc-color-blue, .bc-option-btn.bc-color-blue {
+.bc-peg.bc-color-blue, .bc-peg-compact.bc-color-blue, .bc-history-peg.bc-color-blue, .bc-code-peg.bc-color-blue, .bc-option-btn.bc-color-blue {
   background-color: #0d6efd !important;
 }
-.bc-peg.bc-color-green, .bc-history-peg.bc-color-green, .bc-code-peg.bc-color-green, .bc-option-btn.bc-color-green {
+.bc-peg.bc-color-green, .bc-peg-compact.bc-color-green, .bc-history-peg.bc-color-green, .bc-code-peg.bc-color-green, .bc-option-btn.bc-color-green {
   background-color: #198754 !important;
 }
-.bc-peg.bc-color-yellow, .bc-history-peg.bc-color-yellow, .bc-code-peg.bc-color-yellow, .bc-option-btn.bc-color-yellow {
+.bc-peg.bc-color-yellow, .bc-peg-compact.bc-color-yellow, .bc-history-peg.bc-color-yellow, .bc-code-peg.bc-color-yellow, .bc-option-btn.bc-color-yellow {
   background-color: #ffc107 !important;
   color: #212529 !important;
 }
-.bc-peg.bc-color-orange, .bc-history-peg.bc-color-orange, .bc-code-peg.bc-color-orange, .bc-option-btn.bc-color-orange {
+.bc-peg.bc-color-orange, .bc-peg-compact.bc-color-orange, .bc-history-peg.bc-color-orange, .bc-code-peg.bc-color-orange, .bc-option-btn.bc-color-orange {
   background-color: #fd7e14 !important;
 }
-.bc-peg.bc-color-purple, .bc-history-peg.bc-color-purple, .bc-code-peg.bc-color-purple, .bc-option-btn.bc-color-purple {
+.bc-peg.bc-color-purple, .bc-peg-compact.bc-color-purple, .bc-history-peg.bc-color-purple, .bc-code-peg.bc-color-purple, .bc-option-btn.bc-color-purple {
   background-color: #6f42c1 !important;
 }
 
