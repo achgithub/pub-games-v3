@@ -114,14 +114,19 @@ export default function SoloPlayerBoard({
     }
   };
 
-  const renderCodePeg = (value: string, index: number, className = '') => {
+  const getColorClass = (code: string) => {
+    const color = COLORS.find(c => c.code === code);
+    return color ? color.colorClass : '';
+  };
+
+  const renderCodePeg = (value: string, index: number, isSmall = false) => {
     const option = mode === 'colors' ? COLORS.find(c => c.code === value) : null;
     return (
       <div
         key={index}
-        className={`bc-code-peg ${option ? option.colorClass : ''} ${className}`}
+        className={`${isSmall ? 'bc-history-peg' : 'bc-peg'} ${mode === 'colors' && option ? 'color-mode ' + option.colorClass : ''}`}
       >
-        {mode === 'numbers' && value}
+        {mode === 'numbers' ? value : ''}
       </div>
     );
   };
@@ -136,54 +141,78 @@ export default function SoloPlayerBoard({
   };
 
   return (
-    <div className="ah-container ah-container--narrow">
-      {/* Game Over Banner */}
-      {isGameOver && (
-        <div className={`ah-banner ${status === 'won' ? 'ah-banner--success' : 'ah-banner--error'} ah-mb`}>
-          {status === 'won' ? (
-            <>🎉 You cracked the code: <strong>{secretCode}</strong></>
-          ) : (
-            <>😔 The code was: <strong>{secretCode}</strong></>
-          )}
+    <>
+      {/* Game Info Bar */}
+      <div className="bc-game-info-bar">
+        <div className="bc-game-info-content">
+          <div className="ah-badge">
+            {mode === 'colors' ? 'Colors' : 'Numbers'}
+          </div>
+          <div className="ah-badge">
+            {guesses.length} / {maxGuesses} Guesses
+          </div>
         </div>
-      )}
+      </div>
 
-      {/* Current Guess Input */}
-      {!isGameOver && (
-        <div className="ah-card ah-mb">
-          <h3 className="ah-header">
-            <span>Your Guess ({guesses.length}/{maxGuesses})</span>
-          </h3>
-
-          <div className="bc-code-row ah-mb-lg">
-            {currentGuess.map((value, index) => (
-              <button
-                key={index}
-                className={`bc-code-peg ${selectedPosition === index ? 'bc-code-peg--selected' : ''} ${
-                  value && mode === 'colors' ? options.find(o => o.code === value)?.colorClass || '' : ''
-                }`}
-                onClick={() => handlePositionClick(index)}
-              >
-                {mode === 'numbers' && value ? value : ''}
-                {!value && <span className="bc-code-peg-placeholder">?</span>}
-              </button>
-            ))}
+      <div className="ah-container ah-container--narrow ah-mt">
+        {/* Game Over Banner */}
+        {isGameOver && (
+          <div className={`ah-banner ${status === 'won' ? 'ah-banner--success' : 'ah-banner--error'} ah-mb`}>
+            {status === 'won' ? (
+              <>🎉 You cracked the code: <strong>{secretCode}</strong></>
+            ) : (
+              <>😔 The code was: <strong>{secretCode}</strong></>
+            )}
           </div>
+        )}
 
-          <div className="bc-options-grid ah-mb-lg">
-            {options.map((option) => (
-              <button
-                key={option.code}
-                className={`bc-option-btn ${mode === 'colors' ? option.colorClass : ''} ${
-                  currentGuess.includes(option.code) ? 'bc-option-btn--used' : ''
-                }`}
-                onClick={() => handleOptionClick(option.code)}
-                disabled={currentGuess.includes(option.code)}
-              >
-                {mode === 'numbers' ? option.code : ''}
-              </button>
-            ))}
-          </div>
+        {/* Current Guess Input */}
+        {!isGameOver && (
+          <div className="ah-card ah-mb">
+            <h3 className="bc-section-title">Your Guess</h3>
+
+            <div className="bc-guess-display">
+              {currentGuess.map((value, index) => (
+                <div
+                  key={index}
+                  onClick={() => handlePositionClick(index)}
+                  className={`bc-peg ${selectedPosition === index ? 'selected' : ''} ${
+                    value && mode === 'colors' ? 'color-mode ' + getColorClass(value) : ''
+                  }`}
+                >
+                  {value || '?'}
+                </div>
+              ))}
+            </div>
+
+          {/* Selection Interface */}
+          {mode === 'colors' ? (
+            <div className="bc-color-grid ah-mt">
+              {options.map((option) => (
+                <button
+                  key={option.code}
+                  onClick={() => handleOptionClick(option.code)}
+                  className={`bc-color-btn ${option.colorClass}`}
+                  disabled={currentGuess.includes(option.code)}
+                >
+                  {option.name}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="bc-number-grid ah-mt">
+              {options.map((option) => (
+                <button
+                  key={option.code}
+                  onClick={() => handleOptionClick(option.code)}
+                  className="ah-btn-outline bc-number-btn"
+                  disabled={currentGuess.includes(option.code)}
+                >
+                  {option.code}
+                </button>
+              ))}
+            </div>
+          )}
 
           {error && (
             <div className="ah-banner ah-banner--error ah-mb">
@@ -191,10 +220,7 @@ export default function SoloPlayerBoard({
             </div>
           )}
 
-          <div className="ah-btn-group">
-            <button className="ah-btn-outline" onClick={handleClear}>
-              Clear
-            </button>
+          <div className="bc-actions ah-mt">
             <button
               className="ah-btn-primary"
               onClick={handleSubmit}
@@ -202,37 +228,52 @@ export default function SoloPlayerBoard({
             >
               {submitting ? 'Submitting...' : 'Submit Guess'}
             </button>
+            <button className="ah-btn-outline" onClick={handleClear}>
+              Clear
+            </button>
           </div>
         </div>
       )}
 
-      {/* Guess History */}
-      <div className="ah-card">
-        <h3 className="ah-header">
-          <span>Guess History</span>
-        </h3>
+        {/* Guess History */}
+        <div className="ah-card">
+          <h3 className="bc-section-title">Guess History</h3>
 
-        {guesses.length === 0 ? (
-          <p className="ah-meta">No guesses yet</p>
-        ) : (
-          <div>
-            {[...guesses].reverse().map(guess => (
-              <div key={guess.id} className="bc-guess-row">
-                <span className="bc-guess-number">#{guess.turnNumber}</span>
-                <div className="bc-code-row bc-code-row--sm">
-                  {guess.guessCode.split('').map((value, idx) => renderCodePeg(value, idx, 'bc-code-peg--sm'))}
+          {guesses.length === 0 ? (
+            <p className="ah-meta">No guesses yet</p>
+          ) : (
+            <div className="bc-history-scroll">
+              {[...guesses].reverse().map(guess => (
+                <div key={guess.id} className="ah-list-item ah-mb-sm">
+                  <div className="bc-history-item-content">
+                    <div className="bc-guess-number">
+                      #{guess.turnNumber}
+                    </div>
+                    <div className="bc-history-pegs">
+                      {guess.guessCode.split('').map((value, idx) => renderCodePeg(value, idx, true))}
+                    </div>
+                    <div className="bc-feedback">
+                      <div className="bc-bulls-badge">
+                        ✓ {guess.bulls}
+                      </div>
+                      <div className="bc-cows-badge">
+                        ~ {guess.cows}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                {renderFeedback(guess.bulls, guess.cows)}
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Legend */}
-        <p className="ah-meta ah-mt-lg">
-          <strong>Legend:</strong> ✓ Bulls (correct position) | ~ Cows (wrong position)
-        </p>
+        <div className="ah-card bc-legend ah-mt">
+          <p className="ah-mb-none">
+            <strong>Legend:</strong> ✓ Bulls (correct position) | ~ Cows (wrong position)
+          </p>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

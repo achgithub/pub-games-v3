@@ -3,6 +3,38 @@
  * All UI elements use Activity Hub CSS classes
  */
 
+/* Game Info Bar (below header, above content) */
+.bc-game-info-bar {
+  width: 100%;
+  background: white;
+  border-bottom: 1px solid #e7e5e4;
+  padding: 12px 16px;
+}
+
+.bc-game-info-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  max-width: 600px;
+  margin: 0 auto;
+  flex-wrap: wrap;
+}
+
+.bc-game-info-content .ah-badge {
+  font-size: 14px;
+  font-weight: 500;
+  padding: 6px 12px;
+}
+
+/* Section titles */
+.bc-section-title {
+  margin-top: 0;
+  margin-bottom: 12px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
 /* Color definitions for game pieces - higher specificity to override default white */
 .bc-peg.bc-color-red, .bc-history-peg.bc-color-red, .bc-code-peg.bc-color-red, .bc-option-btn.bc-color-red {
   background-color: #dc3545 !important;
@@ -58,6 +90,12 @@
 
 .bc-peg.selected {
   border: 3px solid #0066cc;
+}
+
+.bc-peg-hidden {
+  background-color: #f8f9fa;
+  color: #6c757d;
+  cursor: default;
 }
 
 .bc-peg.color-mode {
