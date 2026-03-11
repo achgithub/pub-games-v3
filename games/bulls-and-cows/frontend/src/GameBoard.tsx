@@ -167,25 +167,49 @@ export default function GameBoard({ gameId, token, userId, userName }: GameBoard
     }
   };
 
+  const renderHeader = () => (
+    <header className="ah-app-header">
+      <div className="ah-app-header-left">
+        <h1 className="ah-app-title">🐂 Bulls and Cows</h1>
+      </div>
+      <div className="ah-app-header-right">
+        <button
+          className="ah-lobby-btn"
+          onClick={() => {
+            window.location.href = `http://${window.location.hostname}:3001`;
+          }}
+        >
+          ← Lobby
+        </button>
+      </div>
+    </header>
+  );
+
   if (loading) {
     return (
-      <div className="ah-container ah-container--narrow">
-        <div className="ah-card">
-          <p>Loading game...</p>
+      <>
+        {renderHeader()}
+        <div className="ah-container ah-container--narrow">
+          <div className="ah-card">
+            <p>Loading game...</p>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   if (error || !game) {
     return (
-      <div className="ah-container ah-container--narrow">
-        <div className="ah-card">
-          <div className="ah-banner ah-banner--error">
-            {error || 'Failed to load game'}
+      <>
+        {renderHeader()}
+        <div className="ah-container ah-container--narrow">
+          <div className="ah-card">
+            <div className="ah-banner ah-banner--error">
+              {error || 'Failed to load game'}
+            </div>
           </div>
         </div>
-      </div>
+      </>
     );
   }
 
@@ -193,18 +217,21 @@ export default function GameBoard({ gameId, token, userId, userName }: GameBoard
   if (game.variant === '1player') {
     // Solo play
     return (
-      <SoloPlayerBoard
-        gameId={gameId}
-        token={token}
-        userId={userId}
-        mode={game.mode}
-        secretCode={game.secretCode}
-        guesses={game.guesses}
-        maxGuesses={game.maxGuesses}
-        status={game.status}
-        winner={game.winner}
-        onSubmitGuess={handleSoloGuess}
-      />
+      <>
+        {renderHeader()}
+        <SoloPlayerBoard
+          gameId={gameId}
+          token={token}
+          userId={userId}
+          mode={game.mode}
+          secretCode={game.secretCode}
+          guesses={game.guesses}
+          maxGuesses={game.maxGuesses}
+          status={game.status}
+          winner={game.winner}
+          onSubmitGuess={handleSoloGuess}
+        />
+      </>
     );
   } else if (game.variant === '2player') {
     if (game.status === 'code_setting') {
@@ -214,15 +241,18 @@ export default function GameBoard({ gameId, token, userId, userName }: GameBoard
       const opponentCodeSet = isPlayer1 ? game.player2CodeSet || false : game.player1CodeSet || false;
 
       return (
-        <CodeSettingPhase
-          gameId={gameId}
-          token={token}
-          userId={userId}
-          mode={game.mode}
-          myCodeSet={myCodeSet}
-          opponentCodeSet={opponentCodeSet}
-          onCodeSet={fetchGame}
-        />
+        <>
+          {renderHeader()}
+          <CodeSettingPhase
+            gameId={gameId}
+            token={token}
+            userId={userId}
+            mode={game.mode}
+            myCodeSet={myCodeSet}
+            opponentCodeSet={opponentCodeSet}
+            onCodeSet={fetchGame}
+          />
+        </>
       );
     } else {
       // Active gameplay or game over
@@ -233,32 +263,38 @@ export default function GameBoard({ gameId, token, userId, userName }: GameBoard
       const opponentLastGuess = opponentGuesses.length > 0 ? opponentGuesses[opponentGuesses.length - 1] : null;
 
       return (
-        <TwoPlayerBoard
-          gameId={gameId}
-          token={token}
-          userId={userId}
-          mode={game.mode}
-          myCode={myCode}
-          opponentLastGuess={opponentLastGuess}
-          myGuesses={myGuesses}
-          currentTurn={game.currentTurn || 1}
-          maxGuesses={game.maxGuesses}
-          status={game.status}
-          winner={game.winner}
-          waitingForOpponent={waitingForOpponent}
-          onSubmitGuess={handleTwoPlayerGuess}
-        />
+        <>
+          {renderHeader()}
+          <TwoPlayerBoard
+            gameId={gameId}
+            token={token}
+            userId={userId}
+            mode={game.mode}
+            myCode={myCode}
+            opponentLastGuess={opponentLastGuess}
+            myGuesses={myGuesses}
+            currentTurn={game.currentTurn || 1}
+            maxGuesses={game.maxGuesses}
+            status={game.status}
+            winner={game.winner}
+            waitingForOpponent={waitingForOpponent}
+            onSubmitGuess={handleTwoPlayerGuess}
+          />
+        </>
       );
     }
   }
 
   return (
-    <div className="ah-container ah-container--narrow">
-      <div className="ah-card">
-        <div className="ah-banner ah-banner--error">
-          Unknown game variant: {game.variant}
+    <>
+      {renderHeader()}
+      <div className="ah-container ah-container--narrow">
+        <div className="ah-card">
+          <div className="ah-banner ah-banner--error">
+            Unknown game variant: {game.variant}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
