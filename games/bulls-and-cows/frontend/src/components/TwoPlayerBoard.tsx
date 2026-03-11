@@ -297,7 +297,7 @@ export default function TwoPlayerBoard({
         {/* Game over */}
         {status !== 'active' && status !== 'code_setting' && (
           <div className="ah-card ah-mb">
-            <div className={`ah-banner ${status === 'won' && winner === userId ? 'ah-banner--success' : ''}`}>
+            <div className={`bc-game-over-banner ${status === 'won' && winner === userId ? 'bc-game-over-banner--win' : ''}`}>
               {status === 'won' && winner === userId && '🎉 You won!'}
               {status === 'won' && winner !== userId && '😞 Opponent won'}
               {status === 'draw' && '🤝 Draw!'}
