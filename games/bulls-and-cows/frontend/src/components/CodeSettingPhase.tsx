@@ -130,10 +130,10 @@ export default function CodeSettingPhase({
           {code.map((value, index) => (
             <div
               key={index}
-              onClick={() => handlePositionClick(index)}
+              onClick={() => !myCodeSet && handlePositionClick(index)}
               className={`bc-peg ${selectedPosition === index && !myCodeSet ? 'selected' : ''} ${
                 value && mode === 'colors' ? 'color-mode ' + getColorClass(value) : ''
-              } ${myCodeSet ? 'bc-peg-disabled' : ''}`}
+              } ${myCodeSet ? 'bc-peg-set' : ''}`}
             >
               {value || '?'}
             </div>

@@ -33,6 +33,9 @@
   margin-bottom: 12px;
   font-size: 16px;
   font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 /* Waiting indicator inline in title */
@@ -40,7 +43,6 @@
   font-size: 14px;
   font-weight: 400;
   color: #78716c;
-  margin-left: 8px;
 }
 
 /* Color definitions for game pieces - higher specificity to override default white */
@@ -123,6 +125,12 @@
   opacity: 0.4;
   cursor: not-allowed;
   pointer-events: none;
+}
+
+.bc-peg-set {
+  cursor: default;
+  pointer-events: none;
+  border-color: #22c55e;
 }
 
 /* Compact peg for secret code section - smaller to save mobile space */
