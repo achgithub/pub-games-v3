@@ -4,12 +4,25 @@
  */
 
 /* Color definitions for game pieces - higher specificity to override default white */
-.bc-peg.bc-color-red, .bc-history-peg.bc-color-red { background-color: #dc3545 !important; }
-.bc-peg.bc-color-blue, .bc-history-peg.bc-color-blue { background-color: #0d6efd !important; }
-.bc-peg.bc-color-green, .bc-history-peg.bc-color-green { background-color: #198754 !important; }
-.bc-peg.bc-color-yellow, .bc-history-peg.bc-color-yellow { background-color: #ffc107 !important; }
-.bc-peg.bc-color-orange, .bc-history-peg.bc-color-orange { background-color: #fd7e14 !important; }
-.bc-peg.bc-color-purple, .bc-history-peg.bc-color-purple { background-color: #6f42c1 !important; }
+.bc-peg.bc-color-red, .bc-history-peg.bc-color-red, .bc-code-peg.bc-color-red, .bc-option-btn.bc-color-red {
+  background-color: #dc3545 !important;
+}
+.bc-peg.bc-color-blue, .bc-history-peg.bc-color-blue, .bc-code-peg.bc-color-blue, .bc-option-btn.bc-color-blue {
+  background-color: #0d6efd !important;
+}
+.bc-peg.bc-color-green, .bc-history-peg.bc-color-green, .bc-code-peg.bc-color-green, .bc-option-btn.bc-color-green {
+  background-color: #198754 !important;
+}
+.bc-peg.bc-color-yellow, .bc-history-peg.bc-color-yellow, .bc-code-peg.bc-color-yellow, .bc-option-btn.bc-color-yellow {
+  background-color: #ffc107 !important;
+  color: #212529 !important;
+}
+.bc-peg.bc-color-orange, .bc-history-peg.bc-color-orange, .bc-code-peg.bc-color-orange, .bc-option-btn.bc-color-orange {
+  background-color: #fd7e14 !important;
+}
+.bc-peg.bc-color-purple, .bc-history-peg.bc-color-purple, .bc-code-peg.bc-color-purple, .bc-option-btn.bc-color-purple {
+  background-color: #6f42c1 !important;
+}
 
 /* Color button styling */
 .bc-color-btn.bc-color-red { background-color: #dc3545; }
@@ -207,4 +220,150 @@
 .bc-status {
   margin-bottom: 1rem;
   font-size: 0.875rem;
+}
+
+/* ===== NEW 2-PLAYER MODE STYLES ===== */
+
+/* Code pegs (unified style for code setting and gameplay) */
+.bc-code-peg {
+  width: 60px;
+  height: 60px;
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: bold;
+  cursor: pointer;
+  background-color: #fff;
+  color: #212529;
+  transition: border-color 0.2s;
+}
+
+.bc-code-peg--selected {
+  border: 3px solid #0066cc;
+  box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.2);
+}
+
+.bc-code-peg--hidden {
+  background-color: #f8f9fa;
+  color: #6c757d;
+  cursor: default;
+}
+
+.bc-code-peg--sm {
+  width: 32px;
+  height: 32px;
+  font-size: 0.875rem;
+}
+
+.bc-code-peg.bc-color-red,
+.bc-code-peg.bc-color-blue,
+.bc-code-peg.bc-color-green,
+.bc-code-peg.bc-color-orange,
+.bc-code-peg.bc-color-purple {
+  color: #fff;
+}
+
+/* Code row layout */
+.bc-code-row {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-bottom: 0.5rem;
+}
+
+.bc-code-row--sm .bc-code-peg {
+  width: 32px;
+  height: 32px;
+  font-size: 0.875rem;
+}
+
+/* Options grid (for selecting colors/numbers) */
+.bc-options-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+  gap: 0.5rem;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.bc-option-btn {
+  width: 60px;
+  height: 60px;
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+  background-color: #fff;
+  color: #fff;
+  font-size: 1.125rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+}
+
+.bc-option-btn:hover:not(:disabled) {
+  transform: scale(1.05);
+}
+
+.bc-option-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.bc-option-btn--used {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* Badges for bulls/cows feedback */
+.bc-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 0.875rem;
+}
+
+.bc-badge--bulls {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.bc-badge--cows {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+/* Guess row layout */
+.bc-guess-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem;
+  border-bottom: 1px solid #e7e5e4;
+}
+
+.bc-guess-row:last-child {
+  border-bottom: none;
+}
+
+/* Privacy reveal button */
+.bc-reveal-btn {
+  font-size: 1.2rem;
+}
+
+/* Opponent progress summary */
+.bc-opponent-progress {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Code peg placeholder (question mark) */
+.bc-code-peg-placeholder {
+  color: #ccc;
+}
+
+/* Waiting for opponent banner */
+.bc-waiting-banner {
+  background-color: #f0f0f0;
 }
