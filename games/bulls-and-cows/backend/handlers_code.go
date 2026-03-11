@@ -1,14 +1,11 @@
 package main
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"strings"
-	"time"
 
 	authlib "github.com/achgithub/activity-hub-common/auth"
 	"github.com/go-redis/redis/v8"
