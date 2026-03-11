@@ -59,12 +59,13 @@ export default function TwoPlayerBoard({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [revealingCode, setRevealingCode] = useState(false);
+  const [submittedThisTurn, setSubmittedThisTurn] = useState(false);
 
   const options = mode === 'colors' ? COLORS : NUMBERS.map(n => ({ code: n, name: n, colorClass: '' }));
 
-  // Check if I've guessed this turn
+  // Check if I've guessed this turn (from server data or local state)
   const myTurnGuess = myGuesses.find(g => g.turnNumber === currentTurn);
-  const hasGuessedThisTurn = !!myTurnGuess;
+  const hasGuessedThisTurn = !!myTurnGuess || submittedThisTurn;
 
   const handleOptionClick = (value: string) => {
     if (hasGuessedThisTurn || status !== 'active') return;
@@ -114,6 +115,7 @@ export default function TwoPlayerBoard({
 
     try {
       await onSubmitGuess(currentGuess.join(''));
+      setSubmittedThisTurn(true);
       setCurrentGuess(new Array(codeLength).fill(''));
       setSelectedPosition(0);
     } catch (err: any) {
@@ -123,18 +125,34 @@ export default function TwoPlayerBoard({
     }
   };
 
+  // Reset submitted state when turn changes
+  React.useEffect(() => {
+    setSubmittedThisTurn(false);
+  }, [currentTurn]);
+
   const getColorClass = (code: string) => {
     const color = COLORS.find(c => c.code === code);
     return color ? color.colorClass : '';
   };
 
-  const renderCodePeg = (value: string, index: number, isSmall = false, isCompact = false) => {
+  const renderCodePeg = (value: string, index: number, isSmall = false) => {
     const option = mode === 'colors' ? COLORS.find(c => c.code === value) : null;
-    const className = isSmall ? 'bc-history-peg' : isCompact ? 'bc-peg-compact' : 'bc-peg';
     return (
       <div
         key={index}
-        className={`${className} ${mode === 'colors' && option ? 'color-mode ' + option.colorClass : ''}`}
+        className={`${isSmall ? 'bc-history-peg' : 'bc-peg'} ${mode === 'colors' && option ? 'color-mode ' + option.colorClass : ''}`}
+      >
+        {mode === 'numbers' ? value : ''}
+      </div>
+    );
+  };
+
+  const renderCompactCodePeg = (value: string, index: number) => {
+    const option = mode === 'colors' ? COLORS.find(c => c.code === value) : null;
+    return (
+      <div
+        key={index}
+        className={`bc-peg-compact ${mode === 'colors' && option ? 'color-mode ' + option.colorClass : ''}`}
       >
         {mode === 'numbers' ? value : ''}
       </div>
@@ -172,7 +190,7 @@ export default function TwoPlayerBoard({
         <div className="ah-card ah-mb">
           <div className="bc-secret-code-compact">
             {revealingCode
-              ? myCode.split('').map((value, index) => renderCodePeg(value, index, false, true))
+              ? myCode.split('').map((value, index) => renderCompactCodePeg(value, index))
               : new Array(codeLength).fill('*').map((_, index) => (
                   <div key={index} className="bc-peg-compact bc-peg-hidden">
                     *
@@ -192,18 +210,15 @@ export default function TwoPlayerBoard({
           </div>
         </div>
 
-        {/* Opponent's Progress - Always visible to prevent shifting */}
+        {/* Opponent's Last Guess - Compact for mobile */}
         <div className="ah-card ah-mb">
-          <h3 className="bc-section-title">Opponent's Progress</h3>
-          <div className="bc-opponent-progress">
-            {opponentLastGuess ? (
-              <>
-                <span className="ah-meta">Last guess:</span>
-                {renderFeedback(opponentLastGuess.bulls, opponentLastGuess.cows)}
-              </>
-            ) : (
-              <span className="ah-meta">No guesses yet</span>
-            )}
+          <div className="bc-opponent-compact">
+            <div className="bc-opponent-label">
+              Opponent's<br />last guess
+            </div>
+            <div className="bc-opponent-feedback">
+              {opponentLastGuess && renderFeedback(opponentLastGuess.bulls, opponentLastGuess.cows)}
+            </div>
           </div>
         </div>
 
