@@ -108,7 +108,7 @@ export default function GameBoard({ gameId, token, userId, userName }: GameBoard
     }
   }, [fetchGame]);
 
-  const { connected } = useGameSocket(gameId, token, handleSSEEvent);
+  useGameSocket(gameId, token, handleSSEEvent);
 
   // Fetch initial game state
   useEffect(() => {
@@ -133,7 +133,6 @@ export default function GameBoard({ gameId, token, userId, userName }: GameBoard
       throw new Error(errorText || 'Failed to submit guess');
     }
 
-    const data = await response.json();
     // Update game with new guess
     fetchGame();
   };
