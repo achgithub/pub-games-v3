@@ -29,7 +29,7 @@ const GameChallengeModal: React.FC<GameChallengeModalProps> = ({
   const [options, setOptions] = useState<ChallengeOptions>({});
 
   // Determine if this is a 1v1 or group game
-  const isGroupGame = app.minPlayers && app.minPlayers > 2;
+  const isGroupGame = (app.minPlayers ?? 0) > 2;
   const minPlayers = app.minPlayers ?? 1; // Use ?? to properly handle 0
   const maxPlayers = app.maxPlayers ?? (isGroupGame ? 6 : 1);
   const supportsSoloPlay = app.minPlayers === 0;
