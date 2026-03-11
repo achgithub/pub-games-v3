@@ -72,6 +72,18 @@
   margin-bottom: 1rem;
 }
 
+.bc-guess-display-disabled {
+  opacity: 0.5;
+}
+
+/* Secret code compact layout - code pegs + eye button in a row */
+.bc-secret-code-compact {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  align-items: center;
+}
+
 /* Individual peg/position */
 .bc-peg {
   width: 60px;
@@ -99,8 +111,48 @@
 }
 
 .bc-peg-disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Compact peg for secret code section - smaller to save mobile space */
+.bc-peg-compact {
+  width: 48px;
+  height: 48px;
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  font-weight: bold;
+  background-color: #fff;
+  color: #212529;
+}
+
+/* Eye button styled like a peg */
+.bc-eye-button {
+  width: 48px;
+  height: 48px;
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  cursor: pointer;
+  background-color: #fff;
+  color: #212529;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.bc-eye-button:hover {
+  background-color: #f8f9fa;
+  border-color: #0066cc;
+}
+
+.bc-eye-button:active {
+  background-color: #e7e5e4;
 }
 
 .bc-peg.color-mode {

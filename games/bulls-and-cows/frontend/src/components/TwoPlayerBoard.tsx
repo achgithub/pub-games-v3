@@ -128,12 +128,13 @@ export default function TwoPlayerBoard({
     return color ? color.colorClass : '';
   };
 
-  const renderCodePeg = (value: string, index: number, isSmall = false) => {
+  const renderCodePeg = (value: string, index: number, isSmall = false, isCompact = false) => {
     const option = mode === 'colors' ? COLORS.find(c => c.code === value) : null;
+    const className = isSmall ? 'bc-history-peg' : isCompact ? 'bc-peg-compact' : 'bc-peg';
     return (
       <div
         key={index}
-        className={`${isSmall ? 'bc-history-peg' : 'bc-peg'} ${mode === 'colors' && option ? 'color-mode ' + option.colorClass : ''}`}
+        className={`${className} ${mode === 'colors' && option ? 'color-mode ' + option.colorClass : ''}`}
       >
         {mode === 'numbers' ? value : ''}
       </div>
@@ -167,12 +168,18 @@ export default function TwoPlayerBoard({
       </div>
 
       <div className="ah-container ah-container--narrow ah-mt">
-        {/* My Code (Privacy Toggle) */}
+        {/* My Code (Privacy Toggle) - Compact for mobile */}
         <div className="ah-card ah-mb">
-          <h3 className="ah-header">
-            <span>My Secret Code</span>
+          <div className="bc-secret-code-compact">
+            {revealingCode
+              ? myCode.split('').map((value, index) => renderCodePeg(value, index, false, true))
+              : new Array(codeLength).fill('*').map((_, index) => (
+                  <div key={index} className="bc-peg-compact bc-peg-hidden">
+                    *
+                  </div>
+                ))}
             <button
-              className="ah-btn-outline ah-btn-sm bc-reveal-btn"
+              className="bc-eye-button"
               onMouseDown={() => setRevealingCode(true)}
               onMouseUp={() => setRevealingCode(false)}
               onMouseLeave={() => setRevealingCode(false)}
@@ -182,15 +189,6 @@ export default function TwoPlayerBoard({
             >
               👁️
             </button>
-          </h3>
-          <div className="bc-guess-display">
-            {revealingCode
-              ? myCode.split('').map((value, index) => renderCodePeg(value, index, false))
-              : new Array(codeLength).fill('*').map((_, index) => (
-                  <div key={index} className="bc-peg bc-peg-hidden">
-                    *
-                  </div>
-                ))}
           </div>
         </div>
 
@@ -210,18 +208,24 @@ export default function TwoPlayerBoard({
         </div>
 
         {/* Current Guess Input */}
-        {status === 'active' && !hasGuessedThisTurn && (
+        {status === 'active' && (
           <div className="ah-card ah-mb">
             <h3 className="bc-section-title">Your Guess</h3>
 
-            <div className="bc-guess-display">
+            {hasGuessedThisTurn && (
+              <div className="ah-banner bc-waiting-banner ah-mb">
+                ⏳ Waiting for opponent to guess...
+              </div>
+            )}
+
+            <div className={`bc-guess-display ${hasGuessedThisTurn ? 'bc-guess-display-disabled' : ''}`}>
               {currentGuess.map((value, index) => (
                 <div
                   key={index}
-                  onClick={() => handlePositionClick(index)}
-                  className={`bc-peg ${selectedPosition === index ? 'selected' : ''} ${
+                  onClick={() => !hasGuessedThisTurn && handlePositionClick(index)}
+                  className={`bc-peg ${selectedPosition === index && !hasGuessedThisTurn ? 'selected' : ''} ${
                     value && mode === 'colors' ? 'color-mode ' + getColorClass(value) : ''
-                  }`}
+                  } ${hasGuessedThisTurn ? 'bc-peg-disabled' : ''}`}
                 >
                   {value || '?'}
                 </div>
@@ -236,7 +240,7 @@ export default function TwoPlayerBoard({
                     key={option.code}
                     onClick={() => handleOptionClick(option.code)}
                     className={`bc-color-btn ${option.colorClass}`}
-                    disabled={currentGuess.includes(option.code)}
+                    disabled={hasGuessedThisTurn || currentGuess.includes(option.code)}
                   >
                     {option.name}
                   </button>
@@ -249,7 +253,7 @@ export default function TwoPlayerBoard({
                     key={option.code}
                     onClick={() => handleOptionClick(option.code)}
                     className="ah-btn-outline bc-number-btn"
-                    disabled={currentGuess.includes(option.code)}
+                    disabled={hasGuessedThisTurn || currentGuess.includes(option.code)}
                   >
                     {option.code}
                   </button>
@@ -267,22 +271,13 @@ export default function TwoPlayerBoard({
               <button
                 className="ah-btn-primary"
                 onClick={handleSubmit}
-                disabled={submitting || currentGuess.some(c => c === '')}
+                disabled={hasGuessedThisTurn || submitting || currentGuess.some(c => c === '')}
               >
                 {submitting ? 'Submitting...' : 'Submit Guess'}
               </button>
-              <button className="ah-btn-outline" onClick={handleClear}>
+              <button className="ah-btn-outline" onClick={handleClear} disabled={hasGuessedThisTurn}>
                 Clear
               </button>
-            </div>
-          </div>
-        )}
-
-        {/* Waiting indicator */}
-        {status === 'active' && hasGuessedThisTurn && (
-          <div className="ah-card ah-mb">
-            <div className="ah-banner bc-waiting-banner">
-              ⏳ Waiting for opponent to guess...
             </div>
           </div>
         )}
