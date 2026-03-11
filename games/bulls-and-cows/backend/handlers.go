@@ -161,14 +161,9 @@ func CreateGame(db *sql.DB, redisClient *redis.Client) http.HandlerFunc {
 		// Generate secret code
 		secretCode := GenerateSecretCode(req.Mode)
 
-		// Use provided gameID or challengeID, or generate new one
-		gameID := req.GameID
-		if gameID == "" && req.ChallengeID != "" {
-			gameID = req.ChallengeID
-		}
-		if gameID == "" {
-			gameID = uuid.New().String()
-		}
+		// Always generate a new UUID for gameID (database requires UUID type)
+		// ChallengeID is not a UUID, so we can't use it as gameID
+		gameID := uuid.New().String()
 
 
 	// Set max guesses based on mode: Colors = 12, Numbers = 25 (more combinations)
