@@ -1,5 +1,17 @@
 # Pub Games v3 - Project Guide
 
+## Recent Updates (2026-03-12)
+
+**Claude Code Enforcement System (NEW):**
+- ✅ **Standalone Git Repository** - Enforcement system moved to separate project
+- ✅ **Universal Bootstrap Script** - Works in ANY project, not just pub-games-v3
+- ✅ **Four Hook Types** - PreToolUse, PostToolUse, Stop, SessionStart
+- ✅ **Template-Based** - Install stubs first, add rules incrementally
+- ✅ **Example Rules** - TypeScript, CSS, workflow, security enforcement patterns
+- ✅ **Comprehensive Documentation** - README + detailed usage guide
+- 📍 **Location**: `~/Documents/Projects/claude-code-enforcement/`
+- 📖 **See**: `docs/ENFORCEMENT-SYSTEM.md` for pub-games-v3 integration
+
 ## Recent Updates (2026-03-11)
 
 **Bulls and Cows 2-Player Mode (NEW):**
@@ -502,3 +514,7 @@ See global `~/.claude/CLAUDE.md` for Mac/Pi split environment details.
 See `docs/DEPLOYMENT.md` for complete deployment procedures.
 See `docs/LESSONS-LEARNED.md` for important lessons and pitfalls to avoid.
 See `docs/ROADMAP.md` for future features and planned work.
+
+---
+
+<!-- Hook test edit -->
