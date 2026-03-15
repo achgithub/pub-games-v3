@@ -1,5 +1,32 @@
 # Pub Games v3 - Project Guide
 
+## ⚠️ CRITICAL: Token Efficiency Rules
+
+**When a task is complete, STOP. Do not pivot or ask "what next?"**
+
+- ✅ Report results concisely
+- ✅ State what was done
+- ❌ Do NOT ask "what would you like me to do next?"
+- ❌ Do NOT create todos for exploring further options
+- ❌ Do NOT suggest additional work unless explicitly requested
+- ❌ Do NOT pivot to related tasks
+
+**Example - WRONG:**
+```
+User: "test the enforcement rules"
+Claude: [tests rules]
+Claude: "Tests complete. What specific enforcement rule would you like me to test next?"  ← WASTEFUL
+```
+
+**Example - CORRECT:**
+```
+User: "test the enforcement rules"
+Claude: [tests rules]
+Claude: "Enforcement tests complete. Git push blocked ✓, permission logging works ✓"  ← DONE
+```
+
+---
+
 ## Recent Updates (2026-03-12)
 
 **Claude Code Enforcement System (NEW):**
@@ -517,4 +544,4 @@ See `docs/ROADMAP.md` for future features and planned work.
 
 ---
 
-<!-- Hook test edit -->
+<!-- Hook test edit - enforcement active - tested 2026-03-15 -->
