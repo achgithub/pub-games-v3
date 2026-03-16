@@ -9,6 +9,7 @@ import (
 	"os"
 	"time"
 
+	authlib "github.com/achgithub/activity-hub-common/auth"
 	"github.com/google/uuid"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -334,56 +335,31 @@ func getEnv(key, defaultValue string) string {
 func handleGetApps(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	// Try to get user roles from Authorization header
+	// Try to get authenticated user (optional - this endpoint works without auth)
 	authHeader := r.Header.Get("Authorization")
-	var userRoles []string
-	var userEmail string
+	var user *authlib.AuthUser
 	var isGuest bool
 
-	if authHeader != "" {
-		// Extract token (format: "Bearer demo-token-email@example.com", "Bearer impersonate-uuid", or "Bearer guest-token-uuid")
-		token := authHeader
-		if len(token) > 7 && token[:7] == "Bearer " {
-			token = token[7:]
+	if authHeader != "" && len(authHeader) > 7 {
+		// Extract token using centralized validation
+		token := authHeader[7:] // Remove "Bearer " prefix
+		if resolvedUser, err := authlib.ResolveToken(db, token); err == nil {
+			user = resolvedUser
+			isGuest = resolvedUser.Email == "Guest" || (len(resolvedUser.Email) > 6 && resolvedUser.Email[:6] == "guest-")
 		}
-
-		// Check for guest token
-		if len(token) > 12 && token[:12] == "guest-token-" {
-			isGuest = true
-			userEmail = "" // Guests don't have preferences
-		} else if len(token) > 12 && token[:12] == "impersonate-" {
-			// Check for impersonation token
-			var impersonatedEmail string
-			err := db.QueryRow(`
-				SELECT impersonated_email
-				FROM impersonation_sessions
-				WHERE impersonation_token = $1 AND is_active = TRUE
-			`, token).Scan(&impersonatedEmail)
-
-			if err == nil {
-				userEmail = impersonatedEmail
-			}
-		} else if len(token) > 11 && token[:11] == "demo-token-" {
-			// Extract email from demo token
-			userEmail = token[11:]
-		}
-
-		// Query user roles if we have an email (not guest)
-		if userEmail != "" {
-			var roles pq.StringArray
-			err := db.QueryRow("SELECT COALESCE(roles, '{}') FROM users WHERE email = $1", userEmail).Scan(&roles)
-			if err == nil {
-				userRoles = roles
-			}
-		}
+		// If token resolution fails, continue as unauthenticated user
 	}
 
 	// Get apps filtered by user roles or guest access
+	var userRoles []string
+	if user != nil {
+		userRoles = user.Roles
+	}
 	apps := GetAppsForUser(userRoles, isGuest)
 
 	// Apply user preferences if authenticated (not guest)
-	if userEmail != "" && !isGuest {
-		apps = applyUserPreferences(apps, userEmail)
+	if user != nil && !isGuest {
+		apps = applyUserPreferences(apps, user.Email)
 	}
 
 	json.NewEncoder(w).Encode(map[string]interface{}{
