@@ -28,7 +28,7 @@ func Middleware(identityDB *sql.DB) func(http.Handler) http.Handler {
 			}
 
 			token := strings.TrimPrefix(authHeader, "Bearer ")
-			user, err := resolveToken(identityDB, token)
+			user, err := ResolveToken(identityDB, token)
 			if err != nil {
 				log.Printf("❌ Auth failed for %s %s: %v", r.Method, r.URL.Path, err)
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -57,7 +57,7 @@ func SSEMiddleware(identityDB *sql.DB) func(http.Handler) http.Handler {
 				return
 			}
 
-			user, err := resolveToken(identityDB, token)
+			user, err := ResolveToken(identityDB, token)
 			if err != nil {
 				log.Printf("❌ SSE auth failed for %s: %v", r.URL.Path, err)
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -129,9 +129,19 @@ func GetUserFromContext(ctx context.Context) (*AuthUser, bool) {
 	return &user, true
 }
 
-// resolveToken validates a token and returns the associated user.
-// Supports demo-token-{email} and impersonate-{uuid} formats.
-func resolveToken(identityDB *sql.DB, token string) (*AuthUser, error) {
+// ResolveToken validates a token and returns the associated user.
+// Supports demo-token-{email}, guest-token-{uuid}, and impersonate-{uuid} formats.
+// This is the centralized token validation function - all token parsing must go through here.
+func ResolveToken(identityDB *sql.DB, token string) (*AuthUser, error) {
+	if token == "" {
+		return nil, fmt.Errorf("empty token")
+	}
+
+	// Validate token length to prevent malformed tokens
+	if len(token) > 512 {
+		return nil, fmt.Errorf("token exceeds maximum length")
+	}
+
 	if strings.HasPrefix(token, "impersonate-") {
 		var impersonatedEmail, superUserEmail string
 		err := identityDB.QueryRow(`
@@ -153,6 +163,17 @@ func resolveToken(identityDB *sql.DB, token string) (*AuthUser, error) {
 		user.IsImpersonating = true
 		user.ImpersonatedBy = superUserEmail
 		return user, nil
+	}
+
+	if strings.HasPrefix(token, "guest-token-") {
+		// Guest tokens are valid as-is; create a minimal user object
+		guestID := strings.TrimPrefix(token, "guest-token-")
+		return &AuthUser{
+			Email:   "guest-" + guestID,
+			Name:    "Guest",
+			IsAdmin: false,
+			Roles:   []string{},
+		}, nil
 	}
 
 	if strings.HasPrefix(token, "demo-token-") {

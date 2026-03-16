@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	_ "github.com/lib/pq"
 )
@@ -38,6 +39,11 @@ func InitDatabase(appName string) (*sql.DB, error) {
 		return nil, fmt.Errorf("failed to ping database %s: %w", dbName, err)
 	}
 
+	// Configure connection pool to prevent resource exhaustion
+	db.SetMaxOpenConns(25)
+	db.SetMaxIdleConns(5)
+	db.SetConnMaxLifetime(5 * time.Minute)
+
 	log.Printf("✅ Connected to app database: %s", dbName)
 	return db, nil
 }
@@ -65,6 +71,11 @@ func InitDatabaseByName(dbName string) (*sql.DB, error) {
 	if err := db.Ping(); err != nil {
 		return nil, fmt.Errorf("failed to ping database %s: %w", dbName, err)
 	}
+
+	// Configure connection pool to prevent resource exhaustion
+	db.SetMaxOpenConns(25)
+	db.SetMaxIdleConns(5)
+	db.SetConnMaxLifetime(5 * time.Minute)
 
 	log.Printf("✅ Connected to database: %s", dbName)
 	return db, nil
@@ -97,6 +108,11 @@ func InitIdentityDatabase() (*sql.DB, error) {
 	if err := db.Ping(); err != nil {
 		return nil, fmt.Errorf("failed to connect to identity database: %w", err)
 	}
+
+	// Configure connection pool to prevent resource exhaustion
+	db.SetMaxOpenConns(25)
+	db.SetMaxIdleConns(5)
+	db.SetConnMaxLifetime(5 * time.Minute)
 
 	log.Printf("✅ Connected to identity database: %s", dbName)
 	return db, nil
